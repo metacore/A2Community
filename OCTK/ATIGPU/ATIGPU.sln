@@ -1,0 +1,32 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 9.00
+# Visual Studio 2005
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ATIGPU", "ATIGPU\ATIGPU.vcproj", "{FAAA8AAE-7A82-47F4-94F5-510C6F2C7F97}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "brook", "brook\brook.vcproj", "{300C9C33-AFE2-469F-A759-9CDCF9FF8F05}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test", "test\test.vcproj", "{590F5DA3-D588-4535-983A-6567A9B15504}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{FAAA8AAE-7A82-47F4-94F5-510C6F2C7F97}.Debug|Win32.ActiveCfg = Debug|Win32
+		{FAAA8AAE-7A82-47F4-94F5-510C6F2C7F97}.Debug|Win32.Build.0 = Debug|Win32
+		{FAAA8AAE-7A82-47F4-94F5-510C6F2C7F97}.Release|Win32.ActiveCfg = Release|Win32
+		{FAAA8AAE-7A82-47F4-94F5-510C6F2C7F97}.Release|Win32.Build.0 = Release|Win32
+		{300C9C33-AFE2-469F-A759-9CDCF9FF8F05}.Debug|Win32.ActiveCfg = Debug|Win32
+		{300C9C33-AFE2-469F-A759-9CDCF9FF8F05}.Debug|Win32.Build.0 = Debug|Win32
+		{300C9C33-AFE2-469F-A759-9CDCF9FF8F05}.Release|Win32.ActiveCfg = Release|Win32
+		{300C9C33-AFE2-469F-A759-9CDCF9FF8F05}.Release|Win32.Build.0 = Release|Win32
+		{590F5DA3-D588-4535-983A-6567A9B15504}.Debug|Win32.ActiveCfg = Debug|Win32
+		{590F5DA3-D588-4535-983A-6567A9B15504}.Debug|Win32.Build.0 = Debug|Win32
+		{590F5DA3-D588-4535-983A-6567A9B15504}.Release|Win32.ActiveCfg = Release|Win32
+		{590F5DA3-D588-4535-983A-6567A9B15504}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

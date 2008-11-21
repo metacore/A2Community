@@ -1,0 +1,24 @@
+#include <windows.h>
+
+int main(int argc, char** argv)
+{
+	int wx = 4096;	
+	int wy = 4096;
+	double t;	
+
+	float* inputA = (float*)malloc(wx*wy*sizeof(float));	
+	
+	{
+		float streamA <wx,wy>;
+		float streamB <wx,wy>;
+
+		t = GetTickCount();
+		streamRead(streamA,inputA);
+		streamRead(streamB,inputA);
+		t = GetTickCount() - t;
+	}
+
+	free(inputA);
+
+	return 0;
+}
