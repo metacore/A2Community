@@ -3,40 +3,82 @@
 #include "kernels.h"
 
 // Conversion from ArrayObjects data type to GPU data format
-long GetFormat(long dType)
+CALformat GetFormat(long dType, long numComponents)
 {
 	switch(dType)
 	{
 		case TSHORTINT: 
-			return CAL_FORMAT_BYTE_1;
+			switch(numComponents)
+			{
+				case 1:
+					return CAL_FORMAT_BYTE_1;
+				case 2:
+					return CAL_FORMAT_BYTE_2;				
+				case 4:	
+					return CAL_FORMAT_BYTE_4;
+			}
+
 		case TINTEGER: 
-			return CAL_FORMAT_SHORT_1;
+			switch(numComponents)
+			{
+				case 1:
+					return CAL_FORMAT_SHORT_1;
+				case 2:
+					return CAL_FORMAT_SHORT_2;				
+				case 4:	
+					return CAL_FORMAT_SHORT_4;
+			}		
+
 		case TLONGINT: 
-			return CAL_FORMAT_INT_1;		
+			switch(numComponents)
+			{
+				case 1:
+					return CAL_FORMAT_INT_1;
+				case 2:
+					return CAL_FORMAT_INT_2;				
+				case 4:	
+					return CAL_FORMAT_INT_4;
+			}
+
 		case TREAL: 
-			return CAL_FORMAT_FLOAT_1;
+			switch(numComponents)
+			{
+				case 1:
+					return CAL_FORMAT_FLOAT_1;
+				case 2:
+					return CAL_FORMAT_FLOAT_2;				
+				case 4:	
+					return CAL_FORMAT_FLOAT_4;
+			}
 
 		case TLONGREAL: 
-			return CAL_FORMAT_DOUBLE_1;
-		default: 
-			return -1;
-	}	
+			switch(numComponents)
+			{
+				case 1:
+					return CAL_FORMAT_DOUBLE_1;
+				case 2:
+					return CAL_FORMAT_DOUBLE_2;				
+			}
+			
+	}
+
+	return CAL_FORMAT_FLOAT_4;
 }
 
 // Get element size for a given data format
-long GetElementSize(CALformat dFormat)
+long GetElementSize(long dType)
 {
-	switch(dFormat)
+	switch(dType)
 	{
-		case CAL_FORMAT_BYTE_1: 
+		case TSHORTINT: 
 			return 1;
-		case CAL_FORMAT_SHORT_1: 
+		case TINTEGER: 
 			return 2;
-		case CAL_FORMAT_INT_1: 
+		case TLONGINT: 
 			return 4;		
-		case CAL_FORMAT_FLOAT_1: 
+		case TREAL: 
 			return 4;
-		case CAL_FORMAT_DOUBLE_1: 
+		case TLONGREAL: 
 			return 8;		
 		default: 
 			return 0;
@@ -135,31 +177,35 @@ long ObjectPool::Find(void* obj)
 	Argument
 */
 
-// returns nearest number which is multiple of 4
-long PaddedToMultipleOf4(long val)
+// returns number of elements fitting to the size padded to the multiple of "numComponents"
+long GetPaddeNumElements(long size, long numComponents)
 {
-	long k = val/4;
+	long k = size/numComponents;
 	
-	if(k*4 >= val)
-		return k*4;
+	if(k*numComponents >= size)
+		return k;
 	else
-		return (k+1)*4;
+		return k+1;
 }
 
-Argument::Argument(CALdevice hDev, CALdeviceinfo* devInfo, long argID, CALformat dFormat, long nDims, long* size, void* data)
+Argument::Argument(CALdevice hDev, CALdeviceinfo* devInfo, long argID, long dType, long nDims, long* size, void* data)
 {
 	long i;	
 
 	this->hDev = hDev;	
 	this->argID = argID;		
-	this->dFormat = dFormat;
-	this->nDims = nDims;
+	this->dType = dType;
 
+	physNumComponents = 4;
+	this->dFormat = GetFormat(dType,physNumComponents);
+	this->nDims = nDims;
+	elemSize = GetElementSize(dType);	
+	physElemSize = elemSize*physNumComponents;
 	isVirtualized = FALSE;		
 
 	this->size = new long[nDims]; 
 	// total data size in bytes
-	dataSize = GetElementSize(dFormat);
+	dataSize = elemSize;
 	for(i = 0; i < nDims; i++)
 	{
 		this->size[i] = size[i];
@@ -167,8 +213,8 @@ Argument::Argument(CALdevice hDev, CALdeviceinfo* devInfo, long argID, CALformat
 	}	
 
 	// does it fit to hardware memory layout requirements?
-	if( ((nDims == 1) && (size[0] <= (long)devInfo->maxResource1DWidth)) 
-		|| ((nDims == 2) && (size[1] <= (long)devInfo->maxResource2DWidth) && (size[0] <= (long)devInfo->maxResource2DHeight) ) )
+	if( ((nDims == 1) && (GetPaddeNumElements(size[0],physNumComponents) <= (long)devInfo->maxResource1DWidth)) 
+		|| ((nDims == 2) && (GetPaddeNumElements(size[1],physNumComponents) <= (long)devInfo->maxResource2DWidth) && (size[0] <= (long)devInfo->maxResource2DHeight) ) )
 	{
 		// if yes - no memory virtualization! (logical dimensions coincides with real ones)
 		nLogicDims = nDims;
@@ -185,29 +231,25 @@ Argument::Argument(CALdevice hDev, CALdeviceinfo* devInfo, long argID, CALformat
 		logicSize = new long[2];
 		logicSize[1] = devInfo->maxResource2DWidth;
 		
-		i = dataSize / GetElementSize(dFormat);
+		i = dataSize / elemSize;
 		logicSize[0] = i / logicSize[1];
 		if(logicSize[0]*logicSize[1] < i)
-			logicSize[0]++;
-
-		physSize = new long[2];
-		physSize[0] = logicSize[0];
-		physSize[1] = PaddedToMultipleOf4(logicSize[1]);
+			logicSize[0]++;		
 		
 		isVirtualized = TRUE;
 	}	
 	
-	// physical size -> account padding to multiple of 4
+	// physical size -> account padding to multiple of physNumComponents
 	physSize = new long[nLogicDims];
 	physSize[0] = logicSize[0];
 	if(nLogicDims == 1)
-		physSize[0] = PaddedToMultipleOf4(physSize[0]);
+		physSize[0] = GetPaddeNumElements(physSize[0],physNumComponents);
 	else if(nLogicDims == 2)
-		physSize[1] = PaddedToMultipleOf4(logicSize[1]);
+		physSize[1] = GetPaddeNumElements(logicSize[1],physNumComponents);
 
 	// logic and physical data size in bytes
-	logicDataSize = GetElementSize(dFormat);
-	physDataSize = logicDataSize;
+	logicDataSize = elemSize;
+	physDataSize = physElemSize;
 	for(i = 0; i < nLogicDims; i++)
 	{
 		logicDataSize *= logicSize[i];
@@ -243,11 +285,11 @@ CALresult Argument::AllocateLocal(CALuint flags)
 	CALresult err = CAL_RESULT_NOT_SUPPORTED;
 
 	FreeLocal();
-	
+
 	if(nLogicDims == 2)
 		err = calResAllocLocal2D(&localRes,hDev,physSize[1],physSize[0],dFormat,flags);
 	else if(nLogicDims == 1)
-		err = calResAllocLocal1D(&localRes,hDev,physSize[0],dFormat,flags);
+		err = calResAllocLocal2D(&localRes,hDev,physSize[0],1,dFormat,flags);
 
 	if(err != CAL_RESULT_OK) localRes = 0;
 	
@@ -339,9 +381,9 @@ CALresult Argument::SetDataToRemote(CALcontext ctx)
 {
 	CALresult err;
 	CALuint pitch;
-	long i, elemSize, lSize, pSize;
+	long i, lSize, pSize;
 	char* gpuPtr;
-	char* cpuPtr;
+	char* cpuPtr;	
 
 	err = CAL_RESULT_OK;
 	
@@ -356,16 +398,15 @@ CALresult Argument::SetDataToRemote(CALcontext ctx)
 	err = calResMap((void**)&gpuPtr,&pitch,remoteRes,0);
 	if(err != CAL_RESULT_OK) 
 		return err;
-
-	elemSize = GetElementSize(dFormat);
-	pitch *= elemSize; // pitch in number of bytes
+	
+	pitch *= physElemSize; // pitch in number of bytes
 
 	if(nLogicDims == 2)
 	{		
 		lSize = logicSize[1]*elemSize;	// number of bytes in logical row
-		pSize = physSize[1]*elemSize;	// number of bytes in physical row
+		pSize = physSize[1]*physElemSize;	// number of bytes in physical row
 
-		if( (lSize == pitch) && (dataSize == physDataSize) )	
+		if( (pSize == pitch) && (dataSize == physDataSize) )	
 			CopyMemory(gpuPtr,cpuPtr,dataSize);	
 		else
 		{
@@ -420,7 +461,7 @@ CALresult Argument::GetDataFromRemote(CALcontext ctx)
 {	
 	CALresult err;
 	CALuint pitch;
-	long i, elemSize, lSize, pSize;
+	long i, lSize, pSize;
 	char* gpuPtr;
 	char* cpuPtr;
 
@@ -437,16 +478,15 @@ CALresult Argument::GetDataFromRemote(CALcontext ctx)
 	err = calResMap((void**)&gpuPtr,&pitch,remoteRes,0);
 	if(err != CAL_RESULT_OK) 
 		return err;
-
-	elemSize = GetElementSize(dFormat);
-	pitch *= elemSize; // pitch in number of bytes
+	
+	pitch *= physElemSize; // pitch in number of bytes
 
 	if(nLogicDims == 2)
 	{
 		lSize = logicSize[1]*elemSize;	// number of bytes in logical row
-		pSize = physSize[1]*elemSize;	// number of bytes in physical row
+		pSize = physSize[1]*physElemSize;	// number of bytes in physical row
 
-		if( (lSize == pitch) && (dataSize == physDataSize) )	
+		if( (pSize == pitch) && (dataSize == physDataSize) )	
 			CopyMemory(cpuPtr,gpuPtr,dataSize);	
 		else
 		{
@@ -558,17 +598,12 @@ Kernel::Kernel(long iKernel, CALtarget target)
 
 	switch(iKernel)
 	{
-		case KernAdd1DR: kernelStr = kernelAdd1DR; break;
-		case KernAdd2DR: kernelStr = kernelAdd2DR; break;
-		case KernSub1DR: kernelStr = kernelSub1DR; break;
-		case KernSub2DR: kernelStr = kernelSub2DR; break;
+		case KernAddR: kernelStr = kernelAddR; break;		
+		case KernSubR: kernelStr = kernelSubR; break;		
 		case KernNaiveMatMulR: kernelStr = kernelNaiveMatMulR; break;
-		case KernEwMul1DR: kernelStr = kernelEwMul1DR; break;
-		case KernEwMul2DR: kernelStr = kernelEwMul2DR; break;
-		case KernEwDiv1DR: kernelStr = kernelEwDiv1DR; break;
-		case KernEwDiv2DR: kernelStr = kernelEwDiv2DR; break;
-		case KernDotProd1DR: kernelStr = kernelDotProd1DR; break;
-		case KernDotProd2DR: kernelStr = kernelDotProd2DR; break;
+		case KernEwMulR: kernelStr = kernelEwMulR; break;		
+		case KernEwDivR: kernelStr = kernelEwDivR; break;		
+		case KernDotProdR: kernelStr = kernelDotProdR; break;		
 
 		default:
 			return;
@@ -630,17 +665,12 @@ void GetNumInputsOutputs(long iKernel, long* nInputs, long* nOutputs, long* nCon
 {
 	switch(iKernel)
 	{
-		case KernAdd1DR: *nInputs = 2; *nOutputs = 1; *nConstants = 0; break;
-		case KernAdd2DR: *nInputs = 2; *nOutputs = 1; *nConstants = 0; break;
-		case KernSub1DR: *nInputs = 2; *nOutputs = 1; *nConstants = 0; break;
-		case KernSub2DR: *nInputs = 2; *nOutputs = 1; *nConstants = 0; break;
+		case KernAddR: *nInputs = 2; *nOutputs = 1; *nConstants = 0; break;		
+		case KernSubR: *nInputs = 2; *nOutputs = 1; *nConstants = 0; break;		
 		case KernNaiveMatMulR: *nInputs = 2; *nOutputs = 1; *nConstants = 0; break;
-		case KernEwMul1DR: *nInputs = 2; *nOutputs = 1; *nConstants = 0; break;
-		case KernEwMul2DR: *nInputs = 2; *nOutputs = 1; *nConstants = 0; break;
-		case KernEwDiv1DR: *nInputs = 2; *nOutputs = 1; *nConstants = 0; break;
-		case KernEwDiv2DR: *nInputs = 2; *nOutputs = 1; *nConstants = 0; break;
-		case KernDotProd1DR: *nInputs = 2; *nOutputs = 1; *nConstants = 0; break;
-		case KernDotProd2DR: *nInputs = 2; *nOutputs = 1; *nConstants = 0; break;
+		case KernEwMulR: *nInputs = 2; *nOutputs = 1; *nConstants = 0; break;		
+		case KernEwDivR: *nInputs = 2; *nOutputs = 1; *nConstants = 0; break;		
+		case KernDotProdR: *nInputs = 2; *nOutputs = 1; *nConstants = 0; break;		
 		default: *nInputs = 0; *nOutputs = 0; *nConstants = 0; break;
 	}
 }
@@ -821,7 +851,7 @@ Module* Context::GetSuitedModule(long op, CALdomain* domain)
 			(*domain).width = retArg->physSize[0];
 			(*domain).height = 1;
 		}
-		else if(retArg->nDims == 2)
+		else if(retArg->nLogicDims == 2)
 		{				
 			(*domain).x = 0;
 			(*domain).y = 0;
@@ -829,72 +859,37 @@ Module* Context::GetSuitedModule(long op, CALdomain* domain)
 			(*domain).height = retArg->physSize[0];
 		}
 		
-		if(retArg->nLogicDims == 1)
+		switch(op)
 		{
-			switch(op)
-			{
-				case OpAdd:
-					switch(retArg->dFormat)
-					{
-						case CAL_FORMAT_FLOAT_1:
-							return modules->Get(KernAdd1DR);
-					}break;
-
-				case OpSub: 
-					switch(retArg->dFormat)
-					{
-						case CAL_FORMAT_FLOAT_1:
-							return modules->Get(KernSub1DR);
-					}break;
-
-				case OpEwMul:
-					switch(retArg->dFormat)
-					{
-						case CAL_FORMAT_FLOAT_1:
-							return modules->Get(KernEwMul1DR);
-					}break;
-
-				case OpEwDiv: 
-					switch(retArg->dFormat)
-					{
-						case CAL_FORMAT_FLOAT_1:
-							return modules->Get(KernEwDiv1DR);
-					}break;
-			}
+			case OpAdd:
+				switch(retArg->dType)
+				{
+				case TREAL:
+					return modules->Get(KernAddR);
+				}break;
+	
+			case OpSub: 
+				switch(retArg->dType)
+				{
+				case TREAL:
+					return modules->Get(KernSubR);
+				}break;
+	
+			case OpEwMul:
+				switch(retArg->dType)
+				{
+				case TREAL:
+					return modules->Get(KernEwMulR);
+				}break;
+	
+			case OpEwDiv: 
+				switch(retArg->dType)
+				{
+				case TREAL:
+					return modules->Get(KernEwDivR);
+				}break;
 		}
-		else if(retArg->nLogicDims == 2)
-		{
-			switch(op)
-			{
-				case OpAdd:
-					switch(retArg->dFormat)
-					{
-						case CAL_FORMAT_FLOAT_1:
-							return modules->Get(KernAdd2DR);
-					}break;
-
-				case OpSub: 
-					switch(retArg->dFormat)
-					{
-						case CAL_FORMAT_FLOAT_1:
-							return modules->Get(KernSub2DR);
-					}break;
-
-				case OpEwMul:
-					switch(retArg->dFormat)
-					{
-						case CAL_FORMAT_FLOAT_1:
-							return modules->Get(KernEwMul2DR);
-					}break;
-
-				case OpEwDiv: 
-					switch(retArg->dFormat)
-					{
-						case CAL_FORMAT_FLOAT_1:
-							return modules->Get(KernEwDiv2DR);
-					}break;
-			}
-		}
+		
 	}
 
 	return module;
@@ -939,20 +934,22 @@ CALresult Context::DoElementwise(long op)
 	CALevent ev;
 	Module* module = NULL;
 
-	SetupArg1Mem;
-	SetupArg2Mem;
-	SetupRetArgMem;
-
 	// get the most suited module for given operation and array arguments
 	module = GetSuitedModule(op,&domain);
 
-	if(module == NULL){ReleaseArg1Mem; ReleaseArg2Mem; ReleaseRetArgMem; return CAL_RESULT_ERROR;}
+	if(module == NULL)
+		return CAL_RESULT_ERROR;	
+	
+	SetupArg1Mem;
+	SetupArg2Mem;
+	SetupRetArgMem;		
 
 	// run the kernel
 	err = calCtxRunProgram(&ev,ctx,module->func,&domain);
-	if(err != CAL_RESULT_OK){ReleaseArg1Mem; ReleaseArg2Mem; ReleaseRetArgMem; return err;};
-
-	while((err = calCtxIsEventDone(ctx,ev)) == CAL_RESULT_PENDING);
+	if(err == CAL_RESULT_OK)
+	{
+		while((err = calCtxIsEventDone(ctx,ev)) == CAL_RESULT_PENDING);
+	}
 		
 	// set flag that arguments are not currently in use
 	arg1->useCounter--;
@@ -979,7 +976,7 @@ CALresult Context::DoDotProd(void)
 // do an operation
 CALresult Context::Do(long op)
 {
-	if( (op < OpAdd) || (op >= NOps) ) return CAL_RESULT_INVALID_PARAMETER;				
+	if( (op < OpAdd) || (op > OpEwDiv) ) return CAL_RESULT_INVALID_PARAMETER;				
 	
 	switch(op)
 	{
@@ -1148,27 +1145,22 @@ Argument* ArgumentPool::FindMinLocalNotInUse(Exclude* excl)
 	return arg;
 }
 
-CALresult ArgumentPool::NewArgument(CALdevice hDev, CALdeviceinfo* devInfo, CALcontext ctx, long argID, long dType, long nDims, long* size, void* data)
+CALresult ArgumentPool::NewArgument(CALdevice hDev, CALdeviceinfo* devInfo, CALcontext ctx, long argID, long dType, long nDims, long* size, void* data, CALuint flags)
 {
 	CALresult err;
 	Argument* arg;
 	Argument* arg1;
-	Exclude excl;
-	long format;	
-
-	format = GetFormat(dType);
-	if(format == -1) 
-		return CAL_RESULT_INVALID_PARAMETER;
-					
-	arg = new Argument(hDev,devInfo,argID,(CALformat)format,nDims,size,data);	
+	Exclude excl;	
+						
+	arg = new Argument(hDev,devInfo,argID,dType,nDims,size,data);	
 
 	// allocate local GPU memory
-	err = arg->AllocateLocal(0);
+	err = arg->AllocateLocal(flags);
 	if(err == CAL_RESULT_ERROR) // could not allocate
 	{
 		// try to free space in the local memory
 		FreeAllModified();
-		err = arg->AllocateLocal(0);
+		err = arg->AllocateLocal(flags);
 		if(err == CAL_RESULT_ERROR) // could not allocate again
 		{
 			// try to move local to remote if possible
@@ -1177,7 +1169,7 @@ CALresult ArgumentPool::NewArgument(CALdevice hDev, CALdeviceinfo* devInfo, CALc
 				err = arg1->FreeLocalKeepInRemote(ctx);			
 				if(err != CAL_RESULT_OK) // exclude argument from the search									
 					excl.Add(arg1);			
-				else if( (err = arg->AllocateLocal(0)) == CAL_RESULT_OK) 			
+				else if( (err = arg->AllocateLocal(flags)) == CAL_RESULT_OK) 			
 					break;		
 			}		
 		}

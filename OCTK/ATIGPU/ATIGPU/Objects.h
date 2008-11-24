@@ -11,11 +11,12 @@
 #define OpAdd		0	
 #define OpSub		1
 #define OpMul		2
-#define OpEwMul		3
-#define OpEwDiv		4
-#define OpDotProd	5
-
-#define NOps	6	// total number of operations/kernels
+#define OpDiv		3
+#define OpDotProd	4
+#define OpMulInc	5
+#define	OpMulDec	6	
+#define OpEwMul		7
+#define OpEwDiv		8
 
 /*
 	Object with GPU kernel description
@@ -111,7 +112,7 @@ public:
 class Argument
 {	
 public:
-	Argument(CALdevice hDev, CALdeviceinfo* devInfo, CALlong argID, CALformat dFormat, long nDims, long* size, void* data);
+	Argument(CALdevice hDev, CALdeviceinfo* devInfo, CALlong argID, long dType, long nDims, long* size, void* data);
 	~Argument(void);
 	CALresult AllocateLocal(CALuint flags);	// allocate local memory
 	CALresult AllocateRemote(CALuint flags);	// allocate remote memory
@@ -130,14 +131,18 @@ public:
 	CALdevice hDev;	// device on which the argument exists
 	long nDevs;	// number of devices
 	void* cpuData;	// CPU data pointer	
+	long dType;	// data type code
 	CALformat dFormat;	// data format
 	long nDims;	// number of dimensions (logical)
 	long* size;	// argument size
+	long elemSize;	// element size in bytes	
+	long physNumComponents;	// number of components in each element on GPU
+	long physElemSize;	// physical element size
 	long dataSize;		// data size in bytes
 	long logicDataSize;	// logical data size in bytes
 	long physDataSize;	// physical data size in bytes
 	CALresource remoteRes;	// remote GPU resource
-	CALresource localRes;	// local GPU resource
+	CALresource localRes;	// local GPU resource	
 	
 	long nLogicDims;	// number of logical dimensions on the GPU (1D or 2D)
 	long* logicSize;	// logical size on the GPU	
@@ -221,7 +226,7 @@ public:
 	// find currently unused argument with minimum (from all arguments) allocated local memory
 	Argument* FindMinLocalNotInUse(Exclude* excl);
 	// create a new argument and put it to the pool
-	CALresult NewArgument(CALdevice hDev, CALdeviceinfo* devInfo, CALcontext ctx, long argID, long dType, long nDims, long* size, void* data);
+	CALresult NewArgument(CALdevice hDev, CALdeviceinfo* devInfo, CALcontext ctx, long argID, long dType, long nDims, long* size, void* data, CALuint flags);
 };
 
 

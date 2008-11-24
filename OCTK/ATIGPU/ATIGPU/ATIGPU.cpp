@@ -147,11 +147,8 @@ ATIGPU_API long CreateContext(long devNum, long* ctx)
 	if( (devNum < 0) || (devNum >= devs->Length()) ) 
 		return CAL_RESULT_INVALID_PARAMETER;	
 
-	ctxs = devs->Get(devNum)->ctxs;
-
-	ctxs->Lock();
-	err = devs->Get(devNum)->NewContext(ctx);
-	ctxs->Unlock();	
+	ctxs = devs->Get(devNum)->ctxs;	
+	err = devs->Get(devNum)->NewContext(ctx);	
 
 	return err;
 }
@@ -176,11 +173,9 @@ ATIGPU_API long DestroyContext(long devNum, long ctx)
 	
 	ctxs = devs->Get(devNum)->ctxs;
 	
-	// find context in the pool
-	ctxs->Lock();
+	// find context in the pool	
 	ind = ctxs->Find(ctx);
-	ctxs->Remove(ind);
-	ctxs->Unlock();	
+	ctxs->Remove(ind);	
 
 	return CAL_RESULT_OK;
 }
@@ -206,6 +201,7 @@ long SetArg(long devNum, long ctx, long argID, long dType, long nDims, long* siz
 	Context* context;
 	Argument* arg;
 	CALresult err = CAL_RESULT_OK;	
+	CALuint flags = 0;
 
 	Device* dev;	
 	ArgumentPool* args;
@@ -220,27 +216,12 @@ long SetArg(long devNum, long ctx, long argID, long dType, long nDims, long* siz
 		return CAL_RESULT_INVALID_PARAMETER;
 	if(data == NULL) 
 		return CAL_RESULT_INVALID_PARAMETER;
-	
-	// lock all context and argument pools
-	for(i = 0; i < devs->Length(); i++)
-	{
-		devs->Get(i)->ctxs->Lock();
-		devs->Get(i)->args->Lock();
-	}
-
+		
 	ind = devs->Get(devNum)->ctxs->Find(ctx);
 	if(ind >= 0) 
 		context = devs->Get(devNum)->ctxs->Get(ind);
-	else
-	{
-		// unlock all context and argument pools
-		for(i = 0; i < devs->Length(); i++)
-		{
-			devs->Get(i)->ctxs->Unlock();
-			devs->Get(i)->args->Unlock();
-		}
-		return CAL_RESULT_INVALID_PARAMETER;
-	}	
+	else		
+		return CAL_RESULT_INVALID_PARAMETER;	
 	
 	// look for already existing argument
 	i = 0;
@@ -250,8 +231,9 @@ long SetArg(long devNum, long ctx, long argID, long dType, long nDims, long* siz
 	{
 		dev = devs->Get(devNum);
 		args = dev->args;
-
-		err = args->NewArgument(dev->hDev,&(dev->info),context->ctx,argID,dType,nDims,size,data);		
+		
+		//if(argType == RETARG)flags |= CAL_RESALLOC_GLOBAL_BUFFER;
+		err = args->NewArgument(dev->hDev,&(dev->info),context->ctx,argID,dType,nDims,size,data,flags);		
 		if( err == CAL_RESULT_OK )
 		{
 			arg = (Argument*)args->GetLast();
@@ -274,14 +256,7 @@ long SetArg(long devNum, long ctx, long argID, long dType, long nDims, long* siz
 			case ARG2: context->arg2 = arg; break;
 			case RETARG: context->retArg = arg; arg->isReservedForGet = TRUE; break;
 		}
-	}
-	
-	// unlock all context and argument pools
-	for(i = 0; i < devs->Length(); i++)
-	{
-		devs->Get(i)->ctxs->Unlock();
-		devs->Get(i)->args->Unlock();
-	}			
+	}		
 	
 	return err;
 }
@@ -367,20 +342,13 @@ ATIGPU_API long GetReturnArg(long devNum, long ctx)
 		return CAL_RESULT_INVALID_PARAMETER;	
 	
 	ctxs = devs->Get(devNum)->ctxs;
-	args = devs->Get(devNum)->args;
-	
-	ctxs->Lock();
-	args->Lock();		
+	args = devs->Get(devNum)->args;				
 	
 	ind = ctxs->Find(ctx);
 	if(ind >= 0) 
 		context = ctxs->Get(ind);
-	else
-	{
-		ctxs->Unlock();
-		args->Unlock();
+	else	
 		return CAL_RESULT_INVALID_PARAMETER;
-	}
 
 	if(context->retArg)
 	{
@@ -430,19 +398,13 @@ ATIGPU_API long Do(long devNum, long ctx, long op)
 	
 	ctxs = devs->Get(devNum)->ctxs;
 	args = devs->Get(devNum)->args;
-
-	ctxs->Lock();
+	
 
 	ind = ctxs->Find(ctx);
 	if(ind >= 0) 
 		context = ctxs->Get(ind);
-	else
-	{
-		ctxs->Unlock();		
-		return CAL_RESULT_INVALID_PARAMETER;
-	}
-
-	ctxs->Unlock();
+	else	
+		return CAL_RESULT_INVALID_PARAMETER;	
 
 	return context->Do(op);	
 }

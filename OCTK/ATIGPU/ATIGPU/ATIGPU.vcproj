@@ -215,6 +215,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\kernels.h"
+				>
+			</File>
+			<File
 				RelativePath=".\Objects.h"
 				>
 			</File>
