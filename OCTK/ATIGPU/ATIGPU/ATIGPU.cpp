@@ -9,6 +9,10 @@
 #pragma managed(push, off)
 #endif
 
+/*
+	Error codes returned by the library
+	taken the same as in CAL
+*/
 //    CAL_RESULT_OK                = 0, /**< No error */
 //    CAL_RESULT_ERROR             = 1, /**< Operational error */
 //    CAL_RESULT_INVALID_PARAMETER = 2, /**< Parameter passed in is invalid */
@@ -21,7 +25,7 @@
 //    CAL_RESULT_BUSY              = 9,  /**< The resource in question is still in use */
 //    CAL_RESULT_WARNING           = 10, /**< Compiler generated a warning */
 
-// TRUE when library is loaded by a process
+// TRUE when the library is loaded by a process
 BOOL isLoaded = FALSE;
 
 // TRUE when the library is successfully initialized
@@ -30,12 +34,7 @@ BOOL isInitialized = FALSE;
 // GPU devices
 DevicePool* devs = NULL;
 
-// context pools for each device
-ContextPool** ctxPools = NULL;
-
-// argument pool
-ArgumentPool** argPools = NULL;
-
+// argument type codes
 #define ARG1	0
 #define ARG2	1
 #define RETARG	2
@@ -69,9 +68,10 @@ BOOL APIENTRY DllMain( HMODULE hModule,
 			count = 0;
 			err = calDeviceGetCount(&count); // get number of available devices
 			if(count > 0)
-			{
+			{				
 				devs = new DevicePool;
-
+				
+				// create and open available devices
 				for(i = 0; i < (long)count; i++)
 				{
 					dev = new Device(i);
@@ -92,7 +92,7 @@ BOOL APIENTRY DllMain( HMODULE hModule,
 
 		if(isInitialized)
 		{	
-			if(devs)
+			if(devs) // release all allocated resources
 			{				
 				delete devs;
 				devs = NULL;
@@ -251,7 +251,7 @@ long SetArg(long devNum, long ctx, long argID, long dType, long nDims, long* siz
 		dev = devs->Get(devNum);
 		args = dev->args;
 
-		err = args->NewArgument(dev->hDev,context->ctx,argID,dType,nDims,size,data);		
+		err = args->NewArgument(dev->hDev,&(dev->info),context->ctx,argID,dType,nDims,size,data);		
 		if( err == CAL_RESULT_OK )
 		{
 			arg = (Argument*)args->GetLast();
@@ -265,13 +265,14 @@ long SetArg(long devNum, long ctx, long argID, long dType, long nDims, long* siz
 	}
 
 	if(err == CAL_RESULT_OK)
-	{
-		arg->isInUse = TRUE;	// set flag that the object is in use!
+	{		
+		arg->useCounter++;	// the object is in use
+		arg->isModified = FALSE;	// the object is not yet modified outside the library
 		switch(argType)
 		{
 			case ARG1: context->arg1 = arg; break;
 			case ARG2: context->arg2 = arg; break;
-			case RETARG: context->retArg = arg; break;
+			case RETARG: context->retArg = arg; arg->isReservedForGet = TRUE; break;
 		}
 	}
 	
@@ -392,6 +393,8 @@ ATIGPU_API long GetReturnArg(long devNum, long ctx)
 			err = context->retArg->GetDataFromLocal(context->ctx);		
 			// FIXME: what to do if it can not get from local because of failure of remote allocation?!
 		}
+				
+		context->retArg->isReservedForGet = FALSE;
 	}
 	else
 	{
@@ -441,7 +444,5 @@ ATIGPU_API long Do(long devNum, long ctx, long op)
 
 	ctxs->Unlock();
 
-	err = context->Do(op);
-
-	return err;
+	return context->Do(op);	
 }

@@ -1,30 +1,6 @@
 #include <stdafx.h>
 #include "Objects.h"
-
-
-
-const char kernelAdd[] =
-"il_ps_2_0\n"
-//"dcl_cb cb0[1]\n"
-"dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
-"dcl_input_generic_interp(linear) v0.xy__\n"
-"dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
-"dcl_input_generic_interp(linear) v1.xy__\n"
-"sample_resource(0)_sampler(0) r0.x, v0.xy00\n"
-"sample_resource(1)_sampler(1) r1.x, v1.xy00\n"
-"mov r2.x, r0.xxxx\n"
-"mov r3.x, r1.xxxx\n"
-"call 0\n"
-"mov r4.x, r5.xxxx\n"
-"dcl_output_generic o0\n"
-"mov o0, r4.xxxx\n"
-"ret\n"
-"func 0\n"
-"add r6.x, r2.xxxx, r3.xxxx\n"
-"mov r7.x, r6.xxxx\n"
-"mov r5.x, r7.xxxx\n"
-"ret\n"
-"end;\n";
+#include "kernels.h"
 
 // Conversion from ArrayObjects data type to GPU data format
 long GetFormat(long dType)
@@ -159,34 +135,104 @@ long ObjectPool::Find(void* obj)
 	Argument
 */
 
-Argument::Argument(CALdevice hDev, long argID, CALformat dFormat, long nDims, long* size, void* data)
+// returns nearest number which is multiple of 4
+long PaddedToMultipleOf4(long val)
 {
-	long i;
+	long k = val/4;
+	
+	if(k*4 >= val)
+		return k*4;
+	else
+		return (k+1)*4;
+}
+
+Argument::Argument(CALdevice hDev, CALdeviceinfo* devInfo, long argID, CALformat dFormat, long nDims, long* size, void* data)
+{
+	long i;	
 
 	this->hDev = hDev;	
 	this->argID = argID;		
 	this->dFormat = dFormat;
 	this->nDims = nDims;
 
+	isVirtualized = FALSE;		
+
 	this->size = new long[nDims]; 
-	dSize = GetElementSize(dFormat);
+	// total data size in bytes
+	dataSize = GetElementSize(dFormat);
 	for(i = 0; i < nDims; i++)
 	{
 		this->size[i] = size[i];
-		dSize *= size[i];
-	}
+		dataSize *= size[i];
+	}	
 
+	// does it fit to hardware memory layout requirements?
+	if( ((nDims == 1) && (size[0] <= (long)devInfo->maxResource1DWidth)) 
+		|| ((nDims == 2) && (size[1] <= (long)devInfo->maxResource2DWidth) && (size[0] <= (long)devInfo->maxResource2DHeight) ) )
+	{
+		// if yes - no memory virtualization! (logical dimensions coincides with real ones)
+		nLogicDims = nDims;
+		logicSize = new long[nLogicDims];
+		for(i = 0; i < nLogicDims; i++)
+			logicSize[i] = size[i];				
+	}
+	else
+	{	
+		// Virtualization -> represent array as 2D object
+
+		nLogicDims = 2;
+
+		logicSize = new long[2];
+		logicSize[1] = devInfo->maxResource2DWidth;
+		
+		i = dataSize / GetElementSize(dFormat);
+		logicSize[0] = i / logicSize[1];
+		if(logicSize[0]*logicSize[1] < i)
+			logicSize[0]++;
+
+		physSize = new long[2];
+		physSize[0] = logicSize[0];
+		physSize[1] = PaddedToMultipleOf4(logicSize[1]);
+		
+		isVirtualized = TRUE;
+	}	
+	
+	// physical size -> account padding to multiple of 4
+	physSize = new long[nLogicDims];
+	physSize[0] = logicSize[0];
+	if(nLogicDims == 1)
+		physSize[0] = PaddedToMultipleOf4(physSize[0]);
+	else if(nLogicDims == 2)
+		physSize[1] = PaddedToMultipleOf4(logicSize[1]);
+
+	// logic and physical data size in bytes
+	logicDataSize = GetElementSize(dFormat);
+	physDataSize = logicDataSize;
+	for(i = 0; i < nLogicDims; i++)
+	{
+		logicDataSize *= logicSize[i];
+		physDataSize *= physSize[i];
+	}
+	
 	cpuData = data;
 	remoteRes = 0;
 	localRes = 0;
 
-	isInUse = FALSE;
+	useCounter = 0;
+	isReservedForGet = FALSE;
+	isModified = FALSE;
 }
 
 Argument::~Argument(void)
 {
-	if(size != NULL) 
+	if(size) 
 		delete size;
+
+	if(logicSize)
+		delete logicSize;
+
+	if(physSize)
+		delete physSize;
 
 	FreeLocal();
 	FreeRemote();	
@@ -194,47 +240,37 @@ Argument::~Argument(void)
 
 CALresult Argument::AllocateLocal(CALuint flags)
 {
-	CALresult err;	
+	CALresult err = CAL_RESULT_NOT_SUPPORTED;
 
 	FreeLocal();
 	
-	if(nDims == 2)
-	{						
-		err = calResAllocLocal2D(&localRes,hDev,size[1],size[0],dFormat,flags);
-	}
-	else // unsupported dimensionality
-	{
-		err = CAL_RESULT_NOT_SUPPORTED;
-	}
+	if(nLogicDims == 2)
+		err = calResAllocLocal2D(&localRes,hDev,physSize[1],physSize[0],dFormat,flags);
+	else if(nLogicDims == 1)
+		err = calResAllocLocal1D(&localRes,hDev,physSize[0],dFormat,flags);
+
+	if(err != CAL_RESULT_OK) localRes = 0;
 	
 	return err;
 }
 
 CALresult Argument::AllocateRemote(CALuint flags)
 {
-	CALresult err;
-
-	err = CAL_RESULT_OK;
+	CALresult err = CAL_RESULT_NOT_SUPPORTED;	
 
 	FreeRemote();
 	
-	if(nDims == 2)
-	{
-		err = calResAllocRemote2D(&remoteRes,&hDev,1,size[1],size[0],dFormat,flags);
-		if(err != CAL_RESULT_OK) remoteRes = 0;
-	}
-	else
-	{
-		err = CAL_RESULT_NOT_SUPPORTED;
-	}
+	if(nLogicDims == 2)
+		err = calResAllocRemote2D(&remoteRes,&hDev,1,physSize[1],physSize[0],dFormat,flags);
+	else if(nLogicDims == 1)
+		err = calResAllocRemote1D(&remoteRes,&hDev,1,physSize[0],dFormat,flags);
+
+	if(err != CAL_RESULT_OK) remoteRes = 0;
 
 	return err;
 }
 
-/*
-	assumes that remoteRes is not allocated!
-*/
-void Argument::FreeLocal()
+void Argument::FreeLocal(void)
 {
 	if(localRes)
 	{
@@ -258,25 +294,18 @@ CALresult Argument::FreeLocalKeepInRemote(CALcontext ctx)
 
 	err = CAL_RESULT_OK;
 	
-	// try to copy content from local to remote resource
-	if(nDims == 2)
-	{
-		if(remoteRes == 0) 
-			err = AllocateRemote(0);
+	// try to copy content from local to remote resource	
+	if(remoteRes == 0) 
+		err = AllocateRemote(0);
 
-		if(err == CAL_RESULT_OK) 
-		{
-			err = CopyLocalToRemote(ctx);
-			if(err != CAL_RESULT_OK) 
-				FreeRemote();
-			else
-				FreeLocal();
-		}
-	}
-	else
+	if(err == CAL_RESULT_OK) 
 	{
-		err = CAL_RESULT_NOT_SUPPORTED;
-	}			
+		err = CopyLocalToRemote(ctx);
+		if(err != CAL_RESULT_OK) 
+			FreeRemote();
+		else
+			FreeLocal();
+	}				
 
 	return err;
 }
@@ -294,20 +323,14 @@ CALresult Argument::SetDataToLocal(CALcontext ctx)
 
 	if(remoteRes == 0) 
 		err = AllocateRemote(0);
-	if(err != CAL_RESULT_OK)
-	{
-		err = CopyCPUToLocal(ctx);
-		return err;
-	}
+	if(err != CAL_RESULT_OK)			
+		return err;	
 
 	err = SetDataToRemote(ctx);
 	if(err == CAL_RESULT_OK) 
 		err = CopyRemoteToLocal(ctx);
 
-	FreeRemote();
-
-	if(err != CAL_RESULT_OK) 
-		err = CopyCPUToLocal(ctx);
+	FreeRemote();	
 
 	return err;	
 }
@@ -316,7 +339,7 @@ CALresult Argument::SetDataToRemote(CALcontext ctx)
 {
 	CALresult err;
 	CALuint pitch;
-	long i, n;
+	long i, elemSize, lSize, pSize;
 	char* gpuPtr;
 	char* cpuPtr;
 
@@ -330,35 +353,43 @@ CALresult Argument::SetDataToRemote(CALcontext ctx)
 	
 	cpuPtr = (char*)cpuData;
 
-	if(nDims == 2)
-	{
-		err = calResMap((void**)&gpuPtr,&pitch,remoteRes,0);
-		if(err != CAL_RESULT_OK) 
-			return err;
+	err = calResMap((void**)&gpuPtr,&pitch,remoteRes,0);
+	if(err != CAL_RESULT_OK) 
+		return err;
 
-		n = GetElementSize(dFormat);
-		pitch *= n; // pitch in number of bytes
+	elemSize = GetElementSize(dFormat);
+	pitch *= elemSize; // pitch in number of bytes
 
-		n = n*size[1];	// matrix width in bytes
+	if(nLogicDims == 2)
+	{		
+		lSize = logicSize[1]*elemSize;	// number of bytes in logical row
+		pSize = physSize[1]*elemSize;	// number of bytes in physical row
 
-		if(n == pitch) 
-			CopyMemory(gpuPtr,cpuPtr,dSize);
+		if( (lSize == pitch) && (dataSize == physDataSize) )	
+			CopyMemory(gpuPtr,cpuPtr,dataSize);	
 		else
 		{
-			for(i = 0; i < size[0]; i++)
+			for(i = 0; i < logicSize[0]-1; i++)
 			{
-				CopyMemory(gpuPtr,cpuPtr,n);
+				CopyMemory(gpuPtr,cpuPtr,lSize);				
+				ZeroMemory(gpuPtr+lSize,pSize-lSize);	// account padding
 				gpuPtr += pitch;
-				cpuPtr += n;
+				cpuPtr += lSize;
 			}
+			i = dataSize-(logicSize[0]-1)*lSize;
+			CopyMemory(gpuPtr,cpuPtr,i);
+			ZeroMemory(gpuPtr+i,physDataSize-dataSize);	// account padding
 		}
-
-		err = calResUnmap(remoteRes);		
+	}
+	else if(nLogicDims == 1)
+	{
+		CopyMemory(gpuPtr,cpuPtr,dataSize);
+		ZeroMemory(gpuPtr+dataSize,physDataSize-dataSize);	// account padding
 	}
 	else
-	{
 		err = CAL_RESULT_NOT_SUPPORTED;
-	}
+
+	err = calResUnmap(remoteRes);
 
 	return err;
 }
@@ -373,12 +404,8 @@ CALresult Argument::GetDataFromLocal(CALcontext ctx)
 
 	if(remoteRes == 0) 
 		err = AllocateRemote(0);
-
-	if(err != CAL_RESULT_OK) 
-	{
-		err = CopyLocalToCPU(ctx);
+	if(err != CAL_RESULT_OK) 	
 		return err;
-	}
 	
 	err = CopyLocalToRemote(ctx);
 	if(err == CAL_RESULT_OK) 
@@ -393,45 +420,52 @@ CALresult Argument::GetDataFromRemote(CALcontext ctx)
 {	
 	CALresult err;
 	CALuint pitch;
-	long i, n;
+	long i, elemSize, lSize, pSize;
 	char* gpuPtr;
 	char* cpuPtr;
-	
-	_ASSERT(remoteRes != 0);
 
 	err = CAL_RESULT_OK;
 	
+	if(remoteRes == 0) 
+		err = AllocateRemote(0);
+
+	if(err != CAL_RESULT_OK) 
+		return err;
+	
 	cpuPtr = (char*)cpuData;
 
-	if(nDims == 2)
+	err = calResMap((void**)&gpuPtr,&pitch,remoteRes,0);
+	if(err != CAL_RESULT_OK) 
+		return err;
+
+	elemSize = GetElementSize(dFormat);
+	pitch *= elemSize; // pitch in number of bytes
+
+	if(nLogicDims == 2)
 	{
-		err = calResMap((void**)&gpuPtr,&pitch,remoteRes,0);
-		if(err != CAL_RESULT_OK) 
-			return err;
+		lSize = logicSize[1]*elemSize;	// number of bytes in logical row
+		pSize = physSize[1]*elemSize;	// number of bytes in physical row
 
-		n = GetElementSize(dFormat);
-		pitch *= n; // pitch in number of bytes
-
-		n = n*size[1];	// matrix width in bytes		
-
-		if(n == pitch) 
-			CopyMemory(cpuPtr,gpuPtr,dSize);
+		if( (lSize == pitch) && (dataSize == physDataSize) )	
+			CopyMemory(cpuPtr,gpuPtr,dataSize);	
 		else
 		{
-			for(i = 0; i < size[0]; i++)
+			for(i = 0; i < logicSize[0]-1; i++)
 			{
-				CopyMemory(cpuPtr,gpuPtr,n);
+				CopyMemory(cpuPtr,gpuPtr,lSize);				
 				gpuPtr += pitch;
-				cpuPtr += n;
+				cpuPtr += lSize;
 			}
+			i = dataSize-(logicSize[0]-1)*lSize;
+			CopyMemory(cpuPtr,gpuPtr,i);			
 		}
-
-		err = calResUnmap(remoteRes);		
 	}
+	else if(nLogicDims == 1)	
+		CopyMemory(cpuPtr,gpuPtr,dataSize);	
 	else
-	{
 		err = CAL_RESULT_NOT_SUPPORTED;
-	}
+
+	err = calResUnmap(remoteRes);
 
 	return err;
 }
@@ -468,108 +502,6 @@ CALresult Argument::CopyRemoteToLocal(CALcontext ctx)
 
 	calCtxReleaseMem(ctx,localMem);
 	calCtxReleaseMem(ctx,remoteMem);
-
-	return err;
-}
-
-CALresult Argument::CopyCPUToLocal(CALcontext ctx)
-{
-	CALresult err;
-	CALuint pitch;
-	long i, n;
-	char* gpuPtr;
-	char* cpuPtr;
-
-	err = CAL_RESULT_OK;
-	
-	if(localRes == 0)
-		err = AllocateLocal(0);
-
-	if(err != CAL_RESULT_OK) 
-		return err;
-	
-	cpuPtr = (char*)cpuData;
-
-	if(nDims == 2)
-	{
-		err = calResMap((void**)&gpuPtr,&pitch,localRes,0);
-		if(err != CAL_RESULT_OK) 
-			return err;
-
-		n = GetElementSize(dFormat);
-		pitch *= n; // pitch in number of bytes
-
-		n = n*size[1];	// matrix width in bytes
-
-		if(n == pitch) 
-			CopyMemory(gpuPtr,cpuPtr,dSize);
-		else
-		{
-			for(i = 0; i < size[0]; i++)
-			{
-				CopyMemory(gpuPtr,cpuPtr,n);
-				gpuPtr += pitch;
-				cpuPtr += n;
-			}
-		}
-
-		err = calResUnmap(localRes);		
-	}
-	else
-	{
-		err = CAL_RESULT_NOT_SUPPORTED;
-	}
-
-	return err;
-}
-
-CALresult Argument::CopyLocalToCPU(CALcontext ctx)
-{
-	CALresult err;
-	CALuint pitch;
-	long i, n;
-	char* gpuPtr;
-	char* cpuPtr;
-
-	err = CAL_RESULT_OK;
-	
-	if(localRes == 0)
-		err = AllocateLocal(0);
-
-	if(err != CAL_RESULT_OK) 
-		return err;
-	
-	cpuPtr = (char*)cpuData;
-
-	if(nDims == 2)
-	{
-		err = calResMap((void**)&gpuPtr,&pitch,localRes,0);
-		if(err != CAL_RESULT_OK) 
-			return err;
-
-		n = GetElementSize(dFormat);
-		pitch *= n; // pitch in number of bytes
-
-		n = n*size[1];	// matrix width in bytes
-
-		if(n == pitch) 
-			CopyMemory(cpuPtr,gpuPtr,dSize);
-		else
-		{
-			for(i = 0; i < size[0]; i++)
-			{
-				CopyMemory(cpuPtr,gpuPtr,n);
-				gpuPtr += pitch;
-				cpuPtr += n;
-			}
-		}
-
-		err = calResUnmap(localRes);		
-	}
-	else
-	{
-		err = CAL_RESULT_NOT_SUPPORTED;
-	}
 
 	return err;
 }
@@ -615,28 +547,36 @@ CALresult Argument::CopyLocalToRemote(CALcontext ctx)
 	Kernel
 */
 
-Kernel::Kernel(long op, CALtarget target)
+Kernel::Kernel(long iKernel, CALtarget target)
 {	
 	obj = NULL;
 	img = NULL;	
 
 	CALresult err;		
 
-	switch(op)
+	const char* kernelStr = NULL;
+
+	switch(iKernel)
 	{
-		case OP_ADD:
-		{
-			funcName = "main";
-			arg1Name = "i0";
-			arg2Name = "i1";
-			retArgName = "o0";
+		case KernAdd1DR: kernelStr = kernelAdd1DR; break;
+		case KernAdd2DR: kernelStr = kernelAdd2DR; break;
+		case KernSub1DR: kernelStr = kernelSub1DR; break;
+		case KernSub2DR: kernelStr = kernelSub2DR; break;
+		case KernNaiveMatMulR: kernelStr = kernelNaiveMatMulR; break;
+		case KernEwMul1DR: kernelStr = kernelEwMul1DR; break;
+		case KernEwMul2DR: kernelStr = kernelEwMul2DR; break;
+		case KernEwDiv1DR: kernelStr = kernelEwDiv1DR; break;
+		case KernEwDiv2DR: kernelStr = kernelEwDiv2DR; break;
+		case KernDotProd1DR: kernelStr = kernelDotProd1DR; break;
+		case KernDotProd2DR: kernelStr = kernelDotProd2DR; break;
 
-			err = calclCompile(&obj,CAL_LANGUAGE_IL,kernelAdd,target);
-			if(err == CAL_RESULT_OK) 							
-				err = calclLink(&img,&obj,1);						
-
-		}break;
+		default:
+			return;
 	}
+
+	err = calclCompile(&obj,CAL_LANGUAGE_IL,kernelStr,target);
+	if(err == CAL_RESULT_OK) 							
+		err = calclLink(&img,&obj,1);
 	
 	if(err != CAL_RESULT_OK)
 	{
@@ -644,8 +584,10 @@ Kernel::Kernel(long op, CALtarget target)
 			calclFreeObject(obj);
 		obj = NULL;
 		img = NULL;
+		return;
 	}
 
+	this->iKernel = iKernel;
 }
 
 Kernel::~Kernel(void)
@@ -683,34 +625,110 @@ void KernelPool::Remove(long ind)
 	Module
 */
 
-#define ExitModuleInit calModuleUnload(ctx,module); module = 0; return;
+
+void GetNumInputsOutputs(long iKernel, long* nInputs, long* nOutputs, long* nConstants)
+{
+	switch(iKernel)
+	{
+		case KernAdd1DR: *nInputs = 2; *nOutputs = 1; *nConstants = 0; break;
+		case KernAdd2DR: *nInputs = 2; *nOutputs = 1; *nConstants = 0; break;
+		case KernSub1DR: *nInputs = 2; *nOutputs = 1; *nConstants = 0; break;
+		case KernSub2DR: *nInputs = 2; *nOutputs = 1; *nConstants = 0; break;
+		case KernNaiveMatMulR: *nInputs = 2; *nOutputs = 1; *nConstants = 0; break;
+		case KernEwMul1DR: *nInputs = 2; *nOutputs = 1; *nConstants = 0; break;
+		case KernEwMul2DR: *nInputs = 2; *nOutputs = 1; *nConstants = 0; break;
+		case KernEwDiv1DR: *nInputs = 2; *nOutputs = 1; *nConstants = 0; break;
+		case KernEwDiv2DR: *nInputs = 2; *nOutputs = 1; *nConstants = 0; break;
+		case KernDotProd1DR: *nInputs = 2; *nOutputs = 1; *nConstants = 0; break;
+		case KernDotProd2DR: *nInputs = 2; *nOutputs = 1; *nConstants = 0; break;
+		default: *nInputs = 0; *nOutputs = 0; *nConstants = 0; break;
+	}
+}
 
 Module::Module(CALcontext ctx, Kernel* kern)
 {
 	CALresult err;
+	long i;
 	module = 0;
+	char str[8];
 	
 	this->ctx = ctx;
-	this->kern = kern;
+	this->kern = kern;	
 
 	err = calModuleLoad(&module,ctx,kern->img);
-	if(err != CAL_RESULT_OK){ExitModuleInit;}	
+	if(err != CAL_RESULT_OK){module = 0; return;}	
 
-	err = calModuleGetEntry(&func,ctx,module,kern->funcName);
-	if(err != CAL_RESULT_OK){ExitModuleInit;}		
+	err = calModuleGetEntry(&func,ctx,module,"main");
+	if(err != CAL_RESULT_OK){calModuleUnload(ctx,module); module = 0; return;}		
 
-	err = calModuleGetName(&arg1Name,ctx,module,kern->arg1Name);
-	if(err != CAL_RESULT_OK){ExitModuleInit;}		
+	// get names for all kernel parameters
 
-	err = calModuleGetName(&arg2Name,ctx,module,kern->arg2Name);
-	if(err != CAL_RESULT_OK){ExitModuleInit;}		
+	GetNumInputsOutputs(kern->iKernel,&nInputs,&nOutputs,&nConstants);
+	
+	if(nInputs)
+		inputNames = new CALname[nInputs];
+	if(nOutputs)
+		outputNames = new CALname[nOutputs];
+	if(nConstants)
+		constNames = new CALname[nConstants];
 
-	err = calModuleGetName(&retArgName,ctx,module,kern->retArgName);
-	if(err != CAL_RESULT_OK){ExitModuleInit;}		
+	for(i = 0; (i < nInputs) && (err == CAL_RESULT_OK); i++)
+	{
+		sprintf_s(str,"i%d",i);
+		err = calModuleGetName(&inputNames[i],ctx,module,str);
+	}
+	if(err != CAL_RESULT_OK)
+	{
+		if(inputNames){delete inputNames; inputNames = NULL;}
+		if(outputNames){delete outputNames; outputNames = NULL;}
+		if(constNames){delete constNames; constNames = NULL;}
+		calModuleUnload(ctx,module); 
+		module = 0; 
+		return;
+	}
+	
+	for(i = 0; (i < nOutputs) && (err == CAL_RESULT_OK); i++)
+	{
+		sprintf_s(str,"o%d",i);
+		err = calModuleGetName(&outputNames[i],ctx,module,str);
+	}
+	if(err != CAL_RESULT_OK)
+	{
+		if(inputNames){delete inputNames; inputNames = NULL;}
+		if(outputNames){delete outputNames; outputNames = NULL;}
+		if(constNames){delete constNames; constNames = NULL;}
+		calModuleUnload(ctx,module); 
+		module = 0; 
+		return;
+	}	
+
+	for(i = 0; (i < nConstants) && (err == CAL_RESULT_OK); i++)
+	{
+		sprintf_s(str,"cb%d",i);
+		err = calModuleGetName(&constNames[i],ctx,module,str);
+	}
+	if(err != CAL_RESULT_OK)
+	{
+		if(inputNames){delete inputNames; inputNames = NULL;}
+		if(outputNames){delete outputNames; outputNames = NULL;}
+		if(constNames){delete constNames; constNames = NULL;}
+		calModuleUnload(ctx,module); 
+		module = 0; 
+		return;
+	}	
 }
 
 Module::~Module(void)
 {
+	if(nInputs)
+		delete inputNames;
+
+	if(nOutputs)
+		delete outputNames;
+
+	if(nConstants)
+		delete constNames;
+
 	if(module)
 		calModuleUnload(ctx,module);	
 }
@@ -790,62 +808,196 @@ Context::~Context(void)
 	calCtxDestroy(ctx);
 }
 
-#define ExitDo if(arg1Mem)calCtxReleaseMem(ctx,arg1Mem); \
-if(arg2Mem)calCtxReleaseMem(ctx,arg2Mem); \
-if(retArgMem)calCtxReleaseMem(ctx,retArgMem); \
-return err;\
-
-CALresult Context::Do(long op)
+Module* Context::GetSuitedModule(long op, CALdomain* domain)
 {
+	Module* module = NULL;
+
+	if( (op == OpAdd) || (op == OpSub) || (op == OpEwMul) || (op == OpEwDiv) )
+	{
+		if(retArg->nLogicDims == 1)
+		{			
+			(*domain).x = 0;
+			(*domain).y = 0;
+			(*domain).width = retArg->physSize[0];
+			(*domain).height = 1;
+		}
+		else if(retArg->nDims == 2)
+		{				
+			(*domain).x = 0;
+			(*domain).y = 0;
+			(*domain).width = retArg->physSize[1];
+			(*domain).height = retArg->physSize[0];
+		}
+		
+		if(retArg->nLogicDims == 1)
+		{
+			switch(op)
+			{
+				case OpAdd:
+					switch(retArg->dFormat)
+					{
+						case CAL_FORMAT_FLOAT_1:
+							return modules->Get(KernAdd1DR);
+					}break;
+
+				case OpSub: 
+					switch(retArg->dFormat)
+					{
+						case CAL_FORMAT_FLOAT_1:
+							return modules->Get(KernSub1DR);
+					}break;
+
+				case OpEwMul:
+					switch(retArg->dFormat)
+					{
+						case CAL_FORMAT_FLOAT_1:
+							return modules->Get(KernEwMul1DR);
+					}break;
+
+				case OpEwDiv: 
+					switch(retArg->dFormat)
+					{
+						case CAL_FORMAT_FLOAT_1:
+							return modules->Get(KernEwDiv1DR);
+					}break;
+			}
+		}
+		else if(retArg->nLogicDims == 2)
+		{
+			switch(op)
+			{
+				case OpAdd:
+					switch(retArg->dFormat)
+					{
+						case CAL_FORMAT_FLOAT_1:
+							return modules->Get(KernAdd2DR);
+					}break;
+
+				case OpSub: 
+					switch(retArg->dFormat)
+					{
+						case CAL_FORMAT_FLOAT_1:
+							return modules->Get(KernSub2DR);
+					}break;
+
+				case OpEwMul:
+					switch(retArg->dFormat)
+					{
+						case CAL_FORMAT_FLOAT_1:
+							return modules->Get(KernEwMul2DR);
+					}break;
+
+				case OpEwDiv: 
+					switch(retArg->dFormat)
+					{
+						case CAL_FORMAT_FLOAT_1:
+							return modules->Get(KernEwDiv2DR);
+					}break;
+			}
+		}
+	}
+
+	return module;
+}
+
+// macroses used in Do functions
+#define ReleaseArg1Mem \
+if(arg1Mem)calCtxReleaseMem(ctx,arg1Mem); \
+
+#define ReleaseArg2Mem \
+if(arg2Mem)calCtxReleaseMem(ctx,arg2Mem); \
+
+#define ReleaseRetArgMem \
+if(retArgMem)calCtxReleaseMem(ctx,retArgMem); \
+
+#define SetupArg1Mem \
+err = calCtxGetMem(&arg1Mem,ctx,arg1->localRes); \
+if(err != CAL_RESULT_OK){return err;} \
+err = calCtxSetMem(ctx,module->inputNames[0],arg1Mem); \
+if(err != CAL_RESULT_OK){ReleaseArg1Mem; return err;} \
+
+#define SetupArg2Mem \
+err = calCtxGetMem(&arg2Mem,ctx,arg2->localRes); \
+if(err != CAL_RESULT_OK){ReleaseArg1Mem; return err;} \
+err = calCtxSetMem(ctx,module->inputNames[1],arg2Mem); \
+if(err != CAL_RESULT_OK){ReleaseArg1Mem; ReleaseArg2Mem; return err;} \
+
+#define SetupRetArgMem \
+err = calCtxGetMem(&retArgMem,ctx,retArg->localRes); \
+if(err != CAL_RESULT_OK){ReleaseArg1Mem; ReleaseArg2Mem; return err;} \
+err = calCtxSetMem(ctx,module->outputNames[0],retArgMem); \
+if(err != CAL_RESULT_OK){ReleaseArg1Mem; ReleaseArg2Mem; ReleaseRetArgMem; return err;} \
+
+// perform an elementwise operation
+CALresult Context::DoElementwise(long op)
+{
+	CALresult err;
 	CALmem arg1Mem = 0;
 	CALmem arg2Mem = 0;
 	CALmem retArgMem = 0;
 	CALdomain domain;
 	CALevent ev;
+	Module* module = NULL;
 
-	CALresult err;
+	SetupArg1Mem;
+	SetupArg2Mem;
+	SetupRetArgMem;
 
-	if( (op < OP_ADD) || (op >= NOPS) ) return CAL_RESULT_INVALID_PARAMETER;
+	// get the most suited module for given operation and array arguments
+	module = GetSuitedModule(op,&domain);
 
-	if( !arg1 || !arg2 || !retArg )  return CAL_RESULT_INVALID_PARAMETER;
-	
-	// get memory handles
-	err = calCtxGetMem(&arg1Mem,ctx,arg1->localRes);
-	if(err != CAL_RESULT_OK)	
-		return err;
-	
-	err = calCtxGetMem(&arg2Mem,ctx,arg2->localRes);
-	if(err != CAL_RESULT_OK){ExitDo;}
+	if(module == NULL){ReleaseArg1Mem; ReleaseArg2Mem; ReleaseRetArgMem; return CAL_RESULT_ERROR;}
 
-	err = calCtxGetMem(&retArgMem,ctx,retArg->localRes);
-	if(err != CAL_RESULT_OK){ExitDo;}	
-
-	// setting input and output buffers
-	err = calCtxSetMem(ctx,modules->Get(op)->arg1Name,arg1Mem);
-	if(err != CAL_RESULT_OK){ExitDo}	
-
-	err = calCtxSetMem(ctx,modules->Get(op)->arg2Name,arg2Mem);
-	if(err != CAL_RESULT_OK){ExitDo;}	
-
-	err = calCtxSetMem(ctx,modules->Get(op)->retArgName,retArgMem);
-	if(err != CAL_RESULT_OK){ExitDo;}	
-
-	// Setting domain
-	domain.x = 0;
-	domain.y = 0;
-	domain.width = arg1->size[1];
-	domain.height = arg1->size[0];
-
-	err = calCtxRunProgram(&ev,ctx,modules->Get(op)->func,&domain);
-	if(err != CAL_RESULT_OK){ExitDo;};
+	// run the kernel
+	err = calCtxRunProgram(&ev,ctx,module->func,&domain);
+	if(err != CAL_RESULT_OK){ReleaseArg1Mem; ReleaseArg2Mem; ReleaseRetArgMem; return err;};
 
 	while((err = calCtxIsEventDone(ctx,ev)) == CAL_RESULT_PENDING);
-	
-	arg1->isInUse = FALSE;
-	arg2->isInUse = FALSE;
-	retArg->isInUse = FALSE;
+		
+	// set flag that arguments are not currently in use
+	arg1->useCounter--;
+	arg2->useCounter--;
+	retArg->useCounter--;		
 
-	ExitDo;	
+	ReleaseArg1Mem;
+	ReleaseArg2Mem;
+	ReleaseRetArgMem;
+
+	return err;	
+}
+
+CALresult Context::DoMul(void)
+{
+	return CAL_RESULT_NOT_SUPPORTED;	
+}
+
+CALresult Context::DoDotProd(void)
+{
+	return CAL_RESULT_NOT_SUPPORTED;	
+}
+
+// do an operation
+CALresult Context::Do(long op)
+{
+	if( (op < OpAdd) || (op >= NOps) ) return CAL_RESULT_INVALID_PARAMETER;				
+	
+	switch(op)
+	{
+		case OpAdd:
+			return DoElementwise(op);
+		case OpSub:
+			return DoElementwise(op);
+		case OpMul:
+			return DoMul();
+		case OpEwMul:			
+			return DoElementwise(op);
+		case OpEwDiv:
+			return DoElementwise(op);
+		case OpDotProd:
+			return DoDotProd();
+		default:
+			return CAL_RESULT_NOT_SUPPORTED;
+	}
 }
 
 /*
@@ -927,6 +1079,33 @@ long ArgumentPool::Find(long argID)
 		return -1;
 }
 
+long ArgumentPool::FindModified(Exclude* excl)
+{
+	long i;
+	Argument* arg = NULL;
+
+	for(i = 0; i < Length(); i++)
+	{
+		arg = (Argument*)Get(i);
+		if( (arg->isModified) && ((!excl) || (!excl->In(arg))) ) break;
+	}
+
+	if(i < Length()) 
+		return i;
+	else
+		return -1;
+}
+
+void ArgumentPool::FreeAllModified(void)
+{	
+	long ind;
+
+	while( (ind = FindModified(NULL)) >= 0 )
+	{
+		Remove(ind);
+	}
+}
+
 Argument* ArgumentPool::FindMaxLocalNotInUse(Exclude* excl)
 {
 	long i;
@@ -937,9 +1116,9 @@ Argument* ArgumentPool::FindMaxLocalNotInUse(Exclude* excl)
 	{
 		arg1 = (Argument*)Get(i);
 
-		if( (!arg1->isInUse) && (arg1->localRes) && (!excl->In(arg1)) )
+		if( (!arg1->useCounter) && (arg1->localRes) && ((!excl) || (!excl->In(arg1))) )
 		{
-			if(arg && (arg->dSize < arg1->dSize) ) arg = arg1; 
+			if(arg && (arg->dataSize < arg1->dataSize) ) arg = arg1; 
 			else arg = arg1;
 		}
 	}
@@ -957,9 +1136,9 @@ Argument* ArgumentPool::FindMinLocalNotInUse(Exclude* excl)
 	{
 		arg1 = (Argument*)Get(i);
 
-		if( (!arg1->isInUse) && (arg1->localRes) && (!excl->In(arg1)) )
+		if( (!arg1->useCounter) && (arg1->localRes) && ((!excl) || (!excl->In(arg1))) )
 		{
-			if(arg && (arg->dSize > arg1->dSize) ) 
+			if(arg && (arg->dataSize > arg1->dataSize) ) 
 				arg = arg1; 
 			else 
 				arg = arg1;
@@ -969,7 +1148,7 @@ Argument* ArgumentPool::FindMinLocalNotInUse(Exclude* excl)
 	return arg;
 }
 
-CALresult ArgumentPool::NewArgument(CALdevice hDev, CALcontext ctx, long argID, long dType, long nDims, long* size, void* data)
+CALresult ArgumentPool::NewArgument(CALdevice hDev, CALdeviceinfo* devInfo, CALcontext ctx, long argID, long dType, long nDims, long* size, void* data)
 {
 	CALresult err;
 	Argument* arg;
@@ -981,21 +1160,27 @@ CALresult ArgumentPool::NewArgument(CALdevice hDev, CALcontext ctx, long argID, 
 	if(format == -1) 
 		return CAL_RESULT_INVALID_PARAMETER;
 					
-	arg = new Argument(hDev,argID,(CALformat)format,nDims,size,data);	
+	arg = new Argument(hDev,devInfo,argID,(CALformat)format,nDims,size,data);	
 
 	// allocate local GPU memory
 	err = arg->AllocateLocal(0);
 	if(err == CAL_RESULT_ERROR) // could not allocate
 	{
 		// try to free space in the local memory
-		while( (arg1 = FindMinLocalNotInUse(&excl)) != NULL )
+		FreeAllModified();
+		err = arg->AllocateLocal(0);
+		if(err == CAL_RESULT_ERROR) // could not allocate again
 		{
-			err = arg1->FreeLocalKeepInRemote(ctx);			
-			if(err != CAL_RESULT_OK) // exclude argument from the search									
-				excl.Add(arg1);			
-			else if( (err = arg->AllocateLocal(0)) == CAL_RESULT_OK) 			
-				break;		
-		}		
+			// try to move local to remote if possible
+			while( (arg1 = FindMinLocalNotInUse(&excl)) != NULL )
+			{
+				err = arg1->FreeLocalKeepInRemote(ctx);			
+				if(err != CAL_RESULT_OK) // exclude argument from the search									
+					excl.Add(arg1);			
+				else if( (err = arg->AllocateLocal(0)) == CAL_RESULT_OK) 			
+					break;		
+			}		
+		}
 	}
 
 	if(err == CAL_RESULT_OK) 
@@ -1080,10 +1265,18 @@ Device::Device(long devNum)
 		hDev = 0; 
 		return;
 	}
+		
+	err = calDeviceGetInfo(&info,devNum);
+	if(err != CAL_RESULT_OK)
+	{
+		calDeviceClose(hDev); 
+		hDev = 0; 
+		return;
+	}
 
 	kernels = new KernelPool();
 
-	for(i = 0; i < NOPS; i++)
+	for(i = 0; i < NKernels; i++)
 	{
 		kern = new Kernel(i,attribs.target);
 		if(kern->obj)		
@@ -1101,6 +1294,8 @@ Device::Device(long devNum)
 
 	ctxs = new ContextPool(hDev);	
 	args = new ArgumentPool;
+
+	this->devNum = devNum;
 }
 
 Device::~Device(void)

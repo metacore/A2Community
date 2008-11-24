@@ -7,9 +7,30 @@
 #define TREAL		5
 #define TLONGREAL	6
 
-#define OP_ADD	0
-#define NOPS	1	// number of operations/kernels
+// operation codes
+#define OpAdd		0	
+#define OpSub		1
+#define OpMul		2
+#define OpEwMul		3
+#define OpEwDiv		4
+#define OpDotProd	5
 
+#define NOps	6	// total number of operations/kernels
+
+/*
+	Object with GPU kernel description
+*/
+class Kernel
+{
+public:
+	Kernel(long op, CALtarget target);
+	~Kernel(void);	
+	
+	long iKernel;	// kernel code
+
+	CALobject obj;
+	CALimage img;
+};
 
 /*
 	Object pool
@@ -34,61 +55,6 @@ public:
 	virtual void Remove(long ind);	// remove an entry given its position
 	void RemoveAll();	// remove all entries
 	long Find(void* obj);	// find an entry by its pointer, returns index of found entry or -1 if not found	
-};
-
-/*
-	An array argument 
-*/
-class Argument
-{	
-public:
-	Argument(CALdevice hDev, long argID, CALformat dFormat, long nDims, long* size, void* data);
-	~Argument(void);
-	CALresult AllocateLocal(CALuint flags);	// allocate local memory
-	CALresult AllocateRemote(CALuint flags);	// allocate remote memory
-	void FreeLocal(void);	// free local memory
-	void FreeRemote(void);	// free remote memory
-	CALresult FreeLocalKeepInRemote(CALcontext ctx);	// if possible store data in remote memory and free local memory
-	CALresult SetDataToLocal(CALcontext ctx);	// sets data to local GPU memory
-	CALresult SetDataToRemote(CALcontext ctx);	// sets data to remote GPU memory
-	CALresult GetDataFromLocal(CALcontext ctx);	// get data from local GPU memory to the CPU memory
-	CALresult GetDataFromRemote(CALcontext ctx);	// get data from remote GPU memory to the CPU memory
-	CALresult CopyRemoteToLocal(CALcontext ctx);	// copy from remote memory to local
-	CALresult CopyLocalToRemote(CALcontext ctx);	// copy from local memory to remote	
-	CALresult CopyCPUToLocal(CALcontext ctx);		// copy from CPU memory to local
-	CALresult CopyLocalToCPU(CALcontext ctx);		// copy from local memory to CPU 
-
-
-	long argID;	// argument ID
-	CALdevice hDev;	// device on which the argument exists
-	long nDevs;	// number of devices
-	void* cpuData;	// CPU data pointer
-	CALformat dFormat;	// data format
-	long nDims;	// number of dimensions
-	long* size;	// argument size
-	long dSize;	// data size in bytes
-	CALresource remoteRes;	// remote GPU resource
-	CALresource localRes;	// local GPU resource
-
-	BOOL isInUse;	// flag indicating that argument is currently in use	
-};
-
-
-/*
-	Object with GPU kernel description
-*/
-class Kernel
-{
-public:
-	Kernel(long op, CALtarget target);
-	~Kernel(void);	
-	
-	const char* funcName;	// function name
-	const char* arg1Name;	// Arg1 name
-	const char* arg2Name;	// Arg2 name
-	const char* retArgName;	// RetArg name
-	CALobject obj;
-	CALimage img;
 };
 
 
@@ -117,11 +83,18 @@ public:
 	Kernel* kern;
 
 	CALfunc func;
-	CALname arg1Name;
-	CALname arg2Name;
-	CALname retArgName;
+
+	CALname* inputNames;	// names of input parameters
+	long nInputs;			// number of inputs
+	CALname* outputNames;	// names of output parameters
+	long nOutputs;			// number of outputs
+	CALname* constNames;	// names of constant parameters
+	long nConstants;		// number of constants
 };
 
+/*
+	Pool with compute modules
+*/
 class ModulePool : public ObjectPool
 {
 public:
@@ -131,6 +104,51 @@ public:
 	void Remove(long ind);
 };
 
+
+/*
+	An array argument 
+*/
+class Argument
+{	
+public:
+	Argument(CALdevice hDev, CALdeviceinfo* devInfo, CALlong argID, CALformat dFormat, long nDims, long* size, void* data);
+	~Argument(void);
+	CALresult AllocateLocal(CALuint flags);	// allocate local memory
+	CALresult AllocateRemote(CALuint flags);	// allocate remote memory
+	void FreeLocal(void);	// free local memory
+	void FreeRemote(void);	// free remote memory
+	CALresult FreeLocalKeepInRemote(CALcontext ctx);	// if possible store data in remote memory and free local memory
+	CALresult SetDataToLocal(CALcontext ctx);	// sets data to local GPU memory
+	CALresult SetDataToRemote(CALcontext ctx);	// sets data to remote GPU memory
+	CALresult GetDataFromLocal(CALcontext ctx);	// get data from local GPU memory to the CPU memory
+	CALresult GetDataFromRemote(CALcontext ctx);	// get data from remote GPU memory to the CPU memory
+	CALresult CopyRemoteToLocal(CALcontext ctx);	// copy from remote memory to local
+	CALresult CopyLocalToRemote(CALcontext ctx);	// copy from local memory to remote	 
+
+
+	long argID;	// argument ID
+	CALdevice hDev;	// device on which the argument exists
+	long nDevs;	// number of devices
+	void* cpuData;	// CPU data pointer	
+	CALformat dFormat;	// data format
+	long nDims;	// number of dimensions (logical)
+	long* size;	// argument size
+	long dataSize;		// data size in bytes
+	long logicDataSize;	// logical data size in bytes
+	long physDataSize;	// physical data size in bytes
+	CALresource remoteRes;	// remote GPU resource
+	CALresource localRes;	// local GPU resource
+	
+	long nLogicDims;	// number of logical dimensions on the GPU (1D or 2D)
+	long* logicSize;	// logical size on the GPU	
+	long* physSize;		// physical size on the GPU with account of padding to 16 bytes
+
+	BOOL isVirtualized;	// memory virtualization is used to fit to the hardware requirements
+	long useCounter;	// counter for storing number of contextes which use the argument
+	BOOL isReservedForGet;	// the object is reserved for furter getting (for example a return argument)
+	BOOL isModified;	// TRUE when object is modified outside the library
+};
+
 /*
 	A computation context
 */
@@ -138,7 +156,11 @@ class Context
 {
 public:
 	Context(CALdevice hDev, KernelPool* kernels);
-	~Context(void);
+	~Context(void);	
+	Module* GetSuitedModule(long op, CALdomain* domain);	// get module suited for given operation and arguments	
+	CALresult DoElementwise(long op);	
+	CALresult DoMul(void);
+	CALresult DoDotProd(void);
 	CALresult Do(long op);	// perform an operation
 	CALcontext ctx;	// GPU context
 	CALdevice hDev;
@@ -149,6 +171,21 @@ public:
 	Argument* retArg;
 
 	ModulePool* modules;
+};
+
+/*
+	Context pool
+*/
+class ContextPool : public ObjectPool
+{	
+public:	
+	ContextPool(CALdevice hDev);	
+	~ContextPool(void);	
+	CALdevice hDev;
+
+	Context* Get(long ind);	
+	void Remove(long ind);
+	long Find(long ctx);
 };
 
 /*
@@ -166,7 +203,6 @@ public:
 	Exclude* next;
 };
 
-
 /*
 	Argument pool
 */
@@ -178,28 +214,14 @@ public:
 	Argument* Get(long ind);
 	long Find(long argID); // find an argument by given ID
 	void Remove(long ind);	// remove an entry
+	long FindModified(Exclude* excl);	// find a modified argument
+	void FreeAllModified(void);	// free all modified arguments
 	// find currently unused argument with maximum (from all arguments) allocated local memory
 	Argument* FindMaxLocalNotInUse(Exclude* excl);
 	// find currently unused argument with minimum (from all arguments) allocated local memory
 	Argument* FindMinLocalNotInUse(Exclude* excl);
 	// create a new argument and put it to the pool
-	CALresult NewArgument(CALdevice hDev, CALcontext ctx, long argID, long dType, long nDims, long* size, void* data);
-};
-
-
-/*
-	Context pool
-*/
-class ContextPool : public ObjectPool
-{	
-public:	
-	ContextPool(CALdevice hDev);	
-	~ContextPool(void);	
-	CALdevice hDev;
-
-	Context* Get(long ind);	
-	void Remove(long ind);
-	long Find(long ctx);
+	CALresult NewArgument(CALdevice hDev, CALdeviceinfo* devInfo, CALcontext ctx, long argID, long dType, long nDims, long* size, void* data);
 };
 
 
@@ -212,7 +234,9 @@ public:
 	CALdevice hDev;
 	ContextPool* ctxs;
 	CALdeviceattribs attribs;
+	CALdeviceinfo info;
 	
+	CALuint devNum;	// device index
 	KernelPool* kernels;	// device kernels
 	ArgumentPool* args;		// arguments created on the device
 
