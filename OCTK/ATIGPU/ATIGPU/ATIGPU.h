@@ -100,6 +100,17 @@ ATIGPU_API long SetReturnArg(long devNum, long ctx, long argID, long dType, long
 */
 ATIGPU_API long GetReturnArg(long devNum, long ctx);
 
+/*
+	Get an argument from GPU local/remote memory
+	
+	argID - ID of the argument to get
+
+	returns error code
+
+	Copies argument data from local/remote GPU memory to CPU memory
+*/
+ATIGPU_API long GetArg(long argID);
+
 
 /*
 	Compute an op operation using already set Arg1, Arg2, RetArg
@@ -111,4 +122,9 @@ ATIGPU_API long GetReturnArg(long devNum, long ctx);
 	returns error code
 */
 ATIGPU_API long Do(long devNum, long ctx, long op);
+
+/*
+	Free an argument with given ID
+*/
+ATIGPU_API long FreeArg(long argID);
 

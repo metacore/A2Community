@@ -89,16 +89,12 @@ long GetElementSize(long dType)
 ObjectPool::ObjectPool(void)
 {	
 	objs = NULL;
-	nObjs = 0;	
-
-	InitializeCriticalSection(&cs);
+	nObjs = 0;		
 }
 
 ObjectPool::~ObjectPool(void)
 {		
 	RemoveAll();	
-
-	DeleteCriticalSection(&cs);
 }
 
 long ObjectPool::Length()
@@ -261,8 +257,7 @@ Argument::Argument(CALdevice hDev, CALdeviceinfo* devInfo, long argID, long dTyp
 	localRes = 0;
 
 	useCounter = 0;
-	isReservedForGet = FALSE;
-	isModified = FALSE;
+	isReservedForGet = FALSE;	
 }
 
 Argument::~Argument(void)
@@ -1076,51 +1071,58 @@ long ArgumentPool::Find(long argID)
 		return -1;
 }
 
-long ArgumentPool::FindModified(Exclude* excl)
-{
-	long i;
-	Argument* arg = NULL;
-
-	for(i = 0; i < Length(); i++)
-	{
-		arg = (Argument*)Get(i);
-		if( (arg->isModified) && ((!excl) || (!excl->In(arg))) ) break;
-	}
-
-	if(i < Length()) 
-		return i;
-	else
-		return -1;
-}
-
-void ArgumentPool::FreeAllModified(void)
-{	
-	long ind;
-
-	while( (ind = FindModified(NULL)) >= 0 )
-	{
-		Remove(ind);
-	}
-}
-
 Argument* ArgumentPool::FindMaxLocalNotInUse(Exclude* excl)
 {
 	long i;
 	Argument* arg = NULL;
 	Argument* arg1 = NULL;
 
-	for(i = 0; i < Length(); i++)
+	if(Length())
+		arg = Get(0);
+
+	for(i = 1; i < Length(); i++)
 	{
-		arg1 = (Argument*)Get(i);
+		arg1 = Get(i);
 
 		if( (!arg1->useCounter) && (arg1->localRes) && ((!excl) || (!excl->In(arg1))) )
-		{
-			if(arg && (arg->dataSize < arg1->dataSize) ) arg = arg1; 
-			else arg = arg1;
+		{			
+			if(arg->dataSize < arg1->dataSize) 
+				arg = arg1;
 		}
 	}
 
 	return arg;
+}
+
+long ArgumentPool::FindMaxLocalNotInUse1(Exclude* excl)
+{
+	long i, ind;
+	Argument* arg = NULL;
+	Argument* arg1 = NULL;
+		
+	if(Length())
+	{
+		ind = 0;
+		arg = Get(0);
+	}
+	else
+		ind = -1;
+
+	for(i = 1; i < Length(); i++)
+	{
+		arg1 = Get(i);
+
+		if( (!arg1->useCounter) && (arg1->localRes) && ((!excl) || (!excl->In(arg1))) )
+		{			
+			if(arg->dataSize < arg1->dataSize)
+			{
+				ind = i;
+				arg = arg1;
+			}
+		}
+	}
+
+	return ind;
 }
 
 Argument* ArgumentPool::FindMinLocalNotInUse(Exclude* excl)
@@ -1129,20 +1131,52 @@ Argument* ArgumentPool::FindMinLocalNotInUse(Exclude* excl)
 	Argument* arg = NULL;
 	Argument* arg1 = NULL;
 
-	for(i = 0; i < Length(); i++)
+	if(Length())
+		arg = Get(0);
+
+	for(i = 1; i < Length(); i++)
 	{
-		arg1 = (Argument*)Get(i);
+		arg1 = Get(i);
 
 		if( (!arg1->useCounter) && (arg1->localRes) && ((!excl) || (!excl->In(arg1))) )
-		{
-			if(arg && (arg->dataSize > arg1->dataSize) ) 
-				arg = arg1; 
-			else 
+		{			
+			if(arg->dataSize > arg1->dataSize) 
 				arg = arg1;
 		}
 	}
 
 	return arg;
+}
+
+long ArgumentPool::FindMinLocalNotInUse1(Exclude* excl)
+{
+	long i, ind;
+	Argument* arg = NULL;
+	Argument* arg1 = NULL;
+		
+	if(Length())
+	{
+		ind = 0;
+		arg = Get(0);
+	}
+	else
+		ind = -1;
+
+	for(i = 1; i < Length(); i++)
+	{
+		arg1 = Get(i);
+
+		if( (!arg1->useCounter) && (arg1->localRes) && ((!excl) || (!excl->In(arg1))) )
+		{			
+			if(arg->dataSize > arg1->dataSize)
+			{
+				ind = i;
+				arg = arg1;
+			}
+		}
+	}
+
+	return ind;
 }
 
 CALresult ArgumentPool::NewArgument(CALdevice hDev, CALdeviceinfo* devInfo, CALcontext ctx, long argID, long dType, long nDims, long* size, void* data, CALuint flags)
@@ -1151,6 +1185,7 @@ CALresult ArgumentPool::NewArgument(CALdevice hDev, CALdeviceinfo* devInfo, CALc
 	Argument* arg;
 	Argument* arg1;
 	Exclude excl;	
+	long ind;
 						
 	arg = new Argument(hDev,devInfo,argID,dType,nDims,size,data);	
 
@@ -1158,20 +1193,25 @@ CALresult ArgumentPool::NewArgument(CALdevice hDev, CALdeviceinfo* devInfo, CALc
 	err = arg->AllocateLocal(flags);
 	if(err == CAL_RESULT_ERROR) // could not allocate
 	{
-		// try to free space in the local memory
-		FreeAllModified();
-		err = arg->AllocateLocal(flags);
-		if(err == CAL_RESULT_ERROR) // could not allocate again
+		// try to free space in the local memory by moving local to remote if possible		
+		while( (arg1 = FindMinLocalNotInUse(&excl)) != NULL )
 		{
-			// try to move local to remote if possible
-			while( (arg1 = FindMinLocalNotInUse(&excl)) != NULL )
+			err = arg1->FreeLocalKeepInRemote(ctx);			
+			if(err != CAL_RESULT_OK) // exclude argument from the search									
+				excl.Add(arg1);			
+			else if( (err = arg->AllocateLocal(flags)) == CAL_RESULT_OK) 			
+				break;		
+		}
+		
+		// if does not help - free currently unused arguments
+		if(err != CAL_RESULT_OK)
+		{			
+			while( (ind = FindMinLocalNotInUse1(NULL)) != -1 )
 			{
-				err = arg1->FreeLocalKeepInRemote(ctx);			
-				if(err != CAL_RESULT_OK) // exclude argument from the search									
-					excl.Add(arg1);			
-				else if( (err = arg->AllocateLocal(flags)) == CAL_RESULT_OK) 			
+				Remove(ind);			
+				if( (err = arg->AllocateLocal(flags)) == CAL_RESULT_OK) 			
 					break;		
-			}		
+			}
 		}
 	}
 

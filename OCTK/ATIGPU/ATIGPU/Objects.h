@@ -40,8 +40,7 @@ class ObjectPool
 {	
 protected:
 	void** objs;
-	long nObjs;
-	CRITICAL_SECTION cs;
+	long nObjs;	
 
 public:
 	ObjectPool(void);
@@ -49,9 +48,7 @@ public:
 	
 	long Length();	// returns length of the pool
 	void* Get(long ind);	// returns an entry at givne position
-	void* GetLast(void);	// get last object in the pool
-	void Lock(){ EnterCriticalSection(&cs); };	// locks object both for writing and reading
-	void Unlock(){ LeaveCriticalSection(&cs); };	// unlocks object
+	void* GetLast(void);	// get last object in the pool	
 	virtual void Add(void* obj);	// add a new entry
 	virtual void Remove(long ind);	// remove an entry given its position
 	void RemoveAll();	// remove all entries
@@ -150,8 +147,7 @@ public:
 
 	BOOL isVirtualized;	// memory virtualization is used to fit to the hardware requirements
 	long useCounter;	// counter for storing number of contextes which use the argument
-	BOOL isReservedForGet;	// the object is reserved for furter getting (for example a return argument)
-	BOOL isModified;	// TRUE when object is modified outside the library
+	BOOL isReservedForGet;	// the object is reserved for furter getting (for example a return argument)	
 };
 
 /*
@@ -218,13 +214,13 @@ public:
 	~ArgumentPool(void);
 	Argument* Get(long ind);
 	long Find(long argID); // find an argument by given ID
-	void Remove(long ind);	// remove an entry
-	long FindModified(Exclude* excl);	// find a modified argument
-	void FreeAllModified(void);	// free all modified arguments
+	void Remove(long ind);	// remove an entry	
 	// find currently unused argument with maximum (from all arguments) allocated local memory
 	Argument* FindMaxLocalNotInUse(Exclude* excl);
+	long FindMaxLocalNotInUse1(Exclude* excl);
 	// find currently unused argument with minimum (from all arguments) allocated local memory
 	Argument* FindMinLocalNotInUse(Exclude* excl);
+	long FindMinLocalNotInUse1(Exclude* excl);
 	// create a new argument and put it to the pool
 	CALresult NewArgument(CALdevice hDev, CALdeviceinfo* devInfo, CALcontext ctx, long argID, long dType, long nDims, long* size, void* data, CALuint flags);
 };

@@ -243,13 +243,21 @@ long SetArg(long devNum, long ctx, long argID, long dType, long nDims, long* siz
 	}
 	else // use already existing argument
 	{		
-		err = CAL_RESULT_NOT_SUPPORTED;
+		arg = devs->Get(i)->args->Get(ind);
+		// if necessary set data from remote to the local GPU memory
+		if(arg->remoteRes)
+		{
+			err = arg->CopyRemoteToLocal(context->ctx);
+			if(err == CAL_RESULT_OK)
+				arg->FreeRemote();
+			else
+				devs->Get(i)->args->Remove(ind);	// remove rubbish!
+		}
 	}
 
 	if(err == CAL_RESULT_OK)
 	{		
-		arg->useCounter++;	// the object is in use
-		arg->isModified = FALSE;	// the object is not yet modified outside the library
+		arg->useCounter++;	// the object is in use		
 		switch(argType)
 		{
 			case ARG1: context->arg1 = arg; break;
@@ -374,6 +382,55 @@ ATIGPU_API long GetReturnArg(long devNum, long ctx)
 
 
 /*
+	Get an argument from GPU local/remote memory
+	
+	argID - ID of the argument to get
+
+	returns error code
+
+	Copies argument data from local/remote GPU memory to CPU memory
+*/
+ATIGPU_API long GetArg(long argID)
+{
+	long i, ind;
+	Argument* arg;
+	CALcontext ctx;
+	CALresult err = CAL_RESULT_OK;
+
+	if(!isInitialized) 
+		return CAL_RESULT_NOT_INITIALIZED;	
+	
+	i = 0;
+	while((i < devs->Length()) && ((ind = devs->Get(i)->args->Find(argID)) == -1) ){i++;}
+
+	if(ind >= 0)
+	{
+		arg = devs->Get(i)->args->Get(ind);
+
+		err = calCtxCreate(&ctx,devs->Get(0)->hDev);
+		if(err == CAL_RESULT_OK)
+		{
+			if(arg->remoteRes)
+				err = arg->GetDataFromRemote(ctx);
+			else
+				err = arg->GetDataFromLocal(ctx);
+
+			if(err == CAL_RESULT_OK)
+			{
+				if(arg->isReservedForGet) 
+					arg->isReservedForGet = FALSE;
+			}
+
+			calCtxDestroy(ctx);
+		}
+	}
+	else
+		err = CAL_RESULT_INVALID_PARAMETER;
+
+	return err;
+}
+
+/*
 	Compute an op operation using already set Arg1, Arg2, RetArg
 
 	devNum - used device number
@@ -407,4 +464,29 @@ ATIGPU_API long Do(long devNum, long ctx, long op)
 		return CAL_RESULT_INVALID_PARAMETER;	
 
 	return context->Do(op);	
+}
+
+/*
+	Free an argument with given ID
+*/
+ATIGPU_API long FreeArg(long argID)
+{
+	long i, ind;	
+	CALresult err = CAL_RESULT_OK;
+
+	if(!isInitialized) 
+		return CAL_RESULT_NOT_INITIALIZED;	
+	
+	i = 0;
+	while((i < devs->Length()) && ((ind = devs->Get(i)->args->Find(argID)) == -1) ){i++;}
+
+	if(ind >= 0)
+	{		
+		_ASSERT(!devs->Get(i)->args->Get(ind)->useCounter);
+		devs->Get(i)->args->Remove(ind);
+	}
+	else
+		err = CAL_RESULT_INVALID_PARAMETER;
+
+	return err;
 }
