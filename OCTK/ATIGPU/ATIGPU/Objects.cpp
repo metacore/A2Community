@@ -1022,10 +1022,13 @@ void Exclude::Add(void* obj)
 
 BOOL Exclude::In(void* obj)
 {
-	if(this->obj) 
+	if(next)
+		if (this->obj == obj) 
+			return TRUE;
+		else
+			return next->In(obj);
+	else if(this->obj)	
 		return this->obj == obj;
-	else if(next)	
-		return next->In(obj);
 	else 
 		return FALSE;
 }
@@ -1075,19 +1078,16 @@ Argument* ArgumentPool::FindMaxLocalNotInUse(Exclude* excl)
 {
 	long i;
 	Argument* arg = NULL;
-	Argument* arg1 = NULL;
+	Argument* arg1 = NULL;	
 
-	if(Length())
-		arg = Get(0);
-
-	for(i = 1; i < Length(); i++)
+	for(i = 0; i < Length(); i++)
 	{
 		arg1 = Get(i);
-
+				
 		if( (!arg1->useCounter) && (arg1->localRes) && ((!excl) || (!excl->In(arg1))) )
-		{			
-			if(arg->dataSize < arg1->dataSize) 
-				arg = arg1;
+		{						
+			if( (!arg) || (arg->dataSize < arg1->dataSize) ) 
+				arg = arg1;			
 		}
 	}
 
@@ -1099,26 +1099,20 @@ long ArgumentPool::FindMaxLocalNotInUse1(Exclude* excl)
 	long i, ind;
 	Argument* arg = NULL;
 	Argument* arg1 = NULL;
-		
-	if(Length())
-	{
-		ind = 0;
-		arg = Get(0);
-	}
-	else
-		ind = -1;
+			
+	ind = -1;
 
-	for(i = 1; i < Length(); i++)
+	for(i = 0; i < Length(); i++)
 	{
 		arg1 = Get(i);
 
 		if( (!arg1->useCounter) && (arg1->localRes) && ((!excl) || (!excl->In(arg1))) )
-		{			
-			if(arg->dataSize < arg1->dataSize)
+		{				
+			if( (!arg) || (arg->dataSize < arg1->dataSize) )
 			{
 				ind = i;
 				arg = arg1;
-			}
+			}			
 		}
 	}
 
@@ -1129,18 +1123,15 @@ Argument* ArgumentPool::FindMinLocalNotInUse(Exclude* excl)
 {
 	long i;
 	Argument* arg = NULL;
-	Argument* arg1 = NULL;
+	Argument* arg1 = NULL;	
 
-	if(Length())
-		arg = Get(0);
-
-	for(i = 1; i < Length(); i++)
+	for(i = 0; i < Length(); i++)
 	{
 		arg1 = Get(i);
 
 		if( (!arg1->useCounter) && (arg1->localRes) && ((!excl) || (!excl->In(arg1))) )
 		{			
-			if(arg->dataSize > arg1->dataSize) 
+			if( (!arg) || (arg->dataSize > arg1->dataSize) )
 				arg = arg1;
 		}
 	}
@@ -1153,22 +1144,16 @@ long ArgumentPool::FindMinLocalNotInUse1(Exclude* excl)
 	long i, ind;
 	Argument* arg = NULL;
 	Argument* arg1 = NULL;
-		
-	if(Length())
-	{
-		ind = 0;
-		arg = Get(0);
-	}
-	else
-		ind = -1;
+			
+	ind = -1;
 
-	for(i = 1; i < Length(); i++)
+	for(i = 0; i < Length(); i++)
 	{
 		arg1 = Get(i);
 
 		if( (!arg1->useCounter) && (arg1->localRes) && ((!excl) || (!excl->In(arg1))) )
 		{			
-			if(arg->dataSize > arg1->dataSize)
+			if( (!arg) || (arg->dataSize > arg1->dataSize) )
 			{
 				ind = i;
 				arg = arg1;

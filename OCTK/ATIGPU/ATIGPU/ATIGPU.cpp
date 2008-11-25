@@ -264,7 +264,7 @@ long SetArg(long devNum, long ctx, long argID, long dType, long nDims, long* siz
 			case ARG2: context->arg2 = arg; break;
 			case RETARG: context->retArg = arg; arg->isReservedForGet = TRUE; break;
 		}
-	}		
+	}	
 	
 	return err;
 }
@@ -481,8 +481,12 @@ ATIGPU_API long FreeArg(long argID)
 	while((i < devs->Length()) && ((ind = devs->Get(i)->args->Find(argID)) == -1) ){i++;}
 
 	if(ind >= 0)
-	{		
-		_ASSERT(!devs->Get(i)->args->Get(ind)->useCounter);
+	{	
+		if(devs->Get(i)->args->Get(ind)->useCounter)
+		{
+			err = CAL_RESULT_INVALID_PARAMETER;
+		}
+		//_ASSERT(!devs->Get(i)->args->Get(ind)->useCounter);
 		devs->Get(i)->args->Remove(ind);
 	}
 	else

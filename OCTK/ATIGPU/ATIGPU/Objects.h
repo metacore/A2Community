@@ -125,8 +125,7 @@ public:
 
 
 	long argID;	// argument ID
-	CALdevice hDev;	// device on which the argument exists
-	long nDevs;	// number of devices
+	CALdevice hDev;	// device on which the argument exists	
 	void* cpuData;	// CPU data pointer	
 	long dType;	// data type code
 	CALformat dFormat;	// data format
