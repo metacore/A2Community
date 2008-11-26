@@ -14,8 +14,9 @@ if file < 0
 end;
 
 % first read file ID
-ch = fread(file,11,'char=>char');
-if ~strcmp(ch(1:9)','octkArray') 
+%ch = fread(file,11,'char=>char');
+strID = fgetl(file);
+if ~strcmp(strID,'octkArray') &&  ~strcmp(strID,'NumArray')
     error('invalid data ID in the file header!');
 end;
 
