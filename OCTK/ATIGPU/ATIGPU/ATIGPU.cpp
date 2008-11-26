@@ -232,7 +232,7 @@ long SetArg(long devNum, long ctx, long argID, long dType, long nDims, long* siz
 		dev = devs->Get(devNum);
 		args = dev->args;
 		
-		//if(argType == RETARG)flags |= CAL_RESALLOC_GLOBAL_BUFFER;
+		if(argType == RETARG)flags |= CAL_RESALLOC_GLOBAL_BUFFER;
 		err = args->NewArgument(dev->hDev,&(dev->info),context->ctx,argID,dType,nDims,size,data,flags);		
 		if( err == CAL_RESULT_OK )
 		{

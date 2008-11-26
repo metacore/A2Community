@@ -712,11 +712,19 @@ Module::Module(CALcontext ctx, Kernel* kern)
 		return;
 	}
 	
+	if(kern->iKernel == KernAddR)
+	{
+		sprintf_s(str,"g[]",i);
+		err = calModuleGetName(&outputNames[0],ctx,module,str);
+	}
+	else
+{
 	for(i = 0; (i < nOutputs) && (err == CAL_RESULT_OK); i++)
 	{
 		sprintf_s(str,"o%d",i);
 		err = calModuleGetName(&outputNames[i],ctx,module,str);
 	}
+}
 	if(err != CAL_RESULT_OK)
 	{
 		if(inputNames){delete inputNames; inputNames = NULL;}
