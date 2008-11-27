@@ -10,7 +10,7 @@
 #define ATIGPU_API __declspec(dllimport)
 #endif
 
-#include "Objects.h"
+#include "Arrays.h"
 
 /*
 	Get amount of accessible ATI GPUs:
@@ -41,90 +41,166 @@ ATIGPU_API long CreateContext(long devNum, long* ctx);
 */
 ATIGPU_API long DestroyContext(long devNum, long ctx);
 
+//
+///*
+//	Set first argument of an array expression:
+//
+//	devNum - used device number
+//	ctx - used context
+//	argID - argument ID 
+//	dType - data type code
+//	nDims - number of dimensions
+//	size - size for each dimensions	
+//	data - data to set
+//
+//	returns error code	
+//*/
+//ATIGPU_API long SetArg1(long devNum, long ctx, long argID, long dType, long nDims, long* size, void* data);
+//
+///*
+//	Set second argument of an array expression:
+//
+//	devNum - used device number
+//	ctx - used context
+//	argID - argument ID 
+//	dType - data type code
+//	nDims - number of dimensions
+//	size - size for each dimensions	
+//	data - data to set
+//
+//	returns error code	
+//*/
+//ATIGPU_API long SetArg2(long devNum, long ctx, long argID, long dType, long nDims, long* size, void* data);
+//
+///*
+//	Set return argument of an array expression
+//
+//	devNum - used device number
+//	ctx - used context
+//	argID - argument ID 
+//	dType - data type code
+//	nDims - number of dimensions
+//	size - size for each dimensions	
+//	data - data to set
+//	bSetData - if 0 the data will not be set
+//
+//	returns error code	
+//*/
+//ATIGPU_API long SetReturnArg(long devNum, long ctx, long argID, long dType, long nDims, long* size, void* data, long bSetData);
+//
+///*
+//	Get an argument:
+//
+//	devNum - used device number
+//	ctx - used context	
+//	data - data for writing
+//
+//	returns error code
+//
+//	takes already set return argument and copies data from local/remote GPU memory to CPU memory
+//*/
+//ATIGPU_API long GetReturnArg(long devNum, long ctx);
+//
+///*
+//	Get an argument from GPU local/remote memory
+//	
+//	argID - ID of the argument to get
+//
+//	returns error code
+//
+//	Copies argument data from local/remote GPU memory to CPU memory
+//*/
+//ATIGPU_API long GetArg(long argID);
+//
+//
+///*
+//	Compute an op operation using already set Arg1, Arg2, RetArg
+//
+//	devNum - used device number
+//	ctx - used context	
+//	op - operation code
+//
+//	returns error code
+//*/
+//ATIGPU_API long Do(long devNum, long ctx, long op);
+//
+///*
+//	Free an argument with given ID
+//*/
+//ATIGPU_API long FreeArg(long argID);
+//
+
+
 /*
-	Set first argument of an array expression:
+	Set (prepare) computation
 
 	devNum - used device number
-	ctx - used context
-	argID - argument ID 
-	dType - data type code
-	nDims - number of dimensions
-	size - size for each dimensions	
-	data - data to set
+	ctx - computation context
+	expr - array expression description
+	result - resulting array
+	priority - computation priority number
+	flags - flags (currently unused)
 
-	returns error code	
+	returns error code
 */
-ATIGPU_API long SetArg1(long devNum, long ctx, long argID, long dType, long nDims, long* size, void* data);
+ATIGPU_API long SetComputation(
+							   long devNum, 
+							   long ctx,
+							   ArrayExpressionDesc* expr,
+							   ArrayDesc* result,
+							   long priority,
+							   long flags
+							   );
+
 
 /*
-	Set second argument of an array expression:
-
-	devNum - used device number
-	ctx - used context
-	argID - argument ID 
-	dType - data type code
-	nDims - number of dimensions
-	size - size for each dimensions	
-	data - data to set
-
-	returns error code	
-*/
-ATIGPU_API long SetArg2(long devNum, long ctx, long argID, long dType, long nDims, long* size, void* data);
-
-/*
-	Set return argument of an array expression
-
-	devNum - used device number
-	ctx - used context
-	argID - argument ID 
-	dType - data type code
-	nDims - number of dimensions
-	size - size for each dimensions	
-	data - data to set
-	bSetData - if 0 the data will not be set
-
-	returns error code	
-*/
-ATIGPU_API long SetReturnArg(long devNum, long ctx, long argID, long dType, long nDims, long* size, void* data, long bSetData);
-
-/*
-	Get an argument:
+	Do computation which was preliminary set by SetComputation
 
 	devNum - used device number
 	ctx - used context	
-	data - data for writing
 
 	returns error code
-
-	takes already set return argument and copies data from local/remote GPU memory to CPU memory
 */
-ATIGPU_API long GetReturnArg(long devNum, long ctx);
+ATIGPU_API long DoComputation(
+							   long devNum, 
+							   long ctx
+							   );
 
 /*
-	Get an argument from GPU local/remote memory
+	Get result array for the last computation
+	(has to be called after DoComputation)
 	
-	argID - ID of the argument to get
-
-	returns error code
-
-	Copies argument data from local/remote GPU memory to CPU memory
-*/
-ATIGPU_API long GetArg(long argID);
-
-
-/*
-	Compute an op operation using already set Arg1, Arg2, RetArg
-
 	devNum - used device number
-	ctx - used context	
-	op - operation code
+	ctx - computation context
+	data - array data address
 
 	returns error code
 */
-ATIGPU_API long Do(long devNum, long ctx, long op);
+ATIGPU_API long GetResult(
+						  long devNum,
+						  long ctx,						  
+						  void* data
+						  );
 
 /*
-	Free an argument with given ID
-*/
-ATIGPU_API long FreeArg(long argID);
+	Get an array with given ID
+	
+	arrID - array ID
+	data - array data address
 
+	returns error code
+*/
+ATIGPU_API long GetArray(						 
+						 long arrID,
+						 void* data
+						 );
+
+
+/*
+	Free an array with given ID
+	
+	arrID - array ID
+
+	returns error code
+*/
+ATIGPU_API long FreeArray(long arrID);

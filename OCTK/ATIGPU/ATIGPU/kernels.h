@@ -1,3 +1,5 @@
+#pragma once
+#include "ObjectPool.h"
 
 #define KernAddR				0	// addition
 #define KernSubR				1	// subtraction
@@ -10,7 +12,6 @@
 
 // add
 const char kernelAddR[] =
-/*
 "il_ps_2_0\n"
 "dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__\n"
 "dcl_output_generic o0\n"
@@ -20,8 +21,8 @@ const char kernelAddR[] =
 "sample_resource(1)_sampler(1) r1, vWinCoord0\n"
 "add o0, r0, r1\n"
 "end\n";
-*/
 
+/*
 "il_ps_2_0\n"
 "dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__\n"
 "dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
@@ -101,6 +102,7 @@ const char kernelAddR[] =
 "endloop\n"
 
 "end\n";
+*/
 
 // subtract
 const char kernelSubR[] =
@@ -111,7 +113,7 @@ const char kernelSubR[] =
 "dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
 "sample_resource(0)_sampler(0) r0, vWinCoord0\n"
 "sample_resource(1)_sampler(1) r1, vWinCoord0\n"
-"add o0, r0, r1\n"
+"sub o0, r0, r1\n"
 "end\n";
 
 // naive matrix multiply: C{2D stream} := A{2D stream} * B{2D stream}
@@ -161,3 +163,34 @@ const char kernelDotProdR[] =
 "sample_resource(1)_sampler(1) r1, vWinCoord0\n"
 "mul o0, r0, r1\n"
 "end\n";
+
+class Kernel
+{
+public:
+	Kernel(long iKernel, CALtarget target);
+	~Kernel(void);
+
+	CALresult err;	// error code for last operation
+	long iKernel;	// kernel code
+	CALobject obj;	// CAL object
+	CALimage img;	// CAL image
+
+	long nInputs;	// number of kernel inputs
+	long nOutputs;	// number of kernel outputs
+	long nConstants;	// number of kernel constants
+	BOOL usesGlobalBuffer;	// TRUE when kernel uses a global buffer
+};
+
+/*
+	Pool of kernels
+*/
+class KernelPool :
+	public ObjectPool
+{
+public:
+	KernelPool(void);
+	~KernelPool(void);	
+	void Remove(long ind);
+
+	CALresult err;	// error code for last operation
+};
