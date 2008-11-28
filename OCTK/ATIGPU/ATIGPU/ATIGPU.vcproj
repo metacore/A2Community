@@ -184,6 +184,14 @@
 				>
 			</File>
 			<File
+				RelativePath=".\Common.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\Constant.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\Contexts.cpp"
 				>
 			</File>
@@ -239,6 +247,14 @@
 			</File>
 			<File
 				RelativePath=".\ATIGPU.h"
+				>
+			</File>
+			<File
+				RelativePath=".\Common.h"
+				>
+			</File>
+			<File
+				RelativePath=".\Constant.h"
 				>
 			</File>
 			<File

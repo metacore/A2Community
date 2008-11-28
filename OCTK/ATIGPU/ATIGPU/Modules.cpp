@@ -1,7 +1,7 @@
 #include "StdAfx.h"
 #include "Modules.h"
 
-Module::Module(CALcontext ctx, Kernel* kern)
+Module::Module(CALdevice hDev, CALcontext ctx, Kernel* kern)
 {
 	long i;
 	module = 0;
@@ -12,6 +12,7 @@ Module::Module(CALcontext ctx, Kernel* kern)
 
 	char str[8];
 	
+	this->hDev = hDev;
 	this->ctx = ctx;
 	this->kern = kern;	
 

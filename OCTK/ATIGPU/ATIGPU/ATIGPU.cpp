@@ -5,6 +5,7 @@
 #include "ATIGPU.h"
 #include "Arrays.h"
 #include "Devices.h"
+#include "Common.h"
 
 
 #ifdef _MANAGED
@@ -82,7 +83,7 @@ BOOL APIENTRY DllMain( HMODULE hModule,
 					else
 						delete dev;
 				}
-			}
+			}			
 		}
 
 		break;
@@ -549,9 +550,8 @@ ATIGPU_API long SetComputation(
 	inArgs[0] = expr->arg1;
 	inArgs[1] = expr->arg2;
 	inArgs[2] = expr->arg3;	
-
-	i = 0;
-	while(inArgs[i])
+	
+	for(i = 0; (i < 3) && inArgs[i]; i++)
 	{
 		// look for already existing array
 		j = 0;
@@ -575,9 +575,7 @@ ATIGPU_API long SetComputation(
 			arr = devs->Get(j)->arrs->Get(ind);			
 		}
 
-		exprI->args[i] = arr;
-
-		i++;
+		exprI->args[i] = arr;		
 	}
 
 	delete inArgs;
@@ -739,13 +737,14 @@ ATIGPU_API long GetArray(
 	if(ind >= 0)
 	{
 		arr = devs->Get(j)->arrs->Get(ind);
-		
+				
 		data1 = data;
-		if( (data == NULL) && (arr->cpuData != NULL) )
-			data1 = arr->cpuData;
-		else
-			return CAL_RESULT_INVALID_PARAMETER;		
+		if(!data1) data1 = arr->cpuData;
 
+		if(!data1)
+			return CAL_RESULT_INVALID_PARAMETER;
+
+		arr->cpuData = data1;	// set as a new data address!
 		
 		err = calCtxCreate(&ctx,arr->hDev);
 		if(err == CAL_RESULT_OK)
@@ -797,4 +796,180 @@ ATIGPU_API long FreeArray(long arrID)
 		err = CAL_RESULT_INVALID_PARAMETER;
 
 	return err;
+}
+
+/*
+	Start GPU idle counter
+
+	devNum - used device number
+	ctx - computation context	
+
+	returns error code
+*/
+ATIGPU_API long StartIdleCounter(long devNum,long ctx)
+{	
+	long ind;
+	ContextPool* ctxs;	
+	Device* dev;
+
+	if(!isInitialized) 
+		return CAL_RESULT_NOT_INITIALIZED;
+	if( (devNum < 0) || (devNum >= devs->Length()) ) 
+		return CAL_RESULT_INVALID_PARAMETER;	
+	
+	dev = devs->Get(devNum);
+	ctxs = dev->ctxs;	
+
+	ind = ctxs->Find(ctx);
+	if(ind >= 0) 
+		return ctxs->Get(ind)->StartIdleCounter();
+	else	
+		return CAL_RESULT_INVALID_PARAMETER;
+}
+
+/*
+	Start GPU cache hit counter
+
+	devNum - used device number
+	ctx - computation context	
+
+	returns error code
+*/
+ATIGPU_API long StartCacheHitCounter(long devNum,long ctx)
+{
+	long ind;
+	ContextPool* ctxs;	
+	Device* dev;
+
+	if(!isInitialized) 
+		return CAL_RESULT_NOT_INITIALIZED;
+	if( (devNum < 0) || (devNum >= devs->Length()) ) 
+		return CAL_RESULT_INVALID_PARAMETER;	
+	
+	dev = devs->Get(devNum);
+	ctxs = dev->ctxs;	
+
+	ind = ctxs->Find(ctx);
+	if(ind >= 0) 
+		return ctxs->Get(ind)->StartCacheHitCounter();
+	else	
+		return CAL_RESULT_INVALID_PARAMETER;
+}
+
+/*
+	Stop GPU idle counter
+
+	devNum - used device number
+	ctx - computation context	
+
+	returns error code
+*/
+ATIGPU_API long StopIdleCounter(long devNum,long ctx)
+{
+	long ind;
+	ContextPool* ctxs;	
+	Device* dev;
+
+	if(!isInitialized) 
+		return CAL_RESULT_NOT_INITIALIZED;
+	if( (devNum < 0) || (devNum >= devs->Length()) ) 
+		return CAL_RESULT_INVALID_PARAMETER;	
+	
+	dev = devs->Get(devNum);
+	ctxs = dev->ctxs;	
+
+	ind = ctxs->Find(ctx);
+	if(ind >= 0) 
+		return ctxs->Get(ind)->StopIdleCounter();
+	else	
+		return CAL_RESULT_INVALID_PARAMETER;
+}
+
+/*
+	Stop GPU cache hit counter
+
+	devNum - used device number
+	ctx - computation context	
+
+	returns error code
+*/
+ATIGPU_API long StopCacheHitCounter(long devNum,long ctx)
+{
+	long ind;
+	ContextPool* ctxs;	
+	Device* dev;
+
+	if(!isInitialized) 
+		return CAL_RESULT_NOT_INITIALIZED;
+	if( (devNum < 0) || (devNum >= devs->Length()) ) 
+		return CAL_RESULT_INVALID_PARAMETER;	
+	
+	dev = devs->Get(devNum);
+	ctxs = dev->ctxs;	
+
+	ind = ctxs->Find(ctx);
+	if(ind >= 0) 
+		return ctxs->Get(ind)->StopCacheHitCounter();
+	else	
+		return CAL_RESULT_INVALID_PARAMETER;
+}
+
+/*
+	Get GPU idle counter
+
+	devNum - used device number
+	ctx - computation context	
+	counterVal[var] - counter value
+
+	returns error code
+*/
+ATIGPU_API long GetIdleCounter(long devNum,long ctx, float* counterVal)
+{
+	long ind;
+	ContextPool* ctxs;	
+	Device* dev;
+
+	if(!isInitialized) 
+		return CAL_RESULT_NOT_INITIALIZED;
+	if( (devNum < 0) || (devNum >= devs->Length()) ) 
+		return CAL_RESULT_INVALID_PARAMETER;	
+	
+	dev = devs->Get(devNum);
+	ctxs = dev->ctxs;	
+
+	ind = ctxs->Find(ctx);
+	if(ind >= 0) 
+		return ctxs->Get(ind)->GetIdleCounter(counterVal);
+	else	
+		return CAL_RESULT_INVALID_PARAMETER;
+}
+
+/*
+	Get GPU cache hit counter
+
+	devNum - used device number
+	ctx - computation context	
+	counterVal[var] - counter value
+
+	returns error code
+*/
+ATIGPU_API long GetCacheHitCounter(long devNum,long ctx, float* counterVal)
+{
+	long ind;
+	ContextPool* ctxs;	
+	Device* dev;
+
+	if(!isInitialized) 
+		return CAL_RESULT_NOT_INITIALIZED;
+	if( (devNum < 0) || (devNum >= devs->Length()) ) 
+		return CAL_RESULT_INVALID_PARAMETER;	
+	
+	dev = devs->Get(devNum);
+	ctxs = dev->ctxs;	
+
+	ind = ctxs->Find(ctx);
+	if(ind >= 0) 
+		return ctxs->Get(ind)->GetCacheHitCounter(counterVal);
+	else	
+		return CAL_RESULT_INVALID_PARAMETER;
 }

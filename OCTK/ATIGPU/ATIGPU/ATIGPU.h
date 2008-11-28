@@ -204,3 +204,65 @@ ATIGPU_API long GetArray(
 	returns error code
 */
 ATIGPU_API long FreeArray(long arrID);
+
+/*
+	Start GPU idle counter
+
+	devNum - used device number
+	ctx - computation context	
+
+	returns error code
+*/
+ATIGPU_API long StartIdleCounter(long devNum,long ctx);
+
+/*
+	Start GPU cache hit counter
+
+	devNum - used device number
+	ctx - computation context	
+
+	returns error code
+*/
+ATIGPU_API long StartCacheHitCounter(long devNum,long ctx);
+
+/*
+	Stop GPU idle counter
+
+	devNum - used device number
+	ctx - computation context	
+
+	returns error code
+*/
+ATIGPU_API long StopIdleCounter(long devNum,long ctx);
+
+/*
+	Stop GPU cache hit counter
+
+	devNum - used device number
+	ctx - computation context	
+
+	returns error code
+*/
+ATIGPU_API long StopCacheHitCounter(long devNum,long ctx);
+
+/*
+	Get GPU idle counter
+
+	devNum - used device number
+	ctx - computation context	
+	counterVal[var] - counter value
+
+	returns error code
+*/
+ATIGPU_API long GetIdleCounter(long devNum,long ctx, float* counterVal);
+
+/*
+	Get GPU cache hit counter
+
+	devNum - used device number
+	ctx - computation context	
+	counterVal[var] - counter value
+
+	returns error code
+*/
+ATIGPU_API long GetCacheHitCounter(long devNum,long ctx, float* counterVal);

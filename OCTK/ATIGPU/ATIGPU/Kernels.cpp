@@ -20,21 +20,40 @@ Kernel::Kernel(long iKernel, CALtarget target)
 		case KernAddR: 
 			kernelStr = kernelAddR; nInputs = 2; nOutputs = 1;
 			break;		
+		case KernAddLR: 
+			kernelStr = kernelAddLR; nInputs = 2; nOutputs = 1;
+			break;
 		case KernSubR: 
-			kernelStr = kernelSubR; nInputs = 2; nOutputs = 1; 
-			break;		
-		case KernNaiveMatMulR: 
-			kernelStr = kernelNaiveMatMulR; nInputs = 2; nOutputs = 1;
+			kernelStr = kernelSubR; nInputs = 2; nOutputs = 1;					
+			break;
+		case KernSubLR: 
+			kernelStr = kernelSubLR; nInputs = 2; nOutputs = 1;					
 			break;
 		case KernEwMulR: 
 			kernelStr = kernelEwMulR; nInputs = 2; nOutputs = 1;
 			break;		
+		case KernEwMulLR: 
+			kernelStr = kernelEwMulLR; nInputs = 2; nOutputs = 1;
+			break;
 		case KernEwDivR: 
 			kernelStr = kernelEwDivR; nInputs = 2; nOutputs = 1;
 			break;		
+		case KernEwDivLR: 
+			kernelStr = kernelEwDivLR; nInputs = 2; nOutputs = 1;
+			break;
 		case KernDotProdR: 
 			kernelStr = kernelDotProdR; nInputs = 2; nOutputs = 1;
-			break;		
+			break;
+		case KernDotProdLR: 
+			kernelStr = kernelDotProdLR; nInputs = 2; nOutputs = 1;
+			break;
+		case KernAssign:
+			kernelStr = kernelAssign; nOutputs = 1; nConstants = 1;
+			break;
+		case KernMatVecR: 
+			kernelStr = kernelMatVecR; nInputs = 2; nOutputs = 1; nConstants = 1;
+			break;
+
 
 		default:
 			return;

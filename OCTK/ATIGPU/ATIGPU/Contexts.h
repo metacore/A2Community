@@ -2,9 +2,10 @@
 #include "ObjectPool.h"
 #include "Modules.h"
 #include "Arrays.h"
+#include "Common.h"
 
 // operation codes
-#define OpIdent		0
+#define OpIdentic	0
 #define OpAdd		1
 #define OpSub		2
 #define OpMul		3
@@ -20,7 +21,6 @@
 #define OpReshape	21
 #define OpTranspose	22
 
-
 class Context
 {
 public:
@@ -33,13 +33,47 @@ public:
 
 	CALcontext ctx;	// context handle
 	CALdevice hDev;	// device handle		
+
+	KernelPool* kernels;
 	
 	ArrayExpression* expr;	// array expression describing current computation
 	Array* result;			// result array for current computation
 
-	ModulePool* modules;
+	CALcounter idleCounter;	// GPU Idle counter
+	CALcounter cacheHitCounter;	// GPU cache hit counter
+	
 	// perform the computation which was preliminary set by SetComputation
 	CALresult DoComputation(void);
+	// perform assignment of array identity
+	CALresult DoIdentic(void);
+	// run a kernel in a generic way
+	CALresult RunGeneric(Module* module, Array** inputs, Array** outputs, CALdomain domain);
+	// performs an elementwise operation
+	CALresult DoElementwise(void);
+	// start Idle counter
+	CALresult StartIdleCounter(void);
+	// start cache hit counter
+	CALresult StartCacheHitCounter(void);
+	// stop idle counter
+	CALresult StopIdleCounter(void);
+	// stop cache hit counter
+	CALresult StopCacheHitCounter(void);
+	// get idle counter value
+	CALresult GetIdleCounter(float* counterVal);
+	// get cache hit counter value
+	CALresult GetCacheHitCounter(float* counterVal);
+	
+	BOOL InitCounterExtension(void);
+
+	PFNCALCTXCREATECOUNTER  calCtxCreateCounterExt;
+	PFNCALCTXDESTROYCOUNTER calCtxDestroyCounterExt;
+	PFNCALCTXBEGINCOUNTER   calCtxBeginCounterExt;
+	PFNCALCTXENDCOUNTER     calCtxEndCounterExt;
+	PFNCALCTXGETCOUNTER     calCtxGetCounterExt;
+
+	BOOL counterExtSupported;
+	// perform matrix vector operation
+	CALresult DoMatVec(void);
 };
 
 class ContextPool :

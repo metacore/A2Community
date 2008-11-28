@@ -5,11 +5,12 @@
 class Module
 {
 public:
-	Module(CALcontext ctx, Kernel* kern);
+	Module(CALdevice hDev, CALcontext ctx, Kernel* kern);
 	~Module(void);
 
 	CALresult err;	// error code for last operation
 
+	CALdevice hDev;	// device handle
 	CALcontext ctx;	// module context	
 	CALmodule module;	// handle to the physical module	
 	Kernel* kern;	// module kernel

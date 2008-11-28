@@ -74,6 +74,8 @@ public:
 	BOOL isReservedForGet;	// the object is reserved for further getting (for example a return argument)
 	// copy data from one resource to another
 	CALresult Copy(CALcontext ctx, CALresource dstRes, CALresource srcRes);
+	// get named local memory handle for given context
+	CALresult GetNamedLocalMem(CALcontext ctx, CALname name, CALmem* mem);
 };
 
 // array expression for internal use
