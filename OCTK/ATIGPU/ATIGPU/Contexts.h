@@ -46,8 +46,8 @@ public:
 	CALresult DoComputation(void);
 	// perform assignment of array identity
 	CALresult DoIdentic(void);
-	// run a kernel in a generic way
-	CALresult RunGeneric(Module* module, Array** inputs, Array** outputs, CALdomain domain);
+	// run a pixel shader kernel
+	CALresult RunPixelShader(Module* module, Array** inputs, Array** outputs, CALdomain* domain);
 	// performs an elementwise operation
 	CALresult DoElementwise(void);
 	// start Idle counter
@@ -69,11 +69,18 @@ public:
 	PFNCALCTXDESTROYCOUNTER calCtxDestroyCounterExt;
 	PFNCALCTXBEGINCOUNTER   calCtxBeginCounterExt;
 	PFNCALCTXENDCOUNTER     calCtxEndCounterExt;
-	PFNCALCTXGETCOUNTER     calCtxGetCounterExt;
+	PFNCALCTXGETCOUNTER     calCtxGetCounterExt;	
 
 	BOOL counterExtSupported;
 	// perform matrix vector operation
 	CALresult DoMatVec(void);
+	// set computation inputs in a common way
+	CALresult SetInputs0(ArrayExpression* expr,ArrayPool* arrs);
+	// set computation output in a common way
+	CALresult SetOutput0(Array* result, ArrayPool* arrs, CALuint flags);
+	// allocate local memory of an array with freeing space if necessary
+	CALresult AllocateArrayLocal(Array* arr, ArrayPool* arrs, CALuint flags);
+	CALresult RunComputeShader(Module* module, Array** inputs, Array* globalBuffer, CALprogramGrid* programGrid);
 };
 
 class ContextPool :

@@ -53,7 +53,9 @@ Kernel::Kernel(long iKernel, CALtarget target)
 		case KernMatVecR: 
 			kernelStr = kernelMatVecR; nInputs = 2; nOutputs = 1; nConstants = 1;
 			break;
-
+		case KernAddR_CS:
+			kernelStr = kernelAddR_CS; nInputs = 2; usesGlobalBuffer = TRUE; nOutputs = 0; nConstants = 1;
+			break;
 
 		default:
 			return;

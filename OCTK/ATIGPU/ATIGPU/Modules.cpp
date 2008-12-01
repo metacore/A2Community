@@ -22,6 +22,7 @@ Module::Module(CALdevice hDev, CALcontext ctx, Kernel* kern)
 		module = 0; 
 		return;
 	}	
+
 	err = calModuleGetEntry(&func,ctx,module,"main");
 	if(err != CAL_RESULT_OK)
 	{
@@ -98,7 +99,6 @@ Module::Module(CALdevice hDev, CALcontext ctx, Kernel* kern)
 		module = 0; 
 		return;
 	}
-
 }
 
 Module::~Module(void)
