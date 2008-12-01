@@ -749,20 +749,17 @@ CALresult Context::AllocateArrayLocal(Array* arr, ArrayPool* arrs, CALuint flags
 	return err;
 }
 
-CALresult Context::RunComputeShader(Module* module, Array** inputs, Array** outputs, Array* globalBuffer, CALprogramGrid* programGrid)
+CALresult Context::RunComputeShader(Module* module, Array** inputs, Array* globalBuffer, CALprogramGrid* programGrid)
 {	
 	long i;
-	CALmem* inpMem;
-	CALmem* outMem;	
+	CALmem* inpMem;	
 	CALmem gbufMem;
 	CALevent ev;
 
 	err = CAL_RESULT_OK;
 
-	inpMem = new CALmem[module->nInputs];
-	outMem = new CALmem[module->nOutputs];
-	FillMemory(&inpMem,0,module->nInputs*sizeof(CALmem));
-	FillMemory(&outMem,0,module->nOutputs*sizeof(CALmem));
+	inpMem = new CALmem[module->nInputs];	
+	FillMemory(&inpMem,0,module->nInputs*sizeof(CALmem));	
 	gbufMem = 0;
 
 	/*
@@ -777,30 +774,9 @@ CALresult Context::RunComputeShader(Module* module, Array** inputs, Array** outp
 		for(i = i-1; i >= 0; i--)		
 			calCtxReleaseMem(ctx,inpMem[i]);
 
-		delete inpMem;
-		delete outMem;
+		delete inpMem;		
 		return err;
-	}
-
-	/*
-		Set outputs
-	*/
-	for(i = 0; (err == CAL_RESULT_OK) && (i < module->nOutputs); i++)
-		err = outputs[i]->GetNamedLocalMem(ctx,module->outputNames[i],&outMem[i]);
-	
-	if(err != CAL_RESULT_OK)
-	{
-		// release allocated resources
-		for(i = i-1; i >= 0; i--)		
-			calCtxReleaseMem(ctx,outMem[i]);
-
-		for(i = 0; i < module->nInputs; i++)
-			calCtxReleaseMem(ctx,inpMem[i]);
-
-		delete inpMem;
-		delete outMem;
-		return err;
-	}
+	}	
 
 	/*
 		Set global buffer
@@ -814,12 +790,8 @@ CALresult Context::RunComputeShader(Module* module, Array** inputs, Array** outp
 			// release allocated resources
 			for(i = 0; i < module->nInputs; i++)
 				calCtxReleaseMem(ctx,inpMem[i]);
-	
-			for(i = 0; i < module->nOutputs; i++)
-				calCtxReleaseMem(ctx,outMem[i]);
-	
-			delete inpMem;
-			delete outMem;
+				
+			delete inpMem;	
 			return err;
 		}
 	}
@@ -834,13 +806,9 @@ CALresult Context::RunComputeShader(Module* module, Array** inputs, Array** outp
 		calCtxReleaseMem(ctx,gbufMem);
 
 	for( i = 0; i < module->nInputs; i++)
-		calCtxReleaseMem(ctx,inpMem[i]);
+		calCtxReleaseMem(ctx,inpMem[i]);	
 
-	for( i = 0; i < module->nOutputs; i++)
-		calCtxReleaseMem(ctx,outMem[i]);
-
-	delete inpMem;
-	delete outMem;
+	delete inpMem;	
 
 	return err;	
 }
