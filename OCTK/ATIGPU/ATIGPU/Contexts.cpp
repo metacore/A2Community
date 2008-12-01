@@ -76,14 +76,51 @@ BOOL Context::InitCounterExtension(void)
 CALresult Context::SetComputation(ArrayExpression* expr, Array* result, long priority, long flags, ArrayPool* arrs)
 {
 	long i;
-	long op = expr->op;	
-	
-	err = CAL_RESULT_OK;	
-	
+
 	// increment use counters beforehand!	
 	for(i = 0; (i < 3) && expr->args[i]; i++){expr->args[i]->useCounter++;}	
 	result->useCounter++;
 	result->isReservedForGet = TRUE;
+
+	switch(expr->op)
+	{
+		case OpIdentic:
+			err = SetElementwise(expr,result,arrs);
+			break;
+
+		case OpAdd:
+			err = SetElementwise(expr,result,arrs);
+			break;
+
+		case OpSub:
+			err = SetElementwise(expr,result,arrs);
+			break;
+
+		case OpEwMul:
+			err = SetElementwise(expr,result,arrs);
+			break;
+
+		case OpEwDiv:
+			err = SetElementwise(expr,result,arrs);
+			break;
+
+		case OpDotProd:
+			err = SetElementwise(expr,result,arrs);
+			break;
+	}
+
+	// in case of an error set use counters to their previous values
+	if(err != CAL_RESULT_OK)
+	{			
+		for(i = 0; (i < 3) && expr->args[i]; i++){expr->args[i]->useCounter--;}	
+		result->useCounter--;
+		result->isReservedForGet = FALSE;			
+	}
+/*
+	long i;
+	long op = expr->op;	
+	
+	err = CAL_RESULT_OK;			
 	
 
 	if( (op == OpIdentic) 
@@ -107,16 +144,8 @@ CALresult Context::SetComputation(ArrayExpression* expr, Array* result, long pri
 	}
 	else
 		err = CAL_RESULT_NOT_SUPPORTED;
-
-	
-	// in case of an error set use counters to their previous values
-	if(err != CAL_RESULT_OK)
-	{			
-		for(i = 0; (i < 3) && expr->args[i]; i++){expr->args[i]->useCounter--;}	
-		result->useCounter--;
-		result->isReservedForGet = FALSE;			
-	}		
-
+				
+*/
 	return err;
 }
 
@@ -216,6 +245,7 @@ CALresult Context::DoComputation(void)
 // perform assignment of array identity
 CALresult Context::DoIdentic(void)
 {
+/*
 	Module* module;
 	Constant* constant;
 	Array* arg;	
@@ -275,7 +305,7 @@ CALresult Context::DoIdentic(void)
 					}
 
 					// run the program
-					err = RunPixelShader(module,expr->args,&result,&domain);
+					err = RunPixelShader(module,expr->args,&result,NULL,&domain);
 				}
 			}
 			else
@@ -288,15 +318,16 @@ CALresult Context::DoIdentic(void)
 
 		delete module;
 	}	
-
+*/
 	return err;
 }
 
-CALresult Context::RunPixelShader(Module* module, Array** inputs, Array** outputs, CALdomain* domain)
+CALresult Context::RunPixelShader(Module* module, Array** inputs, Array** outputs, Array* globalBuffer, CALdomain* domain)
 {
 	long i;
 	CALmem* inpMem;
 	CALmem* outMem;	
+	CALmem gbufMem;
 	CALevent ev;
 
 	err = CAL_RESULT_OK;
@@ -305,6 +336,7 @@ CALresult Context::RunPixelShader(Module* module, Array** inputs, Array** output
 	outMem = new CALmem[module->nOutputs];
 	FillMemory(&inpMem,0,module->nInputs*sizeof(CALmem));
 	FillMemory(&outMem,0,module->nOutputs*sizeof(CALmem));
+	gbufMem = 0;
 
 	/*
 		Set inputs
@@ -335,21 +367,44 @@ CALresult Context::RunPixelShader(Module* module, Array** inputs, Array** output
 		for(i = i-1; i >= 0; i--)		
 			calCtxReleaseMem(ctx,outMem[i]);
 
-		for( i = 0; i < module->nInputs; i++)
+		for(i = 0; i < module->nInputs; i++)
 			calCtxReleaseMem(ctx,inpMem[i]);
 
 		delete inpMem;
 		delete outMem;
 		return err;
 	}
+
+	/*
+		Set global buffer
+	*/	
+	if(globalBuffer)
+	{
+		err = globalBuffer->GetNamedLocalMem(ctx,module->gbufName,&gbufMem);
+
+		if(err != CAL_RESULT_OK)
+		{		
+			// release allocated resources
+			for(i = 0; i < module->nInputs; i++)
+				calCtxReleaseMem(ctx,inpMem[i]);
 	
+			for(i = 0; i < module->nOutputs; i++)
+				calCtxReleaseMem(ctx,outMem[i]);
+	
+			delete inpMem;
+			delete outMem;
+			return err;
+		}
+	}
 
 	// run the kernel
 	err = calCtxRunProgram(&ev,ctx,module->func,domain);
 	if(err == CAL_RESULT_OK)
-	{
 		while((err = calCtxIsEventDone(ctx,ev)) == CAL_RESULT_PENDING);
-	}
+
+	// release allocated resources
+	if(globalBuffer)
+		calCtxReleaseMem(ctx,gbufMem);
 
 	for( i = 0; i < module->nInputs; i++)
 		calCtxReleaseMem(ctx,inpMem[i]);
@@ -358,7 +413,7 @@ CALresult Context::RunPixelShader(Module* module, Array** inputs, Array** output
 		calCtxReleaseMem(ctx,outMem[i]);
 
 	delete inpMem;
-	delete outMem;	
+	delete outMem;
 
 	return err;
 }
@@ -366,16 +421,13 @@ CALresult Context::RunPixelShader(Module* module, Array** inputs, Array** output
 
 // performs an elementwise operation
 CALresult Context::DoElementwise(void)
-{
+{		
 	Module* module;
 	CALdomain domain;
-	CALprogramGrid pg;
-	
-	err = CAL_RESULT_OK;
-	
-/*		
-	// run a pixel shader
 
+	err = CAL_RESULT_OK;
+
+	// run a pixel shader
 	switch(expr->dType)
 	{
 		case TREAL:
@@ -451,13 +503,18 @@ CALresult Context::DoElementwise(void)
 		}
 
 		// run the program
-		err = RunPixelShader(module,expr->args,&result,&domain);
+		err = RunPixelShader(module,expr->args,&result,NULL,&domain);
 	}
 	else
 		err = module->err;
 
 	delete module;
-*/		
+
+/*
+	Module* module;	
+	CALprogramGrid pg;
+	
+	err = CAL_RESULT_OK;	
 
 	switch(expr->dType)
 	{
@@ -502,7 +559,7 @@ CALresult Context::DoElementwise(void)
 		pg.gridSize.height  = 1;
 		pg.gridSize.depth   = 1;
 
-		err = RunComputeShader(module,expr->args,result,&pg);
+		err = RunComputeShader(module,expr->args,NULL,result,&pg);
 
 		delete constant;
 	}
@@ -510,7 +567,7 @@ CALresult Context::DoElementwise(void)
 		err = module->err;
 
 	delete module;
-
+*/
 	return err;
 }
 
@@ -572,6 +629,7 @@ CALresult Context::GetCacheHitCounter(float* counterVal)
 // perform matrix vector operation
 CALresult Context::DoMatVec(void)
 {
+/*
 	Module* module;
 	CALdomain domain;
 	Constant* constant;	
@@ -597,7 +655,7 @@ CALresult Context::DoMatVec(void)
 				
 			// run the program
 			if(err == CAL_RESULT_OK)			
-				err = RunPixelShader(module,expr->args,&result,&domain);
+				err = RunPixelShader(module,expr->args,&result,NULL,&domain);
 		}
 		else
 			err = constant->err;
@@ -609,7 +667,7 @@ CALresult Context::DoMatVec(void)
 
 	delete module;
 
-
+*/
 	return err;
 }
 
@@ -617,7 +675,6 @@ CALresult Context::DoMatVec(void)
 CALresult Context::SetInputs0(ArrayExpression* expr, ArrayPool* arrs)
 {
 	long i;	
-	Exclude excl;
 
 	err = CAL_RESULT_OK;
 
@@ -692,17 +749,21 @@ CALresult Context::AllocateArrayLocal(Array* arr, ArrayPool* arrs, CALuint flags
 	return err;
 }
 
-CALresult Context::RunComputeShader(Module* module, Array** inputs, Array* globalBuffer, CALprogramGrid* programGrid)
-{
+CALresult Context::RunComputeShader(Module* module, Array** inputs, Array** outputs, Array* globalBuffer, CALprogramGrid* programGrid)
+{	
 	long i;
 	CALmem* inpMem;
-	CALmem outMem = 0;	
+	CALmem* outMem;	
+	CALmem gbufMem;
 	CALevent ev;
 
 	err = CAL_RESULT_OK;
 
-	inpMem = new CALmem[module->nInputs];	
-	FillMemory(&inpMem,0,module->nInputs*sizeof(CALmem));	
+	inpMem = new CALmem[module->nInputs];
+	outMem = new CALmem[module->nOutputs];
+	FillMemory(&inpMem,0,module->nInputs*sizeof(CALmem));
+	FillMemory(&outMem,0,module->nOutputs*sizeof(CALmem));
+	gbufMem = 0;
 
 	/*
 		Set inputs
@@ -716,41 +777,107 @@ CALresult Context::RunComputeShader(Module* module, Array** inputs, Array* globa
 		for(i = i-1; i >= 0; i--)		
 			calCtxReleaseMem(ctx,inpMem[i]);
 
-		delete inpMem;		
+		delete inpMem;
+		delete outMem;
 		return err;
 	}
-	
+
 	/*
-		Set output
-	*/	
-	err = globalBuffer->GetNamedLocalMem(ctx,module->gbufName,&outMem);
+		Set outputs
+	*/
+	for(i = 0; (err == CAL_RESULT_OK) && (i < module->nOutputs); i++)
+		err = outputs[i]->GetNamedLocalMem(ctx,module->outputNames[i],&outMem[i]);
 	
 	if(err != CAL_RESULT_OK)
 	{
-		// release allocated resources			
-		calCtxReleaseMem(ctx,outMem);
+		// release allocated resources
+		for(i = i-1; i >= 0; i--)		
+			calCtxReleaseMem(ctx,outMem[i]);
 
-		for( i = 0; i < module->nInputs; i++)
+		for(i = 0; i < module->nInputs; i++)
 			calCtxReleaseMem(ctx,inpMem[i]);
 
-		delete inpMem;		
+		delete inpMem;
+		delete outMem;
 		return err;
 	}
-	
 
-	// run the kernel
+	/*
+		Set global buffer
+	*/	
+	if(globalBuffer)
+	{
+		err = globalBuffer->GetNamedLocalMem(ctx,module->gbufName,&gbufMem);
+
+		if(err != CAL_RESULT_OK)
+		{		
+			// release allocated resources
+			for(i = 0; i < module->nInputs; i++)
+				calCtxReleaseMem(ctx,inpMem[i]);
+	
+			for(i = 0; i < module->nOutputs; i++)
+				calCtxReleaseMem(ctx,outMem[i]);
+	
+			delete inpMem;
+			delete outMem;
+			return err;
+		}
+	}
+
+	// run the program
 	err = calCtxRunProgramGrid(&ev,ctx,programGrid);
 	if(err == CAL_RESULT_OK)
-	{
-		while((err = calCtxIsEventDone(ctx,ev)) == CAL_RESULT_PENDING);
-	}
+		while((err = calCtxIsEventDone(ctx,ev)) == CAL_RESULT_PENDING);	
+
+	// release allocated resources
+	if(globalBuffer)
+		calCtxReleaseMem(ctx,gbufMem);
 
 	for( i = 0; i < module->nInputs; i++)
 		calCtxReleaseMem(ctx,inpMem[i]);
-	
-	calCtxReleaseMem(ctx,outMem);
 
-	delete inpMem;	
+	for( i = 0; i < module->nOutputs; i++)
+		calCtxReleaseMem(ctx,outMem[i]);
+
+	delete inpMem;
+	delete outMem;
+
+	return err;	
+}
+
+// setup an elementwise computation
+CALresult Context::SetElementwise(ArrayExpression* expr, Array* result, ArrayPool* arrs)
+{
+	long i;	
+
+	err = CAL_RESULT_OK;	
+	
+	// just in case try to free some space in the remote memory (result will be anyway overwritten)
+	result->FreeRemote();
+
+	for(i = 0; (err == CAL_RESULT_OK) && (i < 3) && expr->args[i]; i++)
+	{	
+		if(!expr->args[i]->localRes)	// is array already residing in the local memory?
+		{
+			// if not try to allocate it	
+			err = AllocateArrayLocal(expr->args[i],arrs,CAL_RESALLOC_GLOBAL_BUFFER);
+					
+			if(err == CAL_RESULT_OK)
+			{
+				if(expr->args[i]->remoteRes)	// array data was already set and resides in the remote memory
+				{
+					err = expr->args[i]->CopyRemoteToLocal(ctx);
+					expr->args[i]->FreeRemote();
+				}
+				else
+					err = expr->args[i]->SetDataToLocal(ctx,expr->args[i]->cpuData);					
+			}
+		}
+	}
+	
+	// allocate result array if necessary
+	if(!result->localRes)		
+		err = AllocateArrayLocal(result,arrs,CAL_RESALLOC_GLOBAL_BUFFER);	
 
 	return err;
 }

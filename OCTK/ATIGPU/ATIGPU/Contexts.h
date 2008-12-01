@@ -46,8 +46,8 @@ public:
 	CALresult DoComputation(void);
 	// perform assignment of array identity
 	CALresult DoIdentic(void);
-	// run a pixel shader kernel
-	CALresult RunPixelShader(Module* module, Array** inputs, Array** outputs, CALdomain* domain);
+	// Run a pixel shader program
+	CALresult RunPixelShader(Module* module, Array** inputs, Array** outputs, Array* globalBuffer, CALdomain* domain);
 	// performs an elementwise operation
 	CALresult DoElementwise(void);
 	// start Idle counter
@@ -80,7 +80,10 @@ public:
 	CALresult SetOutput0(Array* result, ArrayPool* arrs, CALuint flags);
 	// allocate local memory of an array with freeing space if necessary
 	CALresult AllocateArrayLocal(Array* arr, ArrayPool* arrs, CALuint flags);
-	CALresult RunComputeShader(Module* module, Array** inputs, Array* globalBuffer, CALprogramGrid* programGrid);
+	// Run a compute shader program
+	CALresult RunComputeShader(Module* module, Array** inputs, Array** outputs, Array* globalBuffer, CALprogramGrid* programGrid);
+	// setup an elementwise computation
+	CALresult SetElementwise(ArrayExpression* expr, Array* result, ArrayPool* arrs);
 };
 
 class ContextPool :

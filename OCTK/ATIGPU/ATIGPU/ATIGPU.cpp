@@ -538,14 +538,16 @@ ATIGPU_API long SetComputation(
 	ctxs = dev->ctxs;
 	arrs = dev->arrs;	
 
+	// get context object
 	ind = ctxs->Find(ctx);
 	if(ind >= 0) 
 		context = ctxs->Get(ind);
 	else	
 		return CAL_RESULT_INVALID_PARAMETER;
-
+	
+	// create internal expression object
 	exprI = new ArrayExpression(expr->op,expr->dType,expr->nDims,expr->size,expr->transpDims);
-
+		
 	inArgs = new ArrayDesc*[3];
 	inArgs[0] = expr->arg1;
 	inArgs[1] = expr->arg2;
@@ -566,8 +568,9 @@ ATIGPU_API long SetComputation(
 		}
 		else	// use already existing array	
 		{
-			if(j != devNum)
+			if(j != devNum)	// array resides on another device
 			{
+				delete inArgs;
 				delete exprI;
 				return CAL_RESULT_NOT_SUPPORTED;
 			}
@@ -597,7 +600,7 @@ ATIGPU_API long SetComputation(
 	}
 	else	// use already existing array
 	{
-		if(j != devNum)
+		if(j != devNum)	// array resides on another device
 		{
 			delete exprI;
 			return CAL_RESULT_NOT_SUPPORTED;
