@@ -7,7 +7,8 @@ Module::Module(CALdevice hDev, CALcontext ctx, Kernel* kern)
 	module = 0;
 	inputNames = NULL;
 	outputNames = NULL;
-	constNames = NULL;
+	constNames = NULL;	
+	constants = NULL;
 	gbufName = 0;
 
 	char str[8];
@@ -40,8 +41,11 @@ Module::Module(CALdevice hDev, CALcontext ctx, Kernel* kern)
 		inputNames = new CALname[nInputs];
 	if(nOutputs)
 		outputNames = new CALname[nOutputs];
-	if(nConstants)
-		constNames = new CALname[nConstants];
+	if(nConstants)	
+	{
+		constNames = new CALname[nConstants];			
+		constants = new Constant*[nConstants];
+	}
 
 	for(i = 0; (i < nInputs) && (err == CAL_RESULT_OK); i++)
 	{
@@ -77,6 +81,16 @@ Module::Module(CALdevice hDev, CALcontext ctx, Kernel* kern)
 	{
 		sprintf_s(str,"cb%d",i);
 		err = calModuleGetName(&constNames[i],ctx,module,str);
+
+		if(kern->constSizes[i])	// create all necessary constants
+		{
+			constants[i] = new Constant(hDev,ctx,constNames[i],kern->constFormats[i],kern->constSizes[i]);		
+			if(constants[i]->err != CAL_RESULT_OK)
+			{
+				delete constants[i]; constants[i] = NULL;
+				err = constants[i]->err;
+			}
+		}
 	}
 	if(err != CAL_RESULT_OK)
 	{
@@ -103,17 +117,53 @@ Module::Module(CALdevice hDev, CALcontext ctx, Kernel* kern)
 
 Module::~Module(void)
 {
+	long i;
+
 	if(nInputs)
 		delete inputNames;
 
 	if(nOutputs)
 		delete outputNames;
-
-	if(nConstants)
+	
+	if(constants)
+	{
+		for(i = 0; i < nConstants; i++)
+		{
+			if(constants[i])
+				delete constants[i];
+		}
+		delete constants;
 		delete constNames;
+	}	
 
 	if(module)
 		calModuleUnload(ctx,module);
+}
+
+CALresult Module::SetConstantsToContext(void)
+{
+	long i;
+
+	err = CAL_RESULT_OK;
+
+	for(i = 0; (i < nConstants) && (err == CAL_RESULT_OK); i++)	
+	{
+		if(constants[i])
+			err = constants[i]->SetToContext();
+	}
+
+	return err;
+}
+
+void Module::ReleaseConstantsFromContext(void)
+{
+	long i;
+
+	for(i = 0; (i < nConstants) && (err == CAL_RESULT_OK); i++)	
+	{
+		if(constants[i])
+			constants[i]->ReleaseFromContext();
+	}
 }
 
 ModulePool::ModulePool(void)

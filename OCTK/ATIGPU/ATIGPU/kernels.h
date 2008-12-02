@@ -1,48 +1,123 @@
 #pragma once
 #include "ObjectPool.h"
 
+#define GBufBurstSize						64	// global buffer burst size in bytes
+#define MinFillPhysNumElements_PS			64	// minimal data size in bytes used for filling memory using pixel shader kernels
+
 /*
  REAL kernels
 */
 
+// data filling kernels
+enum KernelCode
+{
+KernFillByNComp_PS,		// pixel shader for filling memory by NumComponents elements per thread
+KernFillBy2xNComp_CS,	// compute shader for filling memory by 2xNumComponents elements per thread
+KernFillBy4xNComp_CS,	// compute shader for filling memory by 4xNumComponents elements per thread
+KernFillBy8xNComp_CS,	// compute shader for filling memory by 8xNumComponents elements per thread
+KernFillBy16xNComp_CS,	// compute shader for filling memory by 16xNumComponents elements per thread
+
 // addition
-#define KernAddR				0
-#define KernAddLR				1
+KernAddR_PS,
+KernAddR_CS,
+KernAddLR_PS,
 
 // subtraction
-#define KernSubR				2
-#define KernSubLR				3
+KernSubR_PS,
+KernSubR_CS,
+KernSubLR_PS,
 
 // elementwise multiply
-#define KernEwMulR				4
-#define KernEwMulLR				5
+KernEwMulR_PS,
+KernEwMulR_CS,
+KernEwMulLR_PS,
 
 // elementwise divide
-#define KernEwDivR				6
-#define KernEwDivLR				7
-
-// dot product
-#define KernDotProdR			8
-#define KernDotProdLR			9
+KernEwDivR_PS,
+KernEwDivR_CS,
+KernEwDivLR_PS,
 
 // matrix vector multiply
-#define KernMatVecR				10
+KernMatVecR_PS
+};
 
-// assignment
-#define KernAssign				11
+// total number of kernels
+#define NKernels				18
 
-#define KernAddR_CS				12
-
-#define NKernels				13	// total number of kernels
-
-const char kernelAssign[] =
+const char kernelFillByNComp_PS[] =
 "il_ps_2_0\n"
 "dcl_output_generic o0\n"
 "dcl_cb cb0[1]\n"
 "mov o0, cb0[0]\n"
 "end\n";
 
-const char kernelAddR[] =
+const char kernelFillBy2xNComp_CS[] =
+"il_cs_2_0\n"
+"dcl_num_thread_per_group 64\n"
+"dcl_cb cb0[1]\n"
+"mov r0, vaTid0.x\n"
+"dcl_literal l0, 2, 0, 0, 0\n"
+"imul r0.x, r0.x, l0.x\n"
+"mov g[r0.x], cb0[0]\n"
+"mov g[r0.x+1], cb0[0]\n"
+"end\n";
+
+const char kernelFillBy4xNComp_CS[] =
+"il_cs_2_0\n"
+"dcl_num_thread_per_group 64\n"
+"dcl_cb cb0[1]\n"
+"mov r0, vaTid0.x\n"
+"dcl_literal l0, 4, 0, 0, 0\n"
+"imul r0.x, r0.x, l0.x\n"
+"mov g[r0.x], cb0[0]\n"
+"mov g[r0.x+1], cb0[0]\n"
+"mov g[r0.x+2], cb0[0]\n"
+"mov g[r0.x+3], cb0[0]\n"
+"end\n";
+
+const char kernelFillBy8xNComp_CS[] =
+"il_cs_2_0\n"
+"dcl_num_thread_per_group 64\n"
+"dcl_cb cb0[1]\n"
+"mov r0, vaTid0.x\n"
+"dcl_literal l0, 8, 0, 0, 0\n"
+"imul r0.x, r0.x, l0.x\n"
+"mov g[r0.x], cb0[0]\n"
+"mov g[r0.x+1], cb0[0]\n"
+"mov g[r0.x+2], cb0[0]\n"
+"mov g[r0.x+3], cb0[0]\n"
+"mov g[r0.x+4], cb0[0]\n"
+"mov g[r0.x+5], cb0[0]\n"
+"mov g[r0.x+6], cb0[0]\n"
+"mov g[r0.x+7], cb0[0]\n"
+"end\n";
+
+const char kernelFillBy16xNComp_CS[] =
+"il_cs_2_0\n"
+"dcl_num_thread_per_group 64\n"
+"dcl_cb cb0[1]\n"
+"mov r0, vaTid0.x\n"
+"dcl_literal l0, 16, 0, 0, 0\n"
+"imul r0.x, r0.x, l0.x\n"
+"mov g[r0.x], cb0[0]\n"
+"mov g[r0.x+1], cb0[0]\n"
+"mov g[r0.x+2], cb0[0]\n"
+"mov g[r0.x+3], cb0[0]\n"
+"mov g[r0.x+4], cb0[0]\n"
+"mov g[r0.x+5], cb0[0]\n"
+"mov g[r0.x+6], cb0[0]\n"
+"mov g[r0.x+7], cb0[0]\n"
+"mov g[r0.x+8], cb0[0]\n"
+"mov g[r0.x+9], cb0[0]\n"
+"mov g[r0.x+10], cb0[0]\n"
+"mov g[r0.x+11], cb0[0]\n"
+"mov g[r0.x+12], cb0[0]\n"
+"mov g[r0.x+13], cb0[0]\n"
+"mov g[r0.x+14], cb0[0]\n"
+"mov g[r0.x+15], cb0[0]\n"
+"end\n";
+
+const char kernelAddR_PS[] =
 "il_ps_2_0\n"
 "dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__\n"
 "dcl_output_generic o0\n"
@@ -53,23 +128,7 @@ const char kernelAddR[] =
 "add o0, r0, r1\n"
 "end\n";
 
-const char kernelAddR_CS[] =
-"il_cs_2_0\n"
-"dcl_num_thread_per_blk 64\n"
-"dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
-"dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
-"dcl_cb cb0[1]\n"
-"itof r0.z, vaTid0.x\n"
-"mul r0.y, r0.z, cb0[0].y\n" 
-"mod r0.x, r0.z, cb0[0].x\n"
-"flr r0.xy, r0.xy\n"
-"sample_resource(0)_sampler(0) r2, r0.xy\n"
-//"dcl_literal l0, 0.1f, 0.2f, 0.3f, 0.4f\n"
-"itof r3, vaTid0.x\n"
-"mov g[0], r2\n"
-"end\n";
-
-const char kernelAddLR[] =
+const char kernelAddLR_PS[] =
 "il_ps_2_0\n"
 "dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__\n"
 "dcl_output_generic o0\n"
@@ -79,6 +138,106 @@ const char kernelAddLR[] =
 "sample_resource(1)_sampler(1) r1, vWinCoord0\n"
 "dadd o0.xy, r0.xy, r1.xy\n"
 "dadd o0.zw, r0.zw, r1.zw\n"
+"end\n";
+
+const char kernelAddR_CS[] =
+"il_cs_2_0\n"
+"dcl_num_thread_per_blk 64\n"
+"dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+"dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+"dcl_cb cb0[1]\n"
+
+"ftoi r0.x, cb0[0].w"
+"ilt r0.y, vaTid0.x, r0.x\n"
+
+"if_logicalnz r0.y\n"
+"	itof r0.z, vaTid0.x\n"				// r0.z := thread_index
+"	mul r0.y, r0.z, cb0[0].y\n"			// r0.y := thread_index*(1/width) == y index
+"	mod r0.x, r0.z, cb0[0].x\n"			// r0.x := thread_index % width == x index
+"	flr r0.xy, r0.xy\n"					// [x,y] := floor(r0.xy)
+"	mad r1.x, r0.y, cb0[0].z, r0.x\n"	// index := y*pitch + x - index with account of the alignment pitch
+"	ftoi r1.x, r1.x"					// convert to integer
+"	sample_resource(0)_sampler(0) r2, r0.xy\n"
+"	sample_resource(1)_sampler(1) r3, r0.xy\n"
+"	add r4, r2, r3\n"
+"	mov g[r1.x], r4\n"
+"endif\n"
+
+"end\n";
+
+const char kernelSubR_CS[] =
+"il_cs_2_0\n"
+"dcl_num_thread_per_blk 64\n"
+"dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+"dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+"dcl_cb cb0[1]\n"
+
+"ftoi r0.x, cb0[0].w"
+"ilt r0.y, vaTid0.x, r0.x\n"
+
+"if_logicalnz r0.y\n"
+"	itof r0.z, vaTid0.x\n"				// r0.z := thread_index
+"	mul r0.y, r0.z, cb0[0].y\n"			// r0.y := thread_index*(1/width) == y index
+"	mod r0.x, r0.z, cb0[0].x\n"			// r0.x := thread_index % width == x index
+"	flr r0.xy, r0.xy\n"					// [x,y] := floor(r0.xy)
+"	mad r1.x, r0.y, cb0[0].z, r0.x\n"	// index := y*pitch + x - index with account of the alignment pitch
+"	ftoi r1.x, r1.x"					// convert to integer
+"	sample_resource(0)_sampler(0) r2, r0.xy\n"
+"	sample_resource(1)_sampler(1) r3, r0.xy\n"
+"	sub r4, r2, r3\n"
+"	mov g[r1.x], r4\n"
+"endif\n"
+
+"end\n";
+
+const char kernelEwMulR_CS[] =
+"il_cs_2_0\n"
+"dcl_num_thread_per_blk 64\n"
+"dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+"dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+"dcl_cb cb0[1]\n"
+
+"ftoi r0.x, cb0[0].w"
+"ilt r0.y, vaTid0.x, r0.x\n"
+
+"if_logicalnz r0.y\n"
+"	itof r0.z, vaTid0.x\n"				// r0.z := thread_index
+"	mul r0.y, r0.z, cb0[0].y\n"			// r0.y := thread_index*(1/width) == y index
+"	mod r0.x, r0.z, cb0[0].x\n"			// r0.x := thread_index % width == x index
+"	flr r0.xy, r0.xy\n"					// [x,y] := floor(r0.xy)
+"	mad r1.x, r0.y, cb0[0].z, r0.x\n"	// index := y*pitch + x - index with account of the alignment pitch
+"	ftoi r1.x, r1.x"					// convert to integer
+"	sample_resource(0)_sampler(0) r2, r0.xy\n"
+"	sample_resource(1)_sampler(1) r3, r0.xy\n"
+"	mul r4, r2, r3\n"
+"	mov g[r1.x], r4\n"
+"endif\n"
+
+"end\n";
+
+const char kernelEwDivR_CS[] =
+"il_cs_2_0\n"
+"dcl_num_thread_per_blk 64\n"
+"dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+"dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+"dcl_cb cb0[1]\n"
+
+"ftoi r0.x, cb0[0].w"
+"ilt r0.y, vaTid0.x, r0.x\n"
+
+"if_logicalnz r0.y\n"
+"	itof r0.z, vaTid0.x\n"				// r0.z := thread_index
+"	mul r0.y, r0.z, cb0[0].y\n"			// r0.y := thread_index*(1/width) == y index
+"	mod r0.x, r0.z, cb0[0].x\n"			// r0.x := thread_index % width == x index
+"	flr r0.xy, r0.xy\n"					// [x,y] := floor(r0.xy)
+"	mad r1.x, r0.y, cb0[0].z, r0.x\n"	// index := y*pitch + x - index with account of the alignment pitch
+"	ftoi r1.x, r1.x"					// convert to integer
+"	sample_resource(0)_sampler(0) r2, r0.xy\n"
+"	sample_resource(1)_sampler(1) r3, r0.xy\n"
+"	div_zeroop(zero) r4, r2, r3\n"
+"	mov g[r1.x], r4\n"
+"endif\n"
+
 "end\n";
 
 /*
@@ -164,7 +323,7 @@ const char kernelAddLR[] =
 */
 
 // subtract
-const char kernelSubR[] =
+const char kernelSubR_PS[] =
 "il_ps_2_0\n"
 "dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__\n"
 "dcl_output_generic o0\n"
@@ -175,7 +334,7 @@ const char kernelSubR[] =
 "sub o0, r0, r1\n"
 "end\n";
 
-const char kernelSubLR[] =
+const char kernelSubLR_PS[] =
 "il_ps_2_0\n"
 "dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__\n"
 "dcl_output_generic o0\n"
@@ -188,20 +347,8 @@ const char kernelSubLR[] =
 "dmad o0.zw, r1.zw, l0.zw, r0.zw\n"	// o0 = r1*(-1) + r0 == r0 - r1
 "end\n";
 
-// naive matrix multiply: C{2D stream} := A{2D stream} * B{2D stream}
-const char kernelNaiveMatMulR[] =
-"il_ps_2_0\n"
-"dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__\n"
-"dcl_output_generic o0\n"
-"dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
-"dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
-"sample_resource(0)_sampler(0) r0, vWinCoord0\n"
-"sample_resource(1)_sampler(1) r1, vWinCoord0\n"
-"mul o0, r0, r1\n"
-"end\n";
-
 // elementwise multiply
-const char kernelEwMulR[] =
+const char kernelEwMulR_PS[] =
 "il_ps_2_0\n"
 "dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__\n"
 "dcl_output_generic o0\n"
@@ -212,7 +359,7 @@ const char kernelEwMulR[] =
 "mul o0, r0, r1\n"
 "end\n";
 
-const char kernelEwMulLR[] =
+const char kernelEwMulLR_PS[] =
 "il_ps_2_0\n"
 "dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__\n"
 "dcl_output_generic o0\n"
@@ -225,7 +372,7 @@ const char kernelEwMulLR[] =
 "end\n";
 
 // elementwise divide
-const char kernelEwDivR[] =
+const char kernelEwDivR_PS[] =
 "il_ps_2_0\n"
 "dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__\n"
 "dcl_output_generic o0\n"
@@ -236,7 +383,7 @@ const char kernelEwDivR[] =
 "div_zeroop(zero) o0, r0, r1\n"
 "end\n";
 
-const char kernelEwDivLR[] =
+const char kernelEwDivLR_PS[] =
 "il_ps_2_0\n"
 "dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__\n"
 "dcl_output_generic o0\n"
@@ -246,29 +393,6 @@ const char kernelEwDivLR[] =
 "sample_resource(1)_sampler(1) r1, vWinCoord0\n"
 "ddiv_zeroop(zero) o0.xy, r0.xy, r1.xy\n"
 "ddiv_zeroop(zero) o0.zw, r0.zw, r1.zw\n"
-"end\n";
-
-// dot product
-const char kernelDotProdR[] =
-"il_ps_2_0\n"
-"dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__\n"
-"dcl_output_generic o0\n"
-"dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
-"dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
-"sample_resource(0)_sampler(0) r0, vWinCoord0\n"
-"sample_resource(1)_sampler(1) r1, vWinCoord0\n"
-"mul o0, r0, r1\n"
-"end\n";
-
-const char kernelDotProdLR[] =
-"il_ps_2_0\n"
-"dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__\n"
-"dcl_output_generic o0\n"
-"dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
-"dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
-"sample_resource(0)_sampler(0) r0, vWinCoord0\n"
-"sample_resource(1)_sampler(1) r1, vWinCoord0\n"
-"dmul o0, r0, r1\n"
 "end\n";
 
 const char kernelMatVecR_old[] =
@@ -338,8 +462,38 @@ const char kernelMatVecR_old[] =
 
 "end\n";
 
+const char kernelMatVecR_CS[] =
+"il_cs_2_0\n"
+"dcl_num_thread_per_blk 64\n"
+"dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+"dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+"dcl_cb cb0[1]\n"
 
-const char kernelMatVecR[] =
+"ftoi r0.x, cb0[0].w"
+"ilt r0.y, vaTid0.x, r0.x\n"
+
+"if_logicalnz r0.y\n"
+"	itof r0.z, vaTid0.x\n"				// r0.z := thread_index
+
+/*
+"	mul r0.y, r0.z, cb0[0].y\n"			// r0.y := thread_index*(1/width) == y index
+"	mod r0.x, r0.z, cb0[0].x\n"			// r0.x := thread_index % width == x index
+"	flr r0.xy, r0.xy\n"					// [x,y] := floor(r0.xy)
+"	mad r1.x, r0.y, cb0[0].z, r0.x\n"	// index := y*pitch + x - index with account of the alignment pitch
+"	ftoi r1.x, r1.x"					// convert to integer
+*/
+
+/*
+"	sample_resource(0)_sampler(0) r2, r0.xy\n"
+"	sample_resource(1)_sampler(1) r3, r0.xy\n"
+"	div_zeroop(zero) r4, r2, r3\n"
+*/
+"	mov g[r1.x], r4\n"
+"endif\n"
+
+"end\n";
+
+const char kernelMatVecR_PS[] =
 "il_ps_2_0\n"
 "dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__\n"
 "dcl_cb cb0[1]\n"
@@ -418,6 +572,9 @@ public:
 	long nOutputs;	// number of kernel outputs
 	long nConstants;	// number of kernel constants
 	BOOL usesGlobalBuffer;	// TRUE when kernel uses a global buffer
+
+	CALformat* constFormats;	// data formats for each constant
+	long* constSizes;			// sizes for each constant
 };
 
 /*

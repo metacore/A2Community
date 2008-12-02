@@ -24,7 +24,7 @@
 class Context
 {
 public:
-	Context(CALdevice hDev, KernelPool* kernels);
+	Context(CALdevice hDev, CALdeviceattribs* devAttribs, KernelPool* kernels);
 	~Context(void);
 
 	CALresult SetComputation(ArrayExpression* expr, Array* result, long priority, long flags, ArrayPool* arrs);
@@ -39,17 +39,21 @@ public:
 	ArrayExpression* expr;	// array expression describing current computation
 	Array* result;			// result array for current computation
 
+	CALdeviceattribs* devAttribs;
+
 	CALcounter idleCounter;	// GPU Idle counter
 	CALcounter cacheHitCounter;	// GPU cache hit counter
 	
 	// perform the computation which was preliminary set by SetComputation
 	CALresult DoComputation(void);
-	// perform assignment of array identity
-	CALresult DoIdentic(void);
+	// perform assignment of array identity (using pixel shader)
+	CALresult DoIdenticPS(void);
+	// perform assignment of array identity (using compute shader)
+	CALresult DoIdenticCS(void);
 	// Run a pixel shader program
 	CALresult RunPixelShader(Module* module, Array** inputs, Array** outputs, Array* globalBuffer, CALdomain* domain);
-	// performs an elementwise operation
-	CALresult DoElementwise(void);
+	// performs an elementwise operation using pixel shader
+	CALresult DoElementwisePS(void);
 	// start Idle counter
 	CALresult StartIdleCounter(void);
 	// start cache hit counter
@@ -72,18 +76,18 @@ public:
 	PFNCALCTXGETCOUNTER     calCtxGetCounterExt;	
 
 	BOOL counterExtSupported;
-	// perform matrix vector operation
-	CALresult DoMatVec(void);
-	// set computation inputs in a common way
-	CALresult SetInputs0(ArrayExpression* expr,ArrayPool* arrs);
-	// set computation output in a common way
-	CALresult SetOutput0(Array* result, ArrayPool* arrs, CALuint flags);
+	// perform matrix vector operation using pixel shader
+	CALresult DoMatVecPS(void);
+	// perform matrix vector operation using compute shader
+	CALresult DoMatVecCS(void);
 	// allocate local memory of an array with freeing space if necessary
 	CALresult AllocateArrayLocal(Array* arr, ArrayPool* arrs, CALuint flags);
 	// Run a compute shader program
 	CALresult RunComputeShader(Module* module, Array** inputs, Array* globalBuffer, CALprogramGrid* programGrid);
 	// setup an elementwise computation
 	CALresult SetElementwise(ArrayExpression* expr, Array* result, ArrayPool* arrs);
+	// perform an elementwise operation using compute shader
+	CALresult DoElementwiseCS(void);
 };
 
 class ContextPool :

@@ -1,26 +1,27 @@
 #pragma once
 
-#include "Modules.h"
-
 class Constant
 {
 public:
-	Constant(Module* module, long ind, long dType, long size, long numComponents);
+	Constant(CALdevice hDev, CALcontext ctx, CALname name, CALformat dFormat, long size);
 	~Constant(void);
 	
 	// set constant data
-	CALresult Set(void* data);	
+	CALresult SetData(void* data);	
 	// fill the whole constant with data pattern
 	CALresult Fill(void* pattern, long patternSize);
 	CALresult err;	// error code forr last operation
 		
 	CALcontext ctx;			// context handle
 	CALresource res;		// resource (only local)
+	CALname name;			// constant CAL name
 	CALmem mem;				// memory handle
 
-	long dType;				// constant data type
 	CALformat dFormat;		// data format
 	long size;				// constant size
-	long dataSize;			// total data size in bytes
-	long numComponents;
+	long dataSize;			// total data size in bytes	
+	// set constant memory to the context
+	CALresult SetToContext(void);
+	// release constant memory from the context
+	void ReleaseFromContext(void);
 };

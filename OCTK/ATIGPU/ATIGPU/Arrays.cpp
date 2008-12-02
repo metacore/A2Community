@@ -21,13 +21,15 @@ Array::Array(CALdevice hDev, CALdeviceinfo* devInfo, CALdeviceattribs* devAttrib
 	isVirtualized = FALSE;		
 
 	this->size = new long[nDims]; 
-	// total data size in bytes
-	dataSize = elemSize;
+	// total number of elements
+	numElements = 1;
 	for(i = 0; i < nDims; i++)
 	{
 		this->size[i] = size[i];
-		dataSize *= size[i];
+		numElements *= size[i];
 	}	
+	// total data size in bytes
+	dataSize = numElements*elemSize;
 
 	// does it fit to hardware memory layout requirements?
 	if( ((nDims == 1) && (GetPaddedNumElements(size[0],physNumComponents) <= (long)devInfo->maxResource1DWidth)) 
@@ -60,18 +62,27 @@ Array::Array(CALdevice hDev, CALdeviceinfo* devInfo, CALdeviceattribs* devAttrib
 	physSize = new long[nLogicDims];
 	physSize[0] = logicSize[0];
 	if(nLogicDims == 1)
+	{
 		physSize[0] = GetPaddedNumElements(physSize[0],physNumComponents);
+		pitch = (physSize[0]/devAttribs->pitch_alignment)*devAttribs->pitch_alignment;
+		if(physSize[0] % devAttribs->pitch_alignment) pitch += devAttribs->pitch_alignment;
+	}
 	else if(nLogicDims == 2)
+	{
 		physSize[1] = GetPaddedNumElements(logicSize[1],physNumComponents);
+		pitch = (physSize[1]/devAttribs->pitch_alignment)*devAttribs->pitch_alignment;
+		if(physSize[1] % devAttribs->pitch_alignment) pitch += devAttribs->pitch_alignment;
+	}
 
 	// logic and physical data size in bytes
 	logicDataSize = elemSize;
-	physDataSize = physElemSize;
+	physNumElements = 1;	
 	for(i = 0; i < nLogicDims; i++)
 	{
 		logicDataSize *= logicSize[i];
-		physDataSize *= physSize[i];
+		physNumElements *= physSize[i];
 	}
+	physDataSize = physNumElements*physElemSize;	
 	
 	cpuData = NULL;
 	remoteRes = 0;
@@ -560,4 +571,30 @@ CALresult Array::GetNamedLocalMem(CALcontext ctx, CALname name, CALmem* mem)
 	}
 
 	return err;
+}
+
+// returns TRUE if array is scalar and equal to zero
+BOOL Array::IsZeroScalar(void)
+{	
+	if(cpuData && IsScalar())
+	{
+		switch(dType)
+		{
+			case TSHORTINT: return *((char*)cpuData) == 0;			
+			case TINTEGER:	return *((short*)cpuData) == 0;
+			case TLONGINT:	return *((long*)cpuData) == 0;
+			case TREAL:		return *((float*)cpuData) == 0;
+			case TLONGREAL:	return *((double*)cpuData) == 0;
+			default:
+				return FALSE;
+		}
+	}
+	else
+		return FALSE;
+}
+
+// returns TRUE if array is a scalar
+BOOL Array::IsScalar(void)
+{
+	return (dataSize == elemSize);
 }

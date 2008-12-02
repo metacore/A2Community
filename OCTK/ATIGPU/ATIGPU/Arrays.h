@@ -51,14 +51,17 @@ public:
 	void* cpuData;			// CPU data pointer
 	long nDims;				// number of dimensions (logical)
 	long* size;				// array size
+	long numElements;		// total number of elements
 	long elemSize;			// element size in bytes	
 	long dataSize;			// total data size in bytes
 
-	long physNumComponents;	// number of components in each element on the GPU
-	long physElemSize;		// physical element size
+	long physNumComponents;	// number of components in each element on the GPU	
+	long physNumElements;	// total number of physical multicomponent elements
+	long physElemSize;		// physical element size (here an element can be multicomponent)
 	CALformat dFormat;		// data format on the GPU	
 	long logicDataSize;		// logical data size in bytes
 	long physDataSize;		// physical data size in bytes
+	long pitch;				// GPU alignment pitch for data row
 
 	long nLogicDims;		// number of logical dimensions on the GPU
 	long* logicSize;		// logical size on the GPU
@@ -76,6 +79,10 @@ public:
 	CALresult Copy(CALcontext ctx, CALresource dstRes, CALresource srcRes);
 	// get named local memory handle for given context
 	CALresult GetNamedLocalMem(CALcontext ctx, CALname name, CALmem* mem);
+	// returns TRUE if array is scalar and equal to zero
+	BOOL IsZeroScalar(void);
+	// returns TRUE if array is a scalar
+	BOOL IsScalar(void);
 };
 
 // array expression for internal use

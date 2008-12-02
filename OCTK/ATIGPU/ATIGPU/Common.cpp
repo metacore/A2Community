@@ -64,7 +64,7 @@ CALformat GetFormat(long dType, long numComponents)
 	return CAL_FORMAT_FLOAT_4;
 }
 
-// Get element size for a given data format
+// Get element size for a given data type
 long GetElementSize(long dType)
 {
 	switch(dType)
@@ -79,6 +79,30 @@ long GetElementSize(long dType)
 			return 4;
 		case TLONGREAL: 
 			return 8;		
+		default: 
+			return 0;
+	}	
+}
+
+// Get element size for a given data format
+long GetElementSize(CALformat dFormat)
+{
+	switch(dFormat)
+	{
+		case CAL_FORMAT_BYTE_1: return 1;
+		case CAL_FORMAT_BYTE_2: return 2;
+		case CAL_FORMAT_BYTE_4: return 4;
+		case CAL_FORMAT_SHORT_1: return 2;
+		case CAL_FORMAT_SHORT_2: return 4;
+		case CAL_FORMAT_SHORT_4: return 8;
+		case CAL_FORMAT_INT_1: return 4;
+		case CAL_FORMAT_INT_2: return 8;
+		case CAL_FORMAT_INT_4: return 16;
+		case CAL_FORMAT_FLOAT_1: return 4;
+		case CAL_FORMAT_FLOAT_2: return 8;
+		case CAL_FORMAT_FLOAT_4: return 16;
+		case CAL_FORMAT_DOUBLE_1: return 8;
+		case CAL_FORMAT_DOUBLE_2: return 16;
 		default: 
 			return 0;
 	}	

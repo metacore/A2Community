@@ -1,9 +1,9 @@
 #include "StdAfx.h"
 #include "Contexts.h"
 #include "Kernels.h"
-#include "Constant.h"
+#include "Constants.h"
 
-Context::Context(CALdevice hDev, KernelPool* kernels)
+Context::Context(CALdevice hDev, CALdeviceattribs* devAttribs, KernelPool* kernels)
 {		
 	expr = NULL;
 	result = NULL;
@@ -31,8 +31,8 @@ Context::Context(CALdevice hDev, KernelPool* kernels)
 	}	
 
 	this->kernels = kernels;
-
 	this->hDev = hDev;
+	this->devAttribs = devAttribs;
 }
 
 Context::~Context(void)
@@ -108,44 +108,19 @@ CALresult Context::SetComputation(ArrayExpression* expr, Array* result, long pri
 			err = SetElementwise(expr,result,arrs);
 			break;
 	}
-
-	// in case of an error set use counters to their previous values
-	if(err != CAL_RESULT_OK)
+	
+	if(err == CAL_RESULT_OK)		
+	{
+		this->expr = expr;
+		this->result = result;
+	}
+	else	// in case of an error set use counters to their previous values		
 	{			
 		for(i = 0; (i < 3) && expr->args[i]; i++){expr->args[i]->useCounter--;}	
 		result->useCounter--;
 		result->isReservedForGet = FALSE;			
 	}
-/*
-	long i;
-	long op = expr->op;	
-	
-	err = CAL_RESULT_OK;			
-	
 
-	if( (op == OpIdentic) 
-		|| (op == OpAdd) 
-		|| (op == OpSub) 
-		|| (op == OpDotProd) 
-		|| (op == OpEwMul) 
-		|| (op == OpEwDiv) 
-		|| ((op == OpMul) && (expr->args[0]->nDims == 2) && (expr->args[1]->nDims == 1)) )	// matrix-vector
-	{	
-		// set inputs and output in a common way
-		err = SetInputs0(expr,arrs);
-		if(err == CAL_RESULT_OK)
-			err = SetOutput0(result,arrs,CAL_RESALLOC_GLOBAL_BUFFER);
-		
-		if(err == CAL_RESULT_OK)		
-		{
-			this->expr = expr;
-			this->result = result;
-		}		
-	}
-	else
-		err = CAL_RESULT_NOT_SUPPORTED;
-				
-*/
 	return err;
 }
 
@@ -200,28 +175,28 @@ CALresult Context::DoComputation(void)
 	switch(expr->op)
 	{
 		case OpIdentic:
-			err = DoIdentic();
+			err = DoIdenticCS();
 			break;
 
 		case OpAdd:
-			err = DoElementwise();
+			err = DoElementwiseCS();
 			break;
 
 		case OpSub:
-			err = DoElementwise();
+			err = DoElementwiseCS();
 			break;
 
 		case OpEwMul:
-			err = DoElementwise();
+			err = DoElementwiseCS();
 			break;
 
 		case OpEwDiv:
-			err = DoElementwise();
+			err = DoElementwiseCS();
 			break;
 
 		case OpMul:
 			if( (expr->args[0]->nDims == 2) && (expr->args[1]->nDims == 1) )
-				err = DoMatVec();
+				err = DoMatVecPS();
 			else	
 				err = CAL_RESULT_NOT_SUPPORTED;
 
@@ -242,19 +217,19 @@ CALresult Context::DoComputation(void)
 	return err;
 }
 
-// perform assignment of array identity
-CALresult Context::DoIdentic(void)
-{
-/*
-	Module* module;
-	Constant* constant;
+// perform assignment of array identity (using pixel shader)
+CALresult Context::DoIdenticPS(void)
+{	
+	Module* module = NULL;
+	Constant* constant = NULL;
 	Array* arg;	
+	long w, h;
 
 	CALdomain domain;
 
 	arg = expr->args[0];	
 
-	if(result->nDims == arg->nDims)	// just copy data from one array to another
+	if(result->dataSize == arg->dataSize)	// just copy data from one array to another
 	{
 		if(result->remoteRes)
 		{
@@ -275,50 +250,182 @@ CALresult Context::DoIdentic(void)
 	{	
 		// right hand side is a scalar
 		_ASSERT( (arg->nDims == 1) && (arg->size[0] == 1) );
-
-		// here we use a kernel which sets all data to the same value
-		module = new Module(hDev,ctx,(Kernel*)kernels->Get(KernAssign));
-		if(module->err == CAL_RESULT_OK)
+		
+		if(result->physDataSize/result->physElemSize >= MinFillPhysNumElements_PS)	// if the result is sufficiently big use kernel method
 		{
-			// create constant for passing to the kernel
-			constant = new Constant(module,0,arg->dType,1,arg->physNumComponents);	
+			if(result->nLogicDims == 1) {w = result->logicSize[0]; h = 1;}
+			else {w = result->logicSize[1]; h = result->logicSize[0];}
 
-			if(constant->err == CAL_RESULT_OK)
-			{	
-				// fill all constant components with one value
-				err = constant->Fill(arg->cpuData,arg->elemSize);
+			// if data parts are multiple of result->physNumComponents use KernFillByNComp_PS kernel
+			if( result->IsZeroScalar()
+				|| (result->physDataSize == result->dataSize)
+				|| ( ((w % result->physNumComponents) == 0) && ( ((w - (w*h - result->numElements)) % result->physNumComponents) == 0) ) )
+			{
+				module = new Module(hDev,ctx,(Kernel*)kernels->Get(KernFillByNComp_PS));
 
-				if(err == CAL_RESULT_OK)
+				if(module->err == CAL_RESULT_OK)
 				{
-					// set the domain of execution
-					domain.x = 0;
-					domain.y = 0;
-					if(result->nLogicDims == 1)
-					{
-						domain.width = result->physSize[0];
-						domain.height = 1;
-					}
-					else
-					{
-						domain.width = result->physSize[1];
-						domain.height = result->physSize[0];
-					}
+					// create constant for passing to the kernel
+					constant = new Constant(hDev,ctx,module->constNames[0],arg->dFormat,1);	
 
-					// run the program
-					err = RunPixelShader(module,expr->args,&result,NULL,&domain);
+					if(constant->err == CAL_RESULT_OK)				
+						// fill all constant components with one value
+						err = constant->Fill(arg->cpuData,arg->elemSize);
+					else
+						err = constant->err;				
 				}
-			}
+				else
+					err = module->err;						
+			}	
 			else
-				err = constant->err;
-			
-			delete constant;
+				// FIXME: implement other cases
+				err = CAL_RESULT_NOT_SUPPORTED;	
+
+			if(err == CAL_RESULT_OK)
+			{
+				// set the domain of execution
+				domain.x = 0;
+				domain.y = 0;
+				if(result->nLogicDims == 1)
+				{
+					domain.width = result->physSize[0];
+					domain.height = 1;
+				}
+				else
+				{
+					domain.width = result->physSize[1];
+					domain.height = result->physSize[0];
+				}
+
+				// run the program
+				err = RunPixelShader(module,expr->args,&result,NULL,&domain);
+			}
+
+			if(constant)
+				delete constant;
+			if(module)
+				delete module;
 		}
 		else
-			err = module->err;
+			//if the result size is small it can be done just by using calResMap!
+			err = CAL_RESULT_NOT_SUPPORTED;
 
-		delete module;
 	}	
-*/
+
+	return err;
+}
+
+// perform assignment of array identity (using compute shader)
+CALresult Context::DoIdenticCS(void)
+{
+	Module* module = NULL;
+	Constant* constant = NULL;
+	Array* arg;	
+	CALprogramGrid pg;
+	unsigned long w, w1, h, numBurstElems, nThreads;
+
+	arg = expr->args[0];	
+
+	if(result->dataSize == arg->dataSize)	// just copy data from one array to another
+	{
+		if(result->remoteRes)
+		{
+			if(arg->remoteRes)
+				err = result->Copy(ctx,result->remoteRes,arg->remoteRes);
+			else
+				err = result->Copy(ctx,result->remoteRes,arg->localRes);
+		}
+		else
+		{
+			if(expr->args[0]->localRes)
+				err = result->Copy(ctx,result->localRes,arg->localRes);
+			else
+				err = result->Copy(ctx,result->localRes,arg->remoteRes);					
+		}
+	}
+	else
+	{	
+		
+		// right hand side must be a scalar
+		_ASSERT( (arg->nDims == 1) && (arg->size[0] == 1) );
+		
+		//
+		// FIXME: make setting of the wavefrontsize in a dynamic way
+		// this requires dynamic adding of "dcl_num_thread_per_group devAttribs->wavefrontSize\n" to all CS kernels strings
+		//
+		
+		numBurstElems = GBufBurstSize/result->physElemSize;	// number of physical burst multicomponent elements
+		nThreads = result->physNumElements/numBurstElems;	// total number of threads
+
+		// if the result is sufficiently big use kernel method
+		if(nThreads >= devAttribs->wavefrontSize)
+		{
+			// choose the right module
+			if(result->nLogicDims == 1) {w = result->logicSize[0]*result->elemSize; h = 1; w1 = 0;}
+			else {w1 = result->logicSize[1]; w = w1*result->elemSize; h = result->logicSize[0];}
+
+			// if data parts are multiple of GBufBurstSize and number of threads fits to integer number of
+			// NumThreadPerGroup use simplest kernels AND if tailed data do not have gaps (width is multipple of GPU alignment_pitch)
+			if( ((w1 % devAttribs->pitch_alignment) == 0) && ((nThreads % devAttribs->wavefrontSize) == 0) && ( ((w % GBufBurstSize) == 0) && ( ((w - (w*h - result->dataSize)) % GBufBurstSize) == 0) ) )
+			{				
+				switch(numBurstElems)
+				{
+				case 2:
+					module = new Module(hDev,ctx,(Kernel*)kernels->Get(KernFillBy2xNComp_CS));
+					break;
+				case 4:
+					module = new Module(hDev,ctx,(Kernel*)kernels->Get(KernFillBy4xNComp_CS));
+					break;
+				case 8:
+					module = new Module(hDev,ctx,(Kernel*)kernels->Get(KernFillBy8xNComp_CS));
+					break;	
+				case 16:
+					module = new Module(hDev,ctx,(Kernel*)kernels->Get(KernFillBy16xNComp_CS));
+					break;
+				default:
+					return CAL_RESULT_NOT_SUPPORTED;
+				}
+
+				if(module->err == CAL_RESULT_OK)
+				{
+					// create constant for passing to the kernel
+					constant = new Constant(hDev,ctx,module->constNames[0],arg->dFormat,1);	
+
+					if(constant->err == CAL_RESULT_OK)			
+						// fill all constant components with one value
+						err = constant->Fill(arg->cpuData,arg->elemSize);								
+					else
+						err = constant->err;				
+				}
+				else
+					err = module->err;
+
+				if(err == CAL_RESULT_OK)
+				{					
+					pg.flags = 0;
+					pg.func = module->func;
+					pg.gridBlock.width = devAttribs->wavefrontSize;
+					pg.gridBlock.height = 1;
+					pg.gridBlock.depth  = 1;
+					pg.gridSize.width   = nThreads/devAttribs->wavefrontSize;
+					pg.gridSize.height  = 1;
+					pg.gridSize.depth   = 1;
+
+					err = RunComputeShader(module,expr->args,result,&pg);
+				}
+
+				if(constant)
+					delete constant;
+				if(module)
+					delete module;
+			}
+			else				
+				err = DoIdenticPS();		
+		}
+		else			
+			err = DoIdenticPS();
+	}	
+
 	return err;
 }
 
@@ -419,9 +526,9 @@ CALresult Context::RunPixelShader(Module* module, Array** inputs, Array** output
 }
 
 
-// performs an elementwise operation
-CALresult Context::DoElementwise(void)
-{		
+// performs an elementwise operation using pixel shader
+CALresult Context::DoElementwisePS(void)
+{	
 	Module* module;
 	CALdomain domain;
 
@@ -435,19 +542,19 @@ CALresult Context::DoElementwise(void)
 			switch(expr->op)
 			{
 				case OpAdd:			
-					module = new Module(hDev,ctx,(Kernel*)kernels->Get(KernAddR));			
+					module = new Module(hDev,ctx,(Kernel*)kernels->Get(KernAddR_PS));			
 					break;
 				
 				case OpSub:
-					module = new Module(hDev,ctx,(Kernel*)kernels->Get(KernSubR));			
+					module = new Module(hDev,ctx,(Kernel*)kernels->Get(KernSubR_PS));			
 					break;
 
 				case OpEwMul:
-					module = new Module(hDev,ctx,(Kernel*)kernels->Get(KernEwMulR));			
+					module = new Module(hDev,ctx,(Kernel*)kernels->Get(KernEwMulR_PS));			
 					break;
 				
 				case OpEwDiv:
-					module = new Module(hDev,ctx,(Kernel*)kernels->Get(KernEwDivR));			
+					module = new Module(hDev,ctx,(Kernel*)kernels->Get(KernEwDivR_PS));			
 					break;
 
 				default:
@@ -461,19 +568,19 @@ CALresult Context::DoElementwise(void)
 			switch(expr->op)
 			{
 				case OpAdd:			
-					module = new Module(hDev,ctx,(Kernel*)kernels->Get(KernAddLR));			
+					module = new Module(hDev,ctx,(Kernel*)kernels->Get(KernAddLR_PS));			
 					break;
 				
 				case OpSub:
-					module = new Module(hDev,ctx,(Kernel*)kernels->Get(KernSubLR));			
+					module = new Module(hDev,ctx,(Kernel*)kernels->Get(KernSubLR_PS));			
 					break;
 
 				case OpEwMul:
-					module = new Module(hDev,ctx,(Kernel*)kernels->Get(KernEwMulLR));			
+					module = new Module(hDev,ctx,(Kernel*)kernels->Get(KernEwMulLR_PS));			
 					break;
 				
 				case OpEwDiv:
-					module = new Module(hDev,ctx,(Kernel*)kernels->Get(KernEwDivLR));			
+					module = new Module(hDev,ctx,(Kernel*)kernels->Get(KernEwDivLR_PS));			
 					break;
 
 				default:
@@ -510,64 +617,6 @@ CALresult Context::DoElementwise(void)
 
 	delete module;
 
-/*
-	Module* module;	
-	CALprogramGrid pg;
-	
-	err = CAL_RESULT_OK;	
-
-	switch(expr->dType)
-	{
-		case TREAL:
-		{
-			switch(expr->op)
-			{
-				case OpAdd:			
-					module = new Module(hDev,ctx,(Kernel*)kernels->Get(KernAddR_CS));			
-					break;
-
-				default:
-					return CAL_RESULT_INVALID_PARAMETER;
-			}			
-
-		}break;		
-
-		default:
-			return CAL_RESULT_INVALID_PARAMETER;
-	}
-
-	if(module->err == CAL_RESULT_OK)
-	{
-
-		// create constant for passing to the kernel
-		Constant* constant = new Constant(module,0,result->dType,1,result->physNumComponents);
-		
-		float cdata[4];
-		cdata[0] = (float)(result->physSize[1]);
-		cdata[1] = 1.0/(float)(result->physSize[0]);
-		cdata[2] = (float)(result->physSize[0])*(float)(result->physSize[1]);
-		cdata[3] = 2;
-
-		err = constant->Set(&cdata);
-
-		pg.flags = 0;
-		pg.func = module->func;
-		pg.gridBlock.width = 64;
-		pg.gridBlock.height = 1;
-		pg.gridBlock.depth  = 1;
-		pg.gridSize.width   = (result->physSize[1] * result->physSize[0] + pg.gridBlock.width - 1) / pg.gridBlock.width;
-		pg.gridSize.height  = 1;
-		pg.gridSize.depth   = 1;
-
-		err = RunComputeShader(module,expr->args,NULL,result,&pg);
-
-		delete constant;
-	}
-	else
-		err = module->err;
-
-	delete module;
-*/
 	return err;
 }
 
@@ -626,8 +675,14 @@ CALresult Context::GetCacheHitCounter(float* counterVal)
 		return CAL_RESULT_NOT_SUPPORTED;
 }
 
-// perform matrix vector operation
-CALresult Context::DoMatVec(void)
+// perform matrix vector operation using compute shader
+CALresult Context::DoMatVecCS(void)
+{
+	return err;
+}
+
+// perform matrix vector operation using pixel shader
+CALresult Context::DoMatVecPS(void)
 {
 /*
 	Module* module;
@@ -668,48 +723,6 @@ CALresult Context::DoMatVec(void)
 	delete module;
 
 */
-	return err;
-}
-
-// set computation inputs in a common way
-CALresult Context::SetInputs0(ArrayExpression* expr, ArrayPool* arrs)
-{
-	long i;	
-
-	err = CAL_RESULT_OK;
-
-	for(i = 0; (err == CAL_RESULT_OK) && (i < 3) && expr->args[i]; i++)
-	{	
-		if(!expr->args[i]->localRes)	// is array already residing in the local memory?
-		{
-			err = AllocateArrayLocal(expr->args[i],arrs,0);			
-
-			// successfully allocated local memory
-			if(err == CAL_RESULT_OK)
-			{
-				if(expr->args[i]->remoteRes)	// array data was already set and resides in the remote memory
-				{
-					err = expr->args[i]->CopyRemoteToLocal(ctx);
-					expr->args[i]->FreeRemote();
-				}
-				else
-					err = expr->args[i]->SetDataToLocal(ctx,expr->args[i]->cpuData);					
-			}
-		}
-	}
-
-	return err;
-}
-
-// set computation output in a common way
-CALresult Context::SetOutput0(Array* result, ArrayPool* arrs, CALuint flags)
-{		
-	err = CAL_RESULT_OK;
-
-	// allocate result array if necessary
-	if(!result->localRes)		
-		err = AllocateArrayLocal(result,arrs,flags);	
-
 	return err;
 }
 
@@ -817,8 +830,11 @@ CALresult Context::RunComputeShader(Module* module, Array** inputs, Array* globa
 CALresult Context::SetElementwise(ArrayExpression* expr, Array* result, ArrayPool* arrs)
 {
 	long i;	
+	CALuint flags;
 
 	err = CAL_RESULT_OK;	
+
+	flags = CAL_RESALLOC_GLOBAL_BUFFER;	// allocate arrays with posibility of using them as global buffers
 	
 	// just in case try to free some space in the remote memory (result will be anyway overwritten)
 	result->FreeRemote();
@@ -828,7 +844,7 @@ CALresult Context::SetElementwise(ArrayExpression* expr, Array* result, ArrayPoo
 		if(!expr->args[i]->localRes)	// is array already residing in the local memory?
 		{
 			// if not try to allocate it	
-			err = AllocateArrayLocal(expr->args[i],arrs,CAL_RESALLOC_GLOBAL_BUFFER);
+			err = AllocateArrayLocal(expr->args[i],arrs,flags);
 					
 			if(err == CAL_RESULT_OK)
 			{
@@ -844,8 +860,92 @@ CALresult Context::SetElementwise(ArrayExpression* expr, Array* result, ArrayPoo
 	}
 	
 	// allocate result array if necessary
-	if(!result->localRes)		
-		err = AllocateArrayLocal(result,arrs,CAL_RESALLOC_GLOBAL_BUFFER);	
+	if(err == CAL_RESULT_OK)
+	{
+		if(!result->localRes)		
+			err = AllocateArrayLocal(result,arrs,flags);	
+	}
+
+	return err;
+}
+
+// perform an elementwise operation using compute shader
+CALresult Context::DoElementwiseCS(void)
+{
+	Module* module;	
+	CALprogramGrid pg;
+	float constData[4];
+
+	long iKernel;	
+	
+	err = CAL_RESULT_OK;
+
+	switch(expr->dType)
+	{
+		case TREAL:
+		{
+			switch(expr->op)
+			{
+				case OpAdd: iKernel = KernAddR_CS; break;
+				case OpSub: iKernel = KernSubR_CS; break;
+				case OpEwMul: iKernel = KernEwMulR_CS; break;
+				case OpEwDiv: iKernel = KernEwDivR_CS; break;
+
+				default:
+					return CAL_RESULT_INVALID_PARAMETER;
+			}			
+
+		}break;
+		
+		default:
+			return CAL_RESULT_INVALID_PARAMETER;
+	}	
+	
+	// get suited module
+	module = new Module(hDev,ctx,(Kernel*)kernels->Get(iKernel));	
+	
+	if(module->err == CAL_RESULT_OK)
+	{
+		if(result->nLogicDims == 2)
+		{
+			constData[0] = (float)(result->physSize[1]);		// width
+			constData[1] = 1.0f/(float)(result->physSize[1]);	// 1/width
+			constData[2] = (float)(result->pitch);				// pitch in number of multicomponent elements
+			constData[3] = (float)(result->physNumElements);	// total number of elements	
+		}
+		else
+		{
+			constData[0] = (float)(result->physSize[0]);		// width
+			constData[1] = 1.0f/(float)(result->physSize[0]);	// 1/width
+			constData[2] = 0;
+			constData[3] = (float)(result->physNumElements);	// total number of elements
+		}
+
+		err = module->constants[0]->SetData(&constData);		
+		if(err == CAL_RESULT_OK)
+		{
+			err = module->SetConstantsToContext();
+			if(err == CAL_RESULT_OK)
+			{
+				pg.flags = 0;
+				pg.func = module->func;
+				pg.gridBlock.width = devAttribs->wavefrontSize;
+				pg.gridBlock.height = 1;
+				pg.gridBlock.depth  = 1;
+				pg.gridSize.width   = ((result->physNumElements + pg.gridBlock.width - 1) / pg.gridBlock.width);
+				pg.gridSize.height  = 1;
+				pg.gridSize.depth   = 1;
+
+				err = RunComputeShader(module,expr->args,result,&pg);
+
+				module->ReleaseConstantsFromContext();
+			}
+		}		
+	}
+	else
+		err = module->err;
+
+	delete module;
 
 	return err;
 }
