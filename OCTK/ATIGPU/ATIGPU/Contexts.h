@@ -24,22 +24,26 @@
 class Context
 {
 public:
-	Context(CALdevice hDev, CALdeviceattribs* devAttribs, KernelPool* kernels);
+	Context(CALdevice hDev, CALdeviceattribs* devAttribs, Kernel** kernels);
 	~Context(void);
 
 	CALresult SetComputation(ArrayExpression* expr, Array* result, long priority, long flags, ArrayPool* arrs);
 
 	CALresult err;	// error code for last operation
-
+	
 	CALcontext ctx;	// context handle
 	CALdevice hDev;	// device handle		
 
-	KernelPool* kernels;
+	Kernel** kernels;
+
+	Module** modules;	// context modules
 	
 	ArrayExpression* expr;	// array expression describing current computation
 	Array* result;			// result array for current computation
 
 	CALdeviceattribs* devAttribs;
+
+	BOOL isInUse;	// TRUE when the context is currently in use
 
 	CALcounter idleCounter;	// GPU Idle counter
 	CALcounter cacheHitCounter;	// GPU cache hit counter
@@ -75,7 +79,7 @@ public:
 	PFNCALCTXENDCOUNTER     calCtxEndCounterExt;
 	PFNCALCTXGETCOUNTER     calCtxGetCounterExt;	
 
-	BOOL counterExtSupported;
+	BOOL counterExtSupported;	// TRUE when counter extension is supported
 	// perform matrix vector operation using pixel shader
 	CALresult DoMatVecPS(void);
 	// perform matrix vector operation using compute shader
@@ -98,8 +102,8 @@ public:
 	~ContextPool(void);
 
 	Context* Get(long ind);	
-	void Remove(long ind);
-	long Find(long ctx);
+	void Remove(long ind);	
+	long FindNotUsed(void);
 
 	CALresult err;	// error code for last operation
 };

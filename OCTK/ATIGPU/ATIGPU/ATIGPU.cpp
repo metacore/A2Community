@@ -37,12 +37,6 @@ BOOL isInitialized = FALSE;
 // GPU devices
 DevicePool* devs = NULL;
 
-// argument type codes
-#define ARG1	0
-#define ARG2	1
-#define RETARG	2
-
-
 BOOL APIENTRY DllMain( HMODULE hModule,
                        DWORD  ul_reason_for_call,
                        LPVOID lpReserved
@@ -133,36 +127,18 @@ ATIGPU_API long GetDevCount(long* devCount)
 }
 
 /*
-	Create a new CPU computing context
+	Get a new GPU compute context
 
 	devNum - device number
-	ctxNum[var] - context number
+	ctxNum[var] - compute context number
 
 	returns error code
 */
-ATIGPU_API long CreateContext(long devNum, long* ctx)
+ATIGPU_API long GetContext(long devNum, long* ctxNum)
 {	
-	if(!isInitialized) 
-		return CAL_RESULT_NOT_INITIALIZED;
-	if( (devNum < 0) || (devNum >= devs->Length()) ) 
-		return CAL_RESULT_INVALID_PARAMETER;	
-	
-	return devs->Get(devNum)->NewContext(ctx);		
-}
-
-/*
-	Destroy already existing GPU context
-
-	devNum - device number
-	ctxNum - context number
-
-	returns error code
-*/
-ATIGPU_API long DestroyContext(long devNum, long ctx)
-{	
-	CALresult err;
 	long ind;
-	ContextPool* ctxs;
+	Device* dev;
+	CALresult err;
 
 	err = CAL_RESULT_OK;
 
@@ -171,338 +147,61 @@ ATIGPU_API long DestroyContext(long devNum, long ctx)
 	if( (devNum < 0) || (devNum >= devs->Length()) ) 
 		return CAL_RESULT_INVALID_PARAMETER;	
 	
-	ctxs = devs->Get(devNum)->ctxs;
+	dev = devs->Get(devNum);
+
+	// try to find a context marked as released	
+	ind = dev->ctxs->FindNotUsed();
+	if(ind >= 0)	// reuse already created context	
+		*ctxNum = ind;
+	else	// otherwise create a new context
+	{		
+		err = dev->NewContext();
+		*ctxNum = dev->ctxs->Length()-1;
+	}
+
+	if(err == CAL_RESULT_OK)		
+		(dev->ctxs->Get(*ctxNum))->isInUse = TRUE;
 	
-	// find context in the pool	
-	ind = ctxs->Find(ctx);
-	if(ind >= 0)
-		ctxs->Remove(ind);	
-	else
-		err = CAL_RESULT_INVALID_PARAMETER;
+	return err;		
+}
+
+/*
+	Release a GPU computing context:
+
+	devNum - device number
+	ctxNum - compute context number
+
+	returns error code
+*/
+ATIGPU_API long ReleaseContext(long devNum, long ctxNum)
+{	
+	CALresult err;
+	Device* dev;		
+
+	err = CAL_RESULT_OK;
+
+	if(!isInitialized) 
+		return CAL_RESULT_NOT_INITIALIZED;
+	if( (devNum < 0) || (devNum >= devs->Length()) ) 
+		return CAL_RESULT_INVALID_PARAMETER;	
+	
+	dev = devs->Get(devNum);
+
+	if( (ctxNum < 0) || (ctxNum >= dev->ctxs->Length()) ) 
+		return CAL_RESULT_INVALID_PARAMETER;		
+	
+	// mark context as released
+	(dev->ctxs->Get(ctxNum))->isInUse = FALSE;
 
 	return err;	
 }
-//
-///*
-//	Set argument:
-//
-//	devNum - used device number
-//	ctx - used context
-//	argID - argument ID 
-//	dType - data type code
-//	nDims - number of dimensions
-//	size - size for each dimensions	
-//	data - data to set	
-//	bSetData - TRUE when data has to be set
-//	argType - can be ARG1, ARG2, RETARG
-//
-//	returns error code	
-//*/
-//long SetArg(long devNum, long ctx, long argID, long dType, long nDims, long* size, void* data, BOOL bSetData, long argType)
-//{
-//	long i, ind;	
-//	Context* context;
-//	Argument* arg;
-//	CALresult err = CAL_RESULT_OK;	
-//	CALuint flags = 0;
-//
-//	Device* dev;	
-//	ArgumentPool* args;
-//
-//	if(!isInitialized) 
-//		return CAL_RESULT_NOT_INITIALIZED;
-//	if( (devNum < 0) || (devNum >= devs->Length()) ) 
-//		return CAL_RESULT_INVALID_PARAMETER;	
-//	if(nDims <= 0) 
-//		return CAL_RESULT_INVALID_PARAMETER;
-//	if(argID == 0) 
-//		return CAL_RESULT_INVALID_PARAMETER;
-//	if(data == NULL) 
-//		return CAL_RESULT_INVALID_PARAMETER;
-//		
-//	ind = devs->Get(devNum)->ctxs->Find(ctx);
-//	if(ind >= 0) 
-//		context = devs->Get(devNum)->ctxs->Get(ind);
-//	else		
-//		return CAL_RESULT_INVALID_PARAMETER;	
-//	
-//	// look for already existing argument
-//	i = 0;
-//	while((i < devs->Length()) && ((ind = devs->Get(i)->args->Find(argID)) == -1) ){i++;}
-//
-//	if(ind == -1) // create a new argument on current device
-//	{
-//		dev = devs->Get(devNum);
-//		args = dev->args;
-//		
-//		if(argType == RETARG)flags |= CAL_RESALLOC_GLOBAL_BUFFER;
-//		err = args->NewArgument(dev->hDev,&(dev->info),context->ctx,argID,dType,nDims,size,data,flags);		
-//		if( err == CAL_RESULT_OK )
-//		{
-//			arg = (Argument*)args->GetLast();
-//			// if necessary set data to the local GPU memory
-//			if(bSetData) err = arg->SetDataToLocal(context->ctx);
-//		}
-//	}
-//	else // use already existing argument
-//	{		
-//		arg = devs->Get(i)->args->Get(ind);
-//		// if necessary set data from remote to the local GPU memory
-//		if(arg->remoteRes)
-//		{
-//			err = arg->CopyRemoteToLocal(context->ctx);
-//			if(err == CAL_RESULT_OK)
-//				arg->FreeRemote();
-//			else
-//				devs->Get(i)->args->Remove(ind);	// remove rubbish!
-//		}
-//	}
-//
-//	if(err == CAL_RESULT_OK)
-//	{		
-//		arg->useCounter++;	// the object is in use		
-//		switch(argType)
-//		{
-//			case ARG1: context->arg1 = arg; break;
-//			case ARG2: context->arg2 = arg; break;
-//			case RETARG: context->retArg = arg; arg->isReservedForGet = TRUE; break;
-//		}
-//	}	
-//	
-//	return err;
-//}
-//
-///*
-//	Set first argument of an array expression
-//
-//	devNum - used device number
-//	ctx - used context
-//	argID - argument ID 
-//	dType - data type code
-//	nDims - number of dimensions
-//	size - size for each dimensions	
-//	data - data to set
-//
-//	returns error code	
-//*/
-//ATIGPU_API long SetArg1(long devNum, long ctx, long argID, long dType, long nDims, long* size, void* data)
-//{	
-//	return SetArg(devNum,ctx,argID,dType,nDims,size,data,TRUE,ARG1);
-//}
-//
-///*
-//	Set second argument of an array expression
-//
-//	devNum - used device number
-//	ctx - used context
-//	argID - argument ID 
-//	dType - data type code
-//	nDims - number of dimensions
-//	size - size for each dimensions	
-//	data - data to set
-//
-//	returns error code	
-//*/
-//ATIGPU_API long SetArg2(long devNum, long ctx, long argID, long dType, long nDims, long* size, void* data)
-//{
-//	return SetArg(devNum,ctx,argID,dType,nDims,size,data,TRUE,ARG2);
-//}
-//
-///*
-//	Set return argument of an array expression
-//
-//	devNum - used device number
-//	ctx - used context
-//	argID - argument ID 
-//	dType - data type code
-//	nDims - number of dimensions
-//	size - size for each dimensions	
-//	data - data to set
-//	bSetData - if 0 the data will not be set
-//
-//	returns error code	
-//*/
-//ATIGPU_API long SetReturnArg(long devNum, long ctx, long argID, long dType, long nDims, long* size, void* data, long bSetData)
-//{
-//	return SetArg(devNum,ctx,argID,dType,nDims,size,data,bSetData,RETARG);
-//}
-//
-//
-///*
-//	Get return argument
-//
-//	devNum - used device number
-//	ctx - used context	
-//
-//	returns error code
-//
-//	Copies return argument data from local/remote GPU memory to CPU memory
-//*/
-//ATIGPU_API long GetReturnArg(long devNum, long ctx)
-//{
-//	long ind;	
-//	Context* context;
-//	CALresult err = CAL_RESULT_OK;	
-//
-//	ContextPool* ctxs;
-//	ArgumentPool* args;
-//
-//	if(!isInitialized) 
-//		return CAL_RESULT_NOT_INITIALIZED;
-//	if( (devNum < 0) || (devNum >= devs->Length()) ) 
-//		return CAL_RESULT_INVALID_PARAMETER;	
-//	
-//	ctxs = devs->Get(devNum)->ctxs;
-//	args = devs->Get(devNum)->args;				
-//	
-//	ind = ctxs->Find(ctx);
-//	if(ind >= 0) 
-//		context = ctxs->Get(ind);
-//	else	
-//		return CAL_RESULT_INVALID_PARAMETER;
-//
-//	if(context->retArg)
-//	{
-//		_ASSERT( (context->retArg->remoteRes) || (context->retArg->localRes) );
-//
-//		if(context->retArg->remoteRes) 
-//			err = context->retArg->GetDataFromRemote(context->ctx);
-//		else 
-//		{
-//			err = context->retArg->GetDataFromLocal(context->ctx);		
-//			// FIXME: what to do if it can not get from local because of failure of remote allocation?!
-//		}
-//				
-//		context->retArg->isReservedForGet = FALSE;
-//	}
-//	else
-//	{
-//		err = CAL_RESULT_INVALID_PARAMETER;
-//	}		
-//
-//	return err;
-//}
-//
-//
-///*
-//	Get an argument from GPU local/remote memory
-//	
-//	argID - ID of the argument to get
-//
-//	returns error code
-//
-//	Copies argument data from local/remote GPU memory to CPU memory
-//*/
-//ATIGPU_API long GetArg(long argID)
-//{
-//	long i, ind;
-//	Argument* arg;
-//	CALcontext ctx;
-//	CALresult err = CAL_RESULT_OK;
-//
-//	if(!isInitialized) 
-//		return CAL_RESULT_NOT_INITIALIZED;	
-//	
-//	i = 0;
-//	while((i < devs->Length()) && ((ind = devs->Get(i)->args->Find(argID)) == -1) ){i++;}
-//
-//	if(ind >= 0)
-//	{
-//		arg = devs->Get(i)->args->Get(ind);
-//
-//		err = calCtxCreate(&ctx,devs->Get(0)->hDev);
-//		if(err == CAL_RESULT_OK)
-//		{
-//			if(arg->remoteRes)
-//				err = arg->GetDataFromRemote(ctx);
-//			else
-//				err = arg->GetDataFromLocal(ctx);
-//
-//			if(err == CAL_RESULT_OK)
-//			{
-//				if(arg->isReservedForGet) 
-//					arg->isReservedForGet = FALSE;
-//			}
-//
-//			calCtxDestroy(ctx);
-//		}
-//	}
-//	else
-//		err = CAL_RESULT_INVALID_PARAMETER;
-//
-//	return err;
-//}
-//
-///*
-//	Compute an op operation using already set Arg1, Arg2, RetArg
-//
-//	devNum - used device number
-//	ctx - used context	
-//	op - operation code
-//
-//	returns error code
-//*/
-//ATIGPU_API long Do(long devNum, long ctx, long op)
-//{
-//	long ind;	
-//	Context* context;
-//	CALresult err = CAL_RESULT_OK;	
-//
-//	ContextPool* ctxs;
-//	ArgumentPool* args;
-//
-//	if(!isInitialized) 
-//		return CAL_RESULT_NOT_INITIALIZED;
-//	if( (devNum < 0) || (devNum >= devs->Length()) ) 
-//		return CAL_RESULT_INVALID_PARAMETER;	
-//	
-//	ctxs = devs->Get(devNum)->ctxs;
-//	args = devs->Get(devNum)->args;
-//	
-//
-//	ind = ctxs->Find(ctx);
-//	if(ind >= 0) 
-//		context = ctxs->Get(ind);
-//	else	
-//		return CAL_RESULT_INVALID_PARAMETER;	
-//
-//	return context->Do(op);	
-//}
-//
-///*
-//	Free an argument with given ID
-//*/
-//ATIGPU_API long FreeArg(long argID)
-//{
-//	long i, ind;	
-//	CALresult err = CAL_RESULT_OK;
-//
-//	if(!isInitialized) 
-//		return CAL_RESULT_NOT_INITIALIZED;	
-//	
-//	i = 0;
-//	while((i < devs->Length()) && ((ind = devs->Get(i)->args->Find(argID)) == -1) ){i++;}
-//
-//	if(ind >= 0)
-//	{	
-//		if(devs->Get(i)->args->Get(ind)->useCounter)
-//		{
-//			err = CAL_RESULT_INVALID_PARAMETER;
-//		}
-//		//_ASSERT(!devs->Get(i)->args->Get(ind)->useCounter);
-//		devs->Get(i)->args->Remove(ind);
-//	}
-//	else
-//		err = CAL_RESULT_INVALID_PARAMETER;
-//
-//	return err;
-//}
+
 
 /*
 	Set (prepare) computation
 
 	devNum - used device number
-	ctx - computation context
+	ctxNum - compute context number
 	expr - array expression description
 	result - resulting array
 	priority - computation priority number
@@ -512,7 +211,7 @@ ATIGPU_API long DestroyContext(long devNum, long ctx)
 */
 ATIGPU_API long SetComputation(
 							   long devNum, 
-							   long ctx,
+							   long ctxNum,
 							   ArrayExpressionDesc* expr,
 							   ArrayDesc* result,
 							   long priority,
@@ -521,8 +220,7 @@ ATIGPU_API long SetComputation(
 {
 	long i, j, ind;
 	CALresult err;
-	Context* context;
-	ContextPool* ctxs;
+	Context* context;	
 	ArrayPool* arrs;
 	Array* arr;
 	Device* dev;
@@ -534,16 +232,15 @@ ATIGPU_API long SetComputation(
 	if( (devNum < 0) || (devNum >= devs->Length()) ) 
 		return CAL_RESULT_INVALID_PARAMETER;	
 	
-	dev = devs->Get(devNum);
-	ctxs = dev->ctxs;
-	arrs = dev->arrs;	
+	dev = devs->Get(devNum);	
+
+	if( (ctxNum < 0) || (ctxNum >= dev->ctxs->Length()) ) 
+		return CAL_RESULT_INVALID_PARAMETER;
+	
+	arrs = dev->arrs;
 
 	// get context object
-	ind = ctxs->Find(ctx);
-	if(ind >= 0) 
-		context = ctxs->Get(ind);
-	else	
-		return CAL_RESULT_INVALID_PARAMETER;
+	context = dev->ctxs->Get(ctxNum);	
 	
 	// create internal expression object
 	exprI = new ArrayExpression(expr->op,expr->dType,expr->nDims,expr->size,expr->transpDims);
@@ -620,19 +317,16 @@ ATIGPU_API long SetComputation(
 	Do computation which was preliminary set by SetComputation
 
 	devNum - used device number
-	ctx - computation context	
+	ctxNum - computation context	ID
 
 	returns error code
 */
 ATIGPU_API long DoComputation(
 							   long devNum, 
-							   long ctx
+							   long ctxNum
 							   )
-{
-	long ind;
-	CALresult err;
-	Context* context;
-	ContextPool* ctxs;	
+{	
+	CALresult err;	
 	Device* dev;
 
 	err = CAL_RESULT_OK;
@@ -642,16 +336,13 @@ ATIGPU_API long DoComputation(
 	if( (devNum < 0) || (devNum >= devs->Length()) ) 
 		return CAL_RESULT_INVALID_PARAMETER;	
 	
-	dev = devs->Get(devNum);
-	ctxs = dev->ctxs;	
+	dev = devs->Get(devNum);	
 
-	ind = ctxs->Find(ctx);
-	if(ind >= 0) 
-		context = ctxs->Get(ind);
-	else	
-		err = CAL_RESULT_INVALID_PARAMETER;
+	if( (ctxNum < 0) || (ctxNum >= dev->ctxs->Length()) ) 
+		return CAL_RESULT_INVALID_PARAMETER;		
 
-	return context->DoComputation();
+	// get context object
+	return (dev->ctxs->Get(ctxNum))->DoComputation();	
 }
 
 /*
@@ -659,38 +350,34 @@ ATIGPU_API long DoComputation(
 	(has to be called after DoComputation)
 
 	devNum - used device number
-	ctx - computation context
+	ctxNum - compute context number
 	data - array data address
 
 	returns error code
 */
 ATIGPU_API long GetResult(
 						  long devNum,
-						  long ctx,						  
+						  long ctxNum,						  
 						  void* data
 						  )
-{
-	long ind;
+{	
 	CALresult err;
-	Context* context;
-	ContextPool* ctxs;	
+	Context* context;	
 	Device* dev;
 
 	err = CAL_RESULT_OK;
-
+	
 	if(!isInitialized) 
 		return CAL_RESULT_NOT_INITIALIZED;
 	if( (devNum < 0) || (devNum >= devs->Length()) ) 
-		return CAL_RESULT_INVALID_PARAMETER;	
-	
-	dev = devs->Get(devNum);
-	ctxs = dev->ctxs;	
-
-	ind = ctxs->Find(ctx);
-	if(ind >= 0) 
-		context = ctxs->Get(ind);
-	else	
 		return CAL_RESULT_INVALID_PARAMETER;
+
+	dev = devs->Get(devNum);	
+
+	if( (ctxNum < 0) || (ctxNum >= dev->ctxs->Length()) ) 
+		return CAL_RESULT_INVALID_PARAMETER;
+
+	context = dev->ctxs->Get(ctxNum);
 
 	if(context->result)
 	{
@@ -805,72 +492,62 @@ ATIGPU_API long FreeArray(long arrID)
 	Start GPU idle counter
 
 	devNum - used device number
-	ctx - computation context	
+	ctxNum - compute context number
 
 	returns error code
 */
-ATIGPU_API long StartIdleCounter(long devNum,long ctx)
-{	
-	long ind;
-	ContextPool* ctxs;	
+ATIGPU_API long StartIdleCounter(long devNum, long ctxNum)
+{		
 	Device* dev;
 
 	if(!isInitialized) 
 		return CAL_RESULT_NOT_INITIALIZED;
 	if( (devNum < 0) || (devNum >= devs->Length()) ) 
-		return CAL_RESULT_INVALID_PARAMETER;	
-	
-	dev = devs->Get(devNum);
-	ctxs = dev->ctxs;	
-
-	ind = ctxs->Find(ctx);
-	if(ind >= 0) 
-		return ctxs->Get(ind)->StartIdleCounter();
-	else	
 		return CAL_RESULT_INVALID_PARAMETER;
+
+	dev = devs->Get(devNum);
+
+	if( (ctxNum < 0) || (ctxNum >= dev->ctxs->Length()) ) 
+		return CAL_RESULT_INVALID_PARAMETER;		
+	
+	return dev->ctxs->Get(ctxNum)->StartIdleCounter();	
 }
 
 /*
 	Start GPU cache hit counter
 
 	devNum - used device number
-	ctx - computation context	
+	ctxNum - compute context number	
 
 	returns error code
 */
-ATIGPU_API long StartCacheHitCounter(long devNum,long ctx)
-{
-	long ind;
-	ContextPool* ctxs;	
+ATIGPU_API long StartCacheHitCounter(long devNum, long ctxNum)
+{	
 	Device* dev;
 
 	if(!isInitialized) 
 		return CAL_RESULT_NOT_INITIALIZED;
 	if( (devNum < 0) || (devNum >= devs->Length()) ) 
 		return CAL_RESULT_INVALID_PARAMETER;	
-	
-	dev = devs->Get(devNum);
-	ctxs = dev->ctxs;	
 
-	ind = ctxs->Find(ctx);
-	if(ind >= 0) 
-		return ctxs->Get(ind)->StartCacheHitCounter();
-	else	
+	dev = devs->Get(devNum);
+
+	if( (ctxNum < 0) || (ctxNum >= dev->ctxs->Length()) ) 
 		return CAL_RESULT_INVALID_PARAMETER;
+		
+	return dev->ctxs->Get(ctxNum)->StartCacheHitCounter();	
 }
 
 /*
 	Stop GPU idle counter
 
 	devNum - used device number
-	ctx - computation context	
+	ctxNum - compute context number	
 
 	returns error code
 */
-ATIGPU_API long StopIdleCounter(long devNum,long ctx)
-{
-	long ind;
-	ContextPool* ctxs;	
+ATIGPU_API long StopIdleCounter(long devNum, long ctxNum)
+{		
 	Device* dev;
 
 	if(!isInitialized) 
@@ -879,27 +556,23 @@ ATIGPU_API long StopIdleCounter(long devNum,long ctx)
 		return CAL_RESULT_INVALID_PARAMETER;	
 	
 	dev = devs->Get(devNum);
-	ctxs = dev->ctxs;	
 
-	ind = ctxs->Find(ctx);
-	if(ind >= 0) 
-		return ctxs->Get(ind)->StopIdleCounter();
-	else	
+	if( (ctxNum < 0) || (ctxNum >= dev->ctxs->Length()) ) 
 		return CAL_RESULT_INVALID_PARAMETER;
+
+	return dev->ctxs->Get(ctxNum)->StopIdleCounter();
 }
 
 /*
 	Stop GPU cache hit counter
 
 	devNum - used device number
-	ctx - computation context	
+	ctxNum - compute context number
 
 	returns error code
 */
-ATIGPU_API long StopCacheHitCounter(long devNum,long ctx)
-{
-	long ind;
-	ContextPool* ctxs;	
+ATIGPU_API long StopCacheHitCounter(long devNum, long ctxNum)
+{	
 	Device* dev;
 
 	if(!isInitialized) 
@@ -908,28 +581,24 @@ ATIGPU_API long StopCacheHitCounter(long devNum,long ctx)
 		return CAL_RESULT_INVALID_PARAMETER;	
 	
 	dev = devs->Get(devNum);
-	ctxs = dev->ctxs;	
 
-	ind = ctxs->Find(ctx);
-	if(ind >= 0) 
-		return ctxs->Get(ind)->StopCacheHitCounter();
-	else	
+	if( (ctxNum < 0) || (ctxNum >= dev->ctxs->Length()) ) 
 		return CAL_RESULT_INVALID_PARAMETER;
+
+	return dev->ctxs->Get(ctxNum)->StopCacheHitCounter();
 }
 
 /*
 	Get GPU idle counter
 
 	devNum - used device number
-	ctx - computation context	
+	ctxNum - compute context number
 	counterVal[var] - counter value
 
 	returns error code
 */
-ATIGPU_API long GetIdleCounter(long devNum,long ctx, float* counterVal)
-{
-	long ind;
-	ContextPool* ctxs;	
+ATIGPU_API long GetIdleCounter(long devNum, long ctxNum, float* counterVal)
+{	
 	Device* dev;
 
 	if(!isInitialized) 
@@ -938,28 +607,24 @@ ATIGPU_API long GetIdleCounter(long devNum,long ctx, float* counterVal)
 		return CAL_RESULT_INVALID_PARAMETER;	
 	
 	dev = devs->Get(devNum);
-	ctxs = dev->ctxs;	
 
-	ind = ctxs->Find(ctx);
-	if(ind >= 0) 
-		return ctxs->Get(ind)->GetIdleCounter(counterVal);
-	else	
+	if( (ctxNum < 0) || (ctxNum >= dev->ctxs->Length()) ) 
 		return CAL_RESULT_INVALID_PARAMETER;
+
+	return dev->ctxs->Get(ctxNum)->GetIdleCounter(counterVal);	
 }
 
 /*
 	Get GPU cache hit counter
 
 	devNum - used device number
-	ctx - computation context	
+	ctxNum - compute context number
 	counterVal[var] - counter value
 
 	returns error code
 */
-ATIGPU_API long GetCacheHitCounter(long devNum,long ctx, float* counterVal)
-{
-	long ind;
-	ContextPool* ctxs;	
+ATIGPU_API long GetCacheHitCounter(long devNum, long ctxNum, float* counterVal)
+{	
 	Device* dev;
 
 	if(!isInitialized) 
@@ -968,11 +633,9 @@ ATIGPU_API long GetCacheHitCounter(long devNum,long ctx, float* counterVal)
 		return CAL_RESULT_INVALID_PARAMETER;	
 	
 	dev = devs->Get(devNum);
-	ctxs = dev->ctxs;	
 
-	ind = ctxs->Find(ctx);
-	if(ind >= 0) 
-		return ctxs->Get(ind)->GetCacheHitCounter(counterVal);
-	else	
+	if( (ctxNum < 0) || (ctxNum >= dev->ctxs->Length()) ) 
 		return CAL_RESULT_INVALID_PARAMETER;
+
+	return dev->ctxs->Get(ctxNum)->GetCacheHitCounter(counterVal);	
 }

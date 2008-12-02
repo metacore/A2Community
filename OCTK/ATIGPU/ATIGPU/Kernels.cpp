@@ -146,24 +146,3 @@ Kernel::~Kernel(void)
 	if(obj)
 		calclFreeObject(obj);
 }
-
-KernelPool::KernelPool(void)
-{
-	err = CAL_RESULT_OK;
-}
-
-
-KernelPool::~KernelPool(void)
-{
-	RemoveAll();
-}
-
-
-void KernelPool::Remove(long ind)
-{
-	Kernel* kern = (Kernel*)ObjectPool::Get(ind);
-	if(kern)
-		delete kern;
-	
-	ObjectPool::Remove(ind);
-}

@@ -469,26 +469,74 @@ const char kernelMatVecR_CS[] =
 "dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
 "dcl_cb cb0[1]\n"
 
-"ftoi r0.x, cb0[0].w"
-"ilt r0.y, vaTid0.x, r0.x\n"
+"ftoi r0, cb0[0]"	// r0.x := width, r0.y := height; r0.z := lastRow; r0.w := result.physNumElements
 
-"if_logicalnz r0.y\n"
-"	itof r0.z, vaTid0.x\n"				// r0.z := thread_index
+// lastRow - index of last row quadruple
 
-/*
-"	mul r0.y, r0.z, cb0[0].y\n"			// r0.y := thread_index*(1/width) == y index
-"	mod r0.x, r0.z, cb0[0].x\n"			// r0.x := thread_index % width == x index
-"	flr r0.xy, r0.xy\n"					// [x,y] := floor(r0.xy)
-"	mad r1.x, r0.y, cb0[0].z, r0.x\n"	// index := y*pitch + x - index with account of the alignment pitch
-"	ftoi r1.x, r1.x"					// convert to integer
-*/
+"ilt r1.x, vaTid0.x, r0.w\n"
+"if_logicalnz r1.x\n"	// if thread_index < result.physNumElements
 
-/*
-"	sample_resource(0)_sampler(0) r2, r0.xy\n"
-"	sample_resource(1)_sampler(1) r3, r0.xy\n"
-"	div_zeroop(zero) r4, r2, r3\n"
-*/
-"	mov g[r1.x], r4\n"
+"	ilt r1.x, vaTid0.x, r0.z\n"
+"	if_logicalnz r1.x\n"		// if thread_index < lastRow (the case of processing 4 rows at once)
+
+"		mov r0, r0.0000\n"			// r0.xy is index of the first rhs element
+"		itof r0.w, vaTid0.x\n"		// r0.w := thread_index	== y/4
+
+		// r0.zw -> 2D position of first input row
+"		dcl_literal l2, 0.0f, 0.0f, 0.0f, 4.0f\n"
+"		mul r0.w, r0.w, l2.w\n"		// multiply "y" coordinate by 4
+
+"		add r1.0y, r0.w, r1.1\n"	// r1.xy - 2D position of second input row
+"		add r1.z, r1.y, r1.1\n"		// r1.xz - 2D position of third input row
+"		add r1.w, r1.z, r1.1\n"		// r1.xw - 2D position of fourth input row
+
+		// clear madd accumulators
+"		mov r9, r9.0000\n"
+"		mov r10, r10.0000\n"
+"		mov r11, r11.0000\n"
+"		mov r12, r12.0000\n"
+
+"		mov r2.x, r2.0\n"			// r2.x := 0 (loop counter)
+"		mov r3.x, cb0[0].x\n"		// r3.x := width
+
+		// loop over "width" quadruples
+"		whileloop\n"
+"		  ge r2.y, r2.x, r3.x\n"	// while(loop counter < width)
+"			break_logicalnz r2.y\n"
+
+			// load next quadruple of rhs
+"			sample_resource(1)_sampler(1) r4, r0.xy\n"
+
+			// load next quadruples of each row
+"			sample_resource(0)_sampler(0) r5, r0.zw\n"
+"			sample_resource(0)_sampler(0) r6, r1.xy\n"
+"			sample_resource(0)_sampler(0) r7, r1.xz\n"
+"			sample_resource(0)_sampler(0) r8, r1.xw\n"
+
+			// do element wise multiply	
+"			mad r9, r4, r5, r9\n"
+"			mad r10, r4, r6, r10\n"
+"			mad r11, r4, r7, r11\n"
+"			mad r12, r4, r8, r12\n"
+
+"			add r0.xz, r0.xz, r0.11\n"	// increment rhs and first row column index
+"			add r1.x, r1.x, r1.1\n"		// increment column index for all other rows
+
+"			add r2.x, r2.x, r2.1\n"	// loop counter ++
+"		endloop\n"
+
+		// now do final horizontal add
+"		dp4 r2.x, r9, r9.1111\n"	// r +* ones == r.x+r.y+r.z+r.w
+"		dp4 r2.y, r10, r10.1111\n"
+"		dp4 r2.z, r11, r11.1111\n"
+"		dp4 r2.w, r12, r12.1111\n"
+
+		// write the result
+"		mov g[vaTid0.x], r2"
+
+"	endif\n"
+"else"
+"	mov g[vaTid0.x], r2.0000\n"
 "endif\n"
 
 "end\n";
@@ -575,18 +623,4 @@ public:
 
 	CALformat* constFormats;	// data formats for each constant
 	long* constSizes;			// sizes for each constant
-};
-
-/*
-	Pool of kernels
-*/
-class KernelPool :
-	public ObjectPool
-{
-public:
-	KernelPool(void);
-	~KernelPool(void);	
-	void Remove(long ind);
-
-	CALresult err;	// error code for last operation
 };

@@ -12,7 +12,7 @@ class Device
 public:
 	Device(long devNum);
 	~Device(void);	
-	CALresult NewContext(long* ctx);	// create a new context	
+	CALresult NewContext();	// create a new context	
 
 	CALresult err;	// error code for last operation
 
@@ -22,7 +22,7 @@ public:
 	CALdeviceinfo info;			// device info
 	
 	CALuint devNum;			// device index
-	KernelPool* kernels;	// device kernels
+	Kernel** kernels;		// device kernels
 	ArrayPool* arrs;		// arrays created on the device
 };
 

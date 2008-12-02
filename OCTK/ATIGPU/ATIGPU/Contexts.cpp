@@ -3,10 +3,14 @@
 #include "Kernels.h"
 #include "Constants.h"
 
-Context::Context(CALdevice hDev, CALdeviceattribs* devAttribs, KernelPool* kernels)
+Context::Context(CALdevice hDev, CALdeviceattribs* devAttribs, Kernel** kernels)
 {		
+	long i;
+
 	expr = NULL;
 	result = NULL;
+	modules = NULL;
+	isInUse = FALSE;
 
 	err = calCtxCreate(&ctx,hDev);
 	if(err != CAL_RESULT_OK)
@@ -30,13 +34,29 @@ Context::Context(CALdevice hDev, CALdeviceattribs* devAttribs, KernelPool* kerne
 			cacheHitCounter = 0;
 	}	
 
+	modules = new Module*[NKernels];
+	for(i = 0; i < NKernels; i++)
+		modules[i] = NULL;
+	
 	this->kernels = kernels;
 	this->hDev = hDev;
-	this->devAttribs = devAttribs;
+	this->devAttribs = devAttribs;	
 }
 
 Context::~Context(void)
 {
+	long i;
+
+	if(modules)
+	{
+		for(i = 0; i < NKernels; i++)
+		{
+			if(modules[i])
+				delete modules[i];
+		}
+		delete modules;
+	}
+
 	if(idleCounter)
 		calCtxDestroyCounterExt(ctx,idleCounter);
 
@@ -149,14 +169,11 @@ void ContextPool::Remove(long ind)
 	ObjectPool::Remove(ind);
 }
 
-long ContextPool::Find(long ctx)
-{	
-	CALcontext ctx_;
-	long i;
+long ContextPool::FindNotUsed(void)
+{		
+	long i;	
 
-	ctx_ = (CALcontext)(ctx);
-
-	for(i = 0; (i < Length()) && ( (Get(i))->ctx != ctx_); i++);
+	for(i = 0; (i < Length()) && Get(i)->isInUse; i++);
 
 	if(i < Length()) 
 		return i; 
@@ -261,7 +278,7 @@ CALresult Context::DoIdenticPS(void)
 				|| (result->physDataSize == result->dataSize)
 				|| ( ((w % result->physNumComponents) == 0) && ( ((w - (w*h - result->numElements)) % result->physNumComponents) == 0) ) )
 			{
-				module = new Module(hDev,ctx,(Kernel*)kernels->Get(KernFillByNComp_PS));
+				module = new Module(hDev,ctx,kernels[KernFillByNComp_PS]);
 
 				if(module->err == CAL_RESULT_OK)
 				{
@@ -371,16 +388,16 @@ CALresult Context::DoIdenticCS(void)
 				switch(numBurstElems)
 				{
 				case 2:
-					module = new Module(hDev,ctx,(Kernel*)kernels->Get(KernFillBy2xNComp_CS));
+					module = new Module(hDev,ctx,kernels[KernFillBy2xNComp_CS]);
 					break;
 				case 4:
-					module = new Module(hDev,ctx,(Kernel*)kernels->Get(KernFillBy4xNComp_CS));
+					module = new Module(hDev,ctx,kernels[KernFillBy4xNComp_CS]);
 					break;
 				case 8:
-					module = new Module(hDev,ctx,(Kernel*)kernels->Get(KernFillBy8xNComp_CS));
+					module = new Module(hDev,ctx,kernels[KernFillBy8xNComp_CS]);
 					break;	
 				case 16:
-					module = new Module(hDev,ctx,(Kernel*)kernels->Get(KernFillBy16xNComp_CS));
+					module = new Module(hDev,ctx,kernels[KernFillBy16xNComp_CS]);
 					break;
 				default:
 					return CAL_RESULT_NOT_SUPPORTED;
@@ -542,19 +559,19 @@ CALresult Context::DoElementwisePS(void)
 			switch(expr->op)
 			{
 				case OpAdd:			
-					module = new Module(hDev,ctx,(Kernel*)kernels->Get(KernAddR_PS));			
+					module = new Module(hDev,ctx,kernels[KernAddR_PS]);			
 					break;
 				
 				case OpSub:
-					module = new Module(hDev,ctx,(Kernel*)kernels->Get(KernSubR_PS));			
+					module = new Module(hDev,ctx,kernels[KernSubR_PS]);			
 					break;
 
 				case OpEwMul:
-					module = new Module(hDev,ctx,(Kernel*)kernels->Get(KernEwMulR_PS));			
+					module = new Module(hDev,ctx,kernels[KernEwMulR_PS]);			
 					break;
 				
 				case OpEwDiv:
-					module = new Module(hDev,ctx,(Kernel*)kernels->Get(KernEwDivR_PS));			
+					module = new Module(hDev,ctx,kernels[KernEwDivR_PS]);			
 					break;
 
 				default:
@@ -568,19 +585,19 @@ CALresult Context::DoElementwisePS(void)
 			switch(expr->op)
 			{
 				case OpAdd:			
-					module = new Module(hDev,ctx,(Kernel*)kernels->Get(KernAddLR_PS));			
+					module = new Module(hDev,ctx,kernels[KernAddLR_PS]);			
 					break;
 				
 				case OpSub:
-					module = new Module(hDev,ctx,(Kernel*)kernels->Get(KernSubLR_PS));			
+					module = new Module(hDev,ctx,kernels[KernSubLR_PS]);			
 					break;
 
 				case OpEwMul:
-					module = new Module(hDev,ctx,(Kernel*)kernels->Get(KernEwMulLR_PS));			
+					module = new Module(hDev,ctx,kernels[KernEwMulLR_PS]);			
 					break;
 				
 				case OpEwDiv:
-					module = new Module(hDev,ctx,(Kernel*)kernels->Get(KernEwDivLR_PS));			
+					module = new Module(hDev,ctx,kernels[KernEwDivLR_PS]);			
 					break;
 
 				default:
@@ -691,7 +708,7 @@ CALresult Context::DoMatVecPS(void)
 
 	err = CAL_RESULT_OK;
 
-	module = new Module(hDev,ctx,(Kernel*)kernels->Get(KernMatVecR));
+	module = new Module(hDev,ctx,kernels[KernMatVecR_PS]);
 
 	if(module->err == CAL_RESULT_OK)
 	{
@@ -871,12 +888,12 @@ CALresult Context::SetElementwise(ArrayExpression* expr, Array* result, ArrayPoo
 
 // perform an elementwise operation using compute shader
 CALresult Context::DoElementwiseCS(void)
-{
-	Module* module;	
+{	
+	Module* module;
 	CALprogramGrid pg;
 	float constData[4];
 
-	long iKernel;	
+	long iKernel;
 	
 	err = CAL_RESULT_OK;
 
@@ -902,7 +919,10 @@ CALresult Context::DoElementwiseCS(void)
 	}	
 	
 	// get suited module
-	module = new Module(hDev,ctx,(Kernel*)kernels->Get(iKernel));	
+	if(!modules[iKernel])
+		modules[iKernel] = new Module(hDev,ctx,kernels[iKernel]);	
+
+	module = modules[iKernel];
 	
 	if(module->err == CAL_RESULT_OK)
 	{
@@ -943,9 +963,11 @@ CALresult Context::DoElementwiseCS(void)
 		}		
 	}
 	else
+	{
 		err = module->err;
-
-	delete module;
+		delete modules[iKernel];
+		modules[iKernel] = NULL;
+	}
 
 	return err;
 }

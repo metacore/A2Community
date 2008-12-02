@@ -35,20 +35,22 @@ Device::Device(long devNum)
 		hDev = 0; 
 		return;
 	}
-
-	kernels = new KernelPool();
+	
+	kernels = new Kernel*[NKernels];
 
 	for(i = 0; i < NKernels; i++)
 	{
 		kern = new Kernel(i,attribs.target);
 		if(kern->err == CAL_RESULT_OK)		
-			kernels->Add(kern);		
+			kernels[i] = kern;		
 		else
 		{
 			delete kern;
+			for(i = i-1; i >= 0; i--)
+				delete kernels[i];
 			delete kernels;
-			kernels = NULL;
-			calDeviceClose(hDev); 
+
+			calDeviceClose(hDev);
 			hDev = 0; 
 			return;
 		}
@@ -62,6 +64,8 @@ Device::Device(long devNum)
 
 Device::~Device(void)
 {	
+	long i;
+
 	if(ctxs)
 		delete ctxs;
 
@@ -69,26 +73,26 @@ Device::~Device(void)
 		delete arrs;
 
 	if(kernels)
+	{
+		for(i = 0; i < NKernels; i++)
+			delete kernels[i];
 		delete kernels;
+	}
 
 	if(hDev)
 		calDeviceClose(hDev);
 }
 
-CALresult Device::NewContext(long* ctx)
+CALresult Device::NewContext()
 {
 	Context* context;
 
 	err = CAL_RESULT_OK;
 		
 	context = new Context(hDev,&attribs,kernels);
-	
-	*ctx = 0;
+		
 	if(context->err == CAL_RESULT_OK)
-	{
 		ctxs->Add(context);
-		*ctx = context->ctx;
-	}
 	else
 		err = CAL_RESULT_ERROR;
 	
