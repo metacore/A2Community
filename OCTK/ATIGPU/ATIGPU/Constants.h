@@ -13,7 +13,8 @@ public:
 	CALresult err;	// error code forr last operation
 		
 	CALcontext ctx;			// context handle
-	CALresource res;		// resource (only local)
+	CALresource localRes;	// local resource
+	CALresource remoteRes;	// remote resource
 	CALname name;			// constant CAL name
 	CALmem mem;				// memory handle
 

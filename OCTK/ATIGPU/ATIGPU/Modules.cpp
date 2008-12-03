@@ -45,6 +45,8 @@ Module::Module(CALdevice hDev, CALcontext ctx, Kernel* kern)
 	{
 		constNames = new CALname[nConstants];			
 		constants = new Constant*[nConstants];
+		for(i = 0; i < nConstants; i++)
+			constants[i] = NULL;
 	}
 
 	for(i = 0; (i < nInputs) && (err == CAL_RESULT_OK); i++)

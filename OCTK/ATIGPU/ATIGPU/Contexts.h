@@ -50,14 +50,15 @@ public:
 	
 	// perform the computation which was preliminary set by SetComputation
 	CALresult DoComputation(void);
-	// perform assignment of array identity (using pixel shader)
-	CALresult DoIdenticPS(void);
-	// perform assignment of array identity (using compute shader)
-	CALresult DoIdenticCS(void);
+	// perform assignment of array identity
+	CALresult DoIdentic(void);	
 	// Run a pixel shader program
 	CALresult RunPixelShader(Module* module, Array** inputs, Array** outputs, Array* globalBuffer, CALdomain* domain);
-	// performs an elementwise operation using pixel shader
-	CALresult DoElementwisePS(void);
+	// performs an elementwise operation
+	CALresult DoElementwise(void);
+	// perform matrix vector multiply operation
+	CALresult DoMatVecMul(void);	
+
 	// start Idle counter
 	CALresult StartIdleCounter(void);
 	// start cache hit counter
@@ -79,19 +80,15 @@ public:
 	PFNCALCTXENDCOUNTER     calCtxEndCounterExt;
 	PFNCALCTXGETCOUNTER     calCtxGetCounterExt;	
 
-	BOOL counterExtSupported;	// TRUE when counter extension is supported
-	// perform matrix vector operation using pixel shader
-	CALresult DoMatVecPS(void);
-	// perform matrix vector operation using compute shader
-	CALresult DoMatVecCS(void);
+	BOOL counterExtSupported;	// TRUE when counter extension is supported	
 	// allocate local memory of an array with freeing space if necessary
 	CALresult AllocateArrayLocal(Array* arr, ArrayPool* arrs, CALuint flags);
 	// Run a compute shader program
 	CALresult RunComputeShader(Module* module, Array** inputs, Array* globalBuffer, CALprogramGrid* programGrid);
-	// setup an elementwise computation
-	CALresult SetElementwise(ArrayExpression* expr, Array* result, ArrayPool* arrs);
-	// perform an elementwise operation using compute shader
-	CALresult DoElementwiseCS(void);
+	// setup a computation in a common way
+	CALresult SetCommon(ArrayExpression* expr, Array* result, ArrayPool* arrs, BOOL resultIsGlobalBuf);	
+	// perform matrix matrix multiply operation
+	CALresult DoMatMul(void);
 };
 
 class ContextPool :

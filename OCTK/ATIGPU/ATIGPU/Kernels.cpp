@@ -20,34 +20,19 @@ Kernel::Kernel(long iKernel, CALtarget target)
 
 	switch(iKernel)
 	{
-		case KernFillByNComp_PS:
-			kernelStr = kernelFillByNComp_PS; nOutputs = 1; 
+		case KernFill_PS:
+			kernelStr = kernelFill_PS; nOutputs = 1; 
 			nConstants = 1;
 			constSizes = new long[1]; constSizes[0] = 0;
 			constFormats = new CALformat[1]; constFormats[0] = CALformat(0);
-			break;
+			break;	
 
-		case KernFillBy2xNComp_CS:
-			kernelStr = kernelFillBy2xNComp_CS; nConstants = 1; usesGlobalBuffer = TRUE;
-			constSizes = new long[1]; constSizes[0] = 0;
-			constFormats = new CALformat[1]; constFormats[0] = CALformat(0);
-			break;
-
-		case KernFillBy4xNComp_CS:
-			kernelStr = kernelFillBy4xNComp_CS; nConstants = 1; usesGlobalBuffer = TRUE;
-			constSizes = new long[1]; constSizes[0] = 0;
-			constFormats = new CALformat[1]; constFormats[0] = CALformat(0);
-			break;
-
-		case KernFillBy8xNComp_CS:
-			kernelStr = kernelFillBy8xNComp_CS; nConstants = 1; usesGlobalBuffer = TRUE;
-			break;
-
-		case KernFillBy16xNComp_CS:
-			kernelStr = kernelFillBy16xNComp_CS; nConstants = 1; usesGlobalBuffer = TRUE;
-			constSizes = new long[1]; constSizes[0] = 0;
-			constFormats = new CALformat[1]; constFormats[0] = CALformat(0);
-			break;
+		case KernFill1_PS:
+			kernelStr = kernelFill1_PS; nOutputs = 1; 
+			nConstants = 2;
+			constSizes = new long[2]; constSizes[0] = 0; constSizes[1] = 1;
+			constFormats = new CALformat[2]; constFormats[0] = CALformat(0); constFormats[1] = CAL_FORMAT_FLOAT_4;
+			break;	
 
 		case KernAddR_PS: 
 			kernelStr = kernelAddR_PS; nInputs = 2; nOutputs = 1;
@@ -55,25 +40,11 @@ Kernel::Kernel(long iKernel, CALtarget target)
 
 		case KernAddLR_PS: 
 			kernelStr = kernelAddLR_PS; nInputs = 2; nOutputs = 1;
-			break;
-
-		case KernAddR_CS:
-			kernelStr = kernelAddR_CS; nInputs = 2; usesGlobalBuffer = TRUE; nOutputs = 0; 
-			nConstants = 1;
-			constSizes = new long[1]; constSizes[0] = 1;
-			constFormats = new CALformat[1]; constFormats[0] = CAL_FORMAT_FLOAT_4;
-			break;
+			break;		
 
 		case KernSubR_PS: 
 			kernelStr = kernelSubR_PS; nInputs = 2; nOutputs = 1;					
-			break;
-
-		case KernSubR_CS:
-			kernelStr = kernelSubR_CS; nInputs = 2; usesGlobalBuffer = TRUE; nOutputs = 0; 
-			nConstants = 1;
-			constSizes = new long[1]; constSizes[0] = 1;
-			constFormats = new CALformat[1]; constFormats[0] = CAL_FORMAT_FLOAT_4;
-			break;
+			break;		
 
 		case KernSubLR_PS: 
 			kernelStr = kernelSubLR_PS; nInputs = 2; nOutputs = 1;					
@@ -81,22 +52,8 @@ Kernel::Kernel(long iKernel, CALtarget target)
 
 		case KernEwMulR_PS: 
 			kernelStr = kernelEwMulR_PS; nInputs = 2; nOutputs = 1;
-			break;	
-
-		case KernEwMulR_CS:
-			kernelStr = kernelEwMulR_CS; nInputs = 2; usesGlobalBuffer = TRUE; nOutputs = 0; 
-			nConstants = 1;
-			constSizes = new long[1]; constSizes[0] = 1;
-			constFormats = new CALformat[1]; constFormats[0] = CAL_FORMAT_FLOAT_4;
-			break;
-
-		case KernEwDivR_CS:
-			kernelStr = kernelEwDivR_CS; nInputs = 2; usesGlobalBuffer = TRUE; nOutputs = 0; 
-			nConstants = 1;
-			constSizes = new long[1]; constSizes[0] = 1;
-			constFormats = new CALformat[1]; constFormats[0] = CAL_FORMAT_FLOAT_4;
-			break;
-
+			break;			
+		
 		case KernEwMulLR_PS: 
 			kernelStr = kernelEwMulLR_PS; nInputs = 2; nOutputs = 1;
 			break;
@@ -112,8 +69,14 @@ Kernel::Kernel(long iKernel, CALtarget target)
 		case KernMatVecR_PS: 
 			kernelStr = kernelMatVecR_PS; nInputs = 2; nOutputs = 1; nConstants = 1;
 			constSizes = new long[1]; constSizes[0] = 1;
-			constFormats = new CALformat[1]; constFormats[0] = CAL_FORMAT_FLOAT_2;
+			constFormats = new CALformat[1]; constFormats[0] = CAL_FORMAT_FLOAT_4;
 			break;		
+
+		case KernMatMulR_PS: 
+			kernelStr = kernelMatMulR_PS; nInputs = 2; nOutputs = 0; nConstants = 1; usesGlobalBuffer = TRUE;
+			constSizes = new long[1]; constSizes[0] = 1;
+			constFormats = new CALformat[1]; constFormats[0] = CAL_FORMAT_FLOAT_4;
+			break;	
 
 		default:
 			return;

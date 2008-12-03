@@ -11,12 +11,21 @@ Constant::Constant(CALdevice hDev, CALcontext ctx, CALname name, CALformat dForm
 	
 
 	// allocate the constant
-	err = calResAllocLocal1D(&res,hDev,size,dFormat,0);
+	err = calResAllocLocal1D(&localRes,hDev,size,dFormat,0);
 	if(err != CAL_RESULT_OK)	
 	{
-		res = 0;	
+		localRes = 0;	
 		return;
-	}		
+	}	
+
+	err = calResAllocRemote1D(&remoteRes,&hDev,1,size,dFormat,0);
+	if(err != CAL_RESULT_OK)	
+	{
+		calResFree(localRes);
+		localRes = 0;
+		remoteRes = 0;	
+		return;
+	}
 	
 	dataSize = size*GetElementSize(dFormat);
 }
@@ -26,20 +35,55 @@ Constant::~Constant(void)
 	if(mem)
 		calCtxReleaseMem(ctx,mem);
 
-	if(res)
-		calResFree(res);
+	if(localRes)
+		calResFree(localRes);
+
+	if(remoteRes)
+		calResFree(remoteRes);
 }
 
 CALresult Constant::SetData(void* data)
 {
 	void* gpuPtr;
 	CALuint pitch;
+	CALmem srcMem, dstMem;
+	CALevent ev;		
 
-	err = calResMap((void**)&gpuPtr,&pitch,res,0);
+	err = calResMap((void**)&gpuPtr,&pitch,remoteRes,0);
+	if(err == CAL_RESULT_OK)
+	{
+		CopyMemory(gpuPtr,data,dataSize);
+		err = calResUnmap(remoteRes);
+		if(err == CAL_RESULT_OK)
+		{
+			err = calCtxGetMem(&dstMem,ctx,localRes);
+			if(err == CAL_RESULT_OK)
+			{
+				err = calCtxGetMem(&srcMem,ctx,remoteRes);
+				if(err == CAL_RESULT_OK)
+				{
+					err = calMemCopy(&ev,ctx,srcMem,dstMem,0);	
+					if(err == CAL_RESULT_OK)
+						while(calCtxIsEventDone(ctx,ev) == CAL_RESULT_PENDING);
+
+					calCtxReleaseMem(ctx,srcMem);
+					calCtxReleaseMem(ctx,dstMem);
+				}
+				else
+					calCtxReleaseMem(ctx,dstMem);
+			}
+		}
+	}
+/*
+	// this is easier but 1.5 times slower
+
+	void* gpuPtr;
+	CALuint pitch;	
+	err = calResMap((void**)&gpuPtr,&pitch,localRes,0);
 	if(err != CAL_RESULT_OK) return err;	
 	CopyMemory(gpuPtr,data,dataSize);
-	err = calResUnmap(res);
-
+	err = calResUnmap(localRes);
+*/
 	return err;
 }
 
@@ -51,12 +95,12 @@ CALresult Constant::Fill(void* pattern, long patternSize)
 
 	if(patternSize <= dataSize)
 	{
-		err = calResMap((void**)&gpuPtr,&pitch,res,0);
+		err = calResMap((void**)&gpuPtr,&pitch,localRes,0);
 		if(err != CAL_RESULT_OK) return err;	
 		for(i = 0; i < dataSize; i+=patternSize)		
 			CopyMemory(gpuPtr+i,pattern,patternSize);			
 
-		err = calResUnmap(res);
+		err = calResUnmap(localRes);
 	}
 	else
 		return CAL_RESULT_INVALID_PARAMETER;
@@ -67,7 +111,7 @@ CALresult Constant::Fill(void* pattern, long patternSize)
 CALresult Constant::SetToContext(void)
 {
 	// get memory handle
-	err = calCtxGetMem(&mem,ctx,res);
+	err = calCtxGetMem(&mem,ctx,localRes);
 	if(err == CAL_RESULT_OK)	
 	{
 		// set memory to the context

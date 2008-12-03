@@ -95,37 +95,42 @@ BOOL Context::InitCounterExtension(void)
 
 CALresult Context::SetComputation(ArrayExpression* expr, Array* result, long priority, long flags, ArrayPool* arrs)
 {
-	long i;
+	long i;	
 
 	// increment use counters beforehand!	
 	for(i = 0; (i < 3) && expr->args[i]; i++){expr->args[i]->useCounter++;}	
 	result->useCounter++;
-	result->isReservedForGet = TRUE;
+	result->isReservedForGet = TRUE;	
 
 	switch(expr->op)
 	{
 		case OpIdentic:
-			err = SetElementwise(expr,result,arrs);
+			err = SetCommon(expr,result,arrs,FALSE);
 			break;
 
 		case OpAdd:
-			err = SetElementwise(expr,result,arrs);
+			err = SetCommon(expr,result,arrs,FALSE);
 			break;
 
 		case OpSub:
-			err = SetElementwise(expr,result,arrs);
+			err = SetCommon(expr,result,arrs,FALSE);
 			break;
 
 		case OpEwMul:
-			err = SetElementwise(expr,result,arrs);
+			err = SetCommon(expr,result,arrs,FALSE);
 			break;
 
 		case OpEwDiv:
-			err = SetElementwise(expr,result,arrs);
-			break;
+			err = SetCommon(expr,result,arrs,FALSE);
+			break;		
 
-		case OpDotProd:
-			err = SetElementwise(expr,result,arrs);
+		case OpMul:
+			if( (expr->args[0]->nDims == 2) && (expr->args[1]->nDims == 1) )
+				err = SetCommon(expr,result,arrs,FALSE);
+			else if( (expr->args[0]->nDims == 2) && (expr->args[1]->nDims == 2) )	// matrix multiplication
+				err = SetCommon(expr,result,arrs,TRUE);
+			else	
+				err = CAL_RESULT_NOT_SUPPORTED;
 			break;
 	}
 	
@@ -192,30 +197,30 @@ CALresult Context::DoComputation(void)
 	switch(expr->op)
 	{
 		case OpIdentic:
-			err = DoIdenticCS();
+			err = DoIdentic();
 			break;
 
 		case OpAdd:
-			err = DoElementwiseCS();
+			err = DoElementwise();
 			break;
 
 		case OpSub:
-			err = DoElementwiseCS();
+			err = DoElementwise();
 			break;
 
 		case OpEwMul:
-			err = DoElementwiseCS();
+			err = DoElementwise();
 			break;
 
 		case OpEwDiv:
-			err = DoElementwiseCS();
+			err = DoElementwise();
 			break;
 
 		case OpMul:
 			if( (expr->args[0]->nDims == 2) && (expr->args[1]->nDims == 1) )
-				err = DoMatVecPS();
-			else	
-				err = CAL_RESULT_NOT_SUPPORTED;
+				err = DoMatVecMul();
+			else if( (expr->args[0]->nDims == 2) && (expr->args[1]->nDims == 2) )
+				err = DoMatMul();
 
 			break;
 
@@ -235,12 +240,14 @@ CALresult Context::DoComputation(void)
 }
 
 // perform assignment of array identity (using pixel shader)
-CALresult Context::DoIdenticPS(void)
+CALresult Context::DoIdentic(void)
 {	
-	Module* module = NULL;
-	Constant* constant = NULL;
+	Module* module = NULL;	
 	Array* arg;	
-	long w, h;
+	long i, lw, pw, h, iKernel;
+	float lastElem;
+
+	char* pattern;
 
 	CALdomain domain;
 
@@ -265,38 +272,85 @@ CALresult Context::DoIdenticPS(void)
 	}
 	else
 	{	
-		// right hand side is a scalar
-		_ASSERT( (arg->nDims == 1) && (arg->size[0] == 1) );
+
+		_ASSERT(arg->IsScalar());
 		
-		if(result->physDataSize/result->physElemSize >= MinFillPhysNumElements_PS)	// if the result is sufficiently big use kernel method
+		if(result->nLogicDims == 1) {lw = result->logicSize[0]; pw = result->physSize[0]; h = 1;}
+		else {lw = result->logicSize[1]; pw = result->physSize[1]; h = result->logicSize[0];}
+
+		// if data parts are multiple of result->physNumComponents or it is memory clearing use KernFill_PS kernel
+		if( result->IsZeroScalar()
+			|| (result->physDataSize == result->dataSize)
+			|| ((lw % result->physNumComponents) == 0)
+			) /* ((w - (w*h - result->numElements)) % result->physNumComponents) == 0) remainder for the case of virtualization */
 		{
-			if(result->nLogicDims == 1) {w = result->logicSize[0]; h = 1;}
-			else {w = result->logicSize[1]; h = result->logicSize[0];}
+			iKernel = KernFill_PS;
+			if(!modules[iKernel])
+				modules[iKernel] = new Module(hDev,ctx,kernels[iKernel]);
 
-			// if data parts are multiple of result->physNumComponents use KernFillByNComp_PS kernel
-			if( result->IsZeroScalar()
-				|| (result->physDataSize == result->dataSize)
-				|| ( ((w % result->physNumComponents) == 0) && ( ((w - (w*h - result->numElements)) % result->physNumComponents) == 0) ) )
+			module = modules[iKernel];
+
+			if(module->err == CAL_RESULT_OK)
 			{
-				module = new Module(hDev,ctx,kernels[KernFillByNComp_PS]);
+				// create constant for passing to the kernel
+				module->constants[0] = new Constant(hDev,ctx,module->constNames[0],arg->dFormat,1);	
+				if(module->constants[0]->err == CAL_RESULT_OK)
+					// fill all constant components with one value
+					err = module->constants[0]->Fill(arg->cpuData,arg->elemSize);
+				else
+					err = module->constants[0]->err;				
+			}
+			else
+			{
+				err = module->err;	
+				delete module;
+				modules[iKernel] = NULL;
+			}
+		}
+		else
+		{
+			iKernel = KernFill1_PS;
+			if(!modules[iKernel])
+				modules[iKernel] = new Module(hDev,ctx,kernels[iKernel]);
 
-				if(module->err == CAL_RESULT_OK)
+			module = modules[iKernel];
+
+			if(module->err == CAL_RESULT_OK)
+			{
+				// create constant for passing to the kernel
+				module->constants[0] = new Constant(hDev,ctx,module->constNames[0],arg->dFormat,2);	
+				if(module->constants[0]->err == CAL_RESULT_OK)
 				{
-					// create constant for passing to the kernel
-					constant = new Constant(hDev,ctx,module->constNames[0],arg->dFormat,1);	
+					pattern = new char[module->constants[0]->dataSize];	
+					ZeroMemory(pattern,module->constants[0]->dataSize);
 
-					if(constant->err == CAL_RESULT_OK)				
-						// fill all constant components with one value
-						err = constant->Fill(arg->cpuData,arg->elemSize);
-					else
-						err = constant->err;				
+					for(i = 0; i < 2*result->physNumComponents - (pw*result->physNumComponents-lw); i++)
+						CopyMemory(pattern+i*arg->elemSize,arg->cpuData,arg->elemSize);					
+
+					err = module->constants[0]->SetData(pattern);
+
+					delete pattern;
+
+					if(err == CAL_RESULT_OK)
+					{
+						lastElem = (float)(lw/result->physNumComponents);						
+						err = module->constants[1]->Fill(&lastElem,sizeof(lastElem));
+					}
 				}
 				else
-					err = module->err;						
-			}	
+					err = module->constants[0]->err;					
+			}
 			else
-				// FIXME: implement other cases
-				err = CAL_RESULT_NOT_SUPPORTED;	
+			{
+				err = module->err;	
+				delete module;
+				modules[iKernel] = NULL;
+			}
+		}		
+
+		if(err == CAL_RESULT_OK)
+		{
+			err = module->SetConstantsToContext();
 
 			if(err == CAL_RESULT_OK)
 			{
@@ -316,21 +370,22 @@ CALresult Context::DoIdenticPS(void)
 
 				// run the program
 				err = RunPixelShader(module,expr->args,&result,NULL,&domain);
+
+				module->ReleaseConstantsFromContext();
 			}
-
-			if(constant)
-				delete constant;
-			if(module)
-				delete module;
 		}
-		else
-			//if the result size is small it can be done just by using calResMap!
-			err = CAL_RESULT_NOT_SUPPORTED;
 
+		if(module->constants[0])
+		{
+			delete module->constants[0];
+			module->constants[0] = NULL;
+		}
 	}	
 
 	return err;
 }
+
+/*
 
 // perform assignment of array identity (using compute shader)
 CALresult Context::DoIdenticCS(void)
@@ -445,6 +500,7 @@ CALresult Context::DoIdenticCS(void)
 
 	return err;
 }
+*/
 
 CALresult Context::RunPixelShader(Module* module, Array** inputs, Array** outputs, Array* globalBuffer, CALdomain* domain)
 {
@@ -458,8 +514,8 @@ CALresult Context::RunPixelShader(Module* module, Array** inputs, Array** output
 
 	inpMem = new CALmem[module->nInputs];
 	outMem = new CALmem[module->nOutputs];
-	FillMemory(&inpMem,0,module->nInputs*sizeof(CALmem));
-	FillMemory(&outMem,0,module->nOutputs*sizeof(CALmem));
+	FillMemory(inpMem,module->nInputs*sizeof(CALmem),0);
+	FillMemory(outMem,module->nOutputs*sizeof(CALmem),0);
 	gbufMem = 0;
 
 	/*
@@ -543,14 +599,88 @@ CALresult Context::RunPixelShader(Module* module, Array** inputs, Array** output
 }
 
 
-// performs an elementwise operation using pixel shader
-CALresult Context::DoElementwisePS(void)
+// performs an elementwise operation
+CALresult Context::DoElementwise(void)
 {	
 	Module* module;
-	CALdomain domain;
+	CALdomain domain;	
 
+	long iKernel;
+	
 	err = CAL_RESULT_OK;
 
+	switch(expr->dType)
+	{
+		case TREAL:
+		{
+			switch(expr->op)
+			{
+				case OpAdd: iKernel = KernAddR_PS; break;
+				case OpSub: iKernel = KernSubR_PS; break;
+				case OpEwMul: iKernel = KernEwMulR_PS; break;
+				case OpEwDiv: iKernel = KernEwDivR_PS; break;
+
+				default:
+					return CAL_RESULT_INVALID_PARAMETER;
+			}			
+
+		}break;
+
+		case TLONGREAL:
+		{
+			switch(expr->op)
+			{
+				case OpAdd: iKernel = KernAddLR_PS; break;
+				case OpSub: iKernel = KernSubLR_PS; break;
+				case OpEwMul: iKernel = KernEwMulLR_PS; break;
+				case OpEwDiv: iKernel = KernEwDivLR_PS; break;
+
+				default:
+					return CAL_RESULT_INVALID_PARAMETER;
+			}			
+
+		}break;
+		
+		default:
+			return CAL_RESULT_INVALID_PARAMETER;
+	}	
+	
+	// get suited module
+	if(!modules[iKernel])
+		modules[iKernel] = new Module(hDev,ctx,kernels[iKernel]);	
+
+	module = modules[iKernel];
+	
+	if(module->err == CAL_RESULT_OK)
+	{			
+		// set the domain of execution
+		domain.x = 0;
+		domain.y = 0;
+		if(result->nLogicDims == 1)
+		{
+			domain.width = result->physSize[0];
+			domain.height = 1;
+		}
+		else
+		{
+			domain.width = result->physSize[1];
+			domain.height = result->physSize[0];
+		}
+
+		// run the program
+		err = RunPixelShader(module,expr->args,&result,NULL,&domain);
+
+	}
+	else
+	{
+		err = module->err;
+		delete modules[iKernel];
+		modules[iKernel] = NULL;
+	}
+
+	return err;
+
+/*
 	// run a pixel shader
 	switch(expr->dType)
 	{
@@ -633,7 +763,7 @@ CALresult Context::DoElementwisePS(void)
 		err = module->err;
 
 	delete module;
-
+*/
 	return err;
 }
 
@@ -692,54 +822,137 @@ CALresult Context::GetCacheHitCounter(float* counterVal)
 		return CAL_RESULT_NOT_SUPPORTED;
 }
 
+/*
 // perform matrix vector operation using compute shader
 CALresult Context::DoMatVecCS(void)
 {
-	return err;
-}
-
-// perform matrix vector operation using pixel shader
-CALresult Context::DoMatVecPS(void)
-{
-/*
 	Module* module;
-	CALdomain domain;
-	Constant* constant;	
+	CALprogramGrid pg;
+	float constData[4];
 
+	long iKernel;
+	
 	err = CAL_RESULT_OK;
 
-	module = new Module(hDev,ctx,kernels[KernMatVecR_PS]);
-
-	if(module->err == CAL_RESULT_OK)
+	switch(expr->dType)
 	{
-		// create constant for passing to the kernel
-		constant = new Constant(module,0,TLONGINT,1,1);	
-		if(constant->err == CAL_RESULT_OK)
+		case TREAL:
 		{
-		
-			// set the domain of execution
-			domain.x = 0;
-			domain.y = 0;		
-			domain.width = result->physSize[0];
-			domain.height = 1;
-						
-			err = constant->Set(&(expr->args[0]->physSize[1]));
-				
-			// run the program
-			if(err == CAL_RESULT_OK)			
-				err = RunPixelShader(module,expr->args,&result,NULL,&domain);
-		}
-		else
-			err = constant->err;
+			iKernel = KernMatVecR_CS; break;			
 
-		delete constant;
+		}break;
+		
+		default:
+			return CAL_RESULT_INVALID_PARAMETER;
+	}	
+	
+	// get suited module
+	if(!modules[iKernel])
+		modules[iKernel] = new Module(hDev,ctx,kernels[iKernel]);	
+
+	module = modules[iKernel];
+	
+	if(module->err == CAL_RESULT_OK)
+	{		
+		constData[0] = (float)(expr->args[0]->physSize[1]);	// matrix width
+		constData[1] = (float)(result->physSize[0]);		// matrix height
+		constData[2] = (float)((result->physSize[0]/result->physNumComponents)*result->physNumComponents);	// index of last row of quadruples
+		constData[3] = (float)(result->physNumElements);	// total number of elements		
+
+		err = module->constants[0]->SetData(&constData);		
+		if(err == CAL_RESULT_OK)
+		{
+			err = module->SetConstantsToContext();
+			if(err == CAL_RESULT_OK)
+			{
+				pg.flags = 0;
+				pg.func = module->func;
+				pg.gridBlock.width = devAttribs->wavefrontSize;
+				pg.gridBlock.height = 1;
+				pg.gridBlock.depth  = 1;
+				pg.gridSize.width   = ((result->physNumElements + pg.gridBlock.width - 1) / pg.gridBlock.width);
+				pg.gridSize.height  = 1;
+				pg.gridSize.depth   = 1;
+
+				err = RunComputeShader(module,expr->args,result,&pg);
+
+				module->ReleaseConstantsFromContext();
+			}
+		}		
 	}
 	else
+	{
 		err = module->err;
+		delete module;
+		modules[iKernel] = NULL;
+	}
 
-	delete module;
-
+	return err;
+}
 */
+
+// perform matrix vector multiply operation
+CALresult Context::DoMatVecMul(void)
+{
+	Module* module;
+	CALdomain domain;
+	float constData[4];
+
+	long iKernel;
+	
+	err = CAL_RESULT_OK;
+
+	switch(expr->dType)
+	{
+		case TREAL:
+		{
+			iKernel = KernMatVecR_PS; break;			
+
+		}break;
+		
+		default:
+			return CAL_RESULT_INVALID_PARAMETER;
+	}	
+	
+	// get suited module
+	if(!modules[iKernel])
+		modules[iKernel] = new Module(hDev,ctx,kernels[iKernel]);	
+
+	module = modules[iKernel];
+	
+	if(module->err == CAL_RESULT_OK)
+	{		
+		constData[0] = (float)(expr->args[0]->physSize[1]);	// matrix width
+		constData[1] = 0;
+		constData[2] = 0;
+		constData[3] = 0;
+
+		err = module->constants[0]->SetData(&constData);		
+		if(err == CAL_RESULT_OK)
+		{
+			err = module->SetConstantsToContext();
+			if(err == CAL_RESULT_OK)
+			{
+				// set the domain of execution
+				domain.x = 0;
+				domain.y = 0;		
+				domain.width = result->physSize[0];
+				domain.height = 1;
+
+				// run the program				
+				err = RunPixelShader(module,expr->args,&result,NULL,&domain);
+
+				module->ReleaseConstantsFromContext();
+			}
+		}		
+	}
+	else
+	{
+		err = module->err;
+		delete module;
+		modules[iKernel] = NULL;
+	}
+
 	return err;
 }
 
@@ -789,7 +1002,7 @@ CALresult Context::RunComputeShader(Module* module, Array** inputs, Array* globa
 	err = CAL_RESULT_OK;
 
 	inpMem = new CALmem[module->nInputs];	
-	FillMemory(&inpMem,0,module->nInputs*sizeof(CALmem));	
+	FillMemory(inpMem,module->nInputs*sizeof(CALmem),0);	
 	gbufMem = 0;
 
 	/*
@@ -844,24 +1057,24 @@ CALresult Context::RunComputeShader(Module* module, Array** inputs, Array* globa
 }
 
 // setup an elementwise computation
-CALresult Context::SetElementwise(ArrayExpression* expr, Array* result, ArrayPool* arrs)
+CALresult Context::SetCommon(ArrayExpression* expr, Array* result, ArrayPool* arrs, BOOL resultIsGlobalBuf)
 {
 	long i;	
-	CALuint flags;
+	CALuint flags = 0;	
 
-	err = CAL_RESULT_OK;	
-
-	flags = CAL_RESALLOC_GLOBAL_BUFFER;	// allocate arrays with posibility of using them as global buffers
+	err = CAL_RESULT_OK;		
 	
 	// just in case try to free some space in the remote memory (result will be anyway overwritten)
 	result->FreeRemote();
+	if( result->localRes && ((!resultIsGlobalBuf && (result->localIsGlobalBuf)) || (resultIsGlobalBuf && (~result->localIsGlobalBuf))) )
+		result->FreeLocal();
 
 	for(i = 0; (err == CAL_RESULT_OK) && (i < 3) && expr->args[i]; i++)
 	{	
 		if(!expr->args[i]->localRes)	// is array already residing in the local memory?
 		{
 			// if not try to allocate it	
-			err = AllocateArrayLocal(expr->args[i],arrs,flags);
+			err = AllocateArrayLocal(expr->args[i],arrs,0);
 					
 			if(err == CAL_RESULT_OK)
 			{
@@ -874,17 +1087,30 @@ CALresult Context::SetElementwise(ArrayExpression* expr, Array* result, ArrayPoo
 					err = expr->args[i]->SetDataToLocal(ctx,expr->args[i]->cpuData);					
 			}
 		}
+		else
+		{
+			// FIXME: convert if possible to not a global buffer
+			if(expr->args[i]->localIsGlobalBuf)
+			{
+				
+			}
+		}
 	}
 	
 	// allocate result array if necessary
 	if(err == CAL_RESULT_OK)
 	{
-		if(!result->localRes)		
+		if(resultIsGlobalBuf)	// for compute shader result is a global buffer
+			flags = CAL_RESALLOC_GLOBAL_BUFFER;
+
+		if(!result->localRes)
 			err = AllocateArrayLocal(result,arrs,flags);	
 	}
 
 	return err;
 }
+
+/*
 
 // perform an elementwise operation using compute shader
 CALresult Context::DoElementwiseCS(void)
@@ -929,7 +1155,7 @@ CALresult Context::DoElementwiseCS(void)
 		if(result->nLogicDims == 2)
 		{
 			constData[0] = (float)(result->physSize[1]);		// width
-			constData[1] = 1.0f/(float)(result->physSize[1]);	// 1/width
+			constData[1] = 1.0f/constData[0];					// 1/width
 			constData[2] = (float)(result->pitch);				// pitch in number of multicomponent elements
 			constData[3] = (float)(result->physNumElements);	// total number of elements	
 		}
@@ -966,6 +1192,72 @@ CALresult Context::DoElementwiseCS(void)
 	{
 		err = module->err;
 		delete modules[iKernel];
+		modules[iKernel] = NULL;
+	}
+
+	return err;
+}
+*/
+
+// perform matrix matrix multiply operation
+CALresult Context::DoMatMul(void)
+{
+	Module* module;
+	CALdomain domain;
+	float constData[4];
+
+	long iKernel;
+	
+	err = CAL_RESULT_OK;
+
+	switch(expr->dType)
+	{
+		case TREAL:
+		{
+			iKernel = KernMatMulR_PS; break;			
+
+		}break;
+		
+		default:
+			return CAL_RESULT_INVALID_PARAMETER;
+	}	
+	
+	// get suited module
+	if(!modules[iKernel])
+		modules[iKernel] = new Module(hDev,ctx,kernels[iKernel]);	
+
+	module = modules[iKernel];
+	
+	if(module->err == CAL_RESULT_OK)
+	{	
+		constData[0] = (float)(expr->args[0]->physSize[1]);	// matrix width
+		constData[1] = (float)(result->pitch);	// pitch
+		constData[2] = 0;
+		constData[3] = 0;
+
+		err = module->constants[0]->SetData(&constData);		
+		if(err == CAL_RESULT_OK)
+		{
+			err = module->SetConstantsToContext();
+			if(err == CAL_RESULT_OK)
+			{
+				// set the domain of execution
+				domain.x = 0;
+				domain.y = 0;		
+				domain.width = result->physSize[1];
+				domain.height = result->physSize[0]/4;
+
+				// run the program				
+				err = RunPixelShader(module,expr->args,NULL,result,&domain);
+
+				module->ReleaseConstantsFromContext();
+			}
+		}	
+	}
+	else
+	{
+		err = module->err;
+		delete module;
 		modules[iKernel] = NULL;
 	}
 
