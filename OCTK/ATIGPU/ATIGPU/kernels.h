@@ -315,19 +315,20 @@ const char kernelMatVecR_PS[] =
 
 "end\n";
 
+// matrix multiplication C := A*B
 const char kernelMatMulR_PS[] =
 "il_ps_2_0\n"
 "dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__\n"
-"dcl_cb cb0[1]\n"
+"dcl_cb cb0[1]\n"	// [A.width, C.pitch]
 "dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
 "dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
-"dcl_literal l0, 0.0f, 4.0f, 0.0f, 0.0f\n"
+"dcl_literal l0, 0.0f, 4.0f, 4.0f, 0.0f\n"
 
-// 2D index of first row in lhs block
-"flr r0.0y, vWinCoord0.y\n"
-"mul r0.y, r0.y, l0.y\n"	// multiply y coordinate by 4
+// 2D index of first row in first block of A
+"flr r0.0yz, vWinCoord0.y\n"
+"mul r0.yz, r0.yz, l0.yz\n"	// multiply y coordinate by 4
 
-// 2D index of first column of the rhs
+// 2D index of first column of block of B
 "mov r1.x0, vWinCoord0.x\n"
 
 // accumulators for small matrix multiply result
@@ -337,7 +338,7 @@ const char kernelMatMulR_PS[] =
 "mov r15, r15.0000\n"
 
 "mov r2, r2.0000\n"	// loop counter
-"mov r3, cb0[0]\n"	// r3.x := width in quadruples
+"mov r3, cb0[0]\n"
 
 "whileloop\n"
 "    ge r2.y, r2.x, r3.x\n"	// while(loop counter < width)
@@ -355,13 +356,14 @@ const char kernelMatMulR_PS[] =
 	
 	// load the next block of the lhs
 "	sample_resource(0)_sampler(0) r8, r0.xy\n"
-"	add r0.x, r0.x, r0.1\n"
+"	add r0.y, r0.y, r0.1\n"
 "	sample_resource(0)_sampler(0) r9, r0.xy\n"
-"	add r0.x, r0.x, r0.1\n"
+"	add r0.y, r0.y, r0.1\n"
 "	sample_resource(0)_sampler(0) r10, r0.xy\n"
-"	add r0.x, r0.x, r0.1\n"
+"	add r0.y, r0.y, r0.1\n"
 "	sample_resource(0)_sampler(0) r11, r0.xy\n"
 "	add r0.x, r0.x, r0.1\n"
+"	mov r0.y, r0.z\n"
 
 	// compute small matrix multiplication
 

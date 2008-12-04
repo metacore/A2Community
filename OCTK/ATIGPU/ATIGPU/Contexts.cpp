@@ -1219,7 +1219,7 @@ CALresult Context::DoMatMul(void)
 		}break;
 		
 		default:
-			return CAL_RESULT_INVALID_PARAMETER;
+			return CAL_RESULT_NOT_SUPPORTED;
 	}	
 	
 	// get suited module
@@ -1231,7 +1231,7 @@ CALresult Context::DoMatMul(void)
 	if(module->err == CAL_RESULT_OK)
 	{	
 		constData[0] = (float)(expr->args[0]->physSize[1]);	// matrix width
-		constData[1] = (float)(result->pitch);	// pitch
+		constData[1] = (float)(result->pitch);				// alignment pitch for the result
 		constData[2] = 0;
 		constData[3] = 0;
 
