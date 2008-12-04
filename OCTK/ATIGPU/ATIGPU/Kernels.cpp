@@ -87,7 +87,7 @@ Kernel::Kernel(long iKernel, CALtarget target)
 		err = calclLink(&img,&obj,1);
 	
 	if(err != CAL_RESULT_OK)
-	{
+	{	
 		if(obj)
 			calclFreeObject(obj);
 		obj = NULL;

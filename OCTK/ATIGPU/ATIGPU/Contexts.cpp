@@ -1232,8 +1232,8 @@ CALresult Context::DoMatMul(void)
 	{	
 		constData[0] = (float)(expr->args[0]->physSize[1]);	// matrix width
 		constData[1] = (float)(result->pitch);				// alignment pitch for the result
-		constData[2] = 0;
-		constData[3] = 0;
+		constData[2] = (float)(expr->args[0]->physSize[0]/8);
+		constData[3] = (float)(expr->args[1]->physSize[0]/4);
 
 		err = module->constants[0]->SetData(&constData);		
 		if(err == CAL_RESULT_OK)
@@ -1245,7 +1245,7 @@ CALresult Context::DoMatMul(void)
 				domain.x = 0;
 				domain.y = 0;		
 				domain.width = result->physSize[1];
-				domain.height = result->physSize[0]/4;
+				domain.height = result->physSize[0]/8;
 
 				// run the program				
 				err = RunPixelShader(module,expr->args,NULL,result,&domain);

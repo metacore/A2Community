@@ -44,7 +44,7 @@ Device::Device(long devNum)
 		if(kern->err == CAL_RESULT_OK)		
 			kernels[i] = kern;		
 		else
-		{
+		{			
 			delete kern;
 			for(i = i-1; i >= 0; i--)
 				delete kernels[i];
