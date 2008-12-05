@@ -142,7 +142,7 @@ CALresult Array::AllocateRemote(CALuint flags)
 	if(nLogicDims == 2)
 		err = calResAllocRemote2D(&remoteRes,&hDev,1,physSize[1],physSize[0],dFormat,flags);
 	else if(nLogicDims == 1)
-		err = calResAllocRemote1D(&remoteRes,&hDev,1,physSize[0],dFormat,flags);
+		err = calResAllocRemote2D(&remoteRes,&hDev,1,physSize[0],1,dFormat,flags);
 
 	if(err == CAL_RESULT_OK)
 	{

@@ -317,44 +317,44 @@ const char kernelMatVecR_PS[] =
 
 /*
 	Matrix multiplication C := A*B for the case
-	when A has size [8*M,16*N] and B has size [16*N,K]
+	when A has size [8*M,4*N] and B has size [4*N,K]
 	where M, N, K any integer numbers
 */
-const char kernelMatMulR_PS[] =
+const char kernelMatMul8x4by4x4R_PS[] =
 "il_ps_2_0\n"
 "dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__\n"
-"dcl_cb cb0[1]\n"	// [A.width, C.pitch, B.blkHeight, A.blkHeight]
+"dcl_cb cb0[1]\n"	// [A.width, C.pitch]
 "dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
 "dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
-"dcl_literal l0, 4.0f, 8.0f, 1.0f, 2.0f\n"
+"dcl_literal l0, 0.0f, 8.0f, 1.0f, 2.0f\n"
 "dcl_literal l1, 3.0f, 3.0f, 3.0f, 3.0f\n"
-"dcl_literal l2, 0.0f, 1.0f, 1.0f, 1.0f\n"
+"dcl_literal l2, 0.0f, 4.0f, 4.0f, 4.0f\n"
 
 // 2D index of first row in first block of A
 "flr r0.0y, vWinCoord0.y\n"		// [0,y] in the execution domain
+"mul r0.y, r0.y, l0.y\n"		// multiply y coordinate by 8 to get real position in A data
 
 // 2D index of first column of block of B
 "flr r1.x000, vWinCoord0.x\n"	// [x,0] in the B data
 
 // clear float4 accumulators for 8x4 * 4x4 matrix multiply result
-"mov r22, r22.0000\n"	
-"mov r23, r23.0000\n"
-"mov r24, r24.0000\n"
-"mov r25, r25.0000\n"
-"mov r26, r26.0000\n"	
-"mov r27, r27.0000\n"
-"mov r28, r28.0000\n"
-"mov r29, r29.0000\n"
+"mov r34, r34.0000\n"	
+"mov r35, r35.0000\n"
+"mov r36, r36.0000\n"
+"mov r37, r37.0000\n"
+"mov r38, r38.0000\n"	
+"mov r39, r39.0000\n"
+"mov r40, r40.0000\n"
+"mov r41, r41.0000\n"
 
 // initialize sample counters for B
-"mul r1.__zw, cb0[0].00ww, l0.00zw\n"	// r1 := [x,0,1*B.blkHeight,2*B.blkHeight]
-"add r3.xy00, r1.xw00, cb0[0].0w00\n"	// r3 := [x,3*B.blkHeight,...]
+"mov r1.zw, l0\n"			// r1 := [x,0,1,2]
+"add r3, r1, l1.0yzw\n"		// r3 := [x,3,4,5]
 
 // initialize sample counters for A
-"mad r0.__zw, cb0[0].00zz, l0.00zw, r0.00yy\n"	// r0 := [0,y,y+1*A.blkHeight,y+2*A.blkHeight]
-"mad r4.0yzw, cb0[0].z, l1.0yzw, r0.0yzw\n"		// r4 := [0,y+3*A.blkHeight,y+4*A.blkHeight,y+5*A.blkHeight]
-"mad r5.0yzw, cb0[0].z, l1.0yzw, r4.0yzw\n"		// r5 := [0,y+6*A.blkHeight,y+7*A.blkHeight,...]
-
+"add r0.__zw, r0.00yy, l0.00zw\n"	// r0 := [0,y,y+1,y+2]
+"add r8.0yzw, r0.0yzw, l1.0yzw\n"	// r8 := [0,y+3,y+4,y+5]
+"add r9.0yzw, r8.0yzw, l1.0yzw\n"	// r9 := [0,y+6,y+7,y+8]
 
 "mov r2.0y00, cb0[0].x\n"	// r2.x is the loop counter, r2.y := A.width
 
@@ -362,116 +362,108 @@ const char kernelMatMulR_PS[] =
 "    ge r2.z, r2.x, r2.y\n"	// while(loop counter < width)
 "    break_logicalnz r2.z\n"
 
-	// load next 4x4 block of B
+	// load 4 next 4x4 blocks of B
 "	sample_resource(1)_sampler(1) r10, r1.xy\n"
 "	sample_resource(1)_sampler(1) r11, r1.xz\n"
 "	sample_resource(1)_sampler(1) r12, r1.xw\n"
 "	sample_resource(1)_sampler(1) r13, r3.xy\n"
 
 	// load next 8x4 block of A
-"	sample_resource(0)_sampler(0) r14, r0.xy\n"
-"	sample_resource(0)_sampler(0) r15, r0.xz\n"
-"	sample_resource(0)_sampler(0) r16, r0.xw\n"
-"	sample_resource(0)_sampler(0) r17, r4.xy\n"
-"	sample_resource(0)_sampler(0) r18, r4.xz\n"
-"	sample_resource(0)_sampler(0) r19, r4.xw\n"
-"	sample_resource(0)_sampler(0) r20, r5.xy\n"
-"	sample_resource(0)_sampler(0) r21, r5.xz\n"
+"	sample_resource(0)_sampler(0) r26, r0.xy\n"
+"	sample_resource(0)_sampler(0) r27, r0.xz\n"
+"	sample_resource(0)_sampler(0) r28, r0.xw\n"
+"	sample_resource(0)_sampler(0) r29, r8.xy\n"
+"	sample_resource(0)_sampler(0) r30, r8.xz\n"
+"	sample_resource(0)_sampler(0) r31, r8.xw\n"
+"	sample_resource(0)_sampler(0) r32, r9.xy\n"
+"	sample_resource(0)_sampler(0) r33, r9.xz\n"
 
-	// do 8x4 * 4x4 matrix multiply
+	// increment sample counters of A
+"	add r0.x, r0.x, r0.1\n"
+"	add r8.x, r8.x, r8.1\n"
+"	add r9.x, r9.x, r9.1\n"
+
+	// compute Ablk * Bblk
 
 	// row 1
-"	mad r30, r14.x, r10, r22\n"
-"	mad r30, r14.y, r11, r30\n"
-"	mad r30, r14.z, r12, r30\n"
-"	mad r22, r14.w, r13, r30\n"
-
+"	mad r42, r26.x, r10, r34\n"	// r42 := Ablk[0,0]*Bblk[0,*] + Cblk[0,*]
+"	mad r42, r26.y, r11, r42\n"	// r42 := Ablk[0,1]*Bblk[1,*] + r42
+"	mad r42, r26.z, r12, r42\n"	// r42 := Ablk[0,2]*Bblk[2,*] + r42
+"	mad r34, r26.w, r13, r42\n"	// Cblk[0,*] := Ablk[0,3]*Bblk[3,*] + r42
 	// row 2
-"	mad r30, r15.x, r10, r23\n"
-"	mad r30, r15.y, r11, r30\n"
-"	mad r30, r15.z, r12, r30\n"
-"	mad r23, r15.w, r13, r30\n"
-
+"	mad r42, r27.x, r10, r35\n"
+"	mad r42, r27.y, r11, r42\n"
+"	mad r42, r27.z, r12, r42\n"
+"	mad r35, r27.w, r13, r42\n"
 	// row 3
-"	mad r30, r16.x, r10, r24\n"
-"	mad r30, r16.y, r11, r30\n"
-"	mad r30, r16.z, r12, r30\n"
-"	mad r24, r16.w, r13, r30\n"
-
+"	mad r42, r28.x, r10, r36\n"
+"	mad r42, r28.y, r11, r42\n"
+"	mad r42, r28.z, r12, r42\n"
+"	mad r36, r28.w, r13, r42\n"
 	// row 4
-"	mad r30, r17.x, r10, r25\n"
-"	mad r30, r17.y, r11, r30\n"
-"	mad r30, r17.z, r12, r30\n"
-"	mad r25, r17.w, r13, r30\n"
-
+"	mad r42, r29.x, r10, r37\n"
+"	mad r42, r29.y, r11, r42\n"
+"	mad r42, r29.z, r12, r42\n"
+"	mad r37, r29.w, r13, r42\n"
 	// row 5
-"	mad r30, r18.x, r10, r26\n"
-"	mad r30, r18.y, r11, r30\n"
-"	mad r30, r18.z, r12, r30\n"
-"	mad r26, r18.w, r13, r30\n"
-
+"	mad r42, r30.x, r10, r38\n"
+"	mad r42, r30.y, r11, r42\n"
+"	mad r42, r30.z, r12, r42\n"
+"	mad r38, r30.w, r13, r42\n"
 	// row 6
-"	mad r30, r19.x, r10, r27\n"
-"	mad r30, r19.y, r11, r30\n"
-"	mad r30, r19.z, r12, r30\n"
-"	mad r27, r19.w, r13, r30\n"
-
+"	mad r42, r31.x, r10, r39\n"
+"	mad r42, r31.y, r11, r42\n"
+"	mad r42, r31.z, r12, r42\n"
+"	mad r39, r31.w, r13, r42\n"
 	// row 7
-"	mad r30, r20.x, r10, r28\n"
-"	mad r30, r20.y, r11, r30\n"
-"	mad r30, r20.z, r12, r30\n"
-"	mad r28, r20.w, r13, r30\n"
-
+"	mad r42, r32.x, r10, r40\n"
+"	mad r42, r32.y, r11, r42\n"
+"	mad r42, r32.z, r12, r42\n"
+"	mad r40, r32.w, r13, r42\n"
 	// row 8
-"	mad r30, r21.x, r10, r29\n"
-"	mad r30, r21.y, r11, r30\n"
-"	mad r30, r21.z, r12, r30\n"
-"	mad r29, r21.w, r13, r30\n"
-	
-	// increment counters of A
-"	add r0.x, r0.x, r0.1\n"
-"	add r4.x, r4.x, r4.1\n"
-"	add r5.x, r5.x, r5.1\n"
+"	mad r42, r33.x, r10, r41\n"
+"	mad r42, r33.y, r11, r42\n"
+"	mad r42, r33.z, r12, r42\n"
+"	mad r41, r33.w, r13, r42\n"
 
-	// increment counters of B
+	// increment sample counters of B
 "	add r1, r1, l2\n"
 "	add r3, r3, l2\n"
 
-"	add r2.x, r2.x, l0.x\n"	// loop counter ++
+"	add r2.x, r2.x, r2.1\n"	// loop counter ++
 "endloop\n"
-
 
 // convert [x,y] index to equivalent linear index
 "flr r0.xy, vWinCoord0\n"			// [x,y] in the execution domain
-"ftoi r1, cb0[0]\n"					// r1 := int(cb0[0]);			
+"mul r0.y, r0.y, l0.y\n"			// multiply y coordinate by 8 to get real position in A data
+"ftoi r1.x, cb0[0].y\n"				// r1.x := int(pitch);
 "ftoi r0, r0\n"						// r0 := int(r0);
-"imad r0.x, r0.y, r1.y, r0.x\n"		// r0.x := y*pitch + x -> index with account of the alignment pitch
-"imul r1.x, r1.y, r1.z\n"			// r1.x := pitch*A.blkHeight -> step for storing quadruples
+"imad r0.x, r0.y, r1.x, r0.x\n"		// index := y*pitch + x -> index with account of the alignment pitch
 
 // store the result
 
-"mov g[r0.x], r22\n"
-"iadd r0.x, r0.x, r1.x\n"
+"mov g[r0.x], r34\n"
+"iadd r0.x, r0.x, r1.x\n"			// index += pitch -> switch to the next row
 
-"mov g[r0.x], r23\n"
-"iadd r0.x, r0.x, r1.x\n"
+"mov g[r0.x], r35\n"
+"iadd r0.x, r0.x, r1.x\n"			
 
-"mov g[r0.x], r24\n"
-"iadd r0.x, r0.x, r1.x\n"
+"mov g[r0.x], r36\n"
+"iadd r0.x, r0.x, r1.x\n"			
 
-"mov g[r0.x], r25\n"
-"iadd r0.x, r0.x, r1.x\n"
+"mov g[r0.x], r37\n"
+"iadd r0.x, r0.x, r1.x\n"			
 
-"mov g[r0.x], r26\n"
-"iadd r0.x, r0.x, r1.x\n"
+"mov g[r0.x], r38\n"
+"iadd r0.x, r0.x, r1.x\n"			
 
-"mov g[r0.x], r27\n"
-"iadd r0.x, r0.x, r1.x\n"
+"mov g[r0.x], r39\n"
+"iadd r0.x, r0.x, r1.x\n"			
 
-"mov g[r0.x], r28\n"
-"iadd r0.x, r0.x, r1.x\n"
+"mov g[r0.x], r40\n"
+"iadd r0.x, r0.x, r1.x\n"			
 
-"mov g[r0.x], r29\n"
+"mov g[r0.x], r41\n"
 
 "end\n";
 
@@ -480,7 +472,7 @@ const char kernelMatMulR_PS[] =
 	when A has size [8*M,16*N] and B has size [16*N,K]
 	where M, N, K any integer numbers
 */
-const char kernelMatMulR_PS_working[] =
+const char kernelMatMulR8x16by16x4_PS[] =
 "il_ps_2_0\n"
 "dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__\n"
 "dcl_cb cb0[1]\n"	// [A.width, C.pitch]
@@ -824,8 +816,12 @@ const char kernelMatMulR_PS_working[] =
 
 "end\n";
 
-// matrix multiplication C := A*B
-const char kernelMatMulR_PS0[] =
+/*
+	Matrix multiplication C := A*B for the case
+	when A has size [4*M,4*N] and B has size [4*N,K]
+	where M, N, K any integer numbers
+*/
+const char kernelMatMulR_PS[] =
 "il_ps_2_0\n"
 "dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__\n"
 "dcl_cb cb0[1]\n"	// [A.width, C.pitch]
@@ -903,7 +899,6 @@ const char kernelMatMulR_PS0[] =
 "	add r2.x, r2.x, r2.1\n"	// loop counter ++
 "endloop\n"
 
-
 // store the result
 
 // convert [x,y] index to the linear form
@@ -914,13 +909,13 @@ const char kernelMatMulR_PS0[] =
 "imad r0.x, r0.y, r3.y, r0.x\n"	// index := y*pitch + x - index with account of the alignment pitch
 
 "mov g[r0.x], r12\n"
-"iadd r0.x, r0.x, r3.y\n"	// index := index + pitch
+"iadd r0.x, r0.x, r3.y\n"		// index := index + pitch
 
 "mov g[r0.x], r13\n"
-"iadd r0.x, r0.x, r3.y\n"	// index := index + pitch
+"iadd r0.x, r0.x, r3.y\n"		// index := index + pitch
 
 "mov g[r0.x], r14\n"
-"iadd r0.x, r0.x, r3.y\n"	// index := index + pitch
+"iadd r0.x, r0.x, r3.y\n"		// index := index + pitch
 
 "mov g[r0.x], r15\n"
 

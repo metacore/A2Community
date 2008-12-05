@@ -429,7 +429,8 @@ ATIGPU_API long GetArray(
 		arr = devs->Get(j)->arrs->Get(ind);
 				
 		data1 = data;
-		if(!data1) data1 = arr->cpuData;
+		if(!data1) 
+			data1 = arr->cpuData;
 
 		if(!data1)
 			return CAL_RESULT_INVALID_PARAMETER;
