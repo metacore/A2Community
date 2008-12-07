@@ -586,10 +586,10 @@ CALresult Context::RunPixelShader(Module* module, Array** inputs, Array** output
 	if(globalBuffer)
 		calCtxReleaseMem(ctx,gbufMem);
 
-	for( i = 0; i < module->nInputs; i++)
+	for(i = 0; i < module->nInputs; i++)
 		calCtxReleaseMem(ctx,inpMem[i]);
 
-	for( i = 0; i < module->nOutputs; i++)
+	for(i = 0; i < module->nOutputs; i++)
 		calCtxReleaseMem(ctx,outMem[i]);
 
 	delete inpMem;
