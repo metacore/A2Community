@@ -87,7 +87,7 @@ public:
 	// Run a compute shader program
 	CALresult RunComputeShader(Module* module, Array** inputs, Array* globalBuffer, CALprogramGrid* programGrid);
 	// setup a computation in a common way
-	CALresult SetCommon(ArrayExpression* expr, Array* result, ArrayPool* arrs, BOOL resultIsGlobalBuf);	
+	CALresult SetCommon(ArrayExpression* expr, Array* result, ArrayPool* arrs, BOOL overwritenResult, BOOL resultIsGlobalBuf);	
 	// perform matrix matrix multiply operation
 	CALresult DoMatMul(void);
 	// divide a matrix to 4 parts

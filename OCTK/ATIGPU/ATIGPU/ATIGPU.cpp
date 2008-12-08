@@ -297,6 +297,8 @@ ATIGPU_API long SetComputation(
 	}
 	else	// use already existing array
 	{
+		// FIXME: check if result fits by dimensions and size!!!
+
 		if(j != devNum)	// array resides on another device
 		{
 			delete exprI;

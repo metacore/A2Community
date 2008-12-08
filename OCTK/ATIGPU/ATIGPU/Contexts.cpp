@@ -108,30 +108,30 @@ CALresult Context::SetComputation(ArrayExpression* expr, Array* result, long pri
 	switch(expr->op)
 	{
 		case OpIdentic:
-			err = SetCommon(expr,result,arrs,FALSE);
+			err = SetCommon(expr,result,arrs,TRUE,FALSE);
 			break;
 
 		case OpAdd:
-			err = SetCommon(expr,result,arrs,FALSE);
+			err = SetCommon(expr,result,arrs,(expr->args[0] != result)&&(expr->args[1] != result),FALSE);
 			break;
 
 		case OpSub:
-			err = SetCommon(expr,result,arrs,FALSE);
+			err = SetCommon(expr,result,arrs,(expr->args[0] != result)&&(expr->args[1] != result),FALSE);
 			break;
 
 		case OpEwMul:
-			err = SetCommon(expr,result,arrs,FALSE);
+			err = SetCommon(expr,result,arrs,(expr->args[0] != result)&&(expr->args[1] != result),FALSE);
 			break;
 
 		case OpEwDiv:
-			err = SetCommon(expr,result,arrs,FALSE);
+			err = SetCommon(expr,result,arrs,(expr->args[0] != result)&&(expr->args[1] != result),FALSE);
 			break;		
 
 		case OpMul:
 			if( (expr->args[0]->nDims == 2) && (expr->args[1]->nDims == 1) )
-				err = SetCommon(expr,result,arrs,FALSE);
+				err = SetCommon(expr,result,arrs,(expr->args[1] != result),FALSE);
 			else if( (expr->args[0]->nDims == 2) && (expr->args[1]->nDims == 2) )	// matrix multiplication
-				err = SetCommon(expr,result,arrs,TRUE);
+				err = SetCommon(expr,result,arrs,TRUE,TRUE);
 			else	
 				err = CAL_RESULT_NOT_SUPPORTED;
 			break;
@@ -974,13 +974,13 @@ CALresult Context::AllocateArrayLocal(Array* arr, ArrayPool* arrs, CALuint flags
 		while( (tmp = arrs->FindMinLocalNotInUse(&excl)) != NULL )
 		{
 			err = tmp->FreeLocalKeepInRemote(ctx);
-			if(err != CAL_RESULT_OK) // exclude argument from the search									
+			if(err != CAL_RESULT_OK) // exclude array from the search									
 				excl.Add(tmp);			
 			else if( (err = arr->AllocateLocal(flags)) == CAL_RESULT_OK) 			
 				break;
 		}
 
-		// if does not help - free currently unused arguments
+		// if does not help - free currently unused arrays
 		if(err != CAL_RESULT_OK)
 		{
 			while( (ind = arrs->FindMinLocalNotInUse1(NULL)) != -1 )
@@ -1060,55 +1060,82 @@ CALresult Context::RunComputeShader(Module* module, Array** inputs, Array* globa
 }
 
 // setup an elementwise computation
-CALresult Context::SetCommon(ArrayExpression* expr, Array* result, ArrayPool* arrs, BOOL resultIsGlobalBuf)
+CALresult Context::SetCommon(ArrayExpression* expr, Array* result, ArrayPool* arrs, BOOL overwritenResult, BOOL resultIsGlobalBuf)
 {
 	long i;	
 	CALuint flags = 0;	
 
-	err = CAL_RESULT_OK;		
-	
-	// just in case try to free some space in the remote memory (result will be anyway overwritten)
-	result->FreeRemote();
-	if( result->localRes && ((!resultIsGlobalBuf && (result->localIsGlobalBuf)) || (resultIsGlobalBuf && (~result->localIsGlobalBuf))) )
-		result->FreeLocal();
+	err = CAL_RESULT_OK;	
+
+	if(resultIsGlobalBuf)
+		flags = CAL_RESALLOC_GLOBAL_BUFFER;
+
+	if(overwritenResult)
+	{
+		// just in case try to free some space in the memory (result will be anyway overwritten)
+		result->FreeRemote();
+		if( result->localRes && ((!resultIsGlobalBuf && (result->localIsGlobalBuf)) || (resultIsGlobalBuf && (~result->localIsGlobalBuf))) )
+			result->FreeLocal();
+
+		// allocate result array if necessary			
+		if(!result->localRes)
+			err = AllocateArrayLocal(result,arrs,flags);
+	}
+	else
+	{
+		if(!result->localRes)
+		{
+			_ASSERT(result->remoteRes);
+
+			err = AllocateArrayLocal(result,arrs,flags);
+			if(err == CAL_RESULT_OK)
+			{
+				err = result->CopyRemoteToLocal(ctx);
+				if(err == CAL_RESULT_OK)
+					result->FreeRemote();
+				else
+					result->FreeLocal();
+			}
+		}
+		else if(resultIsGlobalBuf && !result->localIsGlobalBuf )// if result has to be a global buffer bit it is not - convert to global
+		{
+			_ASSERT(FALSE);
+		}
+	}
 
 	for(i = 0; (err == CAL_RESULT_OK) && (i < 3) && expr->args[i]; i++)
 	{	
-		if(!expr->args[i]->localRes)	// is array already residing in the local memory?
+		if(expr->args[i] != result)
 		{
-			// if not try to allocate it	
-			err = AllocateArrayLocal(expr->args[i],arrs,0);
-					
-			if(err == CAL_RESULT_OK)
+			if(!expr->args[i]->localRes)	// is array already residing in the local memory?
 			{
-				if(expr->args[i]->remoteRes)	// array data was already set and resides in the remote memory
+				// if not try to allocate it	
+				err = AllocateArrayLocal(expr->args[i],arrs,0);
+						
+				if(err == CAL_RESULT_OK)
 				{
-					err = expr->args[i]->CopyRemoteToLocal(ctx);
-					expr->args[i]->FreeRemote();
+					if(expr->args[i]->remoteRes)	// array data was already set and resides in the remote memory
+					{
+						err = expr->args[i]->CopyRemoteToLocal(ctx);
+						if(err == CAL_RESULT_OK)
+							expr->args[i]->FreeRemote();
+						else
+							expr->args[i]->FreeLocal();	
+					}
+					else
+						err = expr->args[i]->SetDataToLocal(ctx,expr->args[i]->cpuData);					
 				}
-				else
-					err = expr->args[i]->SetDataToLocal(ctx,expr->args[i]->cpuData);					
 			}
-		}
-		else
-		{
-			// FIXME: convert if possible to not using a global buffer
-			if(expr->args[i]->localIsGlobalBuf)
+			else
 			{
-				
+				// FIXME: convert if possible to not a global buffer
+				if(expr->args[i]->localIsGlobalBuf)
+				{
+					
+				}
 			}
 		}
-	}
-	
-	// allocate result array if necessary
-	if(err == CAL_RESULT_OK)
-	{
-		if(resultIsGlobalBuf)	// for compute shader result is a global buffer
-			flags = CAL_RESALLOC_GLOBAL_BUFFER;
-
-		if(!result->localRes)
-			err = AllocateArrayLocal(result,arrs,flags);	
-	}
+	}		
 
 	return err;
 }
