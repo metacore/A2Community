@@ -129,7 +129,10 @@ CALresult Context::SetComputation(ArrayExpression* expr, Array* result, long pri
 
 		case OpMul:
 			if( (expr->args[0]->nDims == 2) && (expr->args[1]->nDims == 1) )
-				err = SetCommon(expr,result,arrs,(expr->args[1] != result),FALSE);
+			{
+				_ASSERT((expr->args[1] != result));
+				err = SetCommon(expr,result,arrs,TRUE,FALSE);
+			}
 			else if( (expr->args[0]->nDims == 2) && (expr->args[1]->nDims == 2) )	// matrix multiplication
 				err = SetCommon(expr,result,arrs,TRUE,TRUE);
 			else	
