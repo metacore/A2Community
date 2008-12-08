@@ -94,8 +94,10 @@ public:
 	CALresult DivideMatrixTo4Parts(Array* arr);
 	// divide a matrix to 8 parts
 	CALresult DivideMatrixTo8Parts(Array* arr);
-	// gather a matrix from its sub parts
-	CALresult GatherMatrixFromParts(void);
+	// gather a matrix from its 4 sub parts
+	CALresult GatherMatrixFrom4Parts(Array* arr);
+	// gather a matrix from its 8 sub parts
+	CALresult GatherMatrixFrom8Parts(Array* arr);
 };
 
 class ContextPool :

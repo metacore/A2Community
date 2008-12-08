@@ -42,6 +42,8 @@ KernMatVecR_PS,
 // divide a matrix into parts
 KernDivideMatrixTo4Parts_PS,
 KernDivideMatrixTo8Parts_PS,
+KernGatherMatrixFrom4Parts_PS,
+KernGatherMatrixFrom8Parts_PS,
 KernMatMulByPartsR_CS,
 
 // matrix matrix multiply
@@ -1306,11 +1308,11 @@ const char kernelMatMulR4x4by4x4_CS[] =
 const char kernelDivideMatrixTo8Parts_PS[] =
 "il_ps_2_0\n"
 "dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__\n"
-"dcl_cb cb0[1]\n" // [A.height/8,8*int(A.height/8)]
+"dcl_cb cb0[1]\n" // [floor(A.height/8),8*floor(A.height/8),...]
 "dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
 
 "flr r0.xy, vWinCoord0.xy\n"
-"mul r0.xy, r0.xy, cb0[0].1x\n"	// [x,y*(A.height/8)] - 2D position of the first row to copy
+"mul r0.y, r0.y, cb0[0].x\n"	// [x,y*floor(A.height/8)] - 2D position of the first row to copy
 
 "dcl_output_generic o0\n"
 "dcl_output_generic o1\n"
@@ -1323,89 +1325,32 @@ const char kernelDivideMatrixTo8Parts_PS[] =
 
 "lt r0.z, r0.y, cb0[0].y\n"
 
-"if_logicalnz r0.z\n"		// if iRow < 8*int(A.height/8)
+"if_logicalnz r0.z\n"		// if iRow < 8*floor(A.height/8)
+
 "	sample_resource(0)_sampler(0) o0, r0.xy\n"
-"	add r0.x, r0.x, cb0[0].x\n"
+"	add r0.y, r0.y, r0.1\n"
+
 "	sample_resource(0)_sampler(0) o1, r0.xy\n"
-"	add r0.x, r0.x, cb0[0].x\n"
+"	add r0.y, r0.y, r0.1\n"
+
 "	sample_resource(0)_sampler(0) o2, r0.xy\n"
-"	add r0.x, r0.x, cb0[0].x\n"
+"	add r0.y, r0.y, r0.1\n"
+
 "	sample_resource(0)_sampler(0) o3, r0.xy\n"
-"	add r0.x, r0.x, cb0[0].x\n"
+"	add r0.y, r0.y, r0.1\n"
+
 "	sample_resource(0)_sampler(0) o4, r0.xy\n"
-"	add r0.x, r0.x, cb0[0].x\n"
+"	add r0.y, r0.y, r0.1\n"
+
 "	sample_resource(0)_sampler(0) o5, r0.xy\n"
-"	add r0.x, r0.x, cb0[0].x\n"
+"	add r0.y, r0.y, r0.1\n"
+
 "	sample_resource(0)_sampler(0) o6, r0.xy\n"
-"	add r0.x, r0.x, cb0[0].x\n"
+"	add r0.y, r0.y, r0.1\n"
+
 "	sample_resource(0)_sampler(0) o7, r0.xy\n"
 "else\n"	// else put to the last row
-"	sample_resource(0)_sampler(0) o7, vWinCoord0.xy\n"
-"endif\n"
-
-"end\n";
-
-/*
-	Gather a 2D array from 8 parts
-*/
-const char kernelGatherMatrixFrom8Parts_PS[] =
-"il_ps_2_0\n"
-"dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__\n"
-"dcl_cb cb0[1]\n" // [A.height/8,8*int(A.height/8),pitch,...]
-"dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
-"dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
-"dcl_resource_id(2)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
-"dcl_resource_id(3)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
-"dcl_resource_id(4)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
-"dcl_resource_id(5)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
-"dcl_resource_id(6)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
-"dcl_resource_id(7)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
-
-"flr r0.xy, vWinCoord0.xy\n"
-"mul r0.xy, r0.xy, cb0[0].1x\n"		// [x,y*(A.height/8)] - 2D position of the first row to copy
-
-
-"mad r1.x, r0.y, cb0[0].y, r0.x\n"	// index := y*result.pitch + x -> index with account of the alignment pitch
-"ftoi r1, r1\n"
-"ftoi r2, cb0[0]\n"
-
-"lt r0.z, r0.y, cb0[0].z\n"
-
-"if_logicalnz r0.z\n"				// if iRow < 8*int(A.height/8)
-"	sample_resource(0)_sampler(0) r3, vWinCoord0.xy\n"
-"	sample_resource(1)_sampler(1) r4, vWinCoord0.xy\n"
-"	sample_resource(2)_sampler(2) r5, vWinCoord0.xy\n"
-"	sample_resource(3)_sampler(3) r6, vWinCoord0.xy\n"
-"	sample_resource(4)_sampler(4) r7, vWinCoord0.xy\n"
-"	sample_resource(5)_sampler(5) r8, vWinCoord0.xy\n"
-"	sample_resource(6)_sampler(6) r9, vWinCoord0.xy\n"
-"	sample_resource(7)_sampler(7) r10, vWinCoord0.xy\n"
-
-"	mov g[r1.x], r3\n"
-"	iadd r1.x, r1.x, r2.y\n"
-
-"	mov g[r1.x], r4\n"
-"	iadd r1.x, r1.x, r2.y\n"
-
-"	mov g[r1.x], r5\n"
-"	iadd r1.x, r1.x, r2.y\n"
-
-"	mov g[r1.x], r6\n"
-"	iadd r1.x, r1.x, r2.y\n"
-
-"	mov g[r1.x], r7\n"
-"	iadd r1.x, r1.x, r2.y\n"
-
-"	mov g[r1.x], r8\n"
-"	iadd r1.x, r1.x, r2.y\n"
-
-"	mov g[r1.x], r9\n"
-"	iadd r1.x, r1.x, r2.y\n"
-
-"	mov g[r1.x], r10\n"
-"	iadd r1.x, r1.x, r2.y\n"
-"else\n"
-
+"	sample_resource(0)_sampler(0) o7, r0.xy\n"
 "endif\n"
 
 "end\n";
@@ -1416,11 +1361,11 @@ const char kernelGatherMatrixFrom8Parts_PS[] =
 const char kernelDivideMatrixTo4Parts_PS[] =
 "il_ps_2_0\n"
 "dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__\n"
-"dcl_cb cb0[1]\n" // [A.height/4, 4*int(A.height/4)]
+"dcl_cb cb0[1]\n" // [floor(A.height/4),4*floor(A.height/4)]
 "dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
 
 "flr r0.xy, vWinCoord0.xy\n"
-"mul r0.xy, r0.xy, cb0[0].1x\n"	// [x,y*(A.height/4)] - 2D position of the first row to copy
+"mul r0.y, r0.y, cb0[0].x\n"	// [x,y*floor(A.height/4)] - 2D position of the first row to move
 
 "dcl_output_generic o0\n"
 "dcl_output_generic o1\n"
@@ -1429,16 +1374,132 @@ const char kernelDivideMatrixTo4Parts_PS[] =
 
 "lt r0.z, r0.y, cb0[0].y\n"
 
-"if_logicalnz r0.z\n"		// if iRow < 4*int(A.height/4)
+"if_logicalnz r0.z\n"		// if iRow < 4*floor(A.height/4)
+
 "	sample_resource(0)_sampler(0) o0, r0.xy\n"
-"	add r0.x, r0.x, cb0[0].x\n"
+"	add r0.y, r0.y, r0.1\n"
+
 "	sample_resource(0)_sampler(0) o1, r0.xy\n"
-"	add r0.x, r0.x, cb0[0].x\n"
+"	add r0.y, r0.y, r0.1\n"
+
 "	sample_resource(0)_sampler(0) o2, r0.xy\n"
-"	add r0.x, r0.x, cb0[0].x\n"
+"	add r0.y, r0.y, r0.1\n"
+
 "	sample_resource(0)_sampler(0) o3, r0.xy\n"
 "else\n"	// else put to the last row
-"	sample_resource(0)_sampler(0) o3, vWinCoord0.xy\n"
+"	sample_resource(0)_sampler(0) o3, r0.xy\n"
+"endif\n"
+
+"end\n";
+
+/*
+	Gather a 2D array from 8 parts
+*/
+const char kernelGatherMatrixFrom8Parts_PS[] =
+"il_ps_2_0\n"
+"dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__\n"
+"dcl_cb cb0[1]\n" // [floor(A.height/8),8*floor(A.height/8),pitch,...]
+
+"dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+"dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+"dcl_resource_id(2)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+"dcl_resource_id(3)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+"dcl_resource_id(4)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+"dcl_resource_id(5)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+"dcl_resource_id(6)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+"dcl_resource_id(7)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+
+"flr r0.xy, vWinCoord0.xy\n"
+"mul r1.xy, r0.xy, cb0[0].1x\n"		// r1.xy := [x,y*floor(A.height/8)] - 2D position of the first row to copy
+
+"mad r2.x, r1.y, cb0[0].z, r1.x\n"	// index := y*A.pitch + x -> index with account of the alignment pitch
+"ftoi r1.x, r1.x\n"
+"ftoi r2.x, cb0[0].z\n"
+
+"lt r0.z, r0.y, cb0[0].y\n"
+
+"if_logicalnz r0.z\n"				// if iRow < 8*floor(A.height/8)
+
+"	sample_resource(0)_sampler(0) r3, r0.xy\n"
+"	sample_resource(1)_sampler(1) r4, r0.xy\n"
+"	sample_resource(2)_sampler(2) r5, r0.xy\n"
+"	sample_resource(3)_sampler(3) r6, r0.xy\n"
+"	sample_resource(4)_sampler(4) r7, r0.xy\n"
+"	sample_resource(5)_sampler(5) r8, r0.xy\n"
+"	sample_resource(6)_sampler(6) r9, r0.xy\n"
+"	sample_resource(7)_sampler(7) r10, r0.xy\n"
+
+"	mov g[r1.x], r3\n"
+"	iadd r1.x, r1.x, r2.x\n"
+
+"	mov g[r1.x], r4\n"
+"	iadd r1.x, r1.x, r2.x\n"
+
+"	mov g[r1.x], r5\n"
+"	iadd r1.x, r1.x, r2.x\n"
+
+"	mov g[r1.x], r6\n"
+"	iadd r1.x, r1.x, r2.x\n"
+
+"	mov g[r1.x], r7\n"
+"	iadd r1.x, r1.x, r2.x\n"
+
+"	mov g[r1.x], r8\n"
+"	iadd r1.x, r1.x, r2.x\n"
+
+"	mov g[r1.x], r9\n"
+"	iadd r1.x, r1.x, r2.x\n"
+
+"	mov g[r1.x], r10\n"
+"else\n"
+"	sample_resource(7)_sampler(7) r3, r0.xy\n"
+"	mov g[r1.x], r3\n"
+"endif\n"
+
+"end\n";
+
+/*
+	Gather a 2D array from 4 parts
+*/
+const char kernelGatherMatrixFrom4Parts_PS[] =
+"il_ps_2_0\n"
+"dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__\n"
+"dcl_cb cb0[1]\n" // [floor(A.height/4),4*floor(A.height/4),pitch,...]
+
+"dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+"dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+"dcl_resource_id(2)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+"dcl_resource_id(3)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+
+"flr r0.xy, vWinCoord0.xy\n"
+"mul r1.xy, r0.xy, cb0[0].1x\n"		// r1.xy := [x,y*floor(A.height/4)] - 2D position of the first row to copy
+
+"mad r2.x, r1.y, cb0[0].z, r1.x\n"	// index := y*A.pitch + x -> index with account of the alignment pitch
+"ftoi r1.x, r1.x\n"
+"ftoi r2.x, cb0[0].z\n"
+
+"lt r0.z, r0.y, cb0[0].y\n"
+
+"if_logicalnz r0.z\n"				// if iRow < 4*floor(A.height/4)
+
+"	sample_resource(0)_sampler(0) r3, r0.xy\n"
+"	sample_resource(1)_sampler(1) r4, r0.xy\n"
+"	sample_resource(2)_sampler(2) r5, r0.xy\n"
+"	sample_resource(3)_sampler(3) r6, r0.xy\n"
+
+"	mov g[r1.x], r3\n"
+"	iadd r1.x, r1.x, r2.x\n"
+
+"	mov g[r1.x], r4\n"
+"	iadd r1.x, r1.x, r2.x\n"
+
+"	mov g[r1.x], r5\n"
+"	iadd r1.x, r1.x, r2.x\n"
+
+"	mov g[r1.x], r6\n"
+"else\n"
+"	sample_resource(3)_sampler(3) r3, r0.xy\n"
+"	mov g[r1.x], r3\n"
 "endif\n"
 
 "end\n";
@@ -1702,7 +1763,7 @@ const char kernelMatMulR_PS[] =
 
 // 2D index of first row in first block of A
 "flr r0.0yz0, vWinCoord0.y\n"	// [0,y]
-"mul r0.yz, r0.yz, l0.yz\n"	// multiply y coordinate by 4
+"mul r0.yz, r0.yz, l0.yz\n"		// multiply y coordinate by 4
 
 // 2D index of first column of block of B
 "flr r1.x000, vWinCoord0.x\n"	// [x,0]

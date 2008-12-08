@@ -90,6 +90,18 @@ Kernel::Kernel(long iKernel, CALtarget target)
 			constFormats = new CALformat[1]; constFormats[0] = CAL_FORMAT_FLOAT_4;
 			break;
 
+		case KernGatherMatrixFrom4Parts_PS:
+			kernelStr = kernelGatherMatrixFrom4Parts_PS; nInputs = 4; nOutputs = 0; nConstants = 1; usesGlobalBuffer = TRUE;
+			constSizes = new long[1]; constSizes[0] = 1;
+			constFormats = new CALformat[1]; constFormats[0] = CAL_FORMAT_FLOAT_4;
+			break;
+
+		case KernGatherMatrixFrom8Parts_PS:
+			kernelStr = kernelGatherMatrixFrom8Parts_PS; nInputs = 8; nOutputs = 0; nConstants = 1; usesGlobalBuffer = TRUE;
+			constSizes = new long[1]; constSizes[0] = 1;
+			constFormats = new CALformat[1]; constFormats[0] = CAL_FORMAT_FLOAT_4;
+			break;
+
 		case KernMatMulR_CS: 
 			kernelStr = kernelMatMulR_CS; nInputs = 2; nOutputs = 0; nConstants = 1; usesGlobalBuffer = TRUE;
 			constSizes = new long[1]; constSizes[0] = 2;

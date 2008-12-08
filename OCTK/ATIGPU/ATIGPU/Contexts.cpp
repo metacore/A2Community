@@ -97,10 +97,12 @@ BOOL Context::InitCounterExtension(void)
 CALresult Context::SetComputation(ArrayExpression* expr, Array* result, long priority, long flags, ArrayPool* arrs)
 {
 	long i;	
+	BOOL isReservedForGet0;
 
 	// increment use counters beforehand!	
 	for(i = 0; (i < 3) && expr->args[i]; i++){expr->args[i]->useCounter++;}	
 	result->useCounter++;
+	isReservedForGet0 = result->isReservedForGet;
 	result->isReservedForGet = TRUE;	
 
 	switch(expr->op)
@@ -144,7 +146,7 @@ CALresult Context::SetComputation(ArrayExpression* expr, Array* result, long pri
 	{			
 		for(i = 0; (i < 3) && expr->args[i]; i++){expr->args[i]->useCounter--;}	
 		result->useCounter--;
-		result->isReservedForGet = FALSE;			
+		result->isReservedForGet = isReservedForGet0;			
 	}
 
 	return err;
@@ -1512,7 +1514,7 @@ CALresult Context::DivideMatrixTo4Parts(Array* arr)
 	arr->subArrs = new Array*[4];	
 	for(i = 0; i < 3; i++)	
 		arr->subArrs[i] = new Array(hDev,devInfo,devAttribs,arr->arrID,arr->dType,2,&size[0]);
-	// account that array height is not multiple of 4	
+	// account that array height can be not multiple of 4	
 	size[0] = arr->size[0] - 3*(arr->size[0]/4);
 	arr->subArrs[3] = new Array(hDev,devInfo,devAttribs,arr->arrID,arr->dType,2,&size[0]);		
 	
@@ -1530,8 +1532,7 @@ CALresult Context::DivideMatrixTo4Parts(Array* arr)
 
 		return err;
 	}
-	
-	
+		
 	iKernel = KernDivideMatrixTo4Parts_PS;
 
 	// get suited module
@@ -1543,7 +1544,7 @@ CALresult Context::DivideMatrixTo4Parts(Array* arr)
 	if(module->err == CAL_RESULT_OK)
 	{	
 		constData[0] = (float)(arr->physSize[0]/4);	// matrix height/4		
-		constData[1] = 4.0f*constData[0];	// 4*int(matrix height/4)
+		constData[1] = 4.0f*constData[0];			// 4*int(matrix height/4)
 
 		err = module->constants[0]->SetData(&constData);		
 		if(err == CAL_RESULT_OK)
@@ -1555,16 +1556,13 @@ CALresult Context::DivideMatrixTo4Parts(Array* arr)
 				domain.x = 0;
 				domain.y = 0;		
 				domain.width = arr->physSize[1];
-				domain.height = arr->physSize[0]/4;
+				domain.height = size[0];
 
 				// run the program				
 				err = RunPixelShader(module,&arr,arr->subArrs,NULL,&domain);
 
-				if(err == CAL_RESULT_OK)
-				{
-					arr->FreeLocal();
-					arr->nSubArrs = 4;
-				}
+				if(err == CAL_RESULT_OK)				
+					arr->nSubArrs = 4;				
 				else
 				{
 					for(i = 0; i < 4; i++)
@@ -1609,7 +1607,7 @@ CALresult Context::DivideMatrixTo8Parts(Array* arr)
 	arr->subArrs = new Array*[8];	
 	for(i = 0; i < 7; i++)	
 		arr->subArrs[i] = new Array(hDev,devInfo,devAttribs,arr->arrID,arr->dType,2,&size[0]);
-	// account that array height is not multiple of 8
+	// account that array height can be not multiple of 8
 	size[0] = arr->size[0] - 7*(arr->size[0]/8);
 	arr->subArrs[7] = new Array(hDev,devInfo,devAttribs,arr->arrID,arr->dType,2,&size[0]);		
 	
@@ -1639,7 +1637,7 @@ CALresult Context::DivideMatrixTo8Parts(Array* arr)
 	if(module->err == CAL_RESULT_OK)
 	{	
 		constData[0] = (float)(arr->physSize[0]/8);	// matrix height/8		
-		constData[1] = 8.0f*constData[0];	// 8*int(matrix height/8)
+		constData[1] = 8.0f*constData[0];			// 8*int(matrix height/8)
 
 		err = module->constants[0]->SetData(&constData);		
 		if(err == CAL_RESULT_OK)
@@ -1651,16 +1649,13 @@ CALresult Context::DivideMatrixTo8Parts(Array* arr)
 				domain.x = 0;
 				domain.y = 0;		
 				domain.width = arr->physSize[1];
-				domain.height = arr->physSize[0]/8;
+				domain.height = size[0];
 
 				// run the program				
 				err = RunPixelShader(module,&arr,arr->subArrs,NULL,&domain);
 
-				if(err == CAL_RESULT_OK)
-				{
-					arr->FreeLocal();
-					arr->nSubArrs = 8;
-				}
+				if(err == CAL_RESULT_OK)				
+					arr->nSubArrs = 8;				
 				else
 				{
 					for(i = 0; i < 8; i++)
@@ -1684,8 +1679,152 @@ CALresult Context::DivideMatrixTo8Parts(Array* arr)
 	return err;
 }
 
-// gather a matrix from its sub parts
-CALresult Context::GatherMatrixFromParts(void)
+// gather a matrix from its 4 sub parts
+CALresult Context::GatherMatrixFrom4Parts(Array* arr)
 {
+	Module* module;
+	CALdomain domain;
+	float constData[4];
+	long i, iKernel;	
+	
+	err = CAL_RESULT_OK;
+
+	_ASSERT(arr->subArrs != NULL);
+	_ASSERT(arr->localRes == 0);
+
+	// allocate result
+	err = arr->AllocateLocal(CAL_RESALLOC_GLOBAL_BUFFER);
+	if(err != CAL_RESULT_OK)		
+		return err;
+			
+	iKernel = KernGatherMatrixFrom4Parts_PS;
+
+	// get suited module
+	if(!modules[iKernel])
+		modules[iKernel] = new Module(hDev,ctx,kernels[iKernel]);
+
+	module = modules[iKernel];
+	
+	if(module->err == CAL_RESULT_OK)
+	{	
+		constData[0] = (float)(arr->physSize[0]/4);	// floor(matrix height/4)
+		constData[1] = 4.0f*constData[0];			// 4*floor(matrix height/4)
+		constData[2] = (float)(arr->pitch);					// alignment pitch
+
+		err = module->constants[0]->SetData(&constData);		
+		if(err == CAL_RESULT_OK)
+		{
+			err = module->SetConstantsToContext();
+			if(err == CAL_RESULT_OK)
+			{
+				// set the domain of execution
+				domain.x = 0;
+				domain.y = 0;		
+				domain.width = arr->physSize[1];
+				domain.height = arr->subArrs[3]->size[0];
+
+				// run the program				
+				err = RunPixelShader(module,arr->subArrs,NULL,arr,&domain);
+
+				if(err == CAL_RESULT_OK)
+				{
+					// free sub arrays
+					for(i = 0; i < 4; i++)
+						delete arr->subArrs[i];
+		
+					delete arr->subArrs;
+					arr->subArrs = NULL;
+
+					arr->nSubArrs = 0;										
+				}
+				else				
+					arr->FreeLocal();				
+
+				module->ReleaseConstantsFromContext();
+			}
+		}	
+	}
+	else
+	{
+		err = module->err;
+		delete module;
+		modules[iKernel] = NULL;
+	}
+	
+	return err;
+}
+
+// gather a matrix from its 8 sub parts
+CALresult Context::GatherMatrixFrom8Parts(Array* arr)
+{
+	Module* module;
+	CALdomain domain;
+	float constData[4];
+	long i, iKernel;	
+	
+	err = CAL_RESULT_OK;
+
+	_ASSERT(arr->subArrs != NULL);
+	_ASSERT(arr->localRes == 0);
+
+	// allocate result
+	err = arr->AllocateLocal(CAL_RESALLOC_GLOBAL_BUFFER);
+	if(err != CAL_RESULT_OK)	// if can not allocate local memory - try to use remote!
+		return err;	
+			
+	iKernel = KernGatherMatrixFrom8Parts_PS;
+
+	// get suited module
+	if(!modules[iKernel])
+		modules[iKernel] = new Module(hDev,ctx,kernels[iKernel]);
+
+	module = modules[iKernel];
+	
+	if(module->err == CAL_RESULT_OK)
+	{	
+		constData[0] = (float)(arr->physSize[0]/8);	// floor(matrix height/8)
+		constData[1] = 8.0f*constData[0];			// 8*floor(matrix height/8)
+		constData[2] = (float)(arr->pitch);			// alignment pitch
+
+		err = module->constants[0]->SetData(&constData);		
+		if(err == CAL_RESULT_OK)
+		{
+			err = module->SetConstantsToContext();
+			if(err == CAL_RESULT_OK)
+			{
+				// set the domain of execution
+				domain.x = 0;
+				domain.y = 0;		
+				domain.width = arr->physSize[1];
+				domain.height = arr->subArrs[7]->size[0];
+
+				// run the program				
+				err = RunPixelShader(module,arr->subArrs,NULL,arr,&domain);
+
+				if(err == CAL_RESULT_OK)
+				{
+					// free sub arrays
+					for(i = 0; i < 8; i++)
+						delete arr->subArrs[i];
+		
+					delete arr->subArrs;
+					arr->subArrs = NULL;
+
+					arr->nSubArrs = 0;										
+				}
+				else				
+					arr->FreeLocal();				
+
+				module->ReleaseConstantsFromContext();
+			}
+		}	
+	}
+	else
+	{
+		err = module->err;
+		delete module;
+		modules[iKernel] = NULL;
+	}
+	
 	return err;
 }
