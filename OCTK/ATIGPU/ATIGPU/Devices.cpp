@@ -89,7 +89,7 @@ CALresult Device::NewContext()
 
 	err = CAL_RESULT_OK;
 		
-	context = new Context(hDev,&attribs,kernels);
+	context = new Context(hDev,&info,&attribs,kernels);
 		
 	if(context->err == CAL_RESULT_OK)
 		ctxs->Add(context);

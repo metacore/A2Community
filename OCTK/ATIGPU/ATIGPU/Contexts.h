@@ -24,7 +24,7 @@
 class Context
 {
 public:
-	Context(CALdevice hDev, CALdeviceattribs* devAttribs, Kernel** kernels);
+	Context(CALdevice hDev, CALdeviceinfo* devInfo, CALdeviceattribs* devAttribs, Kernel** kernels);
 	~Context(void);
 
 	CALresult SetComputation(ArrayExpression* expr, Array* result, long priority, long flags, ArrayPool* arrs);
@@ -42,6 +42,7 @@ public:
 	Array* result;			// result array for current computation
 
 	CALdeviceattribs* devAttribs;
+	CALdeviceinfo* devInfo;
 
 	BOOL isInUse;	// TRUE when the context is currently in use
 
@@ -89,6 +90,12 @@ public:
 	CALresult SetCommon(ArrayExpression* expr, Array* result, ArrayPool* arrs, BOOL resultIsGlobalBuf);	
 	// perform matrix matrix multiply operation
 	CALresult DoMatMul(void);
+	// divide a matrix to 4 parts
+	CALresult DivideMatrixTo4Parts(Array* arr);
+	// divide a matrix to 8 parts
+	CALresult DivideMatrixTo8Parts(Array* arr);
+	// gather a matrix from its sub parts
+	CALresult GatherMatrixFromParts(void);
 };
 
 class ContextPool :

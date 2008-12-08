@@ -39,8 +39,14 @@ KernEwDivLR_PS,
 // matrix vector multiply
 KernMatVecR_PS,
 
+// divide a matrix into parts
+KernDivideMatrixTo4Parts_PS,
+KernDivideMatrixTo8Parts_PS,
+KernMatMulByPartsR_CS,
+
 // matrix matrix multiply
 KernMatMulR_PS,
+KernMatMulR_CS,
 
 NKernels	// total number of kernels
 };
@@ -314,6 +320,7 @@ const char kernelMatVecR_PS[] =
 "mov o0, r30\n"
 
 "end\n";
+
 
 /*
 	Matrix multiplication C := A*B for the case
@@ -814,6 +821,870 @@ const char kernelMatMulR8x16by16x4_PS[] =
 
 "mov g[r0.x], r41\n"
 
+"end\n";
+
+/*
+	Matrix multiplication C := A*B for the case
+	when A has size [8*M,16*N] and B has size [16*N,K]
+	where M, N, K any integer numbers
+*/
+const char kernelMatMulR_CS[] = 
+"il_cs_2_0\n"
+"dcl_num_thread_per_blk 64\n"
+"dcl_cb cb0[2]\n"	// [C.width, C.pitch, 1/C.wieght, C.nTotal4x4], [A.width,...]
+"dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+"dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+"dcl_literal l0, 4.0f, 8.0f, 1.0f, 2.0f\n"
+"dcl_literal l1, 3.0f, 3.0f, 3.0f, 3.0f\n"
+"dcl_literal l2, 0.0f, 16.0f, 16.0f, 16.0f\n"
+
+
+"itof r0.z, vaTid0.x\n"				// r0.z := thread_index
+"mul r0.y, r0.z, cb0[0].z\n"		// r0.y := thread_index*(1/(result.width)) == y index
+"mod r0.x, r0.z, cb0[0].x\n"		// r0.x := thread_index % result.width == x index
+"flr r3.xy, r0.xy\n"				// [x,y] := floor(r0.xy) 2D position in the result
+
+// 2D index of first row in first block of A
+"flr r0.0y, r3.y\n"				// [0,y] in the execution domain
+"mul r0.y, r0.y, l0.y\n"		// multiply y coordinate by 8 to get real position in A data
+
+// 2D index of first column of block of B
+"flr r1.x000, r3.x\n"			// [x,0] in the B data
+
+// clear float4 accumulators for 8x4 * 4x4 matrix multiply result
+"mov r34, r34.0000\n"	
+"mov r35, r35.0000\n"
+"mov r36, r36.0000\n"
+"mov r37, r37.0000\n"
+"mov r38, r38.0000\n"	
+"mov r39, r39.0000\n"
+"mov r40, r40.0000\n"
+"mov r41, r41.0000\n"
+
+// initialize sample counters for B
+"mov r1.zw,	l0\n"			// r1 := [x,0,1,2]
+"add r3, r1, l1.0yzw\n"		// r3 := [x,3,4,5]
+"add r4, r3, l1.0yzw\n"		// r4 := [x,6,7,8]
+"add r5, r4, l1.0yzw\n"		// r5 := [x,9,10,11]
+"add r6, r5, l1.0yzw\n"		// r6 := [x,12,13,14]
+"add r7, r6, l1.0yzw\n"		// r7 := [x,15,16,17]
+
+// initialize sample counters for A
+"add r0.__zw, r0.00yy, l0.00zw\n"	// r0 := [0,y,y+1,y+2]
+"add r8.0yzw, r0.0yzw, l1.0yzw\n"	// r8 := [0,y+3,y+4,y+5]
+"add r9.0yzw, r8.0yzw, l1.0yzw\n"	// r9 := [0,y+6,y+7,y+8]
+
+"mov r2.0y00, cb0[1].x\n"	// r2.x is the loop counter, r2.y := A.width
+
+"whileloop\n"
+"    ge r2.z, r2.x, r2.y\n"	// while(loop counter < width)
+"    break_logicalnz r2.z\n"
+
+	// load 4 next 4x4 blocks of B
+"	sample_resource(1)_sampler(1) r10, r1.xy\n"
+"	sample_resource(1)_sampler(1) r11, r1.xz\n"
+"	sample_resource(1)_sampler(1) r12, r1.xw\n"
+"	sample_resource(1)_sampler(1) r13, r3.xy\n"
+
+"	sample_resource(1)_sampler(1) r14, r3.xz\n"
+"	sample_resource(1)_sampler(1) r15, r3.xw\n"
+"	sample_resource(1)_sampler(1) r16, r4.xy\n"
+"	sample_resource(1)_sampler(1) r17, r4.xz\n"
+
+"	sample_resource(1)_sampler(1) r18, r4.xw\n"
+"	sample_resource(1)_sampler(1) r19, r5.xy\n"
+"	sample_resource(1)_sampler(1) r20, r5.xz\n"
+"	sample_resource(1)_sampler(1) r21, r5.xw\n"
+
+"	sample_resource(1)_sampler(1) r22, r6.xy\n"
+"	sample_resource(1)_sampler(1) r23, r6.xz\n"
+"	sample_resource(1)_sampler(1) r24, r6.xw\n"
+"	sample_resource(1)_sampler(1) r25, r7.xy\n"
+
+	// load next 8x4 block of A
+"	sample_resource(0)_sampler(0) r26, r0.xy\n"
+"	sample_resource(0)_sampler(0) r27, r0.xz\n"
+"	sample_resource(0)_sampler(0) r28, r0.xw\n"
+"	sample_resource(0)_sampler(0) r29, r8.xy\n"
+"	sample_resource(0)_sampler(0) r30, r8.xz\n"
+"	sample_resource(0)_sampler(0) r31, r8.xw\n"
+"	sample_resource(0)_sampler(0) r32, r9.xy\n"
+"	sample_resource(0)_sampler(0) r33, r9.xz\n"
+
+	// increment sample counters of A
+"	add r0.x, r0.x, r0.1\n"
+"	add r8.x, r8.x, r8.1\n"
+"	add r9.x, r9.x, r9.1\n"
+
+	// compute Ablk * Bblk0
+
+	// row 1
+"	mad r42, r26.x, r10, r34\n"	// r42 := Ablk[0,0]*Bblk0[0,*] + Cblk[0,*]
+"	mad r42, r26.y, r11, r42\n"	// r42 := Ablk[0,1]*Bblk0[1,*] + r42
+"	mad r42, r26.z, r12, r42\n"	// r42 := Ablk[0,2]*Bblk0[2,*] + r42
+"	mad r34, r26.w, r13, r42\n"	// Cblk[0,*] := Ablk[0,3]*Bblk0[3,*] + r42
+	// row 2
+"	mad r42, r27.x, r10, r35\n"
+"	mad r42, r27.y, r11, r42\n"
+"	mad r42, r27.z, r12, r42\n"
+"	mad r35, r27.w, r13, r42\n"
+	// row 3
+"	mad r42, r28.x, r10, r36\n"
+"	mad r42, r28.y, r11, r42\n"
+"	mad r42, r28.z, r12, r42\n"
+"	mad r36, r28.w, r13, r42\n"
+	// row 4
+"	mad r42, r29.x, r10, r37\n"
+"	mad r42, r29.y, r11, r42\n"
+"	mad r42, r29.z, r12, r42\n"
+"	mad r37, r29.w, r13, r42\n"
+	// row 5
+"	mad r42, r30.x, r10, r38\n"
+"	mad r42, r30.y, r11, r42\n"
+"	mad r42, r30.z, r12, r42\n"
+"	mad r38, r30.w, r13, r42\n"
+	// row 6
+"	mad r42, r31.x, r10, r39\n"
+"	mad r42, r31.y, r11, r42\n"
+"	mad r42, r31.z, r12, r42\n"
+"	mad r39, r31.w, r13, r42\n"
+	// row 7
+"	mad r42, r32.x, r10, r40\n"
+"	mad r42, r32.y, r11, r42\n"
+"	mad r42, r32.z, r12, r42\n"
+"	mad r40, r32.w, r13, r42\n"
+	// row 8
+"	mad r42, r33.x, r10, r41\n"
+"	mad r42, r33.y, r11, r42\n"
+"	mad r42, r33.z, r12, r42\n"
+"	mad r41, r33.w, r13, r42\n"
+
+	// load next 8x4 block of A
+"	sample_resource(0)_sampler(0) r26, r0.xy\n"
+"	sample_resource(0)_sampler(0) r27, r0.xz\n"
+"	sample_resource(0)_sampler(0) r28, r0.xw\n"
+"	sample_resource(0)_sampler(0) r29, r8.xy\n"
+"	sample_resource(0)_sampler(0) r30, r8.xz\n"
+"	sample_resource(0)_sampler(0) r31, r8.xw\n"
+"	sample_resource(0)_sampler(0) r32, r9.xy\n"
+"	sample_resource(0)_sampler(0) r33, r9.xz\n"
+
+	// increment sample counters of A
+"	add r0.x, r0.x, r0.1\n"
+"	add r8.x, r8.x, r8.1\n"
+"	add r9.x, r9.x, r9.1\n"
+
+	// compute Ablk * Bblk1
+
+	// row 1
+"	mad r42, r26.x, r14, r34\n"	// r42 := Ablk[0,0]*Bblk1[0,*] + Cblk[0,*]
+"	mad r42, r26.y, r15, r42\n"	// r42 := Ablk[0,1]*Bblk1[1,*] + r42
+"	mad r42, r26.z, r16, r42\n"	// r42 := Ablk[0,2]*Bblk1[2,*] + r42
+"	mad r34, r26.w, r17, r42\n"	// Cblk[0,*] := Ablk[0,3]*Bblk1[3,*] + r42
+	// row 2
+"	mad r42, r27.x, r14, r35\n"
+"	mad r42, r27.y, r15, r42\n"
+"	mad r42, r27.z, r16, r42\n"
+"	mad r35, r27.w, r17, r42\n"
+	// row 3
+"	mad r42, r28.x, r14, r36\n"
+"	mad r42, r28.y, r15, r42\n"
+"	mad r42, r28.z, r16, r42\n"
+"	mad r36, r28.w, r17, r42\n"
+	// row 4
+"	mad r42, r29.x, r14, r37\n"
+"	mad r42, r29.y, r15, r42\n"
+"	mad r42, r29.z, r16, r42\n"
+"	mad r37, r29.w, r17, r42\n"
+	// row 5
+"	mad r42, r30.x, r14, r38\n"
+"	mad r42, r30.y, r15, r42\n"
+"	mad r42, r30.z, r16, r42\n"
+"	mad r38, r30.w, r17, r42\n"
+	// row 6
+"	mad r42, r31.x, r14, r39\n"
+"	mad r42, r31.y, r15, r42\n"
+"	mad r42, r31.z, r16, r42\n"
+"	mad r39, r31.w, r17, r42\n"
+	// row 7
+"	mad r42, r32.x, r14, r40\n"
+"	mad r42, r32.y, r15, r42\n"
+"	mad r42, r32.z, r16, r42\n"
+"	mad r40, r32.w, r17, r42\n"
+	// row 8
+"	mad r42, r33.x, r14, r41\n"
+"	mad r42, r33.y, r15, r42\n"
+"	mad r42, r33.z, r16, r42\n"
+"	mad r41, r33.w, r17, r42\n"
+
+	// load next 8x4 block of A
+"	sample_resource(0)_sampler(0) r26, r0.xy\n"
+"	sample_resource(0)_sampler(0) r27, r0.xz\n"
+"	sample_resource(0)_sampler(0) r28, r0.xw\n"
+"	sample_resource(0)_sampler(0) r29, r8.xy\n"
+"	sample_resource(0)_sampler(0) r30, r8.xz\n"
+"	sample_resource(0)_sampler(0) r31, r8.xw\n"
+"	sample_resource(0)_sampler(0) r32, r9.xy\n"
+"	sample_resource(0)_sampler(0) r33, r9.xz\n"
+
+	// increment sample counters of A
+"	add r0.x, r0.x, r0.1\n"
+"	add r8.x, r8.x, r8.1\n"
+"	add r9.x, r9.x, r9.1\n"
+
+	// compute Ablk * Bblk2
+
+	// row 1
+"	mad r42, r26.x, r18, r34\n"	// r42 := Ablk[0,0]*Bblk2[0,*] + Cblk[0,*]
+"	mad r42, r26.y, r19, r42\n"	// r42 := Ablk[0,1]*Bblk2[1,*] + r42
+"	mad r42, r26.z, r20, r42\n"	// r42 := Ablk[0,2]*Bblk2[2,*] + r42
+"	mad r34, r26.w, r21, r42\n"	// Cblk[0,*] := Ablk[0,3]*Bblk2[3,*] + r42
+	// row 2
+"	mad r42, r27.x, r18, r35\n"
+"	mad r42, r27.y, r19, r42\n"
+"	mad r42, r27.z, r20, r42\n"
+"	mad r35, r27.w, r21, r42\n"
+	// row 3
+"	mad r42, r28.x, r18, r36\n"
+"	mad r42, r28.y, r19, r42\n"
+"	mad r42, r28.z, r20, r42\n"
+"	mad r36, r28.w, r21, r42\n"
+	// row 4
+"	mad r42, r29.x, r18, r37\n"
+"	mad r42, r29.y, r19, r42\n"
+"	mad r42, r29.z, r20, r42\n"
+"	mad r37, r29.w, r21, r42\n"
+	// row 5
+"	mad r42, r30.x, r18, r38\n"
+"	mad r42, r30.y, r19, r42\n"
+"	mad r42, r30.z, r20, r42\n"
+"	mad r38, r30.w, r21, r42\n"
+	// row 6
+"	mad r42, r31.x, r18, r39\n"
+"	mad r42, r31.y, r19, r42\n"
+"	mad r42, r31.z, r20, r42\n"
+"	mad r39, r31.w, r21, r42\n"
+	// row 7
+"	mad r42, r32.x, r18, r40\n"
+"	mad r42, r32.y, r19, r42\n"
+"	mad r42, r32.z, r20, r42\n"
+"	mad r40, r32.w, r21, r42\n"
+	// row 8
+"	mad r42, r33.x, r18, r41\n"
+"	mad r42, r33.y, r19, r42\n"
+"	mad r42, r33.z, r20, r42\n"
+"	mad r41, r33.w, r21, r42\n"
+
+	// load next 8x4 block of A
+"	sample_resource(0)_sampler(0) r26, r0.xy\n"
+"	sample_resource(0)_sampler(0) r27, r0.xz\n"
+"	sample_resource(0)_sampler(0) r28, r0.xw\n"
+"	sample_resource(0)_sampler(0) r29, r8.xy\n"
+"	sample_resource(0)_sampler(0) r30, r8.xz\n"
+"	sample_resource(0)_sampler(0) r31, r8.xw\n"
+"	sample_resource(0)_sampler(0) r32, r9.xy\n"
+"	sample_resource(0)_sampler(0) r33, r9.xz\n"
+
+	// increment sample counters of A
+"	add r0.x, r0.x, r0.1\n"
+"	add r8.x, r8.x, r8.1\n"
+"	add r9.x, r9.x, r9.1\n"
+
+	// compute Ablk * Bblk3
+
+	// row 1
+"	mad r42, r26.x, r22, r34\n"	// r42 := Ablk[0,0]*Bblk3[0,*] + Cblk[0,*]
+"	mad r42, r26.y, r23, r42\n"	// r42 := Ablk[0,1]*Bblk3[1,*] + r42
+"	mad r42, r26.z, r24, r42\n"	// r42 := Ablk[0,2]*Bblk3[2,*] + r42
+"	mad r34, r26.w, r25, r42\n"	// Cblk[0,*] := Ablk[0,3]*Bblk3[3,*] + r42
+	// row 2
+"	mad r42, r27.x, r22, r35\n"
+"	mad r42, r27.y, r23, r42\n"
+"	mad r42, r27.z, r24, r42\n"
+"	mad r35, r27.w, r25, r42\n"
+	// row 3
+"	mad r42, r28.x, r22, r36\n"
+"	mad r42, r28.y, r23, r42\n"
+"	mad r42, r28.z, r24, r42\n"
+"	mad r36, r28.w, r25, r42\n"
+	// row 4
+"	mad r42, r29.x, r22, r37\n"
+"	mad r42, r29.y, r23, r42\n"
+"	mad r42, r29.z, r24, r42\n"
+"	mad r37, r29.w, r25, r42\n"
+	// row 5
+"	mad r42, r30.x, r22, r38\n"
+"	mad r42, r30.y, r23, r42\n"
+"	mad r42, r30.z, r24, r42\n"
+"	mad r38, r30.w, r25, r42\n"
+	// row 6
+"	mad r42, r31.x, r22, r39\n"
+"	mad r42, r31.y, r23, r42\n"
+"	mad r42, r31.z, r24, r42\n"
+"	mad r39, r31.w, r25, r42\n"
+	// row 7
+"	mad r42, r32.x, r22, r40\n"
+"	mad r42, r32.y, r23, r42\n"
+"	mad r42, r32.z, r24, r42\n"
+"	mad r40, r32.w, r25, r42\n"
+	// row 8
+"	mad r42, r33.x, r22, r41\n"
+"	mad r42, r33.y, r23, r42\n"
+"	mad r42, r33.z, r24, r42\n"
+"	mad r41, r33.w, r25, r42\n"
+
+	// increment counters of B
+"	add r1, r1, l2\n"
+"	add r3, r3, l2\n"
+"	add r4, r4, l2\n"
+"	add r5, r5, l2\n"
+"	add r6, r6, l2\n"
+"	add r7, r7, l2\n"
+
+"	add r2.x, r2.x, l0.x\n"	// loop counter ++
+"endloop\n"
+
+"itof r0.z, vaTid0.x\n"				// r0.z := thread_index
+"mul r0.y, r0.z, cb0[0].z\n"		// r0.y := thread_index*(1/(result.width)) == y index
+"mod r0.x, r0.z, cb0[0].x\n"		// r0.x := thread_index % result.width == x index
+"flr r3.xy, r0.xy\n"				// [x,y] := floor(r0.xy) 2D position in the result
+
+// convert [x,y] index to equivalent linear index
+"flr r0.xy, r3\n"					// [x,y] in the execution domain
+"mul r0.y, r0.y, l0.y\n"			// multiply y coordinate by 8 to get real position in A data
+"ftoi r1.x, cb0[0].y\n"				// r1.x := int(pitch);
+"ftoi r0, r0\n"						// r0 := int(r0);
+"imad r0.x, r0.y, r1.x, r0.x\n"		// index := y*pitch + x -> index with account of the alignment pitch
+
+// store the result
+
+"mov g[r0.x], r34\n"
+"iadd r0.x, r0.x, r1.x\n"			// index += pitch -> switch to the next row
+
+"mov g[r0.x], r35\n"
+"iadd r0.x, r0.x, r1.x\n"			
+
+"mov g[r0.x], r36\n"
+"iadd r0.x, r0.x, r1.x\n"			
+
+"mov g[r0.x], r37\n"
+"iadd r0.x, r0.x, r1.x\n"			
+
+"mov g[r0.x], r38\n"
+"iadd r0.x, r0.x, r1.x\n"			
+
+"mov g[r0.x], r39\n"
+"iadd r0.x, r0.x, r1.x\n"			
+
+"mov g[r0.x], r40\n"
+"iadd r0.x, r0.x, r1.x\n"			
+
+"mov g[r0.x], r41\n"
+
+"end\n";
+
+/*
+	Matrix multiplication C := A*B for the case
+	when A has size [4*M,4*N] and B has size [4*N,K]
+	where M, N, K any integer numbers	
+
+	compute shader
+*/
+const char kernelMatMulR4x4by4x4_CS[] =
+"il_cs_2_0\n"
+"dcl_num_thread_per_blk 64\n"
+"dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+"dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+"dcl_cb cb0[2]\n"
+"dcl_literal l0, 4.0f, 4.0f, 4.0f, 4.0f\n"
+
+"ftoi r0.x, cb0[0].w"		// total number of 4x4 elements in the result
+"ilt r0.y, vaTid0.x, r0.x\n"
+
+"if_logicalnz r0.y\n"		// if thread_index < total number of 4x4 elements in the result
+
+"	itof r0.z, vaTid0.x\n"				// r0.z := thread_index
+"	mul r0.y, r0.z, cb0[0].z\n"			// r0.y := thread_index*(1/(result.width)) == y index
+"	mod r0.x, r0.z, cb0[0].x\n"			// r0.x := thread_index % result.width == x index
+"	flr r3.xy, r0.xy\n"					// [x,y] := floor(r0.xy) 2D position in the result
+
+	// 2D index of first row in first block of A
+"	flr r0.0yz0, r3.y\n"		// [0,y]
+"	mul r0.yz, r0.yz, l0.yz\n"	// multiply y coordinate by 4
+
+	// 2D index of first column of block of B
+"	flr r1.x000, r3.x\n"	// [x,0]
+
+	// clear float4 accumulators for small matrix multiply result
+"	mov r12, r12.0000\n"	
+"	mov r13, r13.0000\n"
+"	mov r14, r14.0000\n"
+"	mov r15, r15.0000\n"
+
+"	mov r2.0y00, cb0[1].x\n"	// r2.x is the loop counter
+
+"	whileloop\n"
+"		ge r2.z, r2.x, r2.y\n"	// while(loop counter < lhs.width)
+"		break_logicalnz r2.z\n"
+
+		// load the next block of the rhs
+"		sample_resource(1)_sampler(1) r4, r1.xy\n"
+"		add r1.y, r1.y, r1.1\n"
+"		sample_resource(1)_sampler(1) r5, r1.xy\n"
+"		add r1.y, r1.y, r1.1\n"
+"		sample_resource(1)_sampler(1) r6, r1.xy\n"
+"		add r1.y, r1.y, r1.1\n"
+"		sample_resource(1)_sampler(1) r7, r1.xy\n"
+"		add r1.y, r1.y, r1.1\n"
+	
+		// load the next block of the lhs
+"		sample_resource(0)_sampler(0) r8, r0.xy\n"
+"		add r0.y, r0.y, r0.1\n"
+"		sample_resource(0)_sampler(0) r9, r0.xy\n"
+"		add r0.y, r0.y, r0.1\n"
+"		sample_resource(0)_sampler(0) r10, r0.xy\n"
+"		add r0.y, r0.y, r0.1\n"
+"		sample_resource(0)_sampler(0) r11, r0.xy\n"
+"		add r0.x, r0.x, r0.1\n"
+"		mov r0._y, r0.z\n"
+
+		// compute small matrix multiplication
+
+		// first row
+"		mad r16, r8.x, r4, r12\n"
+"		mad r16, r8.y, r5, r16\n"
+"		mad r16, r8.z, r6, r16\n"
+"		mad r12, r8.w, r7, r16\n"
+
+		// second row
+"		mad r16, r9.x, r4, r13\n"
+"		mad r16, r9.y, r5, r16\n"
+"		mad r16, r9.z, r6, r16\n"
+"		mad r13, r9.w, r7, r16\n"
+
+		// third row
+"		mad r16, r10.x, r4, r14\n"
+"		mad r16, r10.y, r5, r16\n"
+"		mad r16, r10.z, r6, r16\n"
+"		mad r14, r10.w, r7, r16\n"
+
+		// fourth row
+"		mad r16, r11.x, r4, r15\n"
+"		mad r16, r11.y, r5, r16\n"
+"		mad r16, r11.z, r6, r16\n"
+"		mad r15, r11.w, r7, r16\n"
+
+"		add r2.x, r2.x, r2.1\n"	// loop counter ++
+"	endloop\n"
+
+	// convert [x,y] index to the linear form	
+"	mul r3.y, r3.y, l0.y\n"
+"	ftoi r3, r3\n"
+"	ftoi r2, cb0[0]\n"
+"	imad r0.x, r3.y, r2.y, r3.x\n"	// index := y*result.pitch + x -> index with account of the alignment pitch
+
+	// store the result
+
+"	mov g[r0.x], r12\n"
+"	iadd r0.x, r0.x, r2.y\n"		// index := index + pitch
+
+"	mov g[r0.x], r13\n"
+"	iadd r0.x, r0.x, r2.y\n"		// index := index + pitch
+
+"	mov g[r0.x], r14\n"
+"	iadd r0.x, r0.x, r2.y\n"		// index := index + pitch
+
+"	mov g[r0.x], r15\n"
+
+"endif\n"
+
+"end\n";
+
+/*
+	Divide a 2D array into 8 parts
+*/
+const char kernelDivideMatrixTo8Parts_PS[] =
+"il_ps_2_0\n"
+"dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__\n"
+"dcl_cb cb0[1]\n" // [A.height/8,8*int(A.height/8)]
+"dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+
+"flr r0.xy, vWinCoord0.xy\n"
+"mul r0.xy, r0.xy, cb0[0].1x\n"	// [x,y*(A.height/8)] - 2D position of the first row to copy
+
+"dcl_output_generic o0\n"
+"dcl_output_generic o1\n"
+"dcl_output_generic o2\n"
+"dcl_output_generic o3\n"
+"dcl_output_generic o4\n"
+"dcl_output_generic o5\n"
+"dcl_output_generic o6\n"
+"dcl_output_generic o7\n"
+
+"lt r0.z, r0.y, cb0[0].y\n"
+
+"if_logicalnz r0.z\n"		// if iRow < 8*int(A.height/8)
+"	sample_resource(0)_sampler(0) o0, r0.xy\n"
+"	add r0.x, r0.x, cb0[0].x\n"
+"	sample_resource(0)_sampler(0) o1, r0.xy\n"
+"	add r0.x, r0.x, cb0[0].x\n"
+"	sample_resource(0)_sampler(0) o2, r0.xy\n"
+"	add r0.x, r0.x, cb0[0].x\n"
+"	sample_resource(0)_sampler(0) o3, r0.xy\n"
+"	add r0.x, r0.x, cb0[0].x\n"
+"	sample_resource(0)_sampler(0) o4, r0.xy\n"
+"	add r0.x, r0.x, cb0[0].x\n"
+"	sample_resource(0)_sampler(0) o5, r0.xy\n"
+"	add r0.x, r0.x, cb0[0].x\n"
+"	sample_resource(0)_sampler(0) o6, r0.xy\n"
+"	add r0.x, r0.x, cb0[0].x\n"
+"	sample_resource(0)_sampler(0) o7, r0.xy\n"
+"else\n"	// else put to the last row
+"	sample_resource(0)_sampler(0) o7, vWinCoord0.xy\n"
+"endif\n"
+
+"end\n";
+
+/*
+	Gather a 2D array from 8 parts
+*/
+const char kernelGatherMatrixFrom8Parts_PS[] =
+"il_ps_2_0\n"
+"dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__\n"
+"dcl_cb cb0[1]\n" // [A.height/8,8*int(A.height/8),pitch,...]
+"dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+"dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+"dcl_resource_id(2)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+"dcl_resource_id(3)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+"dcl_resource_id(4)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+"dcl_resource_id(5)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+"dcl_resource_id(6)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+"dcl_resource_id(7)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+
+"flr r0.xy, vWinCoord0.xy\n"
+"mul r0.xy, r0.xy, cb0[0].1x\n"		// [x,y*(A.height/8)] - 2D position of the first row to copy
+
+
+"mad r1.x, r0.y, cb0[0].y, r0.x\n"	// index := y*result.pitch + x -> index with account of the alignment pitch
+"ftoi r1, r1\n"
+"ftoi r2, cb0[0]\n"
+
+"lt r0.z, r0.y, cb0[0].z\n"
+
+"if_logicalnz r0.z\n"				// if iRow < 8*int(A.height/8)
+"	sample_resource(0)_sampler(0) r3, vWinCoord0.xy\n"
+"	sample_resource(1)_sampler(1) r4, vWinCoord0.xy\n"
+"	sample_resource(2)_sampler(2) r5, vWinCoord0.xy\n"
+"	sample_resource(3)_sampler(3) r6, vWinCoord0.xy\n"
+"	sample_resource(4)_sampler(4) r7, vWinCoord0.xy\n"
+"	sample_resource(5)_sampler(5) r8, vWinCoord0.xy\n"
+"	sample_resource(6)_sampler(6) r9, vWinCoord0.xy\n"
+"	sample_resource(7)_sampler(7) r10, vWinCoord0.xy\n"
+
+"	mov g[r1.x], r3\n"
+"	iadd r1.x, r1.x, r2.y\n"
+
+"	mov g[r1.x], r4\n"
+"	iadd r1.x, r1.x, r2.y\n"
+
+"	mov g[r1.x], r5\n"
+"	iadd r1.x, r1.x, r2.y\n"
+
+"	mov g[r1.x], r6\n"
+"	iadd r1.x, r1.x, r2.y\n"
+
+"	mov g[r1.x], r7\n"
+"	iadd r1.x, r1.x, r2.y\n"
+
+"	mov g[r1.x], r8\n"
+"	iadd r1.x, r1.x, r2.y\n"
+
+"	mov g[r1.x], r9\n"
+"	iadd r1.x, r1.x, r2.y\n"
+
+"	mov g[r1.x], r10\n"
+"	iadd r1.x, r1.x, r2.y\n"
+"else\n"
+
+"endif\n"
+
+"end\n";
+
+/*
+	Divide a 2D array into 4 parts
+*/
+const char kernelDivideMatrixTo4Parts_PS[] =
+"il_ps_2_0\n"
+"dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__\n"
+"dcl_cb cb0[1]\n" // [A.height/4, 4*int(A.height/4)]
+"dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+
+"flr r0.xy, vWinCoord0.xy\n"
+"mul r0.xy, r0.xy, cb0[0].1x\n"	// [x,y*(A.height/4)] - 2D position of the first row to copy
+
+"dcl_output_generic o0\n"
+"dcl_output_generic o1\n"
+"dcl_output_generic o2\n"
+"dcl_output_generic o3\n"
+
+"lt r0.z, r0.y, cb0[0].y\n"
+
+"if_logicalnz r0.z\n"		// if iRow < 4*int(A.height/4)
+"	sample_resource(0)_sampler(0) o0, r0.xy\n"
+"	add r0.x, r0.x, cb0[0].x\n"
+"	sample_resource(0)_sampler(0) o1, r0.xy\n"
+"	add r0.x, r0.x, cb0[0].x\n"
+"	sample_resource(0)_sampler(0) o2, r0.xy\n"
+"	add r0.x, r0.x, cb0[0].x\n"
+"	sample_resource(0)_sampler(0) o3, r0.xy\n"
+"else\n"	// else put to the last row
+"	sample_resource(0)_sampler(0) o3, vWinCoord0.xy\n"
+"endif\n"
+
+"end\n";
+
+const char kernelMatMulByPartsR_CS[] = 
+"il_cs_2_0\n"
+"dcl_cb cb0[2]\n"
+"dcl_cb cb1[4]\n"
+"dcl_num_thread_per_group 64\n"
+"dcl_resource_id(0)_type(2d)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+"dcl_resource_id(1)_type(2d)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+"dcl_resource_id(2)_type(2d)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+"dcl_resource_id(3)_type(2d)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+"dcl_resource_id(4)_type(2d)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+"dcl_resource_id(5)_type(2d)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+"dcl_resource_id(6)_type(2d)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+"dcl_resource_id(7)_type(2d)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+"dcl_resource_id(8)_type(2d)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+"dcl_resource_id(9)_type(2d)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+"dcl_resource_id(10)_type(2d)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+"dcl_resource_id(11)_type(2d)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+"dcl_literal l0, 0x00000000, 0x00000000, 0x00000000, 0x00000000\n"
+"mov r3, l0\n"
+"mov r4, l0\n"
+"mov r5, l0\n"
+"mov r6, l0\n"
+"mov r7, l0\n"
+"mov r8, l0\n"
+"mov r9, l0\n"
+"mov r10, l0\n"
+"umod r0.x, vaTid0.x, cb1[3].x\n"
+"udiv r0.y, vaTid0.x, cb1[3].x\n" 
+"itof r0, r0\n"
+"mul r0.xyz0, r0.xyyx, cb0[0].zwxz\n"
+"mov r1.__zw, r0.zzzx\n"
+"mov r11.w, r0.y\n"
+"mov r11.x, l0\n"
+"whileloop\n"
+"    ge r11._y__, r11.x, cb0[1].x\n"
+"    break_logicalnz r11.y\n"
+"    mov r0.___w, r11.w\n"
+"    add r0._y__, r0.w, cb0[0].y\n"
+"    add r1.x___, r0.y, cb0[0].y\n"
+"    add r1._y__, r1.x, cb0[0].y\n"
+"    add r11.___w, r1.y, cb0[0].y\n"
+
+"    sample_resource(8)_sampler(8)   r21, r0.xw\n"
+"    sample_resource(9)_sampler(9)   r22, r0.xw\n"
+"    sample_resource(10)_sampler(10) r23, r0.xw\n"
+"    sample_resource(11)_sampler(11) r24, r0.xw\n"
+
+"    sample_resource(8)_sampler(8)   r25, r0.xy\n"
+"    sample_resource(9)_sampler(9)   r26, r0.xy\n"
+"    sample_resource(10)_sampler(10) r27, r0.xy\n"
+"    sample_resource(11)_sampler(11) r28, r0.xy\n"
+
+"    sample_resource(8)_sampler(8)   r29, r1.wx\n"
+"    sample_resource(9)_sampler(9)   r30, r1.wx\n"
+"    sample_resource(10)_sampler(10) r31, r1.wx\n"
+"    sample_resource(11)_sampler(11) r32, r1.wx\n"
+
+"    sample_resource(8)_sampler(8)   r33, r1.wy\n"
+"    sample_resource(9)_sampler(9)   r34, r1.wy\n"
+"    sample_resource(10)_sampler(10) r35, r1.wy\n"
+"    sample_resource(11)_sampler(11) r36, r1.wy\n"
+
+"    sample_resource(0)_sampler(0) r13, r0.wz\n"
+"    sample_resource(1)_sampler(1) r14, r0.wz\n"
+"    sample_resource(2)_sampler(2) r15, r0.wz\n"
+"    sample_resource(3)_sampler(3) r16, r0.wz\n"
+"    sample_resource(4)_sampler(4) r17, r0.wz\n"
+"    sample_resource(5)_sampler(5) r18, r0.wz\n"
+"    sample_resource(6)_sampler(6) r19, r0.wz\n"
+"    sample_resource(7)_sampler(7) r20, r0.wz\n"
+
+"    mad r12, r13.y, r22, r3\n"
+"    mad r12, r13.x, r21, r12\n"
+"    mad r12, r13.z, r23, r12\n"
+"    mad r3, r13.w, r24, r12\n"
+"    mad r12, r14.y, r22, r4\n"
+"    mad r12, r14.x, r21, r12\n"
+"    mad r12, r14.z, r23, r12\n"
+"    mad r4, r14.w, r24, r12\n"
+"    mad r12, r15.y, r22, r5\n"
+"    mad r12, r15.x, r21, r12\n"
+"    mad r12, r15.z, r23, r12\n"
+"    mad r5, r15.w, r24, r12\n"
+"    mad r12, r16.y, r22, r6\n"
+"    mad r12, r16.x, r21, r12\n"
+"    mad r12, r16.z, r23, r12\n"
+"    mad r6, r16.w, r24, r12\n"
+"    mad r12, r17.y, r22, r7\n"
+"    mad r12, r17.x, r21, r12\n"
+"    mad r12, r17.z, r23, r12\n"
+"    mad r7, r17.w, r24, r12\n"
+"    mad r12, r18.y, r22, r8\n"
+"    mad r12, r18.x, r21, r12\n"
+"    mad r12, r18.z, r23, r12\n"
+"    mad r8, r18.w, r24, r12\n"
+"    mad r12, r19.y, r22, r9\n"
+"    mad r12, r19.x, r21, r12\n"
+"    mad r12, r19.z, r23, r12\n"
+"    mad r9, r19.w, r24, r12\n"
+"    mad r12, r20.y, r22, r10\n"
+"    mad r12, r20.x, r21, r12\n"
+"    mad r12, r20.z, r23, r12\n"
+"    mad r10, r20.w, r24, r12\n"
+
+"    sample_resource(0)_sampler(0) r13, r0.yz\n"
+"    sample_resource(1)_sampler(1) r14, r0.yz\n"
+"    sample_resource(2)_sampler(2) r15, r0.yz\n"
+"    sample_resource(3)_sampler(3) r16, r0.yz\n"
+"    sample_resource(4)_sampler(4) r17, r0.yz\n"
+"    sample_resource(5)_sampler(5) r18, r0.yz\n"
+"    sample_resource(6)_sampler(6) r19, r0.yz\n"
+"    sample_resource(7)_sampler(7) r20, r0.yz\n"
+
+"    mad r12, r13.y, r26, r3\n"
+"    mad r12, r13.x, r25, r12\n"
+"    mad r12, r13.z, r27, r12\n"
+"    mad r3, r13.w, r28, r12\n"
+"    mad r12, r14.y, r26, r4\n"
+"    mad r12, r14.x, r25, r12\n"
+"    mad r12, r14.z, r27, r12\n"
+"    mad r4, r14.w, r28, r12\n"
+"    mad r12, r15.y, r26, r5\n"
+"    mad r12, r15.x, r25, r12\n"
+"    mad r12, r15.z, r27, r12\n"
+"    mad r5, r15.w, r28, r12\n"
+"    mad r12, r16.y, r26, r6\n"
+"    mad r12, r16.x, r25, r12\n"
+"    mad r12, r16.z, r27, r12\n"
+"    mad r6, r16.w, r28, r12\n"
+"    mad r12, r17.y, r26, r7\n"
+"    mad r12, r17.x, r25, r12\n"
+"    mad r12, r17.z, r27, r12\n"
+"    mad r7, r17.w, r28, r12\n"
+"    mad r12, r18.y, r26, r8\n"
+"    mad r12, r18.x, r25, r12\n"
+"    mad r12, r18.z, r27, r12\n"
+"    mad r8, r18.w, r28, r12\n"
+"    mad r12, r19.y, r26, r9\n"
+"    mad r12, r19.x, r25, r12\n"
+"    mad r12, r19.z, r27, r12\n"
+"    mad r9, r19.w, r28, r12\n"
+"    mad r12, r20.y, r26, r10\n"
+"    mad r12, r20.x, r25, r12\n"
+"    mad r12, r20.z, r27, r12\n"
+"    mad r10, r20.w, r28, r12\n"
+
+"    sample_resource(0)_sampler(0) r13, r1.xz\n"
+"    sample_resource(1)_sampler(1) r14, r1.xz\n"
+"    sample_resource(2)_sampler(2) r15, r1.xz\n"
+"    sample_resource(3)_sampler(3) r16, r1.xz\n"
+"    sample_resource(4)_sampler(4) r17, r1.xz\n"
+"    sample_resource(5)_sampler(5) r18, r1.xz\n"
+"    sample_resource(6)_sampler(6) r19, r1.xz\n"
+"    sample_resource(7)_sampler(7) r20, r1.xz\n"
+
+"    mad r12, r13.y, r30, r3\n"
+"    mad r12, r13.x, r29, r12\n"
+"    mad r12, r13.z, r31, r12\n"
+"    mad r3, r13.w, r32, r12\n"
+"    mad r12, r14.y, r30, r4\n"
+"    mad r12, r14.x, r29, r12\n"
+"    mad r12, r14.z, r31, r12\n"
+"    mad r4, r14.w, r32, r12\n"
+"    mad r12, r15.y, r30, r5\n"
+"    mad r12, r15.x, r29, r12\n"
+"    mad r12, r15.z, r31, r12\n"
+"    mad r5, r15.w, r32, r12\n"
+"    mad r12, r16.y, r30, r6\n"
+"    mad r12, r16.x, r29, r12\n"
+"    mad r12, r16.z, r31, r12\n"
+"    mad r6, r16.w, r32, r12\n"
+"    mad r12, r17.y, r30, r7\n"
+"    mad r12, r17.x, r29, r12\n"
+"    mad r12, r17.z, r31, r12\n"
+"    mad r7, r17.w, r32, r12\n"
+"    mad r12, r18.y, r30, r8\n"
+"    mad r12, r18.x, r29, r12\n"
+"    mad r12, r18.z, r31, r12\n"
+"    mad r8, r18.w, r32, r12\n"
+"    mad r12, r19.y, r30, r9\n"
+"    mad r12, r19.x, r29, r12\n"
+"    mad r12, r19.z, r31, r12\n"
+"    mad r9, r19.w, r32, r12\n"
+"    mad r12, r20.y, r30, r10\n"
+"    mad r12, r20.x, r29, r12\n"
+"    mad r12, r20.z, r31, r12\n"
+"    mad r10, r20.w, r32, r12\n"
+"    sample_resource(0)_sampler(0) r13, r1.yz\n"
+"    sample_resource(1)_sampler(1) r14, r1.yz\n"
+"    sample_resource(2)_sampler(2) r15, r1.yz\n"
+"    sample_resource(3)_sampler(3) r16, r1.yz\n"
+"    sample_resource(4)_sampler(4) r17, r1.yz\n"
+"    sample_resource(5)_sampler(5) r18, r1.yz\n"
+"    sample_resource(6)_sampler(6) r19, r1.yz\n"
+"    sample_resource(7)_sampler(7) r20, r1.yz\n"
+"    mad r12, r13.y, r34, r3\n"
+"    mad r12, r13.x, r33, r12\n"
+"    mad r12, r13.z, r35, r12\n"
+"    mad r3, r13.w, r36, r12\n"
+"    mad r12, r14.y, r34, r4\n"
+"    mad r12, r14.x, r33, r12\n"
+"    mad r12, r14.z, r35, r12\n"
+"    mad r4, r14.w, r36, r12\n"
+"    mad r12, r15.y, r34, r5\n"
+"    mad r12, r15.x, r33, r12\n"
+"    mad r12, r15.z, r35, r12\n"
+"    mad r5, r15.w, r36, r12\n"
+"    mad r12, r16.y, r34, r6\n"
+"    mad r12, r16.x, r33, r12\n"
+"    mad r12, r16.z, r35, r12\n"
+"    mad r6, r16.w, r36, r12\n"
+"    mad r12, r17.y, r34, r7\n"
+"    mad r12, r17.x, r33, r12\n"
+"    mad r12, r17.z, r35, r12\n"
+"    mad r7, r17.w, r36, r12\n"
+"    mad r12, r18.y, r34, r8\n"
+"    mad r12, r18.x, r33, r12\n"
+"    mad r12, r18.z, r35, r12\n"
+"    mad r8, r18.w, r36, r12\n"
+"    mad r12, r19.y, r34, r9\n"
+"    mad r12, r19.x, r33, r12\n"
+"    mad r12, r19.z, r35, r12\n"
+"    mad r9, r19.w, r36, r12\n"
+"    mad r12, r20.y, r34, r10\n"
+"    mad r12, r20.x, r33, r12\n"
+"    mad r12, r20.z, r35, r12\n"
+"    mad r10, r20.w, r36, r12\n"
+"    add r11.x, r11.x, r11.1\n"
+"endloop\n"
+"umod r1.x, vaTid0.x, cb1[3].x\n"
+"udiv r1.y, vaTid0.x, cb1[3].x\n" 
+"imad r11, r1.yyyy, cb1[0].yyyy, r1.xxxx\n"
+"iadd r43, r11, cb1[1]\n"
+"iadd r42, r11, cb1[2]\n"
+"mov g[r43.x], r3\n"
+"mov g[r43.y], r4\n"
+"mov g[r43.z], r5\n"
+"mov g[r43.w], r6\n"
+"mov g[r42.x], r7\n"
+"mov g[r42.y], r8\n"
+"mov g[r42.z], r9\n"
+"mov g[r42.w], r10\n"
 "end\n";
 
 /*

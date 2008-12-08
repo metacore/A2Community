@@ -82,7 +82,11 @@ public:
 	// returns TRUE if array is scalar and equal to zero
 	BOOL IsZeroScalar(void);
 	// returns TRUE if array is a scalar
-	BOOL IsScalar(void);
+	BOOL IsScalar(void);	
+
+	// sub arrays used for matrix matrix multiply
+	Array** subArrs;
+	long nSubArrs;	// number of sub arrays
 };
 
 // array expression for internal use

@@ -78,6 +78,30 @@ Kernel::Kernel(long iKernel, CALtarget target)
 			constFormats = new CALformat[1]; constFormats[0] = CAL_FORMAT_FLOAT_4;
 			break;	
 
+		case KernDivideMatrixTo4Parts_PS:				
+			kernelStr = kernelDivideMatrixTo4Parts_PS; nInputs = 1; nOutputs = 4; nConstants = 1;
+			constSizes = new long[1]; constSizes[0] = 1;
+			constFormats = new CALformat[1]; constFormats[0] = CAL_FORMAT_FLOAT_4;
+			break;		
+
+		case KernDivideMatrixTo8Parts_PS:				
+			kernelStr = kernelDivideMatrixTo8Parts_PS; nInputs = 1; nOutputs = 8; nConstants = 1;
+			constSizes = new long[1]; constSizes[0] = 1;
+			constFormats = new CALformat[1]; constFormats[0] = CAL_FORMAT_FLOAT_4;
+			break;
+
+		case KernMatMulR_CS: 
+			kernelStr = kernelMatMulR_CS; nInputs = 2; nOutputs = 0; nConstants = 1; usesGlobalBuffer = TRUE;
+			constSizes = new long[1]; constSizes[0] = 2;
+			constFormats = new CALformat[1]; constFormats[0] = CAL_FORMAT_FLOAT_4;
+			break;
+
+		case KernMatMulByPartsR_CS:
+			kernelStr = kernelMatMulByPartsR_CS; nInputs = 12; nOutputs = 0; nConstants = 2; usesGlobalBuffer = TRUE;
+			constSizes = new long[2]; constSizes[0] = 2; constSizes[1] = 4;
+			constFormats = new CALformat[2]; constFormats[0] = CAL_FORMAT_FLOAT_4; constFormats[1] = CAL_FORMAT_FLOAT_4;
+			break;
+
 		default:
 			return;
 	}

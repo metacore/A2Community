@@ -3,8 +3,20 @@
 #include "Common.h"
 
 Array::Array(CALdevice hDev, CALdeviceinfo* devInfo, CALdeviceattribs* devAttribs, long arrID, long dType, long nDims, long* size)
+: subArrs(NULL)
 {
 	long i;	
+
+	subArrs = NULL;
+	nSubArrs = 0;
+	cpuData = NULL;
+	remoteRes = 0;
+	localRes = 0;
+
+	useCounter = 0;
+	isReservedForGet = FALSE;
+	localIsGlobalBuf = FALSE;
+	remoteIsGlobalBuf = FALSE;
 
 	this->hDev = hDev;	
 	this->arrID = arrID;		
@@ -82,16 +94,7 @@ Array::Array(CALdevice hDev, CALdeviceinfo* devInfo, CALdeviceattribs* devAttrib
 		logicDataSize *= logicSize[i];
 		physNumElements *= physSize[i];
 	}
-	physDataSize = physNumElements*physElemSize;	
-	
-	cpuData = NULL;
-	remoteRes = 0;
-	localRes = 0;
-
-	useCounter = 0;
-	isReservedForGet = FALSE;
-	localIsGlobalBuf = FALSE;
-	remoteIsGlobalBuf = FALSE;
+	physDataSize = physNumElements*physElemSize;		
 }
 
 Array::~Array(void)
