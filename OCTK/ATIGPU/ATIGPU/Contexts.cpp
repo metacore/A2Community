@@ -1690,12 +1690,7 @@ CALresult Context::GatherMatrixFrom4Parts(Array* arr)
 	err = CAL_RESULT_OK;
 
 	_ASSERT(arr->subArrs != NULL);
-	_ASSERT(arr->localRes == 0);
-
-	// allocate result
-	err = arr->AllocateLocal(CAL_RESALLOC_GLOBAL_BUFFER);
-	if(err != CAL_RESULT_OK)		
-		return err;
+	_ASSERT(arr->localRes && arr->localIsGlobalBuf);
 			
 	iKernel = KernGatherMatrixFrom4Parts_PS;
 
@@ -1736,9 +1731,7 @@ CALresult Context::GatherMatrixFrom4Parts(Array* arr)
 					arr->subArrs = NULL;
 
 					arr->nSubArrs = 0;										
-				}
-				else				
-					arr->FreeLocal();				
+				}				
 
 				module->ReleaseConstantsFromContext();
 			}
@@ -1765,12 +1758,7 @@ CALresult Context::GatherMatrixFrom8Parts(Array* arr)
 	err = CAL_RESULT_OK;
 
 	_ASSERT(arr->subArrs != NULL);
-	_ASSERT(arr->localRes == 0);
-
-	// allocate result
-	err = arr->AllocateLocal(CAL_RESALLOC_GLOBAL_BUFFER);
-	if(err != CAL_RESULT_OK)	// if can not allocate local memory - try to use remote!
-		return err;	
+	_ASSERT(arr->localRes && arr->localIsGlobalBuf);	
 			
 	iKernel = KernGatherMatrixFrom8Parts_PS;
 
@@ -1811,9 +1799,7 @@ CALresult Context::GatherMatrixFrom8Parts(Array* arr)
 					arr->subArrs = NULL;
 
 					arr->nSubArrs = 0;										
-				}
-				else				
-					arr->FreeLocal();				
+				}				
 
 				module->ReleaseConstantsFromContext();
 			}
