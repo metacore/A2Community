@@ -95,6 +95,7 @@ public:
 	CALresult DoMatMult4x8x4by4x4x4(void);
 	CALresult DoMatMult8x4by4x4(void);
 	CALresult DoMatMult4x4by4x4(void);
+	CALresult DoMatMultByParts4x4x4by4x4x4(void);
 };
 
 class ContextPool :

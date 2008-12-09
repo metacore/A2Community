@@ -81,7 +81,7 @@ Kernel::Kernel(long iKernel, CALtarget target)
 			break;		
 
 		case KernMatMul4x8x4by4x4x4R_PS: 
-			kernelStr = kernelMatMul4x8x4by4x4x4R_CS; nInputs = 2; nOutputs = 0; nConstants = 1; usesGlobalBuffer = TRUE;
+			kernelStr = kernelMatMul4x8x4by4x4x4R_PS; nInputs = 2; nOutputs = 0; nConstants = 1; usesGlobalBuffer = TRUE;
 			constSizes = new long[1]; constSizes[0] = 1;
 			constFormats = new CALformat[1]; constFormats[0] = CAL_FORMAT_FLOAT_4;
 			break;
@@ -93,7 +93,7 @@ Kernel::Kernel(long iKernel, CALtarget target)
 			break;
 
 		case KernMatMul4x4by4x4R_PS: 
-			kernelStr = kernelMatMul4x4by4x4R_CS; nInputs = 2; nOutputs = 0; nConstants = 1; usesGlobalBuffer = TRUE;
+			kernelStr = kernelMatMul4x4by4x4R_PS; nInputs = 2; nOutputs = 0; nConstants = 1; usesGlobalBuffer = TRUE;
 			constSizes = new long[1]; constSizes[0] = 1;
 			constFormats = new CALformat[1]; constFormats[0] = CAL_FORMAT_FLOAT_4;
 			break;
@@ -113,6 +113,12 @@ Kernel::Kernel(long iKernel, CALtarget target)
 		case KernMatMul4x4by4x4R_CS: 
 			kernelStr = kernelMatMul4x4by4x4R_CS; nInputs = 2; nOutputs = 0; nConstants = 1; usesGlobalBuffer = TRUE;
 			constSizes = new long[1]; constSizes[0] = 2;
+			constFormats = new CALformat[1]; constFormats[0] = CAL_FORMAT_FLOAT_4;
+			break;
+		
+		case KernMatMulByParts4x4x4by4x4x4R_PS: 
+			kernelStr = kernelMatMulByParts4x4x4by4x4x4R_PS; nInputs = 8; nOutputs = 4; nConstants = 1;
+			constSizes = new long[1]; constSizes[0] = 1;
 			constFormats = new CALformat[1]; constFormats[0] = CAL_FORMAT_FLOAT_4;
 			break;
 
