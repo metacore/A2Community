@@ -1,6 +1,7 @@
 #pragma once
 #include "ObjectPool.h"
 #include "Kernels.h"
+#include "Arrays.h"
 #include "Constants.h"
 
 class Module
@@ -13,6 +14,11 @@ public:
 	CALresult SetConstantsToContext(void);
 	// release constants from the context
 	void ReleaseConstantsFromContext(void);
+	
+	// Run a pixel shader program
+	CALresult RunPixelShader(Array** inputs, Array** outputs, Array* globalBuffer, CALdomain* domain);
+	// Run a compute shader program
+	CALresult RunComputeShader(Array** inputs, Array* globalBuffer, CALprogramGrid* programGrid);
 
 	CALresult err;	// error code for last operation
 

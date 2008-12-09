@@ -375,7 +375,7 @@ CALresult Context::DoIdentic(void)
 				}
 
 				// run the program
-				err = RunPixelShader(module,expr->args,&result,NULL,&domain);
+				err = module->RunPixelShader(expr->args,&result,NULL,&domain);
 
 				module->ReleaseConstantsFromContext();
 			}
@@ -387,219 +387,6 @@ CALresult Context::DoIdentic(void)
 			module->constants[0] = NULL;
 		}
 	}	
-
-	return err;
-}
-
-/*
-
-// perform assignment of array identity (using compute shader)
-CALresult Context::DoIdenticCS(void)
-{
-	Module* module = NULL;
-	Constant* constant = NULL;
-	Array* arg;	
-	CALprogramGrid pg;
-	unsigned long w, w1, h, numBurstElems, nThreads;
-
-	arg = expr->args[0];	
-
-	if(result->dataSize == arg->dataSize)	// just copy data from one array to another
-	{
-		if(result->remoteRes)
-		{
-			if(arg->remoteRes)
-				err = result->Copy(ctx,result->remoteRes,arg->remoteRes);
-			else
-				err = result->Copy(ctx,result->remoteRes,arg->localRes);
-		}
-		else
-		{
-			if(expr->args[0]->localRes)
-				err = result->Copy(ctx,result->localRes,arg->localRes);
-			else
-				err = result->Copy(ctx,result->localRes,arg->remoteRes);					
-		}
-	}
-	else
-	{	
-		
-		// right hand side must be a scalar
-		_ASSERT( (arg->nDims == 1) && (arg->size[0] == 1) );
-		
-		//
-		// FIXME: make setting of the wavefrontsize in a dynamic way
-		// this requires dynamic adding of "dcl_num_thread_per_group devAttribs->wavefrontSize\n" to all CS kernels strings
-		//
-		
-		numBurstElems = GBufBurstSize/result->physElemSize;	// number of physical burst multicomponent elements
-		nThreads = result->physNumElements/numBurstElems;	// total number of threads
-
-		// if the result is sufficiently big use kernel method
-		if(nThreads >= devAttribs->wavefrontSize)
-		{
-			// choose the right module
-			if(result->nLogicDims == 1) {w = result->logicSize[0]*result->elemSize; h = 1; w1 = 0;}
-			else {w1 = result->logicSize[1]; w = w1*result->elemSize; h = result->logicSize[0];}
-
-			// if data parts are multiple of GBufBurstSize and number of threads fits to integer number of
-			// NumThreadPerGroup use simplest kernels AND if tailed data do not have gaps (width is multipple of GPU alignment_pitch)
-			if( ((w1 % devAttribs->pitch_alignment) == 0) && ((nThreads % devAttribs->wavefrontSize) == 0) && ( ((w % GBufBurstSize) == 0) && ( ((w - (w*h - result->dataSize)) % GBufBurstSize) == 0) ) )
-			{				
-				switch(numBurstElems)
-				{
-				case 2:
-					module = new Module(hDev,ctx,kernels[KernFillBy2xNComp_CS]);
-					break;
-				case 4:
-					module = new Module(hDev,ctx,kernels[KernFillBy4xNComp_CS]);
-					break;
-				case 8:
-					module = new Module(hDev,ctx,kernels[KernFillBy8xNComp_CS]);
-					break;	
-				case 16:
-					module = new Module(hDev,ctx,kernels[KernFillBy16xNComp_CS]);
-					break;
-				default:
-					return CAL_RESULT_NOT_SUPPORTED;
-				}
-
-				if(module->err == CAL_RESULT_OK)
-				{
-					// create constant for passing to the kernel
-					constant = new Constant(hDev,ctx,module->constNames[0],arg->dFormat,1);	
-
-					if(constant->err == CAL_RESULT_OK)			
-						// fill all constant components with one value
-						err = constant->Fill(arg->cpuData,arg->elemSize);								
-					else
-						err = constant->err;				
-				}
-				else
-					err = module->err;
-
-				if(err == CAL_RESULT_OK)
-				{					
-					pg.flags = 0;
-					pg.func = module->func;
-					pg.gridBlock.width = devAttribs->wavefrontSize;
-					pg.gridBlock.height = 1;
-					pg.gridBlock.depth  = 1;
-					pg.gridSize.width   = nThreads/devAttribs->wavefrontSize;
-					pg.gridSize.height  = 1;
-					pg.gridSize.depth   = 1;
-
-					err = RunComputeShader(module,expr->args,result,&pg);
-				}
-
-				if(constant)
-					delete constant;
-				if(module)
-					delete module;
-			}
-			else				
-				err = DoIdenticPS();		
-		}
-		else			
-			err = DoIdenticPS();
-	}	
-
-	return err;
-}
-*/
-
-CALresult Context::RunPixelShader(Module* module, Array** inputs, Array** outputs, Array* globalBuffer, CALdomain* domain)
-{
-	long i;
-	CALmem* inpMem;
-	CALmem* outMem;	
-	CALmem gbufMem;
-	CALevent ev;
-
-	err = CAL_RESULT_OK;
-
-	inpMem = new CALmem[module->nInputs];
-	outMem = new CALmem[module->nOutputs];
-	FillMemory(inpMem,module->nInputs*sizeof(CALmem),0);
-	FillMemory(outMem,module->nOutputs*sizeof(CALmem),0);
-	gbufMem = 0;
-
-	/*
-		Set inputs
-	*/
-	for(i = 0; (err == CAL_RESULT_OK) && (i < module->nInputs); i++)
-		err = inputs[i]->GetNamedLocalMem(ctx,module->inputNames[i],&inpMem[i]);
-
-	if(err != CAL_RESULT_OK)
-	{
-		// release allocated resources
-		for(i = i-1; i >= 0; i--)		
-			calCtxReleaseMem(ctx,inpMem[i]);
-
-		delete inpMem;
-		delete outMem;
-		return err;
-	}
-
-	/*
-		Set outputs
-	*/
-	for(i = 0; (err == CAL_RESULT_OK) && (i < module->nOutputs); i++)
-		err = outputs[i]->GetNamedLocalMem(ctx,module->outputNames[i],&outMem[i]);
-	
-	if(err != CAL_RESULT_OK)
-	{
-		// release allocated resources
-		for(i = i-1; i >= 0; i--)		
-			calCtxReleaseMem(ctx,outMem[i]);
-
-		for(i = 0; i < module->nInputs; i++)
-			calCtxReleaseMem(ctx,inpMem[i]);
-
-		delete inpMem;
-		delete outMem;
-		return err;
-	}
-
-	/*
-		Set global buffer
-	*/	
-	if(globalBuffer)
-	{
-		err = globalBuffer->GetNamedLocalMem(ctx,module->gbufName,&gbufMem);
-
-		if(err != CAL_RESULT_OK)
-		{		
-			// release allocated resources
-			for(i = 0; i < module->nInputs; i++)
-				calCtxReleaseMem(ctx,inpMem[i]);
-	
-			for(i = 0; i < module->nOutputs; i++)
-				calCtxReleaseMem(ctx,outMem[i]);
-	
-			delete inpMem;
-			delete outMem;
-			return err;
-		}
-	}
-
-	// run the kernel
-	err = calCtxRunProgram(&ev,ctx,module->func,domain);
-	if(err == CAL_RESULT_OK)
-		while((err = calCtxIsEventDone(ctx,ev)) == CAL_RESULT_PENDING);
-
-	// release allocated resources
-	if(globalBuffer)
-		calCtxReleaseMem(ctx,gbufMem);
-
-	for(i = 0; i < module->nInputs; i++)
-		calCtxReleaseMem(ctx,inpMem[i]);
-
-	for(i = 0; i < module->nOutputs; i++)
-		calCtxReleaseMem(ctx,outMem[i]);
-
-	delete inpMem;
-	delete outMem;
 
 	return err;
 }
@@ -674,7 +461,7 @@ CALresult Context::DoElementwise(void)
 		}
 
 		// run the program
-		err = RunPixelShader(module,expr->args,&result,NULL,&domain);
+		err = module->RunPixelShader(expr->args,&result,NULL,&domain);
 
 	}
 	else
@@ -684,92 +471,6 @@ CALresult Context::DoElementwise(void)
 		modules[iKernel] = NULL;
 	}
 
-	return err;
-
-/*
-	// run a pixel shader
-	switch(expr->dType)
-	{
-		case TREAL:
-		{
-			switch(expr->op)
-			{
-				case OpAdd:			
-					module = new Module(hDev,ctx,kernels[KernAddR_PS]);			
-					break;
-				
-				case OpSub:
-					module = new Module(hDev,ctx,kernels[KernSubR_PS]);			
-					break;
-
-				case OpEwMul:
-					module = new Module(hDev,ctx,kernels[KernEwMulR_PS]);			
-					break;
-				
-				case OpEwDiv:
-					module = new Module(hDev,ctx,kernels[KernEwDivR_PS]);			
-					break;
-
-				default:
-					return CAL_RESULT_INVALID_PARAMETER;
-			}			
-
-		}break;
-
-		case TLONGREAL:
-		{
-			switch(expr->op)
-			{
-				case OpAdd:			
-					module = new Module(hDev,ctx,kernels[KernAddLR_PS]);			
-					break;
-				
-				case OpSub:
-					module = new Module(hDev,ctx,kernels[KernSubLR_PS]);			
-					break;
-
-				case OpEwMul:
-					module = new Module(hDev,ctx,kernels[KernEwMulLR_PS]);			
-					break;
-				
-				case OpEwDiv:
-					module = new Module(hDev,ctx,kernels[KernEwDivLR_PS]);			
-					break;
-
-				default:
-					return CAL_RESULT_INVALID_PARAMETER;
-			}			
-
-		}break;
-
-		default:
-			return CAL_RESULT_INVALID_PARAMETER;
-	}
-
-	if(module->err == CAL_RESULT_OK)
-	{
-		// set the domain of execution
-		domain.x = 0;
-		domain.y = 0;
-		if(result->nLogicDims == 1)
-		{
-			domain.width = result->physSize[0];
-			domain.height = 1;
-		}
-		else
-		{
-			domain.width = result->physSize[1];
-			domain.height = result->physSize[0];
-		}
-
-		// run the program
-		err = RunPixelShader(module,expr->args,&result,NULL,&domain);
-	}
-	else
-		err = module->err;
-
-	delete module;
-*/
 	return err;
 }
 
@@ -828,75 +529,6 @@ CALresult Context::GetCacheHitCounter(float* counterVal)
 		return CAL_RESULT_NOT_SUPPORTED;
 }
 
-/*
-// perform matrix vector operation using compute shader
-CALresult Context::DoMatVecCS(void)
-{
-	Module* module;
-	CALprogramGrid pg;
-	float constData[4];
-
-	long iKernel;
-	
-	err = CAL_RESULT_OK;
-
-	switch(expr->dType)
-	{
-		case TREAL:
-		{
-			iKernel = KernMatVecR_CS; break;			
-
-		}break;
-		
-		default:
-			return CAL_RESULT_INVALID_PARAMETER;
-	}	
-	
-	// get suited module
-	if(!modules[iKernel])
-		modules[iKernel] = new Module(hDev,ctx,kernels[iKernel]);	
-
-	module = modules[iKernel];
-	
-	if(module->err == CAL_RESULT_OK)
-	{		
-		constData[0] = (float)(expr->args[0]->physSize[1]);	// matrix width
-		constData[1] = (float)(result->physSize[0]);		// matrix height
-		constData[2] = (float)((result->physSize[0]/result->physNumComponents)*result->physNumComponents);	// index of last row of quadruples
-		constData[3] = (float)(result->physNumElements);	// total number of elements		
-
-		err = module->constants[0]->SetData(&constData);		
-		if(err == CAL_RESULT_OK)
-		{
-			err = module->SetConstantsToContext();
-			if(err == CAL_RESULT_OK)
-			{
-				pg.flags = 0;
-				pg.func = module->func;
-				pg.gridBlock.width = devAttribs->wavefrontSize;
-				pg.gridBlock.height = 1;
-				pg.gridBlock.depth  = 1;
-				pg.gridSize.width   = ((result->physNumElements + pg.gridBlock.width - 1) / pg.gridBlock.width);
-				pg.gridSize.height  = 1;
-				pg.gridSize.depth   = 1;
-
-				err = RunComputeShader(module,expr->args,result,&pg);
-
-				module->ReleaseConstantsFromContext();
-			}
-		}		
-	}
-	else
-	{
-		err = module->err;
-		delete module;
-		modules[iKernel] = NULL;
-	}
-
-	return err;
-}
-*/
-
 // perform matrix vector multiply operation
 CALresult Context::DoMatVecMul(void)
 {
@@ -946,7 +578,7 @@ CALresult Context::DoMatVecMul(void)
 				domain.height = 1;
 
 				// run the program				
-				err = RunPixelShader(module,expr->args,&result,NULL,&domain);
+				err = module->RunPixelShader(expr->args,&result,NULL,&domain);
 
 				module->ReleaseConstantsFromContext();
 			}
@@ -998,69 +630,6 @@ CALresult Context::AllocateArrayLocal(Array* arr, ArrayPool* arrs, CALuint flags
 	return err;
 }
 
-CALresult Context::RunComputeShader(Module* module, Array** inputs, Array* globalBuffer, CALprogramGrid* programGrid)
-{	
-	long i;
-	CALmem* inpMem;	
-	CALmem gbufMem;
-	CALevent ev;
-
-	err = CAL_RESULT_OK;
-
-	inpMem = new CALmem[module->nInputs];	
-	FillMemory(inpMem,module->nInputs*sizeof(CALmem),0);	
-	gbufMem = 0;
-
-	/*
-		Set inputs
-	*/
-	for(i = 0; (err == CAL_RESULT_OK) && (i < module->nInputs); i++)
-		err = inputs[i]->GetNamedLocalMem(ctx,module->inputNames[i],&inpMem[i]);
-
-	if(err != CAL_RESULT_OK)
-	{
-		// release allocated resources
-		for(i = i-1; i >= 0; i--)		
-			calCtxReleaseMem(ctx,inpMem[i]);
-
-		delete inpMem;		
-		return err;
-	}	
-
-	/*
-		Set global buffer
-	*/	
-	if(globalBuffer)
-	{
-		err = globalBuffer->GetNamedLocalMem(ctx,module->gbufName,&gbufMem);
-
-		if(err != CAL_RESULT_OK)
-		{		
-			// release allocated resources
-			for(i = 0; i < module->nInputs; i++)
-				calCtxReleaseMem(ctx,inpMem[i]);
-				
-			delete inpMem;	
-			return err;
-		}
-	}
-
-	// run the program
-	err = calCtxRunProgramGrid(&ev,ctx,programGrid);
-	if(err == CAL_RESULT_OK)
-		while((err = calCtxIsEventDone(ctx,ev)) == CAL_RESULT_PENDING);	
-
-	// release allocated resources
-	if(globalBuffer)
-		calCtxReleaseMem(ctx,gbufMem);
-
-	for( i = 0; i < module->nInputs; i++)
-		calCtxReleaseMem(ctx,inpMem[i]);	
-
-	delete inpMem;	
-
-	return err;	
-}
 
 // setup an elementwise computation
 CALresult Context::SetCommon(ArrayExpression* expr, Array* result, ArrayPool* arrs, BOOL overwritenResult, BOOL resultIsGlobalBuf)
@@ -1143,161 +712,179 @@ CALresult Context::SetCommon(ArrayExpression* expr, Array* result, ArrayPool* ar
 	return err;
 }
 
-/*
-
-// perform an elementwise operation using compute shader
-CALresult Context::DoElementwiseCS(void)
-{	
-	Module* module;
-	CALprogramGrid pg;
-	float constData[4];
-
-	long iKernel;
-	
-	err = CAL_RESULT_OK;
-
-	switch(expr->dType)
+// perform matrix matrix multiply operation
+CALresult Context::DoMatMul(void)
+{		
+	if( (expr->args[0]->physSize[0] >= 8) && !(expr->args[1]->physSize[0] % 16) )
 	{
-		case TREAL:
-		{
-			switch(expr->op)
-			{
-				case OpAdd: iKernel = KernAddR_CS; break;
-				case OpSub: iKernel = KernSubR_CS; break;
-				case OpEwMul: iKernel = KernEwMulR_CS; break;
-				case OpEwDiv: iKernel = KernEwDivR_CS; break;
-
-				default:
-					return CAL_RESULT_INVALID_PARAMETER;
-			}			
-
-		}break;
-		
-		default:
-			return CAL_RESULT_INVALID_PARAMETER;
-	}	
-	
-	// get suited module
-	if(!modules[iKernel])
-		modules[iKernel] = new Module(hDev,ctx,kernels[iKernel]);	
-
-	module = modules[iKernel];
-	
-	if(module->err == CAL_RESULT_OK)
-	{
-		if(result->nLogicDims == 2)
-		{
-			constData[0] = (float)(result->physSize[1]);		// width
-			constData[1] = 1.0f/constData[0];					// 1/width
-			constData[2] = (float)(result->pitch);				// pitch in number of multicomponent elements
-			constData[3] = (float)(result->physNumElements);	// total number of elements	
-		}
+		if( !(expr->args[0]->physSize[0] % 8) )
+			err = DoMatMult4x8x4by4x4x4();
 		else
-		{
-			constData[0] = (float)(result->physSize[0]);		// width
-			constData[1] = 1.0f/(float)(result->physSize[0]);	// 1/width
-			constData[2] = 0;
-			constData[3] = (float)(result->physNumElements);	// total number of elements
-		}
-
-		err = module->constants[0]->SetData(&constData);		
-		if(err == CAL_RESULT_OK)
-		{
-			err = module->SetConstantsToContext();
-			if(err == CAL_RESULT_OK)
-			{
-				pg.flags = 0;
-				pg.func = module->func;
-				pg.gridBlock.width = devAttribs->wavefrontSize;
-				pg.gridBlock.height = 1;
-				pg.gridBlock.depth  = 1;
-				pg.gridSize.width   = ((result->physNumElements + pg.gridBlock.width - 1) / pg.gridBlock.width);
-				pg.gridSize.height  = 1;
-				pg.gridSize.depth   = 1;
-
-				err = RunComputeShader(module,expr->args,result,&pg);
-
-				module->ReleaseConstantsFromContext();
-			}
-		}		
+			err = CAL_RESULT_NOT_SUPPORTED;
+	}
+	else if( (expr->args[0]->physSize[0] >= 8) && !(expr->args[1]->physSize[0] % 4) )
+	{
+		if( !(expr->args[0]->physSize[0] % 8) )
+			err = DoMatMult8x4by4x4();
+		else
+			err = CAL_RESULT_NOT_SUPPORTED;
+	}
+	else if( (expr->args[0]->physSize[0] >= 4) && !(expr->args[1]->physSize[0] % 4) )
+	{
+		if( !(expr->args[0]->physSize[0] % 4) )
+			err = DoMatMult4x4by4x4();
+		else
+			err = CAL_RESULT_NOT_SUPPORTED;
 	}
 	else
-	{
-		err = module->err;
-		delete modules[iKernel];
-		modules[iKernel] = NULL;
-	}
+		err = CAL_RESULT_NOT_SUPPORTED;	
 
 	return err;
 }
-*/
 
-// perform matrix matrix multiply operation
-CALresult Context::DoMatMul(void)
+// divide a matrix to 4 parts
+CALresult Context::DivideMatrixTo4Parts(Array* arr, Array*** parts)
 {
-/*
 	Module* module;
 	CALdomain domain;
-	float constData[4];
-
-	long iKernel;
+	CALcontext ctx1;
+	long i, iKernel;
+	long size[2];	
 	
-	err = CAL_RESULT_OK;
+	err = CAL_RESULT_OK;	
+	
+	// array size for each part
+	size[0] = arr->size[0]/4;
+	size[1] = arr->size[1];
 
-	switch(expr->dType)
+	// first create sub arrays
+	(*parts) = new Array*[4];	
+	for(i = 0; i < 4; i++)	
+		(*parts)[i] = new Array(hDev,devInfo,devAttribs,arr->arrID,arr->dType,2,&size[0]);	
+	
+	// allocate arrays
+	for(i = 0; (i < 4) && (err == CAL_RESULT_OK); i++)	
+		err = (*parts)[i]->AllocateLocal(0);
+
+	if(err != CAL_RESULT_OK)
 	{
-		case TREAL:
-		{
-			iKernel = KernMatMulR_PS; break;			
-
-		}break;
+		for(i = 0; i < 4; i++)
+			delete (*parts)[i];
 		
-		default:
-			return CAL_RESULT_NOT_SUPPORTED;
-	}	
-	
-	// get suited module
-	if(!modules[iKernel])
-		modules[iKernel] = new Module(hDev,ctx,kernels[iKernel]);	
+		delete (*parts);
+		(*parts) = NULL;
 
-
-	module = modules[iKernel];
+		return err;
+	}
+		
+	iKernel = KernDivideMatrixTo4Parts_PS;
 	
+	err = calCtxCreate(&ctx1,hDev);
+	module = new Module(hDev,ctx1,kernels[iKernel]);
+
 	if(module->err == CAL_RESULT_OK)
-	{	
-		constData[0] = (float)(expr->args[0]->physSize[1]);	// matrix width
-		constData[1] = (float)(result->pitch);				// alignment pitch for the result
-		constData[2] = 0;
-		constData[3] = 0;
+	{							
+		// set the domain of execution
+		domain.x = 0;
+		domain.y = 0;		
+		domain.width = arr->physSize[1];
+		domain.height = size[0];
 
-		err = module->constants[0]->SetData(&constData);		
-		if(err == CAL_RESULT_OK)
+		// run the program				
+		err = module->RunPixelShader(&arr,*parts,NULL,&domain);
+
+		if(err != CAL_RESULT_OK)			
 		{
-			err = module->SetConstantsToContext();
-			if(err == CAL_RESULT_OK)
-			{
-				// set the domain of execution
-				domain.x = 0;
-				domain.y = 0;		
-				domain.width = result->physSize[1];
-				domain.height = result->physSize[0]/4;
+			for(i = 0; i < 4; i++)
+				delete (*parts)[i];
 
-				// run the program				
-				err = RunPixelShader(module,expr->args,NULL,result,&domain);
+			delete (*parts);
+			(*parts) = NULL;
+		}
 
-				module->ReleaseConstantsFromContext();
-			}
-		}	
 	}
 	else
-	{
 		err = module->err;
-		delete module;
-		modules[iKernel] = NULL;
-	}
-*/
 
-/*
+	calCtxDestroy(ctx1);
+	delete module;	
+	
+	return err;
+}
+
+// divide a matrix to 8 parts
+CALresult Context::DivideMatrixTo8Parts(Array* arr, Array*** parts)
+{
+	Module* module;
+	CALcontext ctx1;
+	CALdomain domain;	
+	long i, iKernel;
+	long size[2];	
+	
+	err = CAL_RESULT_OK;
+		
+	// array size for each part
+	size[0] = arr->size[0]/8;
+	size[1] = arr->size[1];
+
+	// first create sub arrays
+	(*parts) = new Array*[8];	
+	for(i = 0; i < 8; i++)	
+		(*parts)[i] = new Array(hDev,devInfo,devAttribs,arr->arrID,arr->dType,2,&size[0]);	
+	
+	// allocate arrays
+	for(i = 0; (i < 8) && (err == CAL_RESULT_OK); i++)	
+		err = (*parts)[i]->AllocateLocal(0);
+
+	if(err != CAL_RESULT_OK)
+	{
+		for(i = 0; i < 8; i++)
+			delete (*parts)[i];
+		
+		delete (*parts);
+		(*parts) = NULL;
+
+		return err;
+	}
+	
+	iKernel = KernDivideMatrixTo8Parts_PS;
+
+	err = calCtxCreate(&ctx1,hDev);
+	module = new Module(hDev,ctx1,kernels[iKernel]);
+
+	if(module->err == CAL_RESULT_OK)
+	{							
+		// set the domain of execution
+		domain.x = 0;
+		domain.y = 0;		
+		domain.width = arr->physSize[1];
+		domain.height = size[0];
+
+		// run the program				
+		err = module->RunPixelShader(&arr,(*parts),NULL,&domain);
+
+		if(err != CAL_RESULT_OK)			
+		{
+			for(i = 0; i < 8; i++)
+				delete (*parts)[i];
+
+			delete (*parts);
+			(*parts) = NULL;
+		}
+			
+	}
+	else	
+		err = module->err;	
+
+	calCtxDestroy(ctx1);
+	delete module;
+	
+	return err;
+}
+
+
+CALresult Context::DoMatMult4x8x4by4x4x4(void)
+{
 	Module* module;
 	CALprogramGrid pg;
 	float constData[8] = {0,0,0,0,0,0,0,0};
@@ -1309,74 +896,9 @@ CALresult Context::DoMatMul(void)
 	switch(expr->dType)
 	{
 		case TREAL:
-		{
-			iKernel = KernMatMulR_CS; break;			
-
-		}break;
-		
-		default:
-			return CAL_RESULT_NOT_SUPPORTED;
-	}	
-	
-	// get suited module
-	if(!modules[iKernel])
-		modules[iKernel] = new Module(hDev,ctx,kernels[iKernel]);	
-
-
-	module = modules[iKernel];
-	
-	if(module->err == CAL_RESULT_OK)
-	{	
-		constData[0] = (float)(result->physSize[1]);				// result width
-		constData[1] = (float)(result->pitch);						// alignment pitch for the result
-		constData[2] = 1.0f/constData[0];							// 1/result.width
-		constData[3] = (float)(result->physSize[0]/4)*constData[0];	// total number of 4x4 elements in the result
-		constData[4] = (float)(expr->args[0]->physSize[1]);			// lhs width in quadruples
-
-		err = module->constants[0]->SetData(&constData);		
-		if(err == CAL_RESULT_OK)
-		{
-			err = module->SetConstantsToContext();
-			if(err == CAL_RESULT_OK)
-			{				
-				pg.flags = 0;
-				pg.func = module->func;
-				pg.gridBlock.width = devAttribs->wavefrontSize;
-				pg.gridBlock.height = 1;
-				pg.gridBlock.depth  = 1;
-				pg.gridSize.width   = (((long)(constData[3]) + pg.gridBlock.width - 1) / pg.gridBlock.width);
-				pg.gridSize.height  = 1;
-				pg.gridSize.depth   = 1;
-
-				// run the program				
-				err = RunComputeShader(module,expr->args,result,&pg);
-
-				module->ReleaseConstantsFromContext();
-			}
-		}	
-	}
-	else
-	{
-		err = module->err;
-		delete module;
-		modules[iKernel] = NULL;
-	}
-*/
-	
-/*
-	Module* module;
-	CALprogramGrid pg;
-	float constData[8] = {0,0,0,0,0,0,0,0};
-
-	long iKernel;
-	
-	err = CAL_RESULT_OK;
-
-	switch(expr->dType)
-	{
-		case TREAL:
-		{
-			iKernel = KernMatMulR_CS; break;			
+		{			
+			iKernel = KernMatMul4x8x4by4x4x4R_CS; 		
+			break;			
 
 		}break;
 		
@@ -1404,18 +926,18 @@ CALresult Context::DoMatMul(void)
 		{
 			err = module->SetConstantsToContext();
 			if(err == CAL_RESULT_OK)
-			{				
+			{						
 				pg.flags = 0;
 				pg.func = module->func;
 				pg.gridBlock.width = devAttribs->wavefrontSize;
 				pg.gridBlock.height = 1;
 				pg.gridBlock.depth  = 1;
-				pg.gridSize.width   = (((long)(constData[3]) + pg.gridBlock.width - 1) / pg.gridBlock.width);
+				pg.gridSize.width   = ((result->physNumElements/8 + pg.gridBlock.width - 1) / pg.gridBlock.width);
 				pg.gridSize.height  = 1;
 				pg.gridSize.depth   = 1;
 
 				// run the program				
-				err = RunComputeShader(module,expr->args,result,&pg);
+				err = module->RunComputeShader(expr->args,result,&pg);
 
 				module->ReleaseConstantsFromContext();
 			}
@@ -1427,20 +949,15 @@ CALresult Context::DoMatMul(void)
 		delete module;
 		modules[iKernel] = NULL;
 	}
-*/
-	
-	err = DivideMatrixTo8Parts(expr->args[0]);
-	if(err != CAL_RESULT_OK)
-		return err;
 
-	err = DivideMatrixTo4Parts(expr->args[1]);
-	if(err != CAL_RESULT_OK)
-		return err;
+	return err;
+}
 
-/*
+CALresult Context::DoMatMult8x4by4x4(void)
+{
 	Module* module;
 	CALprogramGrid pg;
-	float constData[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+	float constData[8] = {0,0,0,0,0,0,0,0};
 
 	long iKernel;
 	
@@ -1449,8 +966,9 @@ CALresult Context::DoMatMul(void)
 	switch(expr->dType)
 	{
 		case TREAL:
-		{
-			iKernel = KernMatMulByPartsR_CS; break;			
+		{			
+			iKernel = KernMatMul8x4by4x4R_CS; 		
+			break;			
 
 		}break;
 		
@@ -1467,14 +985,182 @@ CALresult Context::DoMatMul(void)
 	
 	if(module->err == CAL_RESULT_OK)
 	{	
-		
+		constData[0] = (float)(result->physSize[1]);				// result width
+		constData[1] = (float)(result->pitch);						// alignment pitch for the result
+		constData[2] = 1.0f/constData[0];							// 1/result.width
+		constData[3] = (float)(result->physSize[0]/8)*constData[0];	// total number of 8x4 elements in the result
+		constData[4] = (float)(expr->args[0]->physSize[1]);			// lhs width in quadruples
 
+		err = module->constants[0]->SetData(&constData);		
+		if(err == CAL_RESULT_OK)
+		{
+			err = module->SetConstantsToContext();
+			if(err == CAL_RESULT_OK)
+			{						
+				pg.flags = 0;
+				pg.func = module->func;
+				pg.gridBlock.width = devAttribs->wavefrontSize;
+				pg.gridBlock.height = 1;
+				pg.gridBlock.depth  = 1;
+				pg.gridSize.width   = ((result->physNumElements/8 + pg.gridBlock.width - 1) / pg.gridBlock.width);
+				pg.gridSize.height  = 1;
+				pg.gridSize.depth   = 1;
+
+				// run the program				
+				err = module->RunComputeShader(expr->args,result,&pg);
+
+				module->ReleaseConstantsFromContext();
+			}
+		}	
+	}
+	else
+	{
+		err = module->err;
+		delete module;
+		modules[iKernel] = NULL;
+	}
+
+	return err;
+}
+
+CALresult Context::DoMatMult4x4by4x4(void)
+{
+	Module* module;	
+	CALprogramGrid pg;
+	float constData[8] = {0,0,0,0,0,0,0,0};
+
+	long iKernel;
+	
+	err = CAL_RESULT_OK;
+
+	switch(expr->dType)
+	{
+		case TREAL:
+		{			
+			iKernel = KernMatMul4x4by4x4R_CS;
+			break;			
+
+		}break;
+		
+		default:
+			return CAL_RESULT_NOT_SUPPORTED;
+	}	
+	
+	// get suited module
+	if(!modules[iKernel])
+		modules[iKernel] = new Module(hDev,ctx,kernels[iKernel]);	
+
+	module = modules[iKernel];
+	
+	if(module->err == CAL_RESULT_OK)
+	{	
+		constData[0] = (float)(result->physSize[1]);				// result width
+		constData[1] = (float)(result->pitch);						// alignment pitch for the result
+		constData[2] = 1.0f/constData[0];							// 1/result.width
+		constData[3] = (float)(result->physSize[0]/4)*constData[0];	// total number of 8x4 elements in the result
+		constData[4] = (float)(expr->args[0]->physSize[1]);			// lhs width in quadruples
+
+		err = module->constants[0]->SetData(&constData);		
+		if(err == CAL_RESULT_OK)
+		{
+			err = module->SetConstantsToContext();
+			if(err == CAL_RESULT_OK)
+			{					
+				pg.flags = 0;
+				pg.func = module->func;
+				pg.gridBlock.width = devAttribs->wavefrontSize;
+				pg.gridBlock.height = 1;
+				pg.gridBlock.depth  = 1;
+				pg.gridSize.width   = ((result->physNumElements/4 + pg.gridBlock.width - 1) / pg.gridBlock.width);
+				pg.gridSize.height  = 1;
+				pg.gridSize.depth   = 1;
+	
+				// run the program				
+				err = module->RunComputeShader(expr->args,result,&pg);				
+
+				module->ReleaseConstantsFromContext();
+			}
+		}	
+	}
+	else
+	{
+		err = module->err;
+		delete module;
+		modules[iKernel] = NULL;
+	}
+
+	return err;
+}
+
+/*
+CALresult Context::DoMatMult8x4by4x4(void)
+{
+	Module* module;
+	CALprogramGrid pg;
+	float constData[8] = {0,0,0,0,0,0,0,0};
+	long i, iKernel;
+	Array* arrs[12];
+
+	Array** parts4 = NULL;
+	Array** parts8 = NULL;
+
+	err = CAL_RESULT_OK;
+
+	// divide arrays to parts for efficiently cached computation
+	err = DivideMatrixTo4Parts(expr->args[1],&parts4);
+	if(err != CAL_RESULT_OK)
+		return err;
+
+	err = DivideMatrixTo8Parts(expr->args[0],&parts8);
+	if(err != CAL_RESULT_OK)
+		return err;		
+
+	for(i = 0; i < 8; i++)
+		arrs[i] = parts8[i];
+
+	for(i = 0; i < 4; i++)
+		arrs[i+8] = parts4[i];
+
+		
+	switch(expr->dType)
+	{
+		case TREAL:
+		{
+			iKernel = KernMatMulByParts4x8x4by4x4x4R_CS; break;			
+
+		}break;
+		
+		default:	
+		{
+			for(i = 0; i < 12; i++)
+				delete arrs[i];
+
+			return CAL_RESULT_NOT_SUPPORTED;		
+		}
+	}	
+	
+	// get suited module
+	if(!modules[iKernel])
+		modules[iKernel] = new Module(hDev,ctx,kernels[iKernel]);	
+
+
+	module = modules[iKernel];
+	
+	if(module->err == CAL_RESULT_OK)
+	{	
+		// set kernel constants		
+		constData[0] = (float)(result->physSize[1]);				// result width
+		constData[1] = (float)(result->pitch);						// alignment pitch for the result
+		constData[2] = 1.0f/constData[0];							// 1/result.width
+		constData[3] = (float)(result->physSize[0]/4)*constData[0];	// total number of 4x4 elements in the result
+		constData[4] = (float)(expr->args[0]->physSize[1]);			// lhs width in quadruples
+		
 		err = module->constants[0]->SetData(&constData);
-		err = module->constants[1]->SetData(&constData);
 
 		if(err == CAL_RESULT_OK)
 		{
 			err = module->SetConstantsToContext();
+
 			if(err == CAL_RESULT_OK)
 			{				
 				pg.flags = 0;
@@ -1482,12 +1168,12 @@ CALresult Context::DoMatMul(void)
 				pg.gridBlock.width = devAttribs->wavefrontSize;
 				pg.gridBlock.height = 1;
 				pg.gridBlock.depth  = 1;
-				pg.gridSize.width   = ((result-> + pg.gridBlock.width - 1) / pg.gridBlock.width);
+				pg.gridSize.width   = ((result->physNumElements/8  + pg.gridBlock.width - 1) / pg.gridBlock.width);
 				pg.gridSize.height  = 1;
 				pg.gridSize.depth   = 1;
 
-				// run the program				
-				err = RunComputeShader(module,expr->args,result,&pg);
+				// run the program
+				err = module->RunComputeShader(arrs,result,&pg);
 
 				module->ReleaseConstantsFromContext();
 			}
@@ -1500,347 +1186,10 @@ CALresult Context::DoMatMul(void)
 		modules[iKernel] = NULL;
 	}
 
-	// Setup the constants for the kernel
-    data[bStop].f_data[0] = 8.f / Info.Height;   
-    data[bStop].f_data[1] = 4.f / Info.Width;
-    data[bStop].f_data[2] = 4.f / Info.Height;   
-    data[bStop].f_data[3] = 0.f;
+	for(i = 0; i < 12; i++)
+		delete arrs[i];
 
-    data[bStop].f_data[4] = static_cast<CALfloat>(Info.Width / (UNROLL_FACTOR));
-
-    data[bStop+1].i_data[0] = Info.Height / bPartsNum;
-    data[bStop+1].i_data[1] = data[bStop+1].i_data[0] * aPartsNum;
-    data[bStop+1].i_data[2] = Info.Width * data[bStop+1].i_data[0];
-    data[bStop+1].i_data[3] = (Info.Width + Info.Height) * data[bStop+1].i_data[0];
-
-    for (CALint x = 0; x < 8; ++x)
-    {
-        data[bStop+1].i_data[x+4] = (x * data[bStop+1].i_data[0]);
-    }
-    data[bStop+1].i_data[12] = Info.Height / bPartsNum;
+	return err;
+}
 */
-	
-	return err;
-}
 
-// divide a matrix to 4 parts
-CALresult Context::DivideMatrixTo4Parts(Array* arr)
-{
-	Module* module;
-	CALdomain domain;
-	float constData[4];
-	long i, iKernel;
-	long size[2];	
-	
-	err = CAL_RESULT_OK;
-
-	_ASSERT(arr->subArrs == NULL);
-	
-	// array size for each part
-	size[0] = arr->size[0]/4;
-	size[1] = arr->size[1];
-
-	// first create sub arrays
-	arr->subArrs = new Array*[4];	
-	for(i = 0; i < 3; i++)	
-		arr->subArrs[i] = new Array(hDev,devInfo,devAttribs,arr->arrID,arr->dType,2,&size[0]);
-	// account that array height can be not multiple of 4	
-	size[0] = arr->size[0] - 3*(arr->size[0]/4);
-	arr->subArrs[3] = new Array(hDev,devInfo,devAttribs,arr->arrID,arr->dType,2,&size[0]);		
-	
-	// allocate arrays
-	for(i = 0; (i < 4) && (err == CAL_RESULT_OK); i++)	
-		err = arr->subArrs[i]->AllocateLocal(0);
-
-	if(err != CAL_RESULT_OK)
-	{
-		for(i = 0; i < 4; i++)
-			delete arr->subArrs[i];
-		
-		delete arr->subArrs;
-		arr->subArrs = NULL;
-
-		return err;
-	}
-		
-	iKernel = KernDivideMatrixTo4Parts_PS;
-
-	// get suited module
-	if(!modules[iKernel])
-		modules[iKernel] = new Module(hDev,ctx,kernels[iKernel]);
-
-	module = modules[iKernel];
-	
-	if(module->err == CAL_RESULT_OK)
-	{	
-		constData[0] = (float)(arr->physSize[0]/4);	// matrix height/4		
-		constData[1] = 4.0f*constData[0];			// 4*int(matrix height/4)
-
-		err = module->constants[0]->SetData(&constData);		
-		if(err == CAL_RESULT_OK)
-		{
-			err = module->SetConstantsToContext();
-			if(err == CAL_RESULT_OK)
-			{
-				// set the domain of execution
-				domain.x = 0;
-				domain.y = 0;		
-				domain.width = arr->physSize[1];
-				domain.height = size[0];
-
-				// run the program				
-				err = RunPixelShader(module,&arr,arr->subArrs,NULL,&domain);
-
-				if(err == CAL_RESULT_OK)				
-					arr->nSubArrs = 4;				
-				else
-				{
-					for(i = 0; i < 4; i++)
-						delete arr->subArrs[i];
-		
-					delete arr->subArrs;
-					arr->subArrs = NULL;
-				}
-
-				module->ReleaseConstantsFromContext();
-			}
-		}	
-	}
-	else
-	{
-		err = module->err;
-		delete module;
-		modules[iKernel] = NULL;
-	}
-	
-	return err;
-}
-
-// divide a matrix to 8 parts
-CALresult Context::DivideMatrixTo8Parts(Array* arr)
-{
-	Module* module;
-	CALdomain domain;
-	float constData[4];
-	long i, iKernel;
-	long size[2];	
-	
-	err = CAL_RESULT_OK;
-
-	_ASSERT(arr->subArrs == NULL);
-	
-	// array size for each part
-	size[0] = arr->size[0]/8;
-	size[1] = arr->size[1];
-
-	// first create sub arrays
-	arr->subArrs = new Array*[8];	
-	for(i = 0; i < 7; i++)	
-		arr->subArrs[i] = new Array(hDev,devInfo,devAttribs,arr->arrID,arr->dType,2,&size[0]);
-	// account that array height can be not multiple of 8
-	size[0] = arr->size[0] - 7*(arr->size[0]/8);
-	arr->subArrs[7] = new Array(hDev,devInfo,devAttribs,arr->arrID,arr->dType,2,&size[0]);		
-	
-	// allocate arrays
-	for(i = 0; (i < 8) && (err == CAL_RESULT_OK); i++)	
-		err = arr->subArrs[i]->AllocateLocal(0);
-
-	if(err != CAL_RESULT_OK)
-	{
-		for(i = 0; i < 8; i++)
-			delete arr->subArrs[i];
-		
-		delete arr->subArrs;
-		arr->subArrs = NULL;
-
-		return err;
-	}
-	
-	iKernel = KernDivideMatrixTo8Parts_PS;
-
-	// get suited module
-	if(!modules[iKernel])
-		modules[iKernel] = new Module(hDev,ctx,kernels[iKernel]);
-
-	module = modules[iKernel];
-	
-	if(module->err == CAL_RESULT_OK)
-	{	
-		constData[0] = (float)(arr->physSize[0]/8);	// matrix height/8		
-		constData[1] = 8.0f*constData[0];			// 8*int(matrix height/8)
-
-		err = module->constants[0]->SetData(&constData);		
-		if(err == CAL_RESULT_OK)
-		{
-			err = module->SetConstantsToContext();
-			if(err == CAL_RESULT_OK)
-			{
-				// set the domain of execution
-				domain.x = 0;
-				domain.y = 0;		
-				domain.width = arr->physSize[1];
-				domain.height = size[0];
-
-				// run the program				
-				err = RunPixelShader(module,&arr,arr->subArrs,NULL,&domain);
-
-				if(err == CAL_RESULT_OK)				
-					arr->nSubArrs = 8;				
-				else
-				{
-					for(i = 0; i < 8; i++)
-						delete arr->subArrs[i];
-		
-					delete arr->subArrs;
-					arr->subArrs = NULL;
-				}
-
-				module->ReleaseConstantsFromContext();
-			}
-		}	
-	}
-	else
-	{
-		err = module->err;
-		delete module;
-		modules[iKernel] = NULL;
-	}
-	
-	return err;
-}
-
-// gather a matrix from its 4 sub parts
-CALresult Context::GatherMatrixFrom4Parts(Array* arr)
-{
-	Module* module;
-	CALdomain domain;
-	float constData[4];
-	long i, iKernel;	
-	
-	err = CAL_RESULT_OK;
-
-	_ASSERT(arr->subArrs != NULL);
-	_ASSERT(arr->localRes && arr->localIsGlobalBuf);
-			
-	iKernel = KernGatherMatrixFrom4Parts_PS;
-
-	// get suited module
-	if(!modules[iKernel])
-		modules[iKernel] = new Module(hDev,ctx,kernels[iKernel]);
-
-	module = modules[iKernel];
-	
-	if(module->err == CAL_RESULT_OK)
-	{	
-		constData[0] = (float)(arr->physSize[0]/4);	// floor(matrix height/4)
-		constData[1] = 4.0f*constData[0];			// 4*floor(matrix height/4)
-		constData[2] = (float)(arr->pitch);					// alignment pitch
-
-		err = module->constants[0]->SetData(&constData);		
-		if(err == CAL_RESULT_OK)
-		{
-			err = module->SetConstantsToContext();
-			if(err == CAL_RESULT_OK)
-			{
-				// set the domain of execution
-				domain.x = 0;
-				domain.y = 0;		
-				domain.width = arr->physSize[1];
-				domain.height = arr->subArrs[3]->size[0];
-
-				// run the program				
-				err = RunPixelShader(module,arr->subArrs,NULL,arr,&domain);
-
-				if(err == CAL_RESULT_OK)
-				{
-					// free sub arrays
-					for(i = 0; i < 4; i++)
-						delete arr->subArrs[i];
-		
-					delete arr->subArrs;
-					arr->subArrs = NULL;
-
-					arr->nSubArrs = 0;										
-				}				
-
-				module->ReleaseConstantsFromContext();
-			}
-		}	
-	}
-	else
-	{
-		err = module->err;
-		delete module;
-		modules[iKernel] = NULL;
-	}
-	
-	return err;
-}
-
-// gather a matrix from its 8 sub parts
-CALresult Context::GatherMatrixFrom8Parts(Array* arr)
-{
-	Module* module;
-	CALdomain domain;
-	float constData[4];
-	long i, iKernel;	
-	
-	err = CAL_RESULT_OK;
-
-	_ASSERT(arr->subArrs != NULL);
-	_ASSERT(arr->localRes && arr->localIsGlobalBuf);	
-			
-	iKernel = KernGatherMatrixFrom8Parts_PS;
-
-	// get suited module
-	if(!modules[iKernel])
-		modules[iKernel] = new Module(hDev,ctx,kernels[iKernel]);
-
-	module = modules[iKernel];
-	
-	if(module->err == CAL_RESULT_OK)
-	{	
-		constData[0] = (float)(arr->physSize[0]/8);	// floor(matrix height/8)
-		constData[1] = 8.0f*constData[0];			// 8*floor(matrix height/8)
-		constData[2] = (float)(arr->pitch);			// alignment pitch
-
-		err = module->constants[0]->SetData(&constData);		
-		if(err == CAL_RESULT_OK)
-		{
-			err = module->SetConstantsToContext();
-			if(err == CAL_RESULT_OK)
-			{
-				// set the domain of execution
-				domain.x = 0;
-				domain.y = 0;		
-				domain.width = arr->physSize[1];
-				domain.height = arr->subArrs[7]->size[0];
-
-				// run the program				
-				err = RunPixelShader(module,arr->subArrs,NULL,arr,&domain);
-
-				if(err == CAL_RESULT_OK)
-				{
-					// free sub arrays
-					for(i = 0; i < 8; i++)
-						delete arr->subArrs[i];
-		
-					delete arr->subArrs;
-					arr->subArrs = NULL;
-
-					arr->nSubArrs = 0;										
-				}				
-
-				module->ReleaseConstantsFromContext();
-			}
-		}	
-	}
-	else
-	{
-		err = module->err;
-		delete module;
-		modules[iKernel] = NULL;
-	}
-	
-	return err;
-}

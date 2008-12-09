@@ -71,47 +71,49 @@ Kernel::Kernel(long iKernel, CALtarget target)
 			constSizes = new long[1]; constSizes[0] = 1;
 			constFormats = new CALformat[1]; constFormats[0] = CAL_FORMAT_FLOAT_4;
 			break;		
-
-		case KernMatMulR_PS: 
-			kernelStr = kernelMatMulR_PS; nInputs = 2; nOutputs = 0; nConstants = 1; usesGlobalBuffer = TRUE;
-			constSizes = new long[1]; constSizes[0] = 1;
-			constFormats = new CALformat[1]; constFormats[0] = CAL_FORMAT_FLOAT_4;
-			break;	
-
+		
 		case KernDivideMatrixTo4Parts_PS:				
-			kernelStr = kernelDivideMatrixTo4Parts_PS; nInputs = 1; nOutputs = 4; nConstants = 1;
-			constSizes = new long[1]; constSizes[0] = 1;
-			constFormats = new CALformat[1]; constFormats[0] = CAL_FORMAT_FLOAT_4;
+			kernelStr = kernelDivideMatrixTo4Parts_PS; nInputs = 1; nOutputs = 4;
 			break;		
 
 		case KernDivideMatrixTo8Parts_PS:				
-			kernelStr = kernelDivideMatrixTo8Parts_PS; nInputs = 1; nOutputs = 8; nConstants = 1;
+			kernelStr = kernelDivideMatrixTo8Parts_PS; nInputs = 1; nOutputs = 8;
+			break;		
+
+		case KernMatMul4x8x4by4x4x4R_PS: 
+			kernelStr = kernelMatMul4x8x4by4x4x4R_CS; nInputs = 2; nOutputs = 0; nConstants = 1; usesGlobalBuffer = TRUE;
+			constSizes = new long[1]; constSizes[0] = 1;
+			constFormats = new CALformat[1]; constFormats[0] = CAL_FORMAT_FLOAT_4;
+			break;
+		
+		case KernMatMul8x4by4x4R_PS: 
+			kernelStr = kernelMatMul8x4by4x4R_PS; nInputs = 2; nOutputs = 0; nConstants = 1; usesGlobalBuffer = TRUE;
 			constSizes = new long[1]; constSizes[0] = 1;
 			constFormats = new CALformat[1]; constFormats[0] = CAL_FORMAT_FLOAT_4;
 			break;
 
-		case KernGatherMatrixFrom4Parts_PS:
-			kernelStr = kernelGatherMatrixFrom4Parts_PS; nInputs = 4; nOutputs = 0; nConstants = 1; usesGlobalBuffer = TRUE;
+		case KernMatMul4x4by4x4R_PS: 
+			kernelStr = kernelMatMul4x4by4x4R_CS; nInputs = 2; nOutputs = 0; nConstants = 1; usesGlobalBuffer = TRUE;
 			constSizes = new long[1]; constSizes[0] = 1;
 			constFormats = new CALformat[1]; constFormats[0] = CAL_FORMAT_FLOAT_4;
 			break;
 
-		case KernGatherMatrixFrom8Parts_PS:
-			kernelStr = kernelGatherMatrixFrom8Parts_PS; nInputs = 8; nOutputs = 0; nConstants = 1; usesGlobalBuffer = TRUE;
-			constSizes = new long[1]; constSizes[0] = 1;
+		case KernMatMul4x8x4by4x4x4R_CS: 
+			kernelStr = kernelMatMul4x8x4by4x4x4R_CS; nInputs = 2; nOutputs = 0; nConstants = 1; usesGlobalBuffer = TRUE;
+			constSizes = new long[1]; constSizes[0] = 2;
 			constFormats = new CALformat[1]; constFormats[0] = CAL_FORMAT_FLOAT_4;
-			break;
+			break;		
 
-		case KernMatMulR_CS: 
-			kernelStr = kernelMatMulR_CS; nInputs = 2; nOutputs = 0; nConstants = 1; usesGlobalBuffer = TRUE;
+		case KernMatMul8x4by4x4R_CS: 
+			kernelStr = kernelMatMul8x4by4x4R_CS; nInputs = 2; nOutputs = 0; nConstants = 1; usesGlobalBuffer = TRUE;
 			constSizes = new long[1]; constSizes[0] = 2;
 			constFormats = new CALformat[1]; constFormats[0] = CAL_FORMAT_FLOAT_4;
 			break;
 
-		case KernMatMulByPartsR_CS:
-			kernelStr = kernelMatMulByPartsR_CS; nInputs = 12; nOutputs = 0; nConstants = 2; usesGlobalBuffer = TRUE;
-			constSizes = new long[2]; constSizes[0] = 2; constSizes[1] = 4;
-			constFormats = new CALformat[2]; constFormats[0] = CAL_FORMAT_FLOAT_4; constFormats[1] = CAL_FORMAT_FLOAT_4;
+		case KernMatMul4x4by4x4R_CS: 
+			kernelStr = kernelMatMul4x4by4x4R_CS; nInputs = 2; nOutputs = 0; nConstants = 1; usesGlobalBuffer = TRUE;
+			constSizes = new long[1]; constSizes[0] = 2;
+			constFormats = new CALformat[1]; constFormats[0] = CAL_FORMAT_FLOAT_4;
 			break;
 
 		default:

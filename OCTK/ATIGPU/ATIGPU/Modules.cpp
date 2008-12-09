@@ -168,6 +168,166 @@ void Module::ReleaseConstantsFromContext(void)
 	}
 }
 
+CALresult Module::RunPixelShader(Array** inputs, Array** outputs, Array* globalBuffer, CALdomain* domain)
+{
+	long i;
+	CALmem* inpMem;
+	CALmem* outMem;	
+	CALmem gbufMem;
+	CALevent ev;
+
+	err = CAL_RESULT_OK;
+
+	inpMem = new CALmem[nInputs];
+	outMem = new CALmem[nOutputs];
+	FillMemory(inpMem,nInputs*sizeof(CALmem),0);
+	FillMemory(outMem,nOutputs*sizeof(CALmem),0);
+	gbufMem = 0;
+
+	/*
+		Set inputs
+	*/
+	for(i = 0; (err == CAL_RESULT_OK) && (i < nInputs); i++)
+		err = inputs[i]->GetNamedLocalMem(ctx,inputNames[i],&inpMem[i]);
+
+	if(err != CAL_RESULT_OK)
+	{
+		// release allocated resources
+		for(i = i-1; i >= 0; i--)		
+			calCtxReleaseMem(ctx,inpMem[i]);
+
+		delete inpMem;
+		delete outMem;
+		return err;
+	}
+
+	/*
+		Set outputs
+	*/
+	for(i = 0; (err == CAL_RESULT_OK) && (i < nOutputs); i++)
+		err = outputs[i]->GetNamedLocalMem(ctx,outputNames[i],&outMem[i]);
+	
+	if(err != CAL_RESULT_OK)
+	{
+		// release allocated resources
+		for(i = i-1; i >= 0; i--)		
+			calCtxReleaseMem(ctx,outMem[i]);
+
+		for(i = 0; i < nInputs; i++)
+			calCtxReleaseMem(ctx,inpMem[i]);
+
+		delete inpMem;
+		delete outMem;
+		return err;
+	}
+
+	/*
+		Set global buffer
+	*/	
+	if(globalBuffer)
+	{
+		err = globalBuffer->GetNamedLocalMem(ctx,gbufName,&gbufMem);
+
+		if(err != CAL_RESULT_OK)
+		{		
+			// release allocated resources
+			for(i = 0; i < nInputs; i++)
+				calCtxReleaseMem(ctx,inpMem[i]);
+	
+			for(i = 0; i < nOutputs; i++)
+				calCtxReleaseMem(ctx,outMem[i]);
+	
+			delete inpMem;
+			delete outMem;
+			return err;
+		}
+	}
+
+	// run the kernel
+	err = calCtxRunProgram(&ev,ctx,func,domain);
+	if(err == CAL_RESULT_OK)
+		while((err = calCtxIsEventDone(ctx,ev)) == CAL_RESULT_PENDING);
+
+	// release allocated resources
+	if(globalBuffer)
+		calCtxReleaseMem(ctx,gbufMem);
+
+	for(i = 0; i < nInputs; i++)
+		calCtxReleaseMem(ctx,inpMem[i]);
+
+	for(i = 0; i < nOutputs; i++)
+		calCtxReleaseMem(ctx,outMem[i]);
+
+	delete inpMem;
+	delete outMem;
+
+	return err;
+}
+
+CALresult Module::RunComputeShader(Array** inputs, Array* globalBuffer, CALprogramGrid* programGrid)
+{	
+	long i;
+	CALmem* inpMem;	
+	CALmem gbufMem;
+	CALevent ev;
+
+	err = CAL_RESULT_OK;
+
+	inpMem = new CALmem[nInputs];	
+	FillMemory(inpMem,nInputs*sizeof(CALmem),0);	
+	gbufMem = 0;
+
+	/*
+		Set inputs
+	*/
+	for(i = 0; (err == CAL_RESULT_OK) && (i < nInputs); i++)
+		err = inputs[i]->GetNamedLocalMem(ctx,inputNames[i],&inpMem[i]);
+
+	if(err != CAL_RESULT_OK)
+	{
+		// release allocated resources
+		for(i = i-1; i >= 0; i--)		
+			calCtxReleaseMem(ctx,inpMem[i]);
+
+		delete inpMem;		
+		return err;
+	}	
+
+	/*
+		Set global buffer
+	*/	
+	if(globalBuffer)
+	{
+		err = globalBuffer->GetNamedLocalMem(ctx,gbufName,&gbufMem);
+
+		if(err != CAL_RESULT_OK)
+		{		
+			// release allocated resources
+			for(i = 0; i < nInputs; i++)
+				calCtxReleaseMem(ctx,inpMem[i]);
+				
+			delete inpMem;	
+			return err;
+		}
+	}
+
+	// run the program
+	err = calCtxRunProgramGrid(&ev,ctx,programGrid);
+	if(err == CAL_RESULT_OK)
+		while((err = calCtxIsEventDone(ctx,ev)) == CAL_RESULT_PENDING);	
+
+	// release allocated resources
+	if(globalBuffer)
+		calCtxReleaseMem(ctx,gbufMem);
+
+	for( i = 0; i < nInputs; i++)
+		calCtxReleaseMem(ctx,inpMem[i]);	
+
+	delete inpMem;	
+
+	return err;	
+}
+
 ModulePool::ModulePool(void)
 {
 	err = CAL_RESULT_OK;

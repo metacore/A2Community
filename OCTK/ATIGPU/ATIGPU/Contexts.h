@@ -53,8 +53,6 @@ public:
 	CALresult DoComputation(void);
 	// perform assignment of array identity
 	CALresult DoIdentic(void);	
-	// Run a pixel shader program
-	CALresult RunPixelShader(Module* module, Array** inputs, Array** outputs, Array* globalBuffer, CALdomain* domain);
 	// performs an elementwise operation
 	CALresult DoElementwise(void);
 	// perform matrix vector multiply operation
@@ -83,21 +81,20 @@ public:
 
 	BOOL counterExtSupported;	// TRUE when counter extension is supported	
 	// allocate local memory of an array with freeing space if necessary
-	CALresult AllocateArrayLocal(Array* arr, ArrayPool* arrs, CALuint flags);
-	// Run a compute shader program
-	CALresult RunComputeShader(Module* module, Array** inputs, Array* globalBuffer, CALprogramGrid* programGrid);
+	CALresult AllocateArrayLocal(Array* arr, ArrayPool* arrs, CALuint flags);	
 	// setup a computation in a common way
 	CALresult SetCommon(ArrayExpression* expr, Array* result, ArrayPool* arrs, BOOL overwritenResult, BOOL resultIsGlobalBuf);	
 	// perform matrix matrix multiply operation
 	CALresult DoMatMul(void);
+
 	// divide a matrix to 4 parts
-	CALresult DivideMatrixTo4Parts(Array* arr);
+	CALresult DivideMatrixTo4Parts(Array* arr, Array*** parts);
 	// divide a matrix to 8 parts
-	CALresult DivideMatrixTo8Parts(Array* arr);
-	// gather a matrix from its 4 sub parts
-	CALresult GatherMatrixFrom4Parts(Array* arr);
-	// gather a matrix from its 8 sub parts
-	CALresult GatherMatrixFrom8Parts(Array* arr);
+	CALresult DivideMatrixTo8Parts(Array* arr, Array*** parts);	
+
+	CALresult DoMatMult4x8x4by4x4x4(void);
+	CALresult DoMatMult8x4by4x4(void);
+	CALresult DoMatMult4x4by4x4(void);
 };
 
 class ContextPool :

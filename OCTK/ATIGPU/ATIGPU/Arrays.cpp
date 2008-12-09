@@ -3,12 +3,9 @@
 #include "Common.h"
 
 Array::Array(CALdevice hDev, CALdeviceinfo* devInfo, CALdeviceattribs* devAttribs, long arrID, long dType, long nDims, long* size)
-: subArrs(NULL)
 {
 	long i;	
-
-	subArrs = NULL;
-	nSubArrs = 0;
+	
 	cpuData = NULL;
 	remoteRes = 0;
 	localRes = 0;
