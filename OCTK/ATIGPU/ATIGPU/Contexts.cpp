@@ -714,8 +714,7 @@ CALresult Context::SetCommon(ArrayExpression* expr, Array* result, ArrayPool* ar
 
 // perform matrix matrix multiply operation
 CALresult Context::DoMatMul(void)
-{	
-/*
+{
 	if( (expr->args[0]->physSize[0] >= 8) && !(expr->args[1]->physSize[0] % 16) )
 	{
 		if( !(expr->args[0]->physSize[0] % 8) )
@@ -739,8 +738,8 @@ CALresult Context::DoMatMul(void)
 	}
 	else
 		err = CAL_RESULT_NOT_SUPPORTED;	
-*/
-	err = DoMatMultByParts4x4x4by4x4x4();
+
+	//err = DoMatMultByParts4x4x4by4x4x4();
 
 	return err;
 }
@@ -1202,7 +1201,7 @@ CALresult Context::DoMatMultByParts4x4x4by4x4x4(void)
 	Array** partsA = NULL;
 	Array** partsB = NULL;
 	Array** partsC = NULL;
-	Array** inputs;
+	Array* inputs[8];
 	long i, size[2];
 
 	Module* module;
@@ -1289,7 +1288,7 @@ CALresult Context::DoMatMultByParts4x4x4by4x4x4(void)
 				domain.height = result->physSize[0]/4;
 
 				// run the program				
-				err = module->RunPixelShader(inputs,partsC,NULL,&domain);
+				err = module->RunPixelShader(&inputs[0],partsC,NULL,&domain);
 
 				module->ReleaseConstantsFromContext();
 			}
