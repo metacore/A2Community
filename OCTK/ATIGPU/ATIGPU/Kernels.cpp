@@ -122,6 +122,18 @@ Kernel::Kernel(long iKernel, CALtarget target)
 			constFormats = new CALformat[1]; constFormats[0] = CAL_FORMAT_FLOAT_4;
 			break;
 
+		case KernMatMulByParts4x8x4by4x4x4R_PS: 
+			kernelStr = kernelMatMulByParts4x8x4by4x4x4R1_PS; nInputs = 16; nOutputs = 8; nConstants = 1;
+			constSizes = new long[1]; constSizes[0] = 1;
+			constFormats = new CALformat[1]; constFormats[0] = CAL_FORMAT_FLOAT_4;
+			break;
+
+		case KernMatMulByParts2x8x4by2x4x4R_PS: 
+			kernelStr = kernelMatMulByParts2x8x4by2x4x4R_PS; nInputs = 16; nOutputs = 8; nConstants = 1;
+			constSizes = new long[1]; constSizes[0] = 1;
+			constFormats = new CALformat[1]; constFormats[0] = CAL_FORMAT_FLOAT_4;
+			break;
+
 		default:
 			return;
 	}

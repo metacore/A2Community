@@ -715,6 +715,7 @@ CALresult Context::SetCommon(ArrayExpression* expr, Array* result, ArrayPool* ar
 // perform matrix matrix multiply operation
 CALresult Context::DoMatMul(void)
 {
+/*
 	if( (expr->args[0]->physSize[0] >= 8) && !(expr->args[1]->physSize[0] % 16) )
 	{
 		if( !(expr->args[0]->physSize[0] % 8) )
@@ -738,8 +739,15 @@ CALresult Context::DoMatMul(void)
 	}
 	else
 		err = CAL_RESULT_NOT_SUPPORTED;	
+*/
+
+	//err = DoMatMult4x8x4by4x4x4();
+	//err = DoMatMult8x4by4x4();
+	//err = DoMatMult4x4by4x4();
 
 	//err = DoMatMultByParts4x4x4by4x4x4();
+	err = DoMatMultByParts4x8x4by4x4x4();
+	//err = DoMatMultByParts2x8x4by2x4x4();
 
 	return err;
 }
@@ -1302,6 +1310,238 @@ CALresult Context::DoMatMultByParts4x4x4by4x4x4(void)
 	}
 
 	for(i = 0; i < 4; i++)
+	{
+		delete partsA[i];
+		delete partsB[i];
+		delete partsC[i];
+	}
+
+	return err;
+}
+
+CALresult Context::DoMatMultByParts4x8x4by4x4x4(void)
+{	
+	Array** partsA = NULL;
+	Array** partsB = NULL;
+	Array** partsC = NULL;
+	Array* inputs[16];
+	long i, size[2];
+
+	Module* module;
+	CALdomain domain;
+	float constData[4] = {0,0,0,0};
+
+	long iKernel;
+
+	err = CAL_RESULT_OK;
+			
+	switch(expr->dType)
+	{
+		case TREAL:
+		{
+			iKernel = KernMatMulByParts4x8x4by4x4x4R_PS; break;			
+
+		}break;
+		
+		default:
+			return CAL_RESULT_INVALID_PARAMETER;
+	}	
+
+	// divide arrays to parts for efficiently cached computation
+	err = DivideMatrixTo8Parts(expr->args[0],&partsA);
+	if(err != CAL_RESULT_OK)
+		return err;
+
+	err = DivideMatrixTo8Parts(expr->args[1],&partsB);
+	if(err != CAL_RESULT_OK)
+		return err;
+
+	// allocate result parts
+
+	// array size for each part
+	size[0] = result->size[0]/8;
+	size[1] = result->size[1];
+
+	partsC = new Array*[8];	
+	for(i = 0; i < 8; i++)	
+		partsC[i] = new Array(hDev,devInfo,devAttribs,result->arrID,result->dType,2,&size[0]);
+	
+	// allocate parts
+	for(i = 0; (i < 8) && (err == CAL_RESULT_OK); i++)	
+		err = partsC[i]->AllocateLocal(0);
+
+	if(err != CAL_RESULT_OK)
+	{
+		for(i = 0; i < 8; i++)
+		{
+			delete partsA[i];
+			delete partsB[i];
+			delete partsC[i];
+		}
+
+		return err;
+	}
+
+	for(i = 0; i < 8; i++)
+	{
+		inputs[i] = partsA[i];
+		inputs[i+8] = partsB[i];
+	}
+
+	// get suited module
+	if(!modules[iKernel])
+		modules[iKernel] = new Module(hDev,ctx,kernels[iKernel]);	
+
+	module = modules[iKernel];
+	
+	if(module->err == CAL_RESULT_OK)
+	{		
+		constData[0] = (float)(expr->args[0]->physSize[1]);	// matrix width		
+
+		err = module->constants[0]->SetData(&constData);		
+		if(err == CAL_RESULT_OK)
+		{
+			err = module->SetConstantsToContext();
+			if(err == CAL_RESULT_OK)
+			{
+				// set the domain of execution
+				domain.x = 0;
+				domain.y = 0;		
+				domain.width = result->physSize[1];
+				domain.height = result->physSize[0]/8;
+
+				// run the program				
+				err = module->RunPixelShader(&inputs[0],partsC,NULL,&domain);
+
+				module->ReleaseConstantsFromContext();
+			}
+		}		
+	}
+	else
+	{
+		err = module->err;
+		delete module;
+		modules[iKernel] = NULL;
+	}
+
+	for(i = 0; i < 8; i++)
+	{
+		delete partsA[i];
+		delete partsB[i];
+		delete partsC[i];
+	}
+
+	return err;
+}
+
+CALresult Context::DoMatMultByParts2x8x4by2x4x4(void)
+{	
+	Array** partsA = NULL;
+	Array** partsB = NULL;
+	Array** partsC = NULL;
+	Array* inputs[16];
+	long i, size[2];
+
+	Module* module;
+	CALdomain domain;
+	float constData[4] = {0,0,0,0};
+
+	long iKernel;
+
+	err = CAL_RESULT_OK;
+			
+	switch(expr->dType)
+	{
+		case TREAL:
+		{
+			iKernel = KernMatMulByParts2x8x4by2x4x4R_PS; break;			
+
+		}break;
+		
+		default:
+			return CAL_RESULT_INVALID_PARAMETER;
+	}	
+
+	// divide arrays to parts for efficiently cached computation
+	err = DivideMatrixTo8Parts(expr->args[0],&partsA);
+	if(err != CAL_RESULT_OK)
+		return err;
+
+	err = DivideMatrixTo8Parts(expr->args[1],&partsB);
+	if(err != CAL_RESULT_OK)
+		return err;
+
+	// allocate result parts
+
+	// array size for each part
+	size[0] = result->size[0]/8;
+	size[1] = result->size[1];
+
+	partsC = new Array*[8];	
+	for(i = 0; i < 8; i++)	
+		partsC[i] = new Array(hDev,devInfo,devAttribs,result->arrID,result->dType,2,&size[0]);
+	
+	// allocate parts
+	for(i = 0; (i < 8) && (err == CAL_RESULT_OK); i++)	
+		err = partsC[i]->AllocateLocal(0);
+
+	if(err != CAL_RESULT_OK)
+	{
+		for(i = 0; i < 8; i++)
+		{
+			delete partsA[i];
+			delete partsB[i];
+			delete partsC[i];
+		}
+
+		return err;
+	}
+
+	for(i = 0; i < 8; i++)
+	{
+		inputs[i] = partsA[i];
+		inputs[i+8] = partsB[i];
+	}
+
+	// get suited module
+	if(!modules[iKernel])
+		modules[iKernel] = new Module(hDev,ctx,kernels[iKernel]);	
+
+	module = modules[iKernel];
+	
+	if(module->err == CAL_RESULT_OK)
+	{		
+		constData[0] = (float)(expr->args[0]->physSize[1]);	// matrix width		
+
+		err = module->constants[0]->SetData(&constData);		
+		if(err == CAL_RESULT_OK)
+		{
+			err = module->SetConstantsToContext();
+			if(err == CAL_RESULT_OK)
+			{
+				// set the domain of execution
+				domain.x = 0;
+				domain.y = 0;		
+				domain.width = result->physSize[1];
+				domain.height = result->physSize[0]/8;
+
+				// run the program
+				//err = calCtxFlush(ctx);
+								
+				err = module->RunPixelShader(&inputs[0],partsC,NULL,&domain);				
+
+				module->ReleaseConstantsFromContext();
+			}
+		}		
+	}
+	else
+	{
+		err = module->err;
+		delete module;
+		modules[iKernel] = NULL;
+	}
+
+	for(i = 0; i < 8; i++)
 	{
 		delete partsA[i];
 		delete partsB[i];
