@@ -98,6 +98,8 @@ public:
 	CALresult DoMatMultByParts4x4x4by4x4x4(void);
 	CALresult DoMatMultByParts4x8x4by4x4x4(void);
 	CALresult DoMatMultByParts2x8x4by2x4x4(void);
+	// gather a matrix divided to 8 parts
+	CALresult GatherMatrixFrom8Parts(Array** parts, Array* arr);
 };
 
 class ContextPool :

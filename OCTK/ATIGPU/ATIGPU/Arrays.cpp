@@ -120,8 +120,10 @@ CALresult Array::AllocateLocal(CALuint flags)
 	else if(nLogicDims == 1)
 		err = calResAllocLocal2D(&localRes,hDev,physSize[0],1,dFormat,flags);
 
-	if(err == CAL_RESULT_OK)
+	if( (err == CAL_RESULT_OK) || (err == CAL_RESULT_WARNING) )
 	{
+		err = CAL_RESULT_OK;
+
 		if(flags && CAL_RESALLOC_GLOBAL_BUFFER) 
 			localIsGlobalBuf = TRUE; 
 		else

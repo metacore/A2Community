@@ -651,7 +651,7 @@ CALresult Context::SetCommon(ArrayExpression* expr, Array* result, ArrayPool* ar
 
 		// allocate result array if necessary			
 		if(!result->localRes)
-			err = AllocateArrayLocal(result,arrs,flags);
+			err = AllocateArrayLocal(result,arrs,flags);		
 	}
 	else
 	{
@@ -746,8 +746,8 @@ CALresult Context::DoMatMul(void)
 	//err = DoMatMult4x4by4x4();
 
 	//err = DoMatMultByParts4x4x4by4x4x4();
-	err = DoMatMultByParts4x8x4by4x4x4();
-	//err = DoMatMultByParts2x8x4by2x4x4();
+	//err = DoMatMultByParts4x8x4by4x4x4();
+	err = DoMatMultByParts2x8x4by2x4x4();
 
 	return err;
 }
@@ -1410,8 +1410,10 @@ CALresult Context::DoMatMultByParts4x8x4by4x4x4(void)
 				domain.width = result->physSize[1];
 				domain.height = result->physSize[0]/8;
 
-				// run the program				
+				// run the program		
+				double t = GetTickCount();
 				err = module->RunPixelShader(&inputs[0],partsC,NULL,&domain);
+				t = GetTickCount() - t;
 
 				module->ReleaseConstantsFromContext();
 			}
@@ -1423,6 +1425,10 @@ CALresult Context::DoMatMultByParts4x8x4by4x4x4(void)
 		delete module;
 		modules[iKernel] = NULL;
 	}
+
+
+//	if(err == CAL_RESULT_OK)
+//		err = GatherMatrixFrom8Parts(partsC,result);	
 
 	for(i = 0; i < 8; i++)
 	{
@@ -1524,11 +1530,10 @@ CALresult Context::DoMatMultByParts2x8x4by2x4x4(void)
 				domain.y = 0;		
 				domain.width = result->physSize[1];
 				domain.height = result->physSize[0]/8;
-
-				// run the program
-				//err = calCtxFlush(ctx);
 								
-				err = module->RunPixelShader(&inputs[0],partsC,NULL,&domain);				
+				double t = GetTickCount();
+				err = module->RunPixelShader(&inputs[0],partsC,NULL,&domain);
+				t = GetTickCount() - t;
 
 				module->ReleaseConstantsFromContext();
 			}
@@ -1541,11 +1546,66 @@ CALresult Context::DoMatMultByParts2x8x4by2x4x4(void)
 		modules[iKernel] = NULL;
 	}
 
+//	if(err == CAL_RESULT_OK)
+//		err = GatherMatrixFrom8Parts(partsC,result);	
+
 	for(i = 0; i < 8; i++)
 	{
 		delete partsA[i];
 		delete partsB[i];
 		delete partsC[i];
+	}
+
+	return err;
+}
+
+// gather a matrix divided to 8 parts
+CALresult Context::GatherMatrixFrom8Parts(Array** parts, Array* arr)
+{
+	Module* module;
+	CALdomain domain;
+	float constData[4] = {0,0,0,0};
+
+	long iKernel;
+	
+	err = CAL_RESULT_OK;
+	
+	iKernel = KernGatherMatrixFrom8Parts_PS;
+	
+	// get suited module
+	if(!modules[iKernel])
+		modules[iKernel] = new Module(hDev,ctx,kernels[iKernel]);	
+
+	module = modules[iKernel];
+	
+	if(module->err == CAL_RESULT_OK)
+	{		
+		constData[0] = (float)(result->pitch);	// alignment pitch of the result		
+
+		err = module->constants[0]->SetData(&constData);		
+		if(err == CAL_RESULT_OK)
+		{
+			err = module->SetConstantsToContext();
+			if(err == CAL_RESULT_OK)
+			{
+				// set the domain of execution
+				domain.x = 0;
+				domain.y = 0;		
+				domain.width = result->physSize[1];
+				domain.height = result->physSize[0];;
+
+				// run the program				
+				err = module->RunPixelShader(parts,NULL,result,&domain);
+
+				module->ReleaseConstantsFromContext();
+			}
+		}		
+	}
+	else
+	{
+		err = module->err;
+		delete module;
+		modules[iKernel] = NULL;
 	}
 
 	return err;

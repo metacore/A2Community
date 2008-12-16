@@ -54,6 +54,8 @@ KernMatMulByParts4x4x4by4x4x4R_PS,
 KernMatMulByParts4x8x4by4x4x4R_PS,
 KernMatMulByParts2x8x4by2x4x4R_PS,
 
+KernGatherMatrixFrom8Parts_PS,
+
 NKernels	// total number of kernels
 };
 
@@ -601,10 +603,14 @@ const char kernelMatMulByParts4x4x4by4x4x4R_PS[] =
 "add r3, r1, l1.0yzw\n"		// r3 := [x,3,4,5]
 
 "mov r2.0y00, cb0[0].x\n"	// r2.x is the loop counter, r2.y := A.width
+"sub r2.x, r2.x, l0.x\n"
 
 "whileloop\n"
-"    ge r2.z, r2.x, r2.y\n"	// while(loop counter < A.width)
-"    break_logicalnz r2.z\n"
+
+"	add r2.x, r2.x, l0.x\n"	// loop counter ++
+
+"   ge r2.z, r2.x, r2.y\n"	// while(loop counter < A.width)
+"   break_logicalnz r2.z\n"
 
 	// load 4 next 4x4 blocks of B
 "	sample_resource(4)_sampler(4) r10, r1.xy\n"
@@ -759,7 +765,6 @@ const char kernelMatMulByParts4x4x4by4x4x4R_PS[] =
 "	mad r42, r29.z, r24, r42\n"
 "	mad r37, r29.w, r25, r42\n"
 
-"	add r2.x, r2.x, l0.x\n"	// loop counter ++
 "endloop\n"
 
 // store the result
@@ -1180,10 +1185,14 @@ const char kernelMatMul4x8x4by4x4x4R_CS[] =
 "add r9.0yzw, r8.0yzw, l1.0yzw\n"	// r9 := [0,y+6,y+7,y+8]
 
 "mov r2.0y00, cb0[1].x\n"	// r2.x is the loop counter, r2.y := A.width
+"sub r2.x, r2.x, l0.x\n"
 
 "whileloop\n"
-"    ge r2.z, r2.x, r2.y\n"	// while(loop counter < width)
-"    break_logicalnz r2.z\n"
+
+"	add r2.x, r2.x, l0.x\n"	// loop counter ++
+
+"   ge r2.z, r2.x, r2.y\n"	// while(loop counter < width)
+"   break_logicalnz r2.z\n"
 
 	// load 4 next 4x4 blocks of B
 "	sample_resource(1)_sampler(1) r10, r1.xy\n"
@@ -1215,6 +1224,14 @@ const char kernelMatMul4x8x4by4x4x4R_CS[] =
 "	sample_resource(0)_sampler(0) r31, r8.xw\n"
 "	sample_resource(0)_sampler(0) r32, r9.xy\n"
 "	sample_resource(0)_sampler(0) r33, r9.xz\n"
+
+	// increment counters of B
+"	add r1, r1, l2\n"
+"	add r3, r3, l2\n"
+"	add r4, r4, l2\n"
+"	add r5, r5, l2\n"
+"	add r6, r6, l2\n"
+"	add r7, r7, l2\n"
 
 	// increment sample counters of A
 "	add r0.x, r0.x, r0.1\n"
@@ -1438,15 +1455,6 @@ const char kernelMatMul4x8x4by4x4x4R_CS[] =
 "	mad r42, r33.z, r24, r42\n"
 "	mad r41, r33.w, r25, r42\n"
 
-	// increment counters of B
-"	add r1, r1, l2\n"
-"	add r3, r3, l2\n"
-"	add r4, r4, l2\n"
-"	add r5, r5, l2\n"
-"	add r6, r6, l2\n"
-"	add r7, r7, l2\n"
-
-"	add r2.x, r2.x, l0.x\n"	// loop counter ++
 "endloop\n"
 
 // convert [x,y] index to equivalent linear index
@@ -2107,6 +2115,16 @@ const char kernelMatMulByParts4x8x4by4x4x4R1_PS[] =
 "il_ps_2_0\n"
 "dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__\n"
 "dcl_cb cb0[1]\n"	// [A.width,...]
+
+"dcl_output_generic o0\n"
+"dcl_output_generic o1\n"
+"dcl_output_generic o2\n"
+"dcl_output_generic o3\n"
+"dcl_output_generic o4\n"
+"dcl_output_generic o5\n"
+"dcl_output_generic o6\n"
+"dcl_output_generic o7\n"
+
 "dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
 "dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
 "dcl_resource_id(2)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
@@ -2120,19 +2138,23 @@ const char kernelMatMulByParts4x8x4by4x4x4R1_PS[] =
 "dcl_resource_id(9)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
 "dcl_resource_id(10)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
 "dcl_resource_id(11)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+
 "dcl_resource_id(12)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
 "dcl_resource_id(13)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
 "dcl_resource_id(14)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
 "dcl_resource_id(15)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
 
-"dcl_literal l0, 4.0f, 8.0f, 1.0f, 2.0f\n"
-"dcl_literal l1, 0.0f, 2.0f, 2.0f, 2.0f\n"
+"dcl_literal l0, 4.0f, 0.0f, 1.0f, 2.0f\n"
+"dcl_literal l1, 0.0f, 2.0f, 2.0f, 0.0f\n"
 
-// 2D index of first row in first block of A
-"flr r0.0y, vWinCoord0.y\n"				// [0,y] in the execution domain
+// initialize sample counters of A
+"add r0.0yzw, vWinCoord0.0y00, l0.00zw\n"	// r0 := [0,y,1,2]
+"sub r0, r0, l0.x0xx\n"						// account increment
+"add r3.xy, r0.wy00, r3.1000\n"
 
-// 2D index of first column of block of B
-"flr r1.x000, vWinCoord0.x\n"			// [x,0] in the B data
+// initialize sample counter of B
+"mov r1.x010, vWinCoord0.x\n"			// [x,0,1,...]
+"sub r1, r1, l1\n"
 
 // clear float4 accumulators for 8x4 * 4x4 matrix multiply result
 "mov r34, r34.0000\n"	
@@ -2144,51 +2166,54 @@ const char kernelMatMulByParts4x8x4by4x4x4R1_PS[] =
 "mov r40, r40.0000\n"
 "mov r41, r41.0000\n"
 
-// initialize sample counters for B
-"mov r1.zw,	l0\n"			// r1 := [x,0,1,2]
 
 "mov r2.0y00, cb0[0].x\n"	// r2.x is the loop counter, r2.y := A.width
+"sub r2.x, r2.x, l0.x\n"
 
 "whileloop\n"
-"    ge r2.z, r2.x, r2.y\n"	// while(loop counter < A.width)
-"    break_logicalnz r2.z\n"
 
-	// load 4 next 4x4 blocks of B
-"	sample_resource(8)_sampler(8) r10, r1.xy\n"
-"	sample_resource(9)_sampler(9) r11, r1.xy\n"
-"	sample_resource(10)_sampler(10) r12, r1.xy\n"
-"	sample_resource(11)_sampler(11) r13, r1.xy\n"
-
-"	sample_resource(12)_sampler(12) r14, r1.xy\n"
-"	sample_resource(13)_sampler(13) r15, r1.xy\n"
-"	sample_resource(14)_sampler(14) r16, r1.xy\n"
-"	sample_resource(15)_sampler(15) r17, r1.xy\n"
-
-"	sample_resource(8)_sampler(8) r18, r1.xz\n"
-"	sample_resource(9)_sampler(9) r19, r1.xz\n"
-"	sample_resource(10)_sampler(10) r20, r1.xz\n"
-"	sample_resource(11)_sampler(11) r21, r1.xz\n"
-
-"	sample_resource(12)_sampler(12) r22, r1.xz\n"
-"	sample_resource(13)_sampler(13) r23, r1.xz\n"
-"	sample_resource(14)_sampler(14) r24, r1.xz\n"
-"	sample_resource(15)_sampler(15) r25, r1.xz\n"
-
-	// load next 8x4 block of A
-"	sample_resource(0)_sampler(0) r26, r0.xy\n"
-"	sample_resource(1)_sampler(1) r27, r0.xy\n"
-"	sample_resource(2)_sampler(2) r28, r0.xy\n"
-"	sample_resource(3)_sampler(3) r29, r0.xy\n"
-"	sample_resource(4)_sampler(4) r30, r0.xy\n"
-"	sample_resource(5)_sampler(5) r31, r0.xy\n"
-"	sample_resource(6)_sampler(6) r32, r0.xy\n"
-"	sample_resource(7)_sampler(7) r33, r0.xy\n"
-
-	// increment counters of B
+	// increment sample counter of B
 "	add r1, r1, l1\n"
 
 	// increment sample counters of A
-"	add r0.x, r0.x, r0.1\n"
+"	add r0, r0, l0.x0xx\n"
+"	add r3.x, r3.x, l0.x\n"
+
+"	add r2.x, r2.x, l0.x\n"	// loop counter ++
+
+"   ge r2.z, r2.x, r2.y\n"	// while(loop counter < A.width)
+"   break_logicalnz r2.z\n"
+
+	// load 4 next 4x4 blocks of B
+"	sample_resource(8)_sampler(8) r10, r1.xy00\n"
+"	sample_resource(9)_sampler(9) r11, r1.xy00\n"
+"	sample_resource(10)_sampler(10) r12, r1.xy00\n"
+"	sample_resource(11)_sampler(11) r13, r1.xy00\n"
+
+"	sample_resource(8)_sampler(8) r18, r1.xz00\n"
+"	sample_resource(9)_sampler(9) r19, r1.xz00\n"
+"	sample_resource(10)_sampler(10) r20, r1.xz00\n"
+"	sample_resource(11)_sampler(11) r21, r1.xz00\n"
+
+"	sample_resource(12)_sampler(12) r14, r1.xy00\n"
+"	sample_resource(13)_sampler(13) r15, r1.xy00\n"
+"	sample_resource(14)_sampler(14) r16, r1.xy00\n"
+"	sample_resource(15)_sampler(15) r17, r1.xy00\n"
+
+"	sample_resource(12)_sampler(12) r22, r1.xz00\n"
+"	sample_resource(13)_sampler(13) r23, r1.xz00\n"
+"	sample_resource(14)_sampler(14) r24, r1.xz00\n"
+"	sample_resource(15)_sampler(15) r25, r1.xz00\n"
+
+	// load next 8x4 block of A
+"	sample_resource(0)_sampler(0) r26, r0.xy00\n"
+"	sample_resource(1)_sampler(1) r27, r0.xy00\n"
+"	sample_resource(2)_sampler(2) r28, r0.xy00\n"
+"	sample_resource(3)_sampler(3) r29, r0.xy00\n"
+"	sample_resource(4)_sampler(4) r30, r0.xy00\n"
+"	sample_resource(5)_sampler(5) r31, r0.xy00\n"
+"	sample_resource(6)_sampler(6) r32, r0.xy00\n"
+"	sample_resource(7)_sampler(7) r33, r0.xy00\n"
 
 	// compute Ablk * Bblk0
 
@@ -2234,17 +2259,14 @@ const char kernelMatMulByParts4x8x4by4x4x4R1_PS[] =
 "	mad r41, r33.w, r13, r42\n"
 
 	// load next 8x4 block of A
-"	sample_resource(0)_sampler(0) r26, r0.xy\n"
-"	sample_resource(1)_sampler(1) r27, r0.xy\n"
-"	sample_resource(2)_sampler(2) r28, r0.xy\n"
-"	sample_resource(3)_sampler(3) r29, r0.xy\n"
-"	sample_resource(4)_sampler(4) r30, r0.xy\n"
-"	sample_resource(5)_sampler(5) r31, r0.xy\n"
-"	sample_resource(6)_sampler(6) r32, r0.xy\n"
-"	sample_resource(7)_sampler(7) r33, r0.xy\n"
-
-	// increment sample counters of A
-"	add r0.x, r0.x, r0.1\n"
+"	sample_resource(0)_sampler(0) r26, r0.zy00\n"
+"	sample_resource(1)_sampler(1) r27, r0.zy00\n"
+"	sample_resource(2)_sampler(2) r28, r0.zy00\n"
+"	sample_resource(3)_sampler(3) r29, r0.zy00\n"
+"	sample_resource(4)_sampler(4) r30, r0.zy00\n"
+"	sample_resource(5)_sampler(5) r31, r0.zy00\n"
+"	sample_resource(6)_sampler(6) r32, r0.zy00\n"
+"	sample_resource(7)_sampler(7) r33, r0.zy00\n"
 
 	// compute Ablk * Bblk1
 
@@ -2290,17 +2312,14 @@ const char kernelMatMulByParts4x8x4by4x4x4R1_PS[] =
 "	mad r41, r33.w, r17, r42\n"
 
 	// load next 8x4 block of A
-"	sample_resource(0)_sampler(0) r26, r0.xy\n"
-"	sample_resource(1)_sampler(1) r27, r0.xy\n"
-"	sample_resource(2)_sampler(2) r28, r0.xy\n"
-"	sample_resource(3)_sampler(3) r29, r0.xy\n"
-"	sample_resource(4)_sampler(4) r30, r0.xy\n"
-"	sample_resource(5)_sampler(5) r31, r0.xy\n"
-"	sample_resource(6)_sampler(6) r32, r0.xy\n"
-"	sample_resource(7)_sampler(7) r33, r0.xy\n"
-
-	// increment sample counters of A
-"	add r0.x, r0.x, r0.1\n"
+"	sample_resource(0)_sampler(0) r26, r0.wy00\n"
+"	sample_resource(1)_sampler(1) r27, r0.wy00\n"
+"	sample_resource(2)_sampler(2) r28, r0.wy00\n"
+"	sample_resource(3)_sampler(3) r29, r0.wy00\n"
+"	sample_resource(4)_sampler(4) r30, r0.wy00\n"
+"	sample_resource(5)_sampler(5) r31, r0.wy00\n"
+"	sample_resource(6)_sampler(6) r32, r0.wy00\n"
+"	sample_resource(7)_sampler(7) r33, r0.wy00\n"
 
 	// compute Ablk * Bblk2
 
@@ -2346,17 +2365,14 @@ const char kernelMatMulByParts4x8x4by4x4x4R1_PS[] =
 "	mad r41, r33.w, r21, r42\n"
 
 	// load next 8x4 block of A
-"	sample_resource(0)_sampler(0) r26, r0.xy\n"
-"	sample_resource(1)_sampler(1) r27, r0.xy\n"
-"	sample_resource(2)_sampler(2) r28, r0.xy\n"
-"	sample_resource(3)_sampler(3) r29, r0.xy\n"
-"	sample_resource(4)_sampler(4) r30, r0.xy\n"
-"	sample_resource(5)_sampler(5) r31, r0.xy\n"
-"	sample_resource(6)_sampler(6) r32, r0.xy\n"
-"	sample_resource(7)_sampler(7) r33, r0.xy\n"
-
-	// increment sample counters of A
-"	add r0.x, r0.x, r0.1\n"
+"	sample_resource(0)_sampler(0) r26, r3.xy00\n"
+"	sample_resource(1)_sampler(1) r27, r3.xy00\n"
+"	sample_resource(2)_sampler(2) r28, r3.xy00\n"
+"	sample_resource(3)_sampler(3) r29, r3.xy00\n"
+"	sample_resource(4)_sampler(4) r30, r3.xy00\n"
+"	sample_resource(5)_sampler(5) r31, r3.xy00\n"
+"	sample_resource(6)_sampler(6) r32, r3.xy00\n"
+"	sample_resource(7)_sampler(7) r33, r3.xy00\n"
 
 	// compute Ablk * Bblk3
 
@@ -2401,10 +2417,24 @@ const char kernelMatMulByParts4x8x4by4x4x4R1_PS[] =
 "	mad r42, r33.z, r24, r42\n"
 "	mad r41, r33.w, r25, r42\n"
 
-"	add r2.x, r2.x, l0.x\n"	// loop counter ++
 "endloop\n"
 
 // store the result
+"mov o0, r34\n"
+"mov o1, r35\n"
+"mov o2, r36\n"
+"mov o3, r37\n"
+"mov o4, r38\n"
+"mov o5, r39\n"
+"mov o6, r40\n"
+"mov o7, r41\n"
+"end\n";
+
+const char kernelMatMulByParts2x8x4by2x4x4R_PS[] = 
+"il_ps_2_0\n"
+"dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__\n"
+"dcl_cb cb0[1]\n"	// [A.width,...]
+
 "dcl_output_generic o0\n"
 "dcl_output_generic o1\n"
 "dcl_output_generic o2\n"
@@ -2414,21 +2444,6 @@ const char kernelMatMulByParts4x8x4by4x4x4R1_PS[] =
 "dcl_output_generic o6\n"
 "dcl_output_generic o7\n"
 
-"mov o0, r34\n"
-"mov o1, r35\n"
-"mov o2, r36\n"
-"mov o3, r37\n"
-"mov o4, r38\n"
-"mov o5, r39\n"
-"mov o6, r40\n"
-"mov o7, r41\n"
-
-"end\n";
-
-const char kernelMatMulByParts2x8x4by2x4x4R_PS[] = 
-"il_ps_2_0\n"
-"dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__\n"
-"dcl_cb cb0[1]\n"	// [A.width,...]
 "dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
 "dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
 "dcl_resource_id(2)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
@@ -2442,18 +2457,22 @@ const char kernelMatMulByParts2x8x4by2x4x4R_PS[] =
 "dcl_resource_id(9)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
 "dcl_resource_id(10)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
 "dcl_resource_id(11)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+
 "dcl_resource_id(12)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
 "dcl_resource_id(13)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
 "dcl_resource_id(14)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
 "dcl_resource_id(15)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
 
-"dcl_literal l0, 2.0f, 8.0f, 1.0f, 2.0f\n"
+"dcl_literal l0, 2.0f, 0.0f, 1.0f, 2.0f\n"
+"dcl_literal l1, 0.0f, 1.0f, 1.0f, 0.0f\n"
 
-// 2D index of first row in first block of A
-"flr r0.0y, vWinCoord0.y\n"				// [0,y] in the execution domain
+// initialize sample counters of A
+"add r0.0yzw, vWinCoord0.0y00, l0.00zw\n"	// r0 := [0,y,1,2]
+"sub r0, r0, l0.x0xx\n"						// account increment
 
-// 2D index of first column of block of B
-"flr r1.x000, vWinCoord0.x\n"			// [x,0] in the B data
+// initialize sample counter of B
+"mov r1.x010, vWinCoord0.x\n"			// [x,0,1,...]
+"sub r1, r1, l1\n"
 
 // clear float4 accumulators for 8x4 * 4x4 matrix multiply result
 "mov r34, r34.0000\n"	
@@ -2465,41 +2484,43 @@ const char kernelMatMulByParts2x8x4by2x4x4R_PS[] =
 "mov r40, r40.0000\n"
 "mov r41, r41.0000\n"
 
-// initialize sample counters for B
-"mov r1.zw,	l0\n"			// r1 := [x,0,1,2]
 
 "mov r2.0y00, cb0[0].x\n"	// r2.x is the loop counter, r2.y := A.width
+"sub r2.x, r2.x, l0.x\n"
 
 "whileloop\n"
-"    ge r2.z, r2.x, r2.y\n"	// while(loop counter < A.width)
-"    break_logicalnz r2.z\n"
 
-	// load 2 next 4x4 blocks of B
-"	sample_resource(8)_sampler(8) r10, r1.xy\n"
-"	sample_resource(9)_sampler(9) r11, r1.xy\n"
-"	sample_resource(10)_sampler(10) r12, r1.xy\n"
-"	sample_resource(11)_sampler(11) r13, r1.xy\n"
-
-"	sample_resource(12)_sampler(12) r14, r1.xy\n"
-"	sample_resource(13)_sampler(13) r15, r1.xy\n"
-"	sample_resource(14)_sampler(14) r16, r1.xy\n"
-"	sample_resource(15)_sampler(15) r17, r1.xy\n"
-
-	// load next 8x4 block of A
-"	sample_resource(0)_sampler(0) r26, r0.xy\n"
-"	sample_resource(1)_sampler(1) r27, r0.xy\n"
-"	sample_resource(2)_sampler(2) r28, r0.xy\n"
-"	sample_resource(3)_sampler(3) r29, r0.xy\n"
-"	sample_resource(4)_sampler(4) r30, r0.xy\n"
-"	sample_resource(5)_sampler(5) r31, r0.xy\n"
-"	sample_resource(6)_sampler(6) r32, r0.xy\n"
-"	sample_resource(7)_sampler(7) r33, r0.xy\n"
-
-	// increment counters of B
-"	add r1, r1, r1.0111\n"
+	// increment sample counter of B
+"	add r1, r1, l1\n"
 
 	// increment sample counters of A
-"	add r0.x, r0.x, r0.1\n"
+"	add r0, r0, l0.x0xx\n"
+
+"	add r2.x, r2.x, l0.x\n"	// loop counter ++
+
+"   ge r2.z, r2.x, r2.y\n"	// while(loop counter < A.width)
+"   break_logicalnz r2.z\n"
+
+	// load 4 next 4x4 blocks of B
+"	sample_resource(8)_sampler(8) r10, r1.xy00\n"
+"	sample_resource(9)_sampler(9) r11, r1.xy00\n"
+"	sample_resource(10)_sampler(10) r12, r1.xy00\n"
+"	sample_resource(11)_sampler(11) r13, r1.xy00\n"
+
+"	sample_resource(12)_sampler(12) r14, r1.xy00\n"
+"	sample_resource(13)_sampler(13) r15, r1.xy00\n"
+"	sample_resource(14)_sampler(14) r16, r1.xy00\n"
+"	sample_resource(15)_sampler(15) r17, r1.xy00\n"
+
+	// load next 8x4 block of A
+"	sample_resource(0)_sampler(0) r26, r0.xy00\n"
+"	sample_resource(1)_sampler(1) r27, r0.xy00\n"
+"	sample_resource(2)_sampler(2) r28, r0.xy00\n"
+"	sample_resource(3)_sampler(3) r29, r0.xy00\n"
+"	sample_resource(4)_sampler(4) r30, r0.xy00\n"
+"	sample_resource(5)_sampler(5) r31, r0.xy00\n"
+"	sample_resource(6)_sampler(6) r32, r0.xy00\n"
+"	sample_resource(7)_sampler(7) r33, r0.xy00\n"
 
 	// compute Ablk * Bblk0
 
@@ -2545,17 +2566,14 @@ const char kernelMatMulByParts2x8x4by2x4x4R_PS[] =
 "	mad r41, r33.w, r13, r42\n"
 
 	// load next 8x4 block of A
-"	sample_resource(0)_sampler(0) r26, r0.xy\n"
-"	sample_resource(1)_sampler(1) r27, r0.xy\n"
-"	sample_resource(2)_sampler(2) r28, r0.xy\n"
-"	sample_resource(3)_sampler(3) r29, r0.xy\n"
-"	sample_resource(4)_sampler(4) r30, r0.xy\n"
-"	sample_resource(5)_sampler(5) r31, r0.xy\n"
-"	sample_resource(6)_sampler(6) r32, r0.xy\n"
-"	sample_resource(7)_sampler(7) r33, r0.xy\n"
-
-	// increment sample counters of A
-"	add r0.x, r0.x, r0.1\n"
+"	sample_resource(0)_sampler(0) r26, r0.zy00\n"
+"	sample_resource(1)_sampler(1) r27, r0.zy00\n"
+"	sample_resource(2)_sampler(2) r28, r0.zy00\n"
+"	sample_resource(3)_sampler(3) r29, r0.zy00\n"
+"	sample_resource(4)_sampler(4) r30, r0.zy00\n"
+"	sample_resource(5)_sampler(5) r31, r0.zy00\n"
+"	sample_resource(6)_sampler(6) r32, r0.zy00\n"
+"	sample_resource(7)_sampler(7) r33, r0.zy00\n"
 
 	// compute Ablk * Bblk1
 
@@ -2600,20 +2618,9 @@ const char kernelMatMulByParts2x8x4by2x4x4R_PS[] =
 "	mad r42, r33.z, r16, r42\n"
 "	mad r41, r33.w, r17, r42\n"
 
-"	add r2.x, r2.x, l0.x\n"	// loop counter ++
 "endloop\n"
 
 // store the result
-"dcl_output_generic o0\n"
-"dcl_output_generic o1\n"
-"dcl_output_generic o2\n"
-"dcl_output_generic o3\n"
-"dcl_output_generic o4\n"
-"dcl_output_generic o5\n"
-"dcl_output_generic o6\n"
-"dcl_output_generic o7\n"
-
-/*
 "mov o0, r34\n"
 "mov o1, r35\n"
 "mov o2, r36\n"
@@ -2622,18 +2629,7 @@ const char kernelMatMulByParts2x8x4by2x4x4R_PS[] =
 "mov o5, r39\n"
 "mov o6, r40\n"
 "mov o7, r41\n"
-*/
-
-"mul o0, r34, r34.1\n"
-"mul o1, r35, r35.1\n"
-"mul o2, r36, r36.1\n"
-"mul o3, r37, r37.1\n"
-"mul o4, r38, r38.1\n"
-"mul o5, r39, r39.1\n"
-"mul o6, r40, r40.1\n"
-"mul o7, r41, r41.1\n"
-
-"end\n";
+"end\n";;
 
 const char kernelMatMulByParts4x8x4by4x4x4R_PS[] = 
 "il_ps_2_0\n"
