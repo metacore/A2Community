@@ -100,6 +100,8 @@ public:
 	CALresult DoMatMultByParts2x8x4by2x4x4(void);
 	// gather a matrix divided to 8 parts
 	CALresult GatherMatrixFrom8Parts(Array** parts, Array* arr);
+	CALresult DoElementwiseByParts(void);
+	CALresult DoMatVecMulByParts(void);
 };
 
 class ContextPool :

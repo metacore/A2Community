@@ -22,6 +22,7 @@ KernFill1_PS,	// the same as KernFill_PS but with account of that the size is no
 
 // addition
 KernAddR_PS,
+KernAddByPartsR_PS,
 KernAddLR_PS,
 
 // subtraction
@@ -38,6 +39,7 @@ KernEwDivLR_PS,
 
 // matrix vector multiply
 KernMatVecR_PS,
+KernMatVecByPartsR_PS,
 
 // divide a matrix into parts
 KernDivideMatrixTo4Parts_PS,
@@ -95,6 +97,66 @@ const char kernelAddR_PS[] =
 "sample_resource(0)_sampler(0) r0, vWinCoord0\n"
 "sample_resource(1)_sampler(1) r1, vWinCoord0\n"
 "add o0, r0, r1\n"
+"end\n";
+
+const char kernelAddByPartsR_PS[] =
+"il_ps_2_0\n"
+"dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__\n"
+
+"dcl_output_generic o0\n"
+"dcl_output_generic o1\n"
+"dcl_output_generic o2\n"
+"dcl_output_generic o3\n"
+"dcl_output_generic o4\n"
+"dcl_output_generic o5\n"
+"dcl_output_generic o6\n"
+"dcl_output_generic o7\n"
+
+"dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+"dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+"dcl_resource_id(2)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+"dcl_resource_id(3)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+"dcl_resource_id(4)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+"dcl_resource_id(5)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+"dcl_resource_id(6)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+"dcl_resource_id(7)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+
+"dcl_resource_id(8)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+"dcl_resource_id(9)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+"dcl_resource_id(10)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+"dcl_resource_id(11)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+"dcl_resource_id(12)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+"dcl_resource_id(13)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+"dcl_resource_id(14)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+"dcl_resource_id(15)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+
+"sample_resource(0)_sampler(0) r0, vWinCoord0\n"
+"sample_resource(1)_sampler(1) r1, vWinCoord0\n"
+"sample_resource(2)_sampler(2) r2, vWinCoord0\n"
+"sample_resource(3)_sampler(3) r3, vWinCoord0\n"
+"sample_resource(4)_sampler(4) r4, vWinCoord0\n"
+"sample_resource(5)_sampler(5) r5, vWinCoord0\n"
+"sample_resource(6)_sampler(6) r6, vWinCoord0\n"
+"sample_resource(7)_sampler(7) r7, vWinCoord0\n"
+
+"sample_resource(8)_sampler(8) r8, vWinCoord0\n"
+"sample_resource(9)_sampler(9) r9, vWinCoord0\n"
+"sample_resource(10)_sampler(10) r10, vWinCoord0\n"
+"sample_resource(11)_sampler(11) r11, vWinCoord0\n"
+"sample_resource(12)_sampler(12) r12, vWinCoord0\n"
+"sample_resource(13)_sampler(13) r13, vWinCoord0\n"
+"sample_resource(14)_sampler(14) r14, vWinCoord0\n"
+"sample_resource(15)_sampler(15) r15, vWinCoord0\n"
+
+"add o0, r0, r8\n"
+"add o1, r1, r9\n"
+"add o2, r2, r10\n"
+"add o3, r3, r11\n"
+"add o4, r4, r12\n"
+"add o5, r5, r13\n"
+"add o6, r6, r14\n"
+"add o7, r7, r15\n"
+
 "end\n";
 
 const char kernelAddLR_PS[] =
@@ -188,8 +250,7 @@ const char kernelMatVecR_PS[] =
 "il_ps_2_0\n"
 "dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__\n"
 "dcl_cb cb0[1]\n"
-"dcl_literal l0, 0, 0, 0, 0\n"
-"dcl_literal l2, 0.0f, 0.0f, 0.0f, 4.0f\n"
+"dcl_literal l0, 0.0f, 0.0f, 0.0f, 4.0f\n"
 "dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
 "dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
 
@@ -197,7 +258,7 @@ const char kernelMatVecR_PS[] =
 
 // r0.zw -> 2D position of first input row
 "flr r0.___w, vWinCoord0.x\n"
-"mul r0.w, r0.w, l2.w\n"
+"mul r0.w, r0.w, l0.w\n"
 
 "mov r1.0yzw, r0.w\n"
 "add r1.y, r1.y, r1.1\n"		// 2D position of second input row
@@ -210,9 +271,19 @@ const char kernelMatVecR_PS[] =
 "mov r23, r23.0000\n"
 
 "mov r10, r10.0000\n"	// loop counter
+"sub r10.x, r10.x, r10.1\n"
+
+"sub r0.xz, r0.xz, r0.11\n"
+"sub r1.x, r1.x, r1.1\n"
+
 "mov r11, cb0[0]\n"
 
 "whileloop\n"
+
+"	add r0.xz, r0.xz, r0.11\n"
+"	add r1.x, r1.x, r1.1\n"
+
+"	 add r10.x, r10.x, r10.1\n"	// loop counter ++
 "    ge r10.y, r10.x, r11.x\n"	// while(loop counter < cb0[0].x)
 "    break_logicalnz r10.y\n"
 
@@ -230,11 +301,6 @@ const char kernelMatVecR_PS[] =
 "	mad r21, r5, r7, r21\n"
 "	mad r22, r5, r8, r22\n"
 "	mad r23, r5, r9, r23\n"
-
-"	add r0.xz, r0.xz, r0.11\n"
-"	add r1.x, r1.x, r1.1\n"
-
-"	add r10.x, r10.x, r10.1\n"	// loop counter ++
 "endloop\n"
 
 // now do final horizontal add
@@ -248,6 +314,109 @@ const char kernelMatVecR_PS[] =
 
 "end\n";
 
+const char kernelMatVecByPartsR_PS[] =
+"il_ps_2_0\n"
+"dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__\n"
+
+"dcl_cb cb0[1]\n"
+"dcl_literal l0, 0.0f, 0.5f, 0.0f, 0.0f\n"
+
+"dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+"dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+"dcl_resource_id(2)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+"dcl_resource_id(3)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+"dcl_resource_id(4)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+"dcl_resource_id(5)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+"dcl_resource_id(6)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+"dcl_resource_id(7)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+
+"dcl_resource_id(8)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+
+"mov r0, r0.0000\n"	// r0.xy is [x,y] of the first rhs element
+
+"flr r2.y, vWinCoord0.x\n"
+"mul r2.y, r2.y, l0.y\n"
+"flr r1.0y, r2.y\n"			// r1.xy -> [x,y] of first element in input row
+"sub r2.y, r2.y, r1.y\n"	// remainder of division by 2
+
+"mov r20, r20.0000\n"
+"mov r21, r21.0000\n"
+"mov r22, r22.0000\n"
+"mov r23, r23.0000\n"
+
+"mov r10, r10.0000\n"	// loop counter
+"sub r10.x, r10.x, r10.1\n"
+
+"sub r0.x, r0.x, r0.1\n"
+"sub r1.x, r1.x, r1.1\n"
+
+"mov r11, cb0[0]\n"
+
+"eq r2.z, r2.y, r2.0\n"
+"if_logicalnz r2.z\n"	// if r2.y == 0
+
+"	whileloop\n"
+"		add r0.x, r0.x, r0.1\n"
+"		add r1.x, r1.x, r1.1\n"
+
+"		add r10.x, r10.x, r10.1\n"	// loop counter ++
+"		ge r10.y, r10.x, r11.x\n"	// while(loop counter < cb0[0].x)
+"		break_logicalnz r10.y\n"
+
+		// load next part of rhs
+"		sample_resource(8)_sampler(8) r5, r0.xy\n"
+
+		// load next parts from 4 rows
+"		sample_resource(0)_sampler(0) r6, r1.xy\n"
+"		sample_resource(1)_sampler(1) r7, r1.xy\n"
+"		sample_resource(2)_sampler(2) r8, r1.xy\n"
+"		sample_resource(3)_sampler(3) r9, r1.xy\n"
+
+		// do element wise multiply	
+"		mad r20, r5, r6, r20\n"
+"		mad r21, r5, r7, r21\n"
+"		mad r22, r5, r8, r22\n"
+"		mad r23, r5, r9, r23\n"
+"	endloop\n"
+
+"else\n"
+
+"	whileloop\n"
+"		add r0.x, r0.x, r0.1\n"
+"		add r1.x, r1.x, r1.1\n"
+
+"		add r10.x, r10.x, r10.1\n"	// loop counter ++
+"		ge r10.y, r10.x, r11.x\n"	// while(loop counter < cb0[0].x)
+"		break_logicalnz r10.y\n"
+
+		// load next part of rhs
+"		sample_resource(8)_sampler(8) r5, r0.xy\n"
+
+		// load next parts from 4 rows
+"		sample_resource(4)_sampler(4) r6, r1.xy\n"
+"		sample_resource(5)_sampler(5) r7, r1.xy\n"
+"		sample_resource(6)_sampler(6) r8, r1.xy\n"
+"		sample_resource(7)_sampler(7) r9, r1.xy\n"
+
+		// do element wise multiply	
+"		mad r20, r5, r6, r20\n"
+"		mad r21, r5, r7, r21\n"
+"		mad r22, r5, r8, r22\n"
+"		mad r23, r5, r9, r23\n"
+"	endloop\n"
+
+"endif\n"
+
+// now do final horizontal add
+"dp4 r30.x, r20, r20.1111\n"	// r +* ones == r.x+r.y+r.z+r.w
+"dp4 r30.y, r21, r21.1111\n"
+"dp4 r30.z, r22, r22.1111\n"
+"dp4 r30.w, r23, r23.1111\n"
+
+"dcl_output_generic o0\n"
+"mov o0, r30\n"
+
+"end\n";
 
 /*
 	Matrix multiplication C := A*B for the case

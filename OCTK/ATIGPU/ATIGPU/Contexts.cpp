@@ -208,6 +208,7 @@ CALresult Context::DoComputation(void)
 
 		case OpAdd:
 			err = DoElementwise();
+			//err = DoElementwiseByParts();
 			break;
 
 		case OpSub:
@@ -224,7 +225,8 @@ CALresult Context::DoComputation(void)
 
 		case OpMul:
 			if( (expr->args[0]->nDims == 2) && (expr->args[1]->nDims == 1) )
-				err = DoMatVecMul();
+				//err = DoMatVecMul();
+				err = DoMatVecMulByParts();
 			else if( (expr->args[0]->nDims == 2) && (expr->args[1]->nDims == 2) )
 				err = DoMatMul();
 
@@ -460,8 +462,8 @@ CALresult Context::DoElementwise(void)
 			domain.height = result->physSize[0];
 		}
 
-		// run the program
-		err = module->RunPixelShader(expr->args,&result,NULL,&domain);
+		// run the program				
+		err = module->RunPixelShader(expr->args,&result,NULL,&domain);		
 
 	}
 	else
@@ -536,7 +538,7 @@ CALresult Context::DoMatVecMul(void)
 	CALdomain domain;
 	float constData[4];
 
-	long iKernel;
+	long iKernel;	
 	
 	err = CAL_RESULT_OK;
 
@@ -576,9 +578,14 @@ CALresult Context::DoMatVecMul(void)
 				domain.y = 0;		
 				domain.width = result->physSize[0];
 				domain.height = 1;
+				
+				double t = GetTickCount();
 
-				// run the program				
-				err = module->RunPixelShader(expr->args,&result,NULL,&domain);
+				// run the program	
+				for(long i = 0; i<100; i++)
+					err = module->RunPixelShader(expr->args,&result,NULL,&domain);
+				
+				t = GetTickCount() - t;
 
 				module->ReleaseConstantsFromContext();
 			}
@@ -715,7 +722,6 @@ CALresult Context::SetCommon(ArrayExpression* expr, Array* result, ArrayPool* ar
 // perform matrix matrix multiply operation
 CALresult Context::DoMatMul(void)
 {
-/*
 	if( (expr->args[0]->physSize[0] >= 8) && !(expr->args[1]->physSize[0] % 16) )
 	{
 		if( !(expr->args[0]->physSize[0] % 8) )
@@ -739,7 +745,7 @@ CALresult Context::DoMatMul(void)
 	}
 	else
 		err = CAL_RESULT_NOT_SUPPORTED;	
-*/
+
 
 	//err = DoMatMult4x8x4by4x4x4();
 	//err = DoMatMult8x4by4x4();
@@ -747,7 +753,8 @@ CALresult Context::DoMatMul(void)
 
 	//err = DoMatMultByParts4x4x4by4x4x4();
 	//err = DoMatMultByParts4x8x4by4x4x4();
-	err = DoMatMultByParts2x8x4by2x4x4();
+
+	//err = DoMatMultByParts2x8x4by2x4x4();
 
 	return err;
 }
@@ -946,8 +953,10 @@ CALresult Context::DoMatMult4x8x4by4x4x4(void)
 				pg.gridSize.height  = 1;
 				pg.gridSize.depth   = 1;
 
-				// run the program				
+				// run the program		
+				double t = GetTickCount();
 				err = module->RunComputeShader(expr->args,result,&pg);
+				t = GetTickCount() - t;
 
 				module->ReleaseConstantsFromContext();
 			}
@@ -1596,6 +1605,198 @@ CALresult Context::GatherMatrixFrom8Parts(Array** parts, Array* arr)
 
 				// run the program				
 				err = module->RunPixelShader(parts,NULL,result,&domain);
+
+				module->ReleaseConstantsFromContext();
+			}
+		}		
+	}
+	else
+	{
+		err = module->err;
+		delete module;
+		modules[iKernel] = NULL;
+	}
+
+	return err;
+}
+
+CALresult Context::DoElementwiseByParts(void)
+{
+	Module* module;
+	CALdomain domain;	
+
+	Array** partsA = NULL;
+	Array** partsB = NULL;
+	Array** partsC = NULL;
+	Array* inputs[16];
+	long i, size[2];
+
+	long iKernel;	
+	
+	err = CAL_RESULT_OK;
+
+	switch(expr->dType)
+	{
+		case TREAL:
+		{
+			switch(expr->op)
+			{
+				case OpAdd: iKernel = KernAddByPartsR_PS; break;				
+
+				default:
+					return CAL_RESULT_INVALID_PARAMETER;
+			}			
+
+		}break;		
+		
+		default:
+			return CAL_RESULT_INVALID_PARAMETER;
+	}	
+
+	// divide arrays to parts for efficiently cached computation
+	err = DivideMatrixTo8Parts(expr->args[0],&partsA);
+	if(err != CAL_RESULT_OK)
+		return err;
+
+	err = DivideMatrixTo8Parts(expr->args[1],&partsB);
+	if(err != CAL_RESULT_OK)
+		return err;
+
+	// allocate result parts
+
+	// array size for each part
+	size[0] = result->size[0]/8;
+	size[1] = result->size[1];
+
+	partsC = new Array*[8];	
+	for(i = 0; i < 8; i++)	
+		partsC[i] = new Array(hDev,devInfo,devAttribs,result->arrID,result->dType,2,&size[0]);
+	
+	// allocate parts
+	for(i = 0; (i < 8) && (err == CAL_RESULT_OK); i++)	
+		err = partsC[i]->AllocateLocal(0);
+
+	if(err != CAL_RESULT_OK)
+	{
+		for(i = 0; i < 8; i++)
+		{
+			delete partsA[i];
+			delete partsB[i];
+			delete partsC[i];
+		}
+
+		return err;
+	}
+
+	for(i = 0; i < 8; i++)
+	{
+		inputs[i] = partsA[i];
+		inputs[i+8] = partsB[i];
+	}
+	
+	// get suited module
+	if(!modules[iKernel])
+		modules[iKernel] = new Module(hDev,ctx,kernels[iKernel]);	
+
+	module = modules[iKernel];
+	
+	if(module->err == CAL_RESULT_OK)
+	{			
+		// set the domain of execution
+		domain.x = 0;
+		domain.y = 0;
+		if(result->nLogicDims == 1)
+		{
+			domain.width = result->physSize[0];
+			domain.height = 1;
+		}
+		else
+		{
+			domain.width = result->physSize[1];
+			domain.height = result->physSize[0]/8;
+		}
+		
+		// run the program			
+		err = module->RunPixelShader(inputs,partsC,NULL,&domain);				
+		
+	}
+	else
+	{
+		err = module->err;
+		delete modules[iKernel];
+		modules[iKernel] = NULL;
+	}
+
+	return err;
+}
+
+CALresult Context::DoMatVecMulByParts(void)
+{
+	Module* module;
+	CALdomain domain;
+	float constData[4];
+
+	Array** partsA = NULL;	
+	Array* inputs[9];
+	long i, size[2];
+
+	long iKernel;	
+	
+	err = CAL_RESULT_OK;
+
+	switch(expr->dType)
+	{
+		case TREAL:
+		{
+			iKernel = KernMatVecByPartsR_PS; break;			
+
+		}break;
+		
+		default:
+			return CAL_RESULT_INVALID_PARAMETER;
+	}	
+
+	// divide arrays to parts for efficiently cached computation
+	err = DivideMatrixTo8Parts(expr->args[0],&partsA);
+	if(err != CAL_RESULT_OK)
+		return err;
+
+	for(i = 0; i < 8; i++)
+		inputs[i] = partsA[i];
+	inputs[8] = expr->args[1];
+	
+	// get suited module
+	if(!modules[iKernel])
+		modules[iKernel] = new Module(hDev,ctx,kernels[iKernel]);	
+
+	module = modules[iKernel];
+	
+	if(module->err == CAL_RESULT_OK)
+	{		
+		constData[0] = (float)(expr->args[0]->physSize[1]);	// matrix width
+		constData[1] = 0;
+		constData[2] = 0;
+		constData[3] = 0;
+
+		err = module->constants[0]->SetData(&constData);		
+		if(err == CAL_RESULT_OK)
+		{
+			err = module->SetConstantsToContext();
+			if(err == CAL_RESULT_OK)
+			{
+				// set the domain of execution
+				domain.x = 0;
+				domain.y = 0;		
+				domain.width = result->physSize[0];
+				domain.height = 1;
+				
+				double t = GetTickCount();
+
+				// run the program	
+				for(i = 0; i < 100; i++)
+				err = module->RunPixelShader(inputs,&result,NULL,&domain);
+				
+				t = GetTickCount() - t;
 
 				module->ReleaseConstantsFromContext();
 			}
