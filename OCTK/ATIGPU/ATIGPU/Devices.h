@@ -1,42 +1,35 @@
 #pragma once
+
 #include "ObjectPool.h"
-#include "Contexts.h"
 #include "Kernels.h"
 #include "Arrays.h"
+#include "Contexts.h"
 
-/*
-	GPU device
-*/
 class Device
 {
 public:
-	Device(long devNum);
+	Device(long devNum, CALresult* err);
 	~Device(void);	
-	CALresult NewContext();	// create a new context	
 
-	CALresult err;	// error code for last operation
-
-	CALdevice hDev;	// CAL device handle
-	ContextPool* ctxs;	// pool of contexts active on the device
+	CALdevice hDev;				// CAL device handle
+	CALuint devNum;				// device number
 	CALdeviceattribs attribs;	// device attributes
 	CALdeviceinfo info;			// device info
-	
-	CALuint devNum;			// device index
-	Kernel** kernels;		// device kernels
-	ArrayPool* arrs;		// arrays created on the device
+
+	Kernel** kernels;			// device kernels
+	ContextPool* ctxs;			// pool of contexts active on the device			
+	ArrayPool* arrs;			// arrays created on the device	
+	// create a new context and put it to the context pool
+	CALresult NewContext(void);
 };
 
-/*
-	Pool of GPU devices
-*/
 class DevicePool :
 	public ObjectPool
 {
 public:
 	DevicePool(void);
 	~DevicePool(void);
+
 	Device* Get(long ind);	
 	void Remove(long ind);
-
-	CALresult err;	// error code for last operation
 };

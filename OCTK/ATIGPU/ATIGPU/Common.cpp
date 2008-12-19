@@ -61,7 +61,7 @@ CALformat GetFormat(long dType, long numComponents)
 			
 	}
 
-	return CAL_FORMAT_FLOAT_4;
+	return CALformat(0);
 }
 
 // Get element size for a given data type
@@ -85,7 +85,7 @@ long GetElementSize(long dType)
 }
 
 // Get element size for a given data format
-long GetElementSize(CALformat dFormat)
+long GetElementSize1(CALformat dFormat)
 {
 	switch(dFormat)
 	{
@@ -111,10 +111,19 @@ long GetElementSize(CALformat dFormat)
 // returns number of elements fitting to the size padded to the multiple of "numComponents"
 long GetPaddedNumElements(long size, long numComponents)
 {
-	long k = size/numComponents;
-	
-	if(k*numComponents >= size)
-		return k;
+	return (size+numComponents-1)/numComponents;
+}
+
+// returns TRUE if to array sizes are equal
+BOOL EqualSizes(long nDims1, long* size1, long nDims2, long* size2)
+{	
+	if(nDims1 == nDims2)
+	{
+		nDims1--;
+		for(; (nDims1 >= 0) && (size1[nDims1] == size2[nDims1]); nDims1--);
+
+		return nDims1 == -1;
+	}
 	else
-		return k+1;
+		return FALSE;
 }

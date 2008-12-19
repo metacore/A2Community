@@ -1,35 +1,37 @@
 #include "StdAfx.h"
 #include "Devices.h"
 
-Device::Device(long devNum)
-{	
+Device::Device(long devNum, CALresult* err)
+{		
 	Kernel* kern;
 	long i;
 
-	ctxs = NULL;
-	arrs = NULL;
-	kernels = NULL;
 	hDev = 0;
+	kernels = NULL;
+	ctxs = NULL;
+	arrs = NULL;		
 
-	err = calDeviceOpen(&hDev,devNum);
-	if(err != CAL_RESULT_OK)
+	*err = calDeviceOpen(&hDev,devNum);
+	if(*err != CAL_RESULT_OK)
 	{
 		hDev = 0;
 		return;
 	}
 
+	this->devNum = devNum;
+
 	// get device attributes
 	attribs.struct_size = sizeof(CALdeviceattribs);
-	err = calDeviceGetAttribs(&attribs,devNum);	
-	if(err != CAL_RESULT_OK)
+	*err = calDeviceGetAttribs(&attribs,devNum);	
+	if(*err != CAL_RESULT_OK)
 	{
 		calDeviceClose(hDev); 
 		hDev = 0; 
 		return;
 	}
 		
-	err = calDeviceGetInfo(&info,devNum);
-	if(err != CAL_RESULT_OK)
+	*err = calDeviceGetInfo(&info,devNum);
+	if(*err != CAL_RESULT_OK)
 	{
 		calDeviceClose(hDev); 
 		hDev = 0; 
@@ -40,8 +42,8 @@ Device::Device(long devNum)
 
 	for(i = 0; i < NKernels; i++)
 	{
-		kern = new Kernel(i,attribs.target);
-		if(kern->err == CAL_RESULT_OK)		
+		kern = new Kernel(KernelCode(i),attribs.target,err);
+		if(*err == CAL_RESULT_OK)		
 			kernels[i] = kern;		
 		else
 		{			
@@ -49,6 +51,7 @@ Device::Device(long devNum)
 			for(i = i-1; i >= 0; i--)
 				delete kernels[i];
 			delete kernels;
+			kernels = NULL;
 
 			calDeviceClose(hDev);
 			hDev = 0; 
@@ -57,13 +60,11 @@ Device::Device(long devNum)
 	}
 
 	ctxs = new ContextPool;	
-	arrs = new ArrayPool;
-
-	this->devNum = devNum;
+	arrs = new ArrayPool;	
 }
 
 Device::~Device(void)
-{	
+{
 	long i;
 
 	if(ctxs)
@@ -83,27 +84,9 @@ Device::~Device(void)
 		calDeviceClose(hDev);
 }
 
-CALresult Device::NewContext()
-{
-	Context* context;
-
-	err = CAL_RESULT_OK;
-		
-	context = new Context(hDev,&info,&attribs,kernels);
-		
-	if(context->err == CAL_RESULT_OK)
-		ctxs->Add(context);
-	else
-		err = CAL_RESULT_ERROR;
-	
-	return err;
-}
-
 DevicePool::DevicePool(void)
 {
-	err = CAL_RESULT_OK;
 }
-
 
 DevicePool::~DevicePool(void)
 {
@@ -123,4 +106,18 @@ void DevicePool::Remove(long ind)
 		delete dev;
 
 	ObjectPool::Remove(ind);
+}
+
+// create a new context and put it to the context pool
+CALresult Device::NewContext(void)
+{
+	CALresult err;
+	Context* context;
+		
+	context = new Context(hDev,&info,&attribs,arrs,kernels,&err);
+		
+	if(err == CAL_RESULT_OK)
+		ctxs->Add(context);
+	
+	return err;
 }

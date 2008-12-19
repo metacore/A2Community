@@ -10,10 +10,31 @@
 #define ATIGPU_API __declspec(dllimport)
 #endif
 
-#include "Arrays.h"
+// array description
+struct ArrayDesc
+{
+	long id;	// array ID
+	long dType;	// array data type code
+	long nDims;	// number of dimensions	
+	long* size;	// array size
+	void* data;	// array data address
+};
+
+// array expression description
+struct ArrayExpressionDesc
+{
+	long op;		// operation code
+	long dType;		// data type code
+	long nDims;		// number of dimensions of expression result
+	long* size;		// size of expression result
+	long* transpDims;	// transposed dimensions in case of transposition operation
+	ArrayDesc* arg1;	// first argument desription
+	ArrayDesc* arg2;	// second argument desription
+	ArrayDesc* arg3;	// second argument desription	
+};
 
 /*
-	Get amount of accessible ATI GPUs:
+	Get amount of accessible ATI GPUs
 
 	devCount[var] - number of accessible device
 
@@ -29,7 +50,7 @@ ATIGPU_API long GetDevCount(long* devCount);
 
 	returns error code
 */
-ATIGPU_API long GetContext(long devNum, long* ctxId);
+ATIGPU_API long GetContext(long devNum, long* ctxNum);
 
 /*
 	Release a GPU computing context:
@@ -39,16 +60,16 @@ ATIGPU_API long GetContext(long devNum, long* ctxId);
 
 	returns error code
 */
-ATIGPU_API long ReleaseContext(long devNum, long ctxId);
+ATIGPU_API long ReleaseContext(long devNum, long ctxNum);
 
 
 /*
 	Set (prepare) computation
 
-	devNum - used device number
+	devNum - device number
 	ctxNum - compute context number
-	expr - array expression description
-	result - resulting array
+	exprDesc - array expression description
+	resultDesc - resulting array description
 	priority - computation priority number
 	flags - flags (currently unused)
 
@@ -56,9 +77,9 @@ ATIGPU_API long ReleaseContext(long devNum, long ctxId);
 */
 ATIGPU_API long SetComputation(
 							   long devNum, 
-							   long ctxId,
-							   ArrayExpressionDesc* expr,
-							   ArrayDesc* result,
+							   long ctxNum,
+							   ArrayExpressionDesc* exprDesc,
+							   ArrayDesc* resultDesc,
 							   long priority,
 							   long flags
 							   );
@@ -67,21 +88,20 @@ ATIGPU_API long SetComputation(
 /*
 	Do computation which was preliminary set by SetComputation
 
-	devNum - used device number
+	devNum - device number
 	ctxNum - compute context number
 
 	returns error code
 */
 ATIGPU_API long DoComputation(
 							   long devNum, 
-							   long ctxId
+							   long ctxNum
 							   );
 
 /*
-	Get result array for the last computation
-	(has to be called after DoComputation)
+	Get result array for the last computation done by DoComputation	
 	
-	devNum - used device number
+	devNum - device number
 	ctxNum - compute context number
 	data - array data address
 
@@ -89,7 +109,7 @@ ATIGPU_API long DoComputation(
 */
 ATIGPU_API long GetResult(
 						  long devNum,
-						  long ctxId,						  
+						  long ctxNum,						  
 						  void* data
 						  );
 
@@ -119,53 +139,53 @@ ATIGPU_API long FreeArray(long arrID);
 /*
 	Start GPU idle counter
 
-	devNum - used device number
+	devNum - device number
 	ctxNum - compute context number
 
 	returns error code
 */
-ATIGPU_API long StartIdleCounter(long devNum,long ctxId);
+ATIGPU_API long StartIdleCounter(long devNum, long ctxNum);
 
 /*
 	Start GPU cache hit counter
 
-	devNum - used device number
+	devNum - device number
 	ctxNum - compute context number
 
 	returns error code
 */
-ATIGPU_API long StartCacheHitCounter(long devNum,long ctxId);
+ATIGPU_API long StartCacheHitCounter(long devNum, long ctxNum);
 
 /*
 	Stop GPU idle counter
 
-	devNum - used device number
+	devNum - device number
 	ctxNum - compute context number
 
 	returns error code
 */
-ATIGPU_API long StopIdleCounter(long devNum,long ctxId);
+ATIGPU_API long StopIdleCounter(long devNum, long ctxNum);
 
 /*
 	Stop GPU cache hit counter
 
-	devNum - used device number
+	devNum - device number
 	ctxNum - compute context number
 
 	returns error code
 */
-ATIGPU_API long StopCacheHitCounter(long devNum,long ctxId);
+ATIGPU_API long StopCacheHitCounter(long devNum, long ctxNum);
 
 /*
 	Get GPU idle counter
 
-	devNum - used device number
+	devNum - device number
 	ctxNum - compute context number
 	counterVal[var] - counter value
 
 	returns error code
 */
-ATIGPU_API long GetIdleCounter(long devNum,long ctxId, float* counterVal);
+ATIGPU_API long GetIdleCounter(long devNum, long ctxNum, float* counterVal);
 
 /*
 	Get GPU cache hit counter
@@ -176,4 +196,4 @@ ATIGPU_API long GetIdleCounter(long devNum,long ctxId, float* counterVal);
 
 	returns error code
 */
-ATIGPU_API long GetCacheHitCounter(long devNum,long ctxId, float* counterVal);
+ATIGPU_API long GetCacheHitCounter(long devNum, long ctxNum, float* counterVal);

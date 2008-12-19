@@ -1,8 +1,8 @@
 #include "StdAfx.h"
 #include "Modules.h"
 
-Module::Module(CALdevice hDev, CALcontext ctx, Kernel* kern)
-{
+Module::Module(CALdevice hDev, CALcontext ctx, Kernel* kern, CALresult* err)
+{	
 	long i;
 	module = 0;
 	inputNames = NULL;
@@ -17,15 +17,15 @@ Module::Module(CALdevice hDev, CALcontext ctx, Kernel* kern)
 	this->ctx = ctx;
 	this->kern = kern;	
 
-	err = calModuleLoad(&module,ctx,kern->img);
-	if(err != CAL_RESULT_OK)
+	*err = calModuleLoad(&module,ctx,kern->img);
+	if(*err != CAL_RESULT_OK)
 	{
 		module = 0; 
 		return;
 	}	
 
-	err = calModuleGetEntry(&func,ctx,module,"main");
-	if(err != CAL_RESULT_OK)
+	*err = calModuleGetEntry(&func,ctx,module,"main");
+	if(*err != CAL_RESULT_OK)
 	{
 		calModuleUnload(ctx,module); 
 		module = 0; 
@@ -49,12 +49,12 @@ Module::Module(CALdevice hDev, CALcontext ctx, Kernel* kern)
 			constants[i] = NULL;
 	}
 
-	for(i = 0; (i < nInputs) && (err == CAL_RESULT_OK); i++)
+	for(i = 0; (i < nInputs) && (*err == CAL_RESULT_OK); i++)
 	{
 		sprintf_s(str,"i%d",i);
-		err = calModuleGetName(&inputNames[i],ctx,module,str);
+		*err = calModuleGetName(&inputNames[i],ctx,module,str);
 	}
-	if(err != CAL_RESULT_OK)
+	if(*err != CAL_RESULT_OK)
 	{
 		if(inputNames){delete inputNames; inputNames = NULL;}
 		if(outputNames){delete outputNames; outputNames = NULL;}
@@ -64,12 +64,12 @@ Module::Module(CALdevice hDev, CALcontext ctx, Kernel* kern)
 		return;
 	}
 		
-	for(i = 0; (i < nOutputs) && (err == CAL_RESULT_OK); i++)
+	for(i = 0; (i < nOutputs) && (*err == CAL_RESULT_OK); i++)
 	{
 		sprintf_s(str,"o%d",i);
-		err = calModuleGetName(&outputNames[i],ctx,module,str);
+		*err = calModuleGetName(&outputNames[i],ctx,module,str);
 	}
-	if(err != CAL_RESULT_OK)
+	if(*err != CAL_RESULT_OK)
 	{
 		if(inputNames){delete inputNames; inputNames = NULL;}
 		if(outputNames){delete outputNames; outputNames = NULL;}
@@ -79,22 +79,22 @@ Module::Module(CALdevice hDev, CALcontext ctx, Kernel* kern)
 		return;
 	}	
 
-	for(i = 0; (i < nConstants) && (err == CAL_RESULT_OK); i++)
+	for(i = 0; (i < nConstants) && (*err == CAL_RESULT_OK); i++)
 	{
 		sprintf_s(str,"cb%d",i);
-		err = calModuleGetName(&constNames[i],ctx,module,str);
+		*err = calModuleGetName(&constNames[i],ctx,module,str);
 
 		if(kern->constSizes[i])	// create all necessary constants
 		{
-			constants[i] = new Constant(hDev,ctx,constNames[i],kern->constFormats[i],kern->constSizes[i]);		
-			if(constants[i]->err != CAL_RESULT_OK)
+			constants[i] = new Constant(hDev,ctx,constNames[i],kern->constFormats[i],kern->constSizes[i],err);		
+			if(*err != CAL_RESULT_OK)
 			{
-				delete constants[i]; constants[i] = NULL;
-				err = constants[i]->err;
+				delete constants[i]; 
+				constants[i] = NULL;				
 			}
 		}
 	}
-	if(err != CAL_RESULT_OK)
+	if(*err != CAL_RESULT_OK)
 	{
 		if(inputNames){delete inputNames; inputNames = NULL;}
 		if(outputNames){delete outputNames; outputNames = NULL;}
@@ -105,8 +105,8 @@ Module::Module(CALdevice hDev, CALcontext ctx, Kernel* kern)
 	}
 
 	if(usesGlobalBuffer)			
-		err = calModuleGetName(&gbufName,ctx,module,"g[]");
-	if(err != CAL_RESULT_OK)
+		*err = calModuleGetName(&gbufName,ctx,module,"g[]");
+	if(*err != CAL_RESULT_OK)
 	{
 		if(inputNames){delete inputNames; inputNames = NULL;}
 		if(outputNames){delete outputNames; outputNames = NULL;}
@@ -144,6 +144,7 @@ Module::~Module(void)
 
 CALresult Module::SetConstantsToContext(void)
 {
+	CALresult err;
 	long i;
 
 	err = CAL_RESULT_OK;
@@ -158,10 +159,10 @@ CALresult Module::SetConstantsToContext(void)
 }
 
 void Module::ReleaseConstantsFromContext(void)
-{
+{	
 	long i;
 
-	for(i = 0; (i < nConstants) && (err == CAL_RESULT_OK); i++)	
+	for(i = 0; i < nConstants; i++)	
 	{
 		if(constants[i])
 			constants[i]->ReleaseFromContext();
@@ -171,12 +172,11 @@ void Module::ReleaseConstantsFromContext(void)
 CALresult Module::RunPixelShader(Array** inputs, Array** outputs, Array* globalBuffer, CALdomain* domain)
 {
 	long i;
+	CALresult err;
 	CALmem* inpMem;
 	CALmem* outMem;	
 	CALmem gbufMem;
-	CALevent ev;
-
-	err = CAL_RESULT_OK;
+	CALevent ev;	
 
 	inpMem = new CALmem[nInputs];
 	outMem = new CALmem[nOutputs];
@@ -187,6 +187,7 @@ CALresult Module::RunPixelShader(Array** inputs, Array** outputs, Array* globalB
 	/*
 		Set inputs
 	*/
+	err = CAL_RESULT_OK;
 	for(i = 0; (err == CAL_RESULT_OK) && (i < nInputs); i++)
 		err = inputs[i]->GetNamedLocalMem(ctx,inputNames[i],&inpMem[i]);
 
@@ -267,11 +268,11 @@ CALresult Module::RunPixelShader(Array** inputs, Array** outputs, Array* globalB
 CALresult Module::RunComputeShader(Array** inputs, Array* globalBuffer, CALprogramGrid* programGrid)
 {	
 	long i;
+	CALresult err;
 	CALmem* inpMem;	
 	CALmem gbufMem;
 	CALevent ev;
-
-	err = CAL_RESULT_OK;
+	
 
 	inpMem = new CALmem[nInputs];	
 	FillMemory(inpMem,nInputs*sizeof(CALmem),0);	
@@ -280,6 +281,7 @@ CALresult Module::RunComputeShader(Array** inputs, Array* globalBuffer, CALprogr
 	/*
 		Set inputs
 	*/
+	err = CAL_RESULT_OK;
 	for(i = 0; (err == CAL_RESULT_OK) && (i < nInputs); i++)
 		err = inputs[i]->GetNamedLocalMem(ctx,inputNames[i],&inpMem[i]);
 
@@ -326,29 +328,4 @@ CALresult Module::RunComputeShader(Array** inputs, Array* globalBuffer, CALprogr
 	delete inpMem;	
 
 	return err;	
-}
-
-ModulePool::ModulePool(void)
-{
-	err = CAL_RESULT_OK;
-}
-
-
-ModulePool::~ModulePool(void)
-{
-	RemoveAll();
-}
-
-Module* ModulePool::Get(long ind)
-{
-	return (Module*)ObjectPool::Get(ind);
-}
-
-void ModulePool::Remove(long ind)
-{
-	Module* module = Get(ind);
-	if(module)
-		delete module;
-	
-	ObjectPool::Remove(ind);
 }

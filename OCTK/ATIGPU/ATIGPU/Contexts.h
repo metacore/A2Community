@@ -1,8 +1,10 @@
 #pragma once
 #include "ObjectPool.h"
-#include "Modules.h"
 #include "Arrays.h"
-#include "Common.h"
+#include "Kernels.h"
+#include "Modules.h"
+#include "cal_ext.h"
+#include "cal_ext_counter.h"
 
 // operation codes
 #define OpIdentic	0
@@ -24,39 +26,23 @@
 class Context
 {
 public:
-	Context(CALdevice hDev, CALdeviceinfo* devInfo, CALdeviceattribs* devAttribs, Kernel** kernels);
+	Context(CALdevice hDev, CALdeviceinfo* devInfo, CALdeviceattribs* devAttribs, ArrayPool* arrs, Kernel** kernels, CALresult* err);
 	~Context(void);
 
-	CALresult SetComputation(ArrayExpression* expr, Array* result, long priority, long flags, ArrayPool* arrs);
+	// set computation
+	CALresult SetComputation(ArrayExpression* expr, Array* result, long priority, long flags);
 
-	CALresult err;	// error code for last operation
-	
-	CALcontext ctx;	// context handle
-	CALdevice hDev;	// device handle		
-
-	Kernel** kernels;
-
-	Module** modules;	// context modules
-	
-	ArrayExpression* expr;	// array expression describing current computation
-	Array* result;			// result array for current computation
-
-	CALdeviceattribs* devAttribs;
-	CALdeviceinfo* devInfo;
-
-	BOOL isInUse;	// TRUE when the context is currently in use
-
-	CALcounter idleCounter;	// GPU Idle counter
-	CALcounter cacheHitCounter;	// GPU cache hit counter
-	
-	// perform the computation which was preliminary set by SetComputation
+	// set an elementwise computation
+	CALresult SetElementwise(ArrayExpression* expr, Array* result);
+	// split a matrix into given number of parts, convenient for matrix multiplication
+	CALresult SplitMatrix(Array* arr, long numParts, Array* parts);
+	// perform a computation already set by SetComputation
 	CALresult DoComputation(void);
-	// perform assignment of array identity
-	CALresult DoIdentic(void);	
-	// performs an elementwise operation
+	// perform an elementwise operation
 	CALresult DoElementwise(void);
-	// perform matrix vector multiply operation
-	CALresult DoMatVecMul(void);	
+	// set a matrix vector multiply computation
+	CALresult SetMatVecMul(ArrayExpression* expr, Array* result);
+
 
 	// start Idle counter
 	CALresult StartIdleCounter(void);
@@ -70,38 +56,45 @@ public:
 	CALresult GetIdleCounter(float* counterVal);
 	// get cache hit counter value
 	CALresult GetCacheHitCounter(float* counterVal);
-	
-	BOOL InitCounterExtension(void);
 
+	BOOL InitCounterExtension(void);	// initialize CAL counters extension
 	PFNCALCTXCREATECOUNTER  calCtxCreateCounterExt;
 	PFNCALCTXDESTROYCOUNTER calCtxDestroyCounterExt;
 	PFNCALCTXBEGINCOUNTER   calCtxBeginCounterExt;
 	PFNCALCTXENDCOUNTER     calCtxEndCounterExt;
 	PFNCALCTXGETCOUNTER     calCtxGetCounterExt;	
 
-	BOOL counterExtSupported;	// TRUE when counter extension is supported	
-	// allocate local memory of an array with freeing space if necessary
-	CALresult AllocateArrayLocal(Array* arr, ArrayPool* arrs, CALuint flags);	
-	// setup a computation in a common way
-	CALresult SetCommon(ArrayExpression* expr, Array* result, ArrayPool* arrs, BOOL overwritenResult, BOOL resultIsGlobalBuf);	
-	// perform matrix matrix multiply operation
+	BOOL isUsed;					// TRUE when the context is currently in use
+
+	CALdevice hDev;					// device handle
+	CALcontext ctx;					// context handle
+
+	Kernel** kernels;				// used kernels
+	Module** modules;				// context modules
+	ArrayPool* arrs;				// pool of arrays created on the device
+
+	ArrayExpression* expr;			// array expression describing current computation
+	Array* result;					// result array for current computation
+	Array* resultTemp;				// a temporary result array
+
+	CALdeviceinfo* devInfo;			// device info
+	CALdeviceattribs* devAttribs;	// device attributes 	
+
+	BOOL counterExtSupported;		// TRUE when counter extension is supported	
+	CALcounter idleCounter;			// GPU Idle counter
+	CALcounter cacheHitCounter;		// GPU cache hit counter	
+	// perform a matrix vector multiplication
+	CALresult DoMatVecMul(void);
+	// perform matrix vector multiplication for the case when matrix is splitted into parts
+	CALresult DoMatVecMulSplitted(void);
+	// set a matrix multiplication computation
+	CALresult SetMatMul(ArrayExpression* expr, Array* result);
+	// perform a matrix multiplication computation
 	CALresult DoMatMul(void);
-
-	// divide a matrix to 4 parts
-	CALresult DivideMatrixTo4Parts(Array* arr, Array*** parts);
-	// divide a matrix to 8 parts
-	CALresult DivideMatrixTo8Parts(Array* arr, Array*** parts);	
-
-	CALresult DoMatMult4x8x4by4x4x4(void);
-	CALresult DoMatMult8x4by4x4(void);
-	CALresult DoMatMult4x4by4x4(void);
-	CALresult DoMatMultByParts4x4x4by4x4x4(void);
-	CALresult DoMatMultByParts4x8x4by4x4x4(void);
-	CALresult DoMatMultByParts2x8x4by2x4x4(void);
-	// gather a matrix divided to 8 parts
-	CALresult GatherMatrixFrom8Parts(Array** parts, Array* arr);
-	CALresult DoElementwiseByParts(void);
-	CALresult DoMatVecMulByParts(void);
+	// set a reshape computation
+	CALresult SetReshape(ArrayExpression* expr, Array* result);
+	// perform a reshape computation
+	CALresult DoReshape(void);
 };
 
 class ContextPool :
@@ -113,7 +106,5 @@ public:
 
 	Context* Get(long ind);	
 	void Remove(long ind);	
-	long FindNotUsed(void);
-
-	CALresult err;	// error code for last operation
+	long FindUnused(void);			// find a context which is currently unused, returns -1 if there is no such
 };
