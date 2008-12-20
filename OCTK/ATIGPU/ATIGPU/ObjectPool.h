@@ -18,4 +18,6 @@ public:
 	virtual void Remove(long ind);	// remove an entry given its position
 	void RemoveAll(void);			// remove all pool entries
 	long Find(void* obj);			// find an entry by its pointer, returns index of found entry or -1 if not found	
+	// set an object at given index
+	void Set(long ind, void* obj);
 };

@@ -31,7 +31,7 @@ KernSplitMatrixTo4Parts_PS,
 KernSplitMatrixTo8Parts_PS,
 
 // reshape an array to matrix
-//KernReshapeToMatrixR_PS,
+KernReshapeToMatrixNoBounds_PS,
 
 NKernels		// total number of kernels
 };
@@ -559,16 +559,26 @@ const char kernelMatMul88Parts8x4by4x4R_PS[] =
 "end\n";
 
 /*
-	Reshape an array to matrix
+	C := reshape(A,width,height);
+	Reshape A with (A.width % physNumComponents == 0) to C with (C.width % physNumComponents == 0)
+
+	Easiest case without handling of boundaries
 */
-const char kernelReshapeToMatrixR_PS[] =
+const char kernelReshapeToMatrixNoBounds_PS[] =
 "il_ps_2_0\n"
-"dcl_cb cb0[1]\n"	// [pitch,delta,]
+"dcl_cb cb0[1]\n"	// [A.width,1/A.width]
+"dcl_output_generic o0\n"
 "dcl_input vObjIndex0\n"
 "dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__\n"
 "dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
 
+// compute 2D position for element of A
+"itof r0.x, vObjIndex0.x\n"		// linear element index
+"mul r1.y, r0.x, cb0[0].y\n"	// y := index/A.width
+"mod r1.x, r0.x, cb0[0].x\n"	// x := index % A.width
+"flr r1.xy, r1.xy\n"
 
+"sample_resource(0)_sampler(0) o0, r1.xy\n"
 
 "end\n";
 

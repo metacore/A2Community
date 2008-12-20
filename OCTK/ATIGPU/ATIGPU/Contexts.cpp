@@ -557,7 +557,7 @@ CALresult Context::SetMatVecMul(ArrayExpression* expr, Array* result)
 		// result is within input arguments - create temporary result array
 		_ASSERT(!resultTemp);
 
-		resultTemp = new Array(result->hDev,result->devInfo,result->devAttribs,-1,result->dType,4,result->nDims,result->size);
+		resultTemp = new Array(result->hDev,result->devInfo,result->devAttribs,result->arrID,result->dType,4,result->nDims,result->size);
 		if( (err = arrs->AllocateArray(resultTemp,0)) != CAL_RESULT_OK )
 		{
 			delete resultTemp;
@@ -630,16 +630,25 @@ CALresult Context::DoMatVecMul(void)
 				else
 				{
 					if( (err = module->RunPixelShader(expr->args,&resultTemp,NULL,&domain)) == CAL_RESULT_OK )
-						err = result->Copy(ctx,result->res,resultTemp->res);
-
-					delete resultTemp;
-					resultTemp = NULL;
+					{	
+						// FIXME: do it without write access to the array pool by changing result's properties
+						delete result;
+						arrs->Set(arrs->Find(resultTemp->arrID),resultTemp);						
+						result = resultTemp;
+						resultTemp = NULL;
+					}
 				}								
 
 				module->ReleaseConstantsFromContext();
 			}
 		}		
-	}	
+	}
+
+	if(resultTemp)
+	{
+		delete resultTemp;
+		resultTemp = NULL;
+	}
 
 	return err;
 }
@@ -728,16 +737,25 @@ CALresult Context::DoMatVecMulSplitted(void)
 				else
 				{
 					if( (err = module->RunPixelShader(inputs,&resultTemp,NULL,&domain)) == CAL_RESULT_OK )
-						err = result->Copy(ctx,result->res,resultTemp->res);
-
-					delete resultTemp;
-					resultTemp = NULL;
+					{
+						// FIXME: do it without write access to the array pool by changing result's properties
+						delete result;
+						arrs->Set(arrs->Find(resultTemp->arrID),resultTemp);						
+						result = resultTemp;
+						resultTemp = NULL;
+					}
 				}								
 
 				module->ReleaseConstantsFromContext();
 			}
 		}		
 	}	
+
+	if(resultTemp)
+	{
+		delete resultTemp;
+		resultTemp = NULL;
+	}
 
 	return err;
 }
@@ -785,23 +803,24 @@ CALresult Context::SetMatMul(ArrayExpression* expr, Array* result)
 	if(err != CAL_RESULT_OK)
 		return err;
 
-	if(result->res || !result->parts || !EqualSizes(result->nDims,result->size,expr->nDims,expr->size))
-	{
-		result->Free();
-		err = arrs->AllocateSplittedMatrix(result,expr->args[0]->numParts,0);
-	}
-	else if( (result == expr->args[0]) || (result == expr->args[1]) )
+	if( (result == expr->args[0]) || (result == expr->args[1]) )
 	{
 		// result is within input arguments - create temporary result array
 		_ASSERT(!resultTemp);
 
-		resultTemp = new Array(result->hDev,result->devInfo,result->devAttribs,-1,result->dType,4,result->nDims,result->size);
+		resultTemp = new Array(result->hDev,result->devInfo,result->devAttribs,-1,result->dType,result->physNumComponents,result->nDims,result->size);
 		if( (err = arrs->AllocateSplittedMatrix(resultTemp,result->numParts,0)) != CAL_RESULT_OK )
 		{
 			delete resultTemp;
 			resultTemp = NULL;
 		}
 	}
+	else if(result->res || !result->parts || !EqualSizes(result->nDims,result->size,expr->nDims,expr->size))
+	{
+		result->Free();
+		err = arrs->AllocateSplittedMatrix(result,expr->args[0]->numParts,0);
+	}
+	
 
 	return err;
 }
@@ -874,18 +893,24 @@ CALresult Context::DoMatMul(void)
 				{
 					if( (err = module->RunPixelShader(inputs,resultTemp->parts,NULL,&domain)) == CAL_RESULT_OK )
 					{
-						for(i = 0; (i < resultTemp->numParts) && (err == CAL_RESULT_OK); i++)
-							err = result->Copy(ctx,result->parts[i]->res,resultTemp->parts[i]->res);
-					}
-
-					delete resultTemp;
-					resultTemp = NULL;
+						// FIXME: do it without write access to the array pool by changing result's properties
+						delete result;
+						arrs->Set(arrs->Find(resultTemp->arrID),resultTemp);						
+						result = resultTemp;
+						resultTemp = NULL;
+					}					
 				}								
 
 				module->ReleaseConstantsFromContext();
 			}
 		}		
 	}	
+
+	if(resultTemp)
+	{
+		delete resultTemp;
+		resultTemp = NULL;
+	}
 
 	return err;
 }
@@ -897,23 +922,30 @@ CALresult Context::SetReshape(ArrayExpression* expr, Array* result)
 	
 	err = CAL_RESULT_OK;
 		
-	if(!expr->args[0]->res)
+	if(!expr->args[0]->res && !expr->args[0]->parts)
 	{
 		if( (err = arrs->AllocateArray(expr->args[0],0)) == CAL_RESULT_OK )
 			err = expr->args[0]->SetData(ctx,expr->args[0]->cpuData);
 	}
+	else if(expr->args[0]->parts)
+	{
+		err = CAL_RESULT_NOT_SUPPORTED;
+	}
 
 	if(err != CAL_RESULT_OK)
-		return err;
+		return err;	
 
-	resultTemp = new Array(hDev,devInfo,devAttribs,result->arrID,expr->args[0]->dType,1,expr->args[0]->nDims,expr->args[0]->size);
-	err = arrs->AllocateArray(resultTemp,0);
-
-	if(err != CAL_RESULT_OK)
-		return err;
-
-	if(!result->res || !EqualSizes(result->nDims,result->size,expr->nDims,expr->size))
+	if(result == expr->args[0])
+	{
+		resultTemp = new Array(result->hDev,result->devInfo,result->devAttribs,result->arrID,result->dType,result->physNumComponents,expr->nDims,expr->size);
+		if(!resultTemp->isVirtualized)
+			err = arrs->AllocateArray(resultTemp,0);
+	}
+	else if( !result->res || result->parts || !EqualSizes(result->nDims,result->size,expr->nDims,expr->size) )
+	{
+		result->Free();
 		err = arrs->AllocateArray(result,0);
+	}
 
 	return err;
 }
@@ -922,13 +954,100 @@ CALresult Context::SetReshape(ArrayExpression* expr, Array* result)
 CALresult Context::DoReshape(void)
 {
 	CALresult err;
+	KernelCode iKernel;		
+	Module* module;
+	CALdomain domain;		
+	float constData[4];	
+	Array* arr;	
 
-	//err = resultTemp->Copy(ctx,resultTemp->res,expr->args[0]->res);
-	//err = result->Copy(ctx,result->res,resultTemp->res);
-	err = resultTemp->Copy(ctx,resultTemp->res,expr->args[0]->res);	
-	arrs->Remove(arrs->Find(result->arrID));
-	arrs->Add(resultTemp);
-	result = resultTemp;
+	err = CAL_RESULT_OK;
+
+	if(result != expr->args[0])
+		arr = result;
+	else
+		arr = resultTemp;
+
+	if(expr->args[0]->isVirtualized && arr->isVirtualized)
+	{
+		// no explicit reshape is required!
+
+		if(!resultTemp)
+			err = arr->Copy(ctx,result->res,expr->args[0]->res);
+		else
+		{	
+			// FIXME: do it without write access to the array pool by changing result's properties
+			resultTemp->res = result->res;
+			result->res = 0;
+			delete result;
+
+			arrs->Set(arrs->Find(resultTemp->arrID),resultTemp);			
+			result = resultTemp;
+			resultTemp = NULL;
+		}
+
+		return err;
+	}
+	else if( (expr->args[0]->isVirtualized || (expr->args[0]->size[1] == expr->args[0]->physSize[1]) ) && (arr->size[1] == arr->physSize[1]) )
+	{
+		iKernel = KernReshapeToMatrixNoBounds_PS;
+	}
+	else
+		return CAL_RESULT_NOT_SUPPORTED;
+
+	// get suited module
+	if(!modules[iKernel])
+	{
+		modules[iKernel] = new Module(hDev,ctx,kernels[iKernel],&err);		
+		if(err != CAL_RESULT_OK)
+		{
+			delete modules[iKernel];
+			modules[iKernel] = NULL;
+		}
+	}
+	
+	if(err == CAL_RESULT_OK)
+	{		
+		module = modules[iKernel];
+
+		constData[0] = (float)(expr->args[0]->physSize[1]);	// width		
+		constData[1] = 1.0f/constData[0];					// 1/width
+
+		err = module->constants[0]->SetData(&constData);		
+		if(err == CAL_RESULT_OK)
+		{
+			err = module->SetConstantsToContext();
+			if(err == CAL_RESULT_OK)
+			{
+				// set the domain of execution
+				domain.x = 0;
+				domain.y = 0;		
+				domain.width = arr->physSize[1];
+				domain.height = arr->physSize[0];	
+								
+				err = module->RunPixelShader(expr->args,&arr,NULL,&domain);
+
+				if( (err == CAL_RESULT_OK) && resultTemp )
+				{		
+					// FIXME: do it without write access to the array pool by changing result's properties
+					resultTemp->res = result->res;
+					result->res = 0;
+					delete result;
+
+					arrs->Set(arrs->Find(resultTemp->arrID),resultTemp);					
+					result = resultTemp;
+					resultTemp = NULL;
+				}
+				
+				module->ReleaseConstantsFromContext();
+			}
+		}		
+	}	
+
+	if(resultTemp)
+	{
+		delete resultTemp;
+		resultTemp = NULL;
+	}
 
 	return err;
 }

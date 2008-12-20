@@ -87,3 +87,11 @@ long ObjectPool::Find(void* obj)
 	else 
 		return -1;
 }
+// set an object at given index
+void ObjectPool::Set(long ind, void* obj)
+{
+	if( (ind >= 0) && (ind < nObjs) )
+	{
+		objs[ind] = obj;
+	}
+}
