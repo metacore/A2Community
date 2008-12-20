@@ -30,8 +30,11 @@ KernMatMul88Parts8x4by4x4R_PS,
 KernSplitMatrixTo4Parts_PS,
 KernSplitMatrixTo8Parts_PS,
 
-// reshape an array to matrix
-KernReshapeToMatrixNoBounds_PS,
+// reshape a matrix to matrix
+KernReshapeMatToMatNoBounds_PS,
+
+// reshape a ND array to matrix
+KernReshapeArr1DWToMat4DW_PS,
 
 NKernels		// total number of kernels
 };
@@ -564,7 +567,7 @@ const char kernelMatMul88Parts8x4by4x4R_PS[] =
 
 	Easiest case without handling of boundaries
 */
-const char kernelReshapeToMatrixNoBounds_PS[] =
+const char kernelReshapeMatToMatNoBounds_PS[] =
 "il_ps_2_0\n"
 "dcl_cb cb0[1]\n"	// [A.width,1/A.width]
 "dcl_output_generic o0\n"
@@ -581,6 +584,96 @@ const char kernelReshapeToMatrixNoBounds_PS[] =
 "sample_resource(0)_sampler(0) o0, r1.xy\n"
 
 "end\n";
+
+/*
+	Reshape a virtualized array with 1-double word elements to a matrix with 4-double word elements
+
+	C := A.Reshape(width,height);
+*/
+const char kernelReshapeArr1DWToMat4DW_PS[] =
+"il_ps_2_0\n"
+"dcl_cb cb0[1]\n"	// [A.physWidth,1/A.physWidth,C.physWidth-1,C.physWidth-C.width]
+"dcl_output_generic o0\n"
+"dcl_input vObjIndex0\n"
+"dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__\n"
+"dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+
+"dcl_literal l0, 4.0f, 1.0f, 2.0f, 3.0f\n"
+
+// compute 2D position for element of A
+"itof r0.x, vObjIndex0.x\n"		// linear element index
+"mad r0.xyzw, r0.xxxx, l0.x, l0.0yzw\n" // [index*4,index*4+1,index*4+2,index*4+3]
+
+"mod r1, r0, cb0[0].xxxx\n"		// [index,index+1,index+2,index+3] % A.physWidth
+"mul r2, r0, cb0[0].yyyy\n"		// [index,index+1,index+2,index+3]/A.physWidth
+
+"mov r3.xz, r1.xy\n"
+"mov r3.yw, r2.xy\n"
+"mov r4.xz, r1.zw\n"
+"mov r4.yw, r2.zw\n"
+
+"sample_resource(0)_sampler(0) r0.x, r3.xy\n"
+"sample_resource(0)_sampler(0) r0.y, r3.zw\n"
+"sample_resource(0)_sampler(0) r0.z, r4.xy\n"
+"sample_resource(0)_sampler(0) r0.w, r4.zw\n"
+
+"neq r1.x, vWinCoord0.x, cb0[0].z\n"
+"if_logicalnz r1.x\n"	// if vWinCoord0.x != C.physWidth-1
+"	mov o0, r0\n"
+"else\n"
+
+"	ftoi r1.x, cb0[0].w\n"
+
+"	switch r1.x\n"
+
+"		default\n"
+"			mov o0, r0\n"
+"		break\n"
+
+"		case 1\n"
+"			mov o0.xyz0, r0\n"
+"		break\n"
+
+"		case 2\n"
+"			mov o0.xy00, r0\n"
+"		break\n"
+
+"		case 3\n"
+"			mov o0.x000, r0\n"
+"		break\n"
+
+"	endswitch\n"
+
+"endif\n"
+
+/*
+"mul r1.y, r0.x, cb0[0].y\n"	// y := index/A.width
+"mod r1.x, r0.x, cb0[0].x\n"	// x := index % A.width
+"flr r1.xy, r1.xy\n"
+
+"add r0.x, r0.x, r0.1\n"
+"mul r2.y, r0.x, cb0[0].y\n"	// y := index/A.width
+"mod r2.x, r0.x, cb0[0].x\n"	// x := index % A.width
+"flr r2.xy, r2.xy\n"
+
+"add r0.x, r0.x, r0.1\n"
+"mul r3.y, r0.x, cb0[0].y\n"	// y := index/A.width
+"mod r3.x, r0.x, cb0[0].x\n"	// x := index % A.width
+"flr r3.xy, r3.xy\n"
+
+"add r0.x, r0.x, r0.1\n"
+"mul r4.y, r0.x, cb0[0].y\n"	// y := index/A.width
+"mod r4.x, r0.x, cb0[0].x\n"	// x := index % A.width
+"flr r4.xy, r4.xy\n"
+
+"sample_resource(0)_sampler(0) o0.x, r1.xy\n"
+"sample_resource(0)_sampler(0) o0.y, r2.xy\n"
+"sample_resource(0)_sampler(0) o0.z, r3.xy\n"
+"sample_resource(0)_sampler(0) o0.w, r4.xy\n"
+*/
+
+"end\n";
+
 
 /*
 	Split a matrix to 4 parts

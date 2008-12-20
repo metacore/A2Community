@@ -557,7 +557,7 @@ CALresult Context::SetMatVecMul(ArrayExpression* expr, Array* result)
 		// result is within input arguments - create temporary result array
 		_ASSERT(!resultTemp);
 
-		resultTemp = new Array(result->hDev,result->devInfo,result->devAttribs,result->arrID,result->dType,4,result->nDims,result->size);
+		resultTemp = new Array(result->hDev,result->devInfo,result->devAttribs,result->arrID,result->dType,result->nDims,result->size);
 		if( (err = arrs->AllocateArray(resultTemp,0)) != CAL_RESULT_OK )
 		{
 			delete resultTemp;
@@ -630,8 +630,7 @@ CALresult Context::DoMatVecMul(void)
 				else
 				{
 					if( (err = module->RunPixelShader(expr->args,&resultTemp,NULL,&domain)) == CAL_RESULT_OK )
-					{	
-						// FIXME: do it without write access to the array pool by changing result's properties
+					{							
 						delete result;
 						arrs->Set(arrs->Find(resultTemp->arrID),resultTemp);						
 						result = resultTemp;
@@ -737,8 +736,7 @@ CALresult Context::DoMatVecMulSplitted(void)
 				else
 				{
 					if( (err = module->RunPixelShader(inputs,&resultTemp,NULL,&domain)) == CAL_RESULT_OK )
-					{
-						// FIXME: do it without write access to the array pool by changing result's properties
+					{						
 						delete result;
 						arrs->Set(arrs->Find(resultTemp->arrID),resultTemp);						
 						result = resultTemp;
@@ -808,7 +806,7 @@ CALresult Context::SetMatMul(ArrayExpression* expr, Array* result)
 		// result is within input arguments - create temporary result array
 		_ASSERT(!resultTemp);
 
-		resultTemp = new Array(result->hDev,result->devInfo,result->devAttribs,-1,result->dType,result->physNumComponents,result->nDims,result->size);
+		resultTemp = new Array(result->hDev,result->devInfo,result->devAttribs,result->arrID,result->dType,result->nDims,result->size);
 		if( (err = arrs->AllocateSplittedMatrix(resultTemp,result->numParts,0)) != CAL_RESULT_OK )
 		{
 			delete resultTemp;
@@ -892,8 +890,7 @@ CALresult Context::DoMatMul(void)
 				else
 				{
 					if( (err = module->RunPixelShader(inputs,resultTemp->parts,NULL,&domain)) == CAL_RESULT_OK )
-					{
-						// FIXME: do it without write access to the array pool by changing result's properties
+					{						
 						delete result;
 						arrs->Set(arrs->Find(resultTemp->arrID),resultTemp);						
 						result = resultTemp;
@@ -937,7 +934,7 @@ CALresult Context::SetReshape(ArrayExpression* expr, Array* result)
 
 	if(result == expr->args[0])
 	{
-		resultTemp = new Array(result->hDev,result->devInfo,result->devAttribs,result->arrID,result->dType,result->physNumComponents,expr->nDims,expr->size);
+		resultTemp = new Array(result->hDev,result->devInfo,result->devAttribs,result->arrID,result->dType,expr->nDims,expr->size);
 		if(!resultTemp->isVirtualized)
 			err = arrs->AllocateArray(resultTemp,0);
 	}
@@ -974,8 +971,7 @@ CALresult Context::DoReshape(void)
 		if(!resultTemp)
 			err = arr->Copy(ctx,result->res,expr->args[0]->res);
 		else
-		{	
-			// FIXME: do it without write access to the array pool by changing result's properties
+		{				
 			resultTemp->res = result->res;
 			result->res = 0;
 			delete result;
@@ -987,9 +983,29 @@ CALresult Context::DoReshape(void)
 
 		return err;
 	}
-	else if( (expr->args[0]->isVirtualized || (expr->args[0]->size[1] == expr->args[0]->physSize[1]) ) && (arr->size[1] == arr->physSize[1]) )
+	else if(!expr->args[0]->isVirtualized && !arr->isVirtualized)
 	{
-		iKernel = KernReshapeToMatrixNoBounds_PS;
+		if( (expr->args[0]->size[1] == expr->args[0]->physSize[1]) && (arr->size[1] == arr->physSize[1]) )
+		{
+			iKernel = KernReshapeMatToMatNoBounds_PS;
+			constData[0] = (float)(expr->args[0]->physSize[1]);	// A.physWidth		
+			constData[1] = 1.0f/constData[0];					// 1/A.physWidth
+		}
+		else
+			return CAL_RESULT_NOT_SUPPORTED;
+	}
+	else if(expr->args[0]->isVirtualized && !arr->isVirtualized)
+	{
+		if(expr->args[0]->elemSize == 4)
+		{
+			iKernel = KernReshapeArr1DWToMat4DW_PS;
+			constData[0] = (float)(expr->args[0]->physSize[1]);	// A.physWidth		
+			constData[1] = 1.0f/constData[0];					// 1/A.physWidth
+			constData[2] = (float)(result->physSize[1]-1);	// C.physWidth-1
+			constData[3] = (float)(result->physSize[1]-result->size[1]);	// C.physWidth-C.width
+		}
+		else
+			return CAL_RESULT_NOT_SUPPORTED;
 	}
 	else
 		return CAL_RESULT_NOT_SUPPORTED;
@@ -1007,10 +1023,7 @@ CALresult Context::DoReshape(void)
 	
 	if(err == CAL_RESULT_OK)
 	{		
-		module = modules[iKernel];
-
-		constData[0] = (float)(expr->args[0]->physSize[1]);	// width		
-		constData[1] = 1.0f/constData[0];					// 1/width
+		module = modules[iKernel];		
 
 		err = module->constants[0]->SetData(&constData);		
 		if(err == CAL_RESULT_OK)
@@ -1027,8 +1040,7 @@ CALresult Context::DoReshape(void)
 				err = module->RunPixelShader(expr->args,&arr,NULL,&domain);
 
 				if( (err == CAL_RESULT_OK) && resultTemp )
-				{		
-					// FIXME: do it without write access to the array pool by changing result's properties
+				{					
 					resultTemp->res = result->res;
 					result->res = 0;
 					delete result;

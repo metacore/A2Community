@@ -250,9 +250,8 @@ ATIGPU_API long SetComputation(
 	
 		if(ind == -1)	// create a new array
 		{		
-			arr = new Array(dev->hDev,&dev->info,&dev->attribs,inArgs[i]->id,inArgs[i]->dType,4,inArgs[i]->nDims,inArgs[i]->size);		
-			arr->cpuData = inArgs[i]->data;		
-
+			arr = new Array(dev->hDev,&dev->info,&dev->attribs,inArgs[i]->id,inArgs[i]->dType,inArgs[i]->nDims,inArgs[i]->size);
+			arr->cpuData = inArgs[i]->data;
 			dev->arrs->Add(arr);	// add new array to the pool
 		}
 		else	// use already existing array		
@@ -269,9 +268,8 @@ ATIGPU_API long SetComputation(
 	
 	if(ind == -1)	// create a new array
 	{		
-		arr = new Array(dev->hDev,&dev->info,&dev->attribs,resultDesc->id,resultDesc->dType,4,resultDesc->nDims,resultDesc->size);		
+		arr = new Array(dev->hDev,&dev->info,&dev->attribs,resultDesc->id,resultDesc->dType,resultDesc->nDims,resultDesc->size);		
 		arr->cpuData = resultDesc->data;
-
 		dev->arrs->Add(arr);	// add new array to the pool
 	}
 	else	// use already existing array	

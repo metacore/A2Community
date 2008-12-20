@@ -4,7 +4,7 @@
 class Array
 {
 public:	
-	Array(CALdevice hDev, CALdeviceinfo* devInfo, CALdeviceattribs* devAttribs, long arrID, long dType, long numComponents, long nDims, long* size);	
+	Array(CALdevice hDev, CALdeviceinfo* devInfo, CALdeviceattribs* devAttribs, long arrID, long dType, long nDims, long* size);
 	~Array(void);
 
 	// free array resource

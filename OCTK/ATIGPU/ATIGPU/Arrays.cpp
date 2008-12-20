@@ -2,26 +2,28 @@
 #include "Arrays.h"
 #include "Common.h"
 
-Array::Array(CALdevice hDev, CALdeviceinfo* devInfo, CALdeviceattribs* devAttribs, long arrID, long dType, long numComponents, long nDims, long* size)
+Array::Array(CALdevice hDev, CALdeviceinfo* devInfo, CALdeviceattribs* devAttribs, long arrID, long dType, long nDims, long* size)
 {	
-	long i;
-
-	res = 0;	
-	cpuData = NULL;
-	numParts = 0;
-	parts = NULL;
+	long i;	
+	
+	res = 0;
+	numParts = 0;	
 	useCounter = 0;
+
+	cpuData = NULL;
+	parts = NULL;
+
 	isReservedForGet = FALSE;
 	isVirtualized = FALSE;
 	isGlobalBuf = FALSE;
 
-	this->hDev = hDev;	
+	this->hDev = hDev;
 	this->arrID = arrID;		
 	this->dType = dType;
 	this->devInfo = devInfo;
 	this->devAttribs = devAttribs;
 
-	physNumComponents = min(numComponents,4);			
+	physNumComponents = 4;	// use quads for efficient memory accesses
 	if(dType == TLONGREAL)
 		physNumComponents = min(physNumComponents,2);	
 	
@@ -37,17 +39,14 @@ Array::Array(CALdevice hDev, CALdeviceinfo* devInfo, CALdeviceattribs* devAttrib
 
 	// total data size in bytes
 	elemSize = GetElementSize(dType);	
-	dataSize = numElements*elemSize;
-
-	this->dFormat = GetFormat(dType,physNumComponents);
-	physElemSize = elemSize*physNumComponents;
+	dataSize = numElements*elemSize;			
 
 	// does it require virtualization?
 	if( ((nDims == 1) && (GetPaddedNumElements(size[0],physNumComponents) <= (long)devInfo->maxResource1DWidth)) 
 		|| ((nDims == 2) && (GetPaddedNumElements(size[1],physNumComponents) <= (long)devInfo->maxResource2DWidth) && (size[0] <= (long)devInfo->maxResource2DHeight) ) )
 	{
 		if( (nDims == 2) && (size[0] > 1) )
-		{
+		{			
 			physSize[0] = size[0];
 			physSize[1] = GetPaddedNumElements(size[1],physNumComponents);
 
@@ -67,28 +66,32 @@ Array::Array(CALdevice hDev, CALdeviceinfo* devInfo, CALdeviceattribs* devAttrib
 				physSize[1] = GetPaddedNumElements(size[1],physNumComponents);
 				this->nDims = 1;
 			}
-		}
+		}		
 		
 		// compute pitch in physical elements
 		physPitch = (physSize[1]/devAttribs->pitch_alignment)*devAttribs->pitch_alignment;
 		if(physSize[1] % devAttribs->pitch_alignment) physPitch += devAttribs->pitch_alignment;		
 	}
-	else
+	else	// virtualization is required -> represent array in tiled memory layout
 	{
-		physPitch = devInfo->maxResource2DWidth;
+		isVirtualized = TRUE;		
 
-		// Virtualization -> represent array as a matrix
-		physSize[1] = physPitch;
-		
+		physNumComponents = 1;	// this is for more convenient memory access
+
+		physPitch = devInfo->maxResource2DWidth;		
+		physSize[1] = physPitch;		
 		physSize[0] = GetPaddedNumElements(numElements,physPitch*physNumComponents);		
-
-		isVirtualized = TRUE;
 	}	
 
-	// physical total number of elements and the same in bytes	
+	// format and size of a physical element
+	dFormat = GetFormat(dType,physNumComponents);
+	physElemSize = elemSize*physNumComponents;
+
+	// total number of physical elements and total physical data size in bytes
 	physNumElements = physSize[0]*physSize[1];
-	physDataSize = physNumElements*physElemSize;
+	physDataSize = physNumElements*physElemSize;	
 }
+
 
 Array::~Array(void)
 {
@@ -572,7 +575,7 @@ CALresult ArrayPool::AllocateSplittedMatrix(Array* arr, long numParts, CALuint f
 		
 		arr->parts = new Array*[numParts];
 		for(i = 0; i < numParts; i++)
-			arr->parts[i] = new Array(arr->hDev,arr->devInfo,arr->devAttribs,arr->arrID,arr->dType,4,2,&size[0]);
+			arr->parts[i] = new Array(arr->hDev,arr->devInfo,arr->devAttribs,arr->arrID,arr->dType,2,&size[0]);
 
 		for(i = 0; (i < numParts) && (err == CAL_RESULT_OK); i++)
 			err = AllocateArray(arr->parts[i],flags);
