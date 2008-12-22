@@ -82,7 +82,7 @@ Kernel::Kernel(KernelCode iKernel, CALtarget target, CALresult* err)
 
 		case KernReshapeArr1DWToMat4DW_PS:
 			kernelStr = kernelReshapeArr1DWToMat4DW_PS; nInputs = 1; nOutputs = 1; nConstants = 1;
-			constSizes = new long[1]; constSizes[0] = 1;
+			constSizes = new long[1]; constSizes[0] = 2;
 			constFormats = new CALformat[1]; constFormats[0] = CAL_FORMAT_FLOAT_4;
 			break;
 
@@ -92,6 +92,10 @@ Kernel::Kernel(KernelCode iKernel, CALtarget target, CALresult* err)
 
 		case KernSplitMatrixTo8Parts_PS:
 			kernelStr = kernelSplitMatrixTo8Parts_PS; nInputs = 1; nOutputs = 8;
+			break;
+
+		case KernZeroMemory_PS:
+			kernelStr = kernelZeroMemory_PS; nOutputs = 1;
 			break;
 
 		default:

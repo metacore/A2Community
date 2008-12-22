@@ -35,7 +35,7 @@ public:
 	// set an elementwise computation
 	CALresult SetElementwise(ArrayExpression* expr, Array* result);
 	// split a matrix into given number of parts, convenient for matrix multiplication
-	CALresult SplitMatrix(Array* arr, long numParts, Array* parts);
+	CALresult SplitMatrix(Array* arr, long numParts, Array** parts);
 	// perform a computation already set by SetComputation
 	CALresult DoComputation(void);
 	// perform an elementwise operation
@@ -95,6 +95,8 @@ public:
 	CALresult SetReshape(ArrayExpression* expr, Array* result);
 	// perform a reshape computation
 	CALresult DoReshape(void);
+	// zero array memory
+	CALresult ZeroArrayMemory(Array* arr, CALdomain* domain);
 };
 
 class ContextPool :

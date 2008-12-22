@@ -36,6 +36,9 @@ KernReshapeMatToMatNoBounds_PS,
 // reshape a ND array to matrix
 KernReshapeArr1DWToMat4DW_PS,
 
+// zero memory
+KernZeroMemory_PS,
+
 NKernels		// total number of kernels
 };
 
@@ -566,17 +569,20 @@ const char kernelMatMul88Parts8x4by4x4R_PS[] =
 	Reshape A with (A.width % physNumComponents == 0) to C with (C.width % physNumComponents == 0)
 
 	Easiest case without handling of boundaries
+
+	NOTE: vObjectIndex0.x gives strange indexing!!! That is why it is not used in this implementation.
 */
 const char kernelReshapeMatToMatNoBounds_PS[] =
 "il_ps_2_0\n"
-"dcl_cb cb0[1]\n"	// [A.width,1/A.width]
+"dcl_cb cb0[1]\n"	// [A.width,1/A.width,C.width]
 "dcl_output_generic o0\n"
-"dcl_input vObjIndex0\n"
 "dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__\n"
 "dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
 
-// compute 2D position for element of A
-"itof r0.x, vObjIndex0.x\n"		// linear element index
+// compute linear index in the input
+"flr r0.xy, vWinCoord0.xy\n"
+"mad r0.x, r0.y, cb0[0].z, r0.x\n"
+// compute 2D index in the input matrix
 "mul r1.y, r0.x, cb0[0].y\n"	// y := index/A.width
 "mod r1.x, r0.x, cb0[0].x\n"	// x := index % A.width
 "flr r1.xy, r1.xy\n"
@@ -589,91 +595,84 @@ const char kernelReshapeMatToMatNoBounds_PS[] =
 	Reshape a virtualized array with 1-double word elements to a matrix with 4-double word elements
 
 	C := A.Reshape(width,height);
+
+	NOTE: vObjectIndex0.x gives strange indexing!!! That is why it is not used in this implementation.
 */
 const char kernelReshapeArr1DWToMat4DW_PS[] =
 "il_ps_2_0\n"
-"dcl_cb cb0[1]\n"	// [A.physWidth,1/A.physWidth,C.physWidth-1,C.physWidth-C.width]
+"dcl_cb cb0[1]\n"	// [A.physWidth,1/A.physWidth,C.physWidth,C.width]
 "dcl_output_generic o0\n"
-"dcl_input vObjIndex0\n"
 "dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__\n"
 "dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
 
 "dcl_literal l0, 4.0f, 1.0f, 2.0f, 3.0f\n"
 
-// compute 2D position for element of A
-"itof r0.x, vObjIndex0.x\n"		// linear element index
-"mad r0.xyzw, r0.xxxx, l0.x, l0.0yzw\n" // [index*4,index*4+1,index*4+2,index*4+3]
+// compute linear index in the input
+"flr r5.xy, vWinCoord0.xy\n"
+"mul r0.x, r5.x, l0.x\n"	// x := x*4;
+"mad r0.x, r5.y, cb0[0].w, r0.x\n"
 
+// compute 2D position for 4 input elements
+"add r0.xyzw, r0.xxxx, l0.0yzw\n" // [index,index+1,index+2,index+3]
+
+// x coordinates
 "mod r1, r0, cb0[0].xxxx\n"		// [index,index+1,index+2,index+3] % A.physWidth
+// y coordinates
 "mul r2, r0, cb0[0].yyyy\n"		// [index,index+1,index+2,index+3]/A.physWidth
+"flr r2, r2\n"
 
 "mov r3.xz, r1.xy\n"
 "mov r3.yw, r2.xy\n"
 "mov r4.xz, r1.zw\n"
 "mov r4.yw, r2.zw\n"
 
-"sample_resource(0)_sampler(0) r0.x, r3.xy\n"
-"sample_resource(0)_sampler(0) r0.y, r3.zw\n"
-"sample_resource(0)_sampler(0) r0.z, r4.xy\n"
-"sample_resource(0)_sampler(0) r0.w, r4.zw\n"
+"sample_resource(0)_sampler(0) r2.x, r3.xy\n"
+"sample_resource(0)_sampler(0) r2.y, r3.zw\n"
+"sample_resource(0)_sampler(0) r2.z, r4.xy\n"
+"sample_resource(0)_sampler(0) r2.w, r4.zw\n"
 
-"neq r1.x, vWinCoord0.x, cb0[0].z\n"
-"if_logicalnz r1.x\n"	// if vWinCoord0.x != C.physWidth-1
-"	mov o0, r0\n"
+"sub r1.y, cb0[0].z, r1.1\n"	// r1.y := C.physWidth-1
+"ne r1.x, r5.x, r1.y\n"
+
+"if_logicalnz r1.x\n"	// if x != C.physWidth-1
+"	mov o0, r2\n"
 "else\n"
 
-"	ftoi r1.x, cb0[0].w\n"
+	// r1.x := C.physWidth*4 - C.width
+"	mul r1.x, cb0[0].z, l0.x\n"
+"	sub r1.x, r1.x, cb0[0].w\n"
+
+"	ftoi r1.x, r1.x\n"
 
 "	switch r1.x\n"
 
 "		default\n"
-"			mov o0, r0\n"
+"			mov o0, r2\n"
 "		break\n"
 
 "		case 1\n"
-"			mov o0.xyz0, r0\n"
+"			mov o0, r2.xyz0\n"
 "		break\n"
 
 "		case 2\n"
-"			mov o0.xy00, r0\n"
+"			mov o0, r2.xy00\n"
 "		break\n"
 
 "		case 3\n"
-"			mov o0.x000, r0\n"
+"			mov o0, r2.x000\n"
 "		break\n"
 
 "	endswitch\n"
 
 "endif\n"
 
-/*
-"mul r1.y, r0.x, cb0[0].y\n"	// y := index/A.width
-"mod r1.x, r0.x, cb0[0].x\n"	// x := index % A.width
-"flr r1.xy, r1.xy\n"
-
-"add r0.x, r0.x, r0.1\n"
-"mul r2.y, r0.x, cb0[0].y\n"	// y := index/A.width
-"mod r2.x, r0.x, cb0[0].x\n"	// x := index % A.width
-"flr r2.xy, r2.xy\n"
-
-"add r0.x, r0.x, r0.1\n"
-"mul r3.y, r0.x, cb0[0].y\n"	// y := index/A.width
-"mod r3.x, r0.x, cb0[0].x\n"	// x := index % A.width
-"flr r3.xy, r3.xy\n"
-
-"add r0.x, r0.x, r0.1\n"
-"mul r4.y, r0.x, cb0[0].y\n"	// y := index/A.width
-"mod r4.x, r0.x, cb0[0].x\n"	// x := index % A.width
-"flr r4.xy, r4.xy\n"
-
-"sample_resource(0)_sampler(0) o0.x, r1.xy\n"
-"sample_resource(0)_sampler(0) o0.y, r2.xy\n"
-"sample_resource(0)_sampler(0) o0.z, r3.xy\n"
-"sample_resource(0)_sampler(0) o0.w, r4.xy\n"
-*/
-
 "end\n";
 
+const char kernelZeroMemory_PS[] = 
+"il_ps_2_0\n"
+"dcl_output_generic o0\n"
+"mov o0, r0.0000\n"
+"end\n";
 
 /*
 	Split a matrix to 4 parts
@@ -716,9 +715,9 @@ const char kernelSplitMatrixTo8Parts_PS[] =
 "flr r0.xy, vWinCoord0.xy\n"
 "mul r0.y, r0.y, l0.y\n"				// r1.xy := [x,y*8] - 2D position of the first row to copy
 
-"add r0.__zw, r0.yy, l0.zw\n"			// r0 := [x,y,y+1,y+2]
-"add r1.xyzw, r0.xyzw, l0.0xxx\n"		// r1 := [x,y+3,y+4,y+5]
-"add r2.xyz, r1.xyz, l0.0xx\n"			// r2 := [x,y+6,y+7]
+"add r0.__zw, r0.00yy, l0.00zw\n"			// r0 := [x,y,y+1,y+2]
+"add r1.xyzw, r0.xyzw, l0.0xxx\n"			// r1 := [x,y+3,y+4,y+5]
+"add r2.xyz0, r1.xyz0, l0.0xx0\n"			// r2 := [x,y+6,y+7]
 
 "dcl_output_generic o0\n"
 "dcl_output_generic o1\n"

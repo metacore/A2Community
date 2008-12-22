@@ -290,7 +290,7 @@ CALresult Context::SetElementwise(ArrayExpression* expr, Array* result)
 			{
 				if( (err = arrs->AllocateSplittedMatrix(expr->args[i],numParts,0)) == CAL_RESULT_OK )
 				{
-					if( (err = SplitMatrix(expr->args[i],numParts,expr->args[i]->parts[0])) == CAL_RESULT_OK )
+					if( (err = SplitMatrix(expr->args[i],numParts,expr->args[i]->parts)) == CAL_RESULT_OK )
 					{
 						calResFree(expr->args[i]->res);
 						expr->args[i]->res = 0;
@@ -321,7 +321,7 @@ CALresult Context::SetElementwise(ArrayExpression* expr, Array* result)
 }
 
 // split a matrix into given number of parts, convenient for matrix multiplication
-CALresult Context::SplitMatrix(Array* arr, long numParts, Array* parts)
+CALresult Context::SplitMatrix(Array* arr, long numParts, Array** parts)
 {	
 	CALresult err;
 	CALdomain domain;	
@@ -338,6 +338,8 @@ CALresult Context::SplitMatrix(Array* arr, long numParts, Array* parts)
 		default:
 			return CAL_RESULT_INVALID_PARAMETER;
 	}	
+
+	err = CAL_RESULT_OK;
 	
 	// get suited module
 	if(!modules[iKernel])
@@ -355,11 +357,11 @@ CALresult Context::SplitMatrix(Array* arr, long numParts, Array* parts)
 		// set the domain of execution
 		domain.x = 0;
 		domain.y = 0;		
-		domain.width = result->physSize[1];
-		domain.height = result->physSize[0]/numParts;		
+		domain.width = parts[0]->physSize[1];
+		domain.height = parts[0]->physSize[0];		
 
 		// run the program				
-		err = modules[iKernel]->RunPixelShader(&arr,&parts,NULL,&domain);
+		err = modules[iKernel]->RunPixelShader(&arr,parts,NULL,&domain);
 	}
 
 	return err;
@@ -766,6 +768,9 @@ CALresult Context::SetMatMul(ArrayExpression* expr, Array* result)
 
 	err = CAL_RESULT_OK;
 
+	if(result->isVirtualized || expr->args[0]->isVirtualized || expr->args[1]->isVirtualized)
+		err = CAL_RESULT_NOT_SUPPORTED;
+
 	for(i = 0; (i < 2) && (err == CAL_RESULT_OK); i++)
 	{
 		if(!expr->args[i]->res && !expr->args[i]->parts)
@@ -788,7 +793,7 @@ CALresult Context::SetMatMul(ArrayExpression* expr, Array* result)
 	
 			if(err == CAL_RESULT_OK)
 			{
-				err = SplitMatrix(expr->args[i],8,*expr->args[i]->parts);
+				err = SplitMatrix(expr->args[i],8,expr->args[i]->parts);
 				if(err == CAL_RESULT_OK)
 				{
 					calResFree(expr->args[i]->res);
@@ -817,8 +822,7 @@ CALresult Context::SetMatMul(ArrayExpression* expr, Array* result)
 	{
 		result->Free();
 		err = arrs->AllocateSplittedMatrix(result,expr->args[0]->numParts,0);
-	}
-	
+	}	
 
 	return err;
 }
@@ -951,7 +955,7 @@ CALresult Context::SetReshape(ArrayExpression* expr, Array* result)
 CALresult Context::DoReshape(void)
 {
 	CALresult err;
-	KernelCode iKernel;		
+	KernelCode iKernel;
 	Module* module;
 	CALdomain domain;		
 	float constData[4];	
@@ -985,11 +989,12 @@ CALresult Context::DoReshape(void)
 	}
 	else if(!expr->args[0]->isVirtualized && !arr->isVirtualized)
 	{
-		if( (expr->args[0]->size[1] == expr->args[0]->physSize[1]) && (arr->size[1] == arr->physSize[1]) )
+		if( !(expr->args[0]->size[1] % expr->args[0]->physNumComponents) && !(arr->size[arr->nDims-1] % arr->physNumComponents) )
 		{
 			iKernel = KernReshapeMatToMatNoBounds_PS;
 			constData[0] = (float)(expr->args[0]->physSize[1]);	// A.physWidth		
 			constData[1] = 1.0f/constData[0];					// 1/A.physWidth
+			constData[2] = (float)(arr->physSize[1]);			// C.physWidth						
 		}
 		else
 			return CAL_RESULT_NOT_SUPPORTED;
@@ -1001,8 +1006,8 @@ CALresult Context::DoReshape(void)
 			iKernel = KernReshapeArr1DWToMat4DW_PS;
 			constData[0] = (float)(expr->args[0]->physSize[1]);	// A.physWidth		
 			constData[1] = 1.0f/constData[0];					// 1/A.physWidth
-			constData[2] = (float)(result->physSize[1]-1);	// C.physWidth-1
-			constData[3] = (float)(result->physSize[1]-result->size[1]);	// C.physWidth-C.width
+			constData[2] = (float)(arr->physSize[1]);			// C.physWidth
+			constData[3] = (float)(arr->size[1]);				// C.width			
 		}
 		else
 			return CAL_RESULT_NOT_SUPPORTED;
@@ -1030,13 +1035,13 @@ CALresult Context::DoReshape(void)
 		{
 			err = module->SetConstantsToContext();
 			if(err == CAL_RESULT_OK)
-			{
+			{	
 				// set the domain of execution
 				domain.x = 0;
 				domain.y = 0;		
 				domain.width = arr->physSize[1];
-				domain.height = arr->physSize[0];	
-								
+				domain.height = arr->physSize[0];
+
 				err = module->RunPixelShader(expr->args,&arr,NULL,&domain);
 
 				if( (err == CAL_RESULT_OK) && resultTemp )
@@ -1059,7 +1064,35 @@ CALresult Context::DoReshape(void)
 	{
 		delete resultTemp;
 		resultTemp = NULL;
+	}		
+
+	return err;
+}
+
+
+// zero array memory
+CALresult Context::ZeroArrayMemory(Array* arr, CALdomain* domain)
+{
+	CALresult err;	
+	
+	err = CAL_RESULT_OK;	
+	
+	// get suited module
+	if(!modules[KernZeroMemory_PS])
+	{
+		modules[KernZeroMemory_PS] = new Module(hDev,ctx,kernels[KernZeroMemory_PS],&err);		
+		if(err != CAL_RESULT_OK)
+		{
+			delete modules[KernZeroMemory_PS];
+			modules[KernZeroMemory_PS] = NULL;
+		}
 	}
+	
+	if(err == CAL_RESULT_OK)
+	{
+		// run the program			
+		err = modules[KernZeroMemory_PS]->RunPixelShader(NULL,&arr,NULL,domain);				
+	}	
 
 	return err;
 }

@@ -77,10 +77,11 @@ Array::Array(CALdevice hDev, CALdeviceinfo* devInfo, CALdeviceattribs* devAttrib
 		isVirtualized = TRUE;		
 
 		physNumComponents = 1;	// this is for more convenient memory access
+		
+		physSize[1] = min(numElements,devInfo->maxResource2DWidth);		
+		physSize[0] = GetPaddedNumElements(numElements,physSize[1]);
 
 		physPitch = devInfo->maxResource2DWidth;		
-		physSize[1] = physPitch;		
-		physSize[0] = GetPaddedNumElements(numElements,physPitch*physNumComponents);		
 	}	
 
 	// format and size of a physical element
@@ -361,7 +362,7 @@ CALresult Array::SetDataToRes(CALresource res, void* cpuData)
 		else
 		{			
 			cpuPitch = physSize[1];
-			numCpuPitch = numElements/(physPitch*physNumComponents); // integer number of CPU pitches
+			numCpuPitch = physSize[0]; // integer number of CPU pitches
 		}
 		
 		cpuPitch *= elemSize;
@@ -473,13 +474,15 @@ CALresult Array::GetDataFromRes(CALresource res, void* cpuData)
 	CALuint gpuPitch;
 	long i, numCpuPitch, cpuPitch, pSize;
 	char* gpuPtr;
-	char* cpuPtr;
+	char* cpuPtr;	
 
 	cpuPtr = (char*)cpuData;
 
 	err = calResMap((void**)&gpuPtr,&gpuPitch,res,0);
 	if(err != CAL_RESULT_OK) 
 		return err;
+
+	float* gpuPtr0 = (float*)gpuPtr;
 
 	gpuPitch *= physElemSize; // pitch in number of bytes
 
@@ -495,7 +498,7 @@ CALresult Array::GetDataFromRes(CALresource res, void* cpuData)
 		else
 		{			
 			cpuPitch = physSize[1];
-			numCpuPitch = numElements/(physPitch*physNumComponents); // integer number of CPU pitches
+			numCpuPitch = physSize[0]; // integer number of CPU pitches
 		}
 		
 		cpuPitch *= elemSize;
