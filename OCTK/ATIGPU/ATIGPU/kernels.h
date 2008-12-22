@@ -668,6 +668,65 @@ const char kernelReshapeArr1DWToMat4DW_PS[] =
 
 "end\n";
 
+/*
+	Reshape  a matrix with 4-double word elements to virtualized array with 1-double word elements
+
+	C := A.Reshape(size);
+
+	NOTE: vObjectIndex0.x gives strange indexing!!! That is why it is not used in this implementation.
+*/
+const char kernelReshapeMat4DWToArr1DW_PS[] =
+"il_ps_2_0\n"
+"dcl_cb cb0[1]\n"	// [C.physWidth,A.Width,1/A.Width]
+"dcl_output_generic o0\n"
+"dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__\n"
+"dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+
+"dcl_literal l0, 4.0f, 0.25f, 2.0f, 3.0f\n"
+
+// compute linear index in the output
+"flr r5.xy, vWinCoord0.xy\n"
+"mad r0.x, r5.y, cb0[0].x, r0.x\n"
+
+"mod r1.x, r0.x, l0.x\n"	// remainder from division by 4
+"mul r0.x, r0.x, l0.y\n"	// division by 4 to get index in quads
+
+// compute 2D position in the input
+"mod r2.x, r0.x, cb0[0].y\n"	// x coordinate
+"mul r2.y, r0.x, cb0[0].z\n"	// y coordinate
+"flr r2, r2\n"
+
+"ftoi r1.x, r1.x\n"
+
+"switch r1.x\n"
+
+"	default\n"
+"	sample_resource(0)_sampler(0) r3.x, r2.xy\n"
+"	mov o0.x, r3.x\n"
+"	break\n"
+
+"	case 1\n"
+"	sample_resource(0)_sampler(0) r3.y, r2.xy\n"
+"	mov o0.x, r3.y\n"
+"	break\n"
+
+"	case 2\n"
+"	sample_resource(0)_sampler(0) r3.z, r2.xy\n"
+"	mov o0.x, r3.z\n"
+"	break\n"
+
+"	case 3\n"
+"	sample_resource(0)_sampler(0) r3.w, r2.xy\n"
+"	mov o0.x, r3.w\n"
+"	break\n"
+
+"endswitch\n"
+
+"end\n";
+
+/*
+	Zeroing array memory
+*/
 const char kernelZeroMemory_PS[] = 
 "il_ps_2_0\n"
 "dcl_output_generic o0\n"
@@ -687,8 +746,8 @@ const char kernelSplitMatrixTo4Parts_PS[] =
 "flr r0.xy, vWinCoord0.xy\n"
 "mul r0.y, r0.y, l0.y\n"		// r1.xy := [x,y*4] - 2D position of the first row to copy
 
-"add r0.__zw, r0.yy, l0.zw\n"	// r0 := [x,y,y+1,y+2]
-"add r1.xy, r0.xy, l0.0x\n"		// r1 := [x,y+3]
+"add r0.__zw, r0.00yy, l0.00zw\n"	// r0 := [x,y,y+1,y+2]
+"add r1.xy00, r0.xy00, l0.0x00\n"		// r1 := [x,y+3]
 
 "dcl_output_generic o0\n"
 "dcl_output_generic o1\n"
