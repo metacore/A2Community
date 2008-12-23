@@ -1374,7 +1374,53 @@ const char kernelTransposeMat4DW_PS[] =
 
 "end\n";
 
+/*
+	Getting a submatrix from a given matrix without handling left bounds (xleft % 4 == 0)
+*/
+const char kernelGetSubMat4DWNoLeftBounds_PS[] = 
+"il_ps_2_0\n"
+"dcl_cb cb0[2]\n"	// [xleft, ytop, xleft+C.physWidth-1, ytop+C.Height], [C.physWidth*C.physNumComponents-C.Width]
+"dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__\n"
+"dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
 
+"flr r0.xy, vWinCoord0.xy\n"
+"add r0.xy, r0.xy, cb0[0].xy\n"	// [x+xleft, y+ytop] -> position in the input
+
+"lt r1.x, r0.y, cb0[0].w\n"
+"if_logicalnz r1.x\n"			// if y < ytop+C.Height
+
+"	ne r1.x, r0.x, cb0[0].z\n"
+"	if_logicalnz r1.x\n"	// if x != xleft+C.physWidth-1
+"		sample_resource(0)_sampler(0) o0, r0.xy\n"
+"	else\n"
+
+"		ftoi r1.x, cb0[1].x\n"
+
+"		switch r1.x\n"
+
+"			default\n"
+"				sample_resource(0)_sampler(0) o0, r0.xy\n"
+"			break\n"
+
+"			case 1\n"	
+"				sample_resource(0)_sampler(0) o0.xyz0, r0.xy\n"
+"			break\n"
+
+"			case 2\n"
+"				sample_resource(0)_sampler(0) o0.xy00, r0.xy\n"
+"			break\n"
+
+"			case 3\n"
+"				sample_resource(0)_sampler(0) o0.x000, r0.xy\n"
+"			break\n"
+
+"		endswitch\n"
+"	endif\n"
+"else\n"
+"	mov o0, o0.0000\n"
+"endif\n"
+
+"end\n";
 /*
 	Zeroing array memory
 */
