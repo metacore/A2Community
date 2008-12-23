@@ -39,9 +39,15 @@ KernReshapeArr1DWToMat4DW_PS,
 // reshape a matrix to ND array
 KernReshapeMat4DWToArr1DW_PS,
 
+KernReshapeMat4Parts4DWToArr1DW_PS,
+KernReshapeMat8Parts4DWToArr1DW_PS,
+
 // 3D transpose
 KernTranspose3D_PS,
 KernTranspose4D_PS,
+
+// matrix transposition
+KernTransposeMat4DW_PS,
 
 // zero memory
 KernZeroMemory_PS,
@@ -732,7 +738,7 @@ const char kernelReshapeMat4DWToArr1DW_PS[] =
 "end\n";
 
 /*
-	Transpose a 3D array
+	Transpose a 3D array with single component elements
 */
 const char kernelTranspose3D_PS[] = 
 "il_ps_2_0\n"
@@ -813,12 +819,12 @@ const char kernelTranspose3D_PS[] =
 "udiv r3.y, r2.x, cb0[0].x\n"	// y := index / physWidth
 "itof r3, r3\n"
 
-"sample_resource(0)_sampler(0) o0.x, r3.xy\n"
+"sample_resource(0)_sampler(0) o0, r3.xy\n"
 
 "end\n";
 
 /*
-	Transpose a 3D array
+	Transpose a 4D array  with single component elements
 */
 const char kernelTranspose4D_PS[] = 
 "il_ps_2_0\n"
@@ -930,9 +936,444 @@ const char kernelTranspose4D_PS[] =
 "udiv r3.y, r2.x, cb0[0].x\n"	// y := index / physWidth
 "itof r3, r3\n"
 
-"sample_resource(0)_sampler(0) o0.x, r3.xy\n"
+"sample_resource(0)_sampler(0) o0, r3.xy\n"
 
 "end\n";
+
+/*
+	Reshape a matrix (4 double word elements) splitted to 4 parts to 1 double word ND array
+*/
+const char kernelReshapeMat4Parts4DWToArr1DW_PS[] = 
+"il_ps_2_0\n"
+"dcl_cb cb0[1]\n"	// int32[C.physWidth,A.Width]
+"dcl_output_generic o0\n"
+"dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__\n"
+
+"dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+"dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+"dcl_resource_id(2)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+"dcl_resource_id(3)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+
+"dcl_literal l0, 4, 4, 0, 0\n"
+
+// compute linear index in the output
+"ftoi r5, vWinCoord0\n"
+"umad r0.x, r5.y, cb0[0].x, r5.x\n"
+
+// compute corresponding 2D index in the input
+"umod r3.x, r0.x, cb0[0].y\n"	// x := index % A.Width
+"udiv r3.y, r0.x, cb0[0].y\n"	// y := index / A.Width
+
+// compute which input from available 4 to use
+"umod r4.y, r3.y, l0.y\n"	// r4.y := y % 4
+// compute which sample to take
+"umod r4.z, r3.x, l0.x\n"	// r4.z := x % 4
+
+"switch r4.y\n"
+
+"	default\n"
+"		switch r4.z\n"
+"			default\n"
+"				sample_resource(0)_sampler(0) r1.x___, r3.xy\n"
+"				mov o0, r1.x\n"
+"			break\n"
+
+"			case 1\n"
+"				sample_resource(0)_sampler(0) r1._y__, r3.xy\n"
+"				mov o0, r1.y\n"
+"			break\n"
+
+"			case 2\n"
+"				sample_resource(0)_sampler(0) r1.__z_, r3.xy\n"
+"				mov o0, r1.z\n"
+"			break\n"
+
+"			case 3\n"
+"				sample_resource(0)_sampler(0) r1.___w, r3.xy\n"
+"				mov o0, r1.w\n"
+"			break\n"
+"		endswitch\n"
+
+"	break\n"
+
+"	case 1\n"
+"		switch r4.z\n"
+"			default\n"
+"				sample_resource(1)_sampler(1) r1.x___, r3.xy\n"
+"				mov o0, r1.x\n"
+"			break\n"
+
+"			case 1\n"
+"				sample_resource(1)_sampler(1) r1._y__, r3.xy\n"
+"				mov o0, r1.y\n"
+"			break\n"
+
+"			case 2\n"
+"				sample_resource(1)_sampler(1) r1.__z_, r3.xy\n"
+"				mov o0, r1.z\n"
+"			break\n"
+
+"			case 3\n"
+"				sample_resource(1)_sampler(1) r1.___w, r3.xy\n"
+"				mov o0, r1.w\n"
+"			break\n"
+"		endswitch\n"
+"	break\n"
+
+"	case 2\n"
+"		switch r4.z\n"
+"			default\n"
+"				sample_resource(2)_sampler(2) r1.x___, r3.xy\n"
+"				mov o0, r1.x\n"
+"			break\n"
+
+"			case 1\n"
+"				sample_resource(2)_sampler(2) r1._y__, r3.xy\n"
+"				mov o0, r1.y\n"
+"			break\n"
+
+"			case 2\n"
+"				sample_resource(2)_sampler(2) r1.__z_, r3.xy\n"
+"				mov o0, r1.z\n"
+"			break\n"
+
+"			case 3\n"
+"				sample_resource(2)_sampler(2) r1.___w, r3.xy\n"
+"				mov o0, r1.w\n"
+"			break\n"
+"		endswitch\n"
+"	break\n"
+
+"	case 3\n"
+"		switch r4.z\n"
+"			default\n"
+"				sample_resource(3)_sampler(3) r1.x___, r3.xy\n"
+"				mov o0, r1.x\n"
+"			break\n"
+
+"			case 1\n"
+"				sample_resource(3)_sampler(3) r1._y__, r3.xy\n"
+"				mov o0, r1.y\n"
+"			break\n"
+
+"			case 2\n"
+"				sample_resource(3)_sampler(3) r1.__z_, r3.xy\n"
+"				mov o0, r1.z\n"
+"			break\n"
+
+"			case 3\n"
+"				sample_resource(3)_sampler(3) r1.___w, r3.xy\n"
+"				mov o0, r1.w\n"
+"			break\n"
+"		endswitch\n"
+"	break\n"
+
+"endswitch\n"
+
+"end\n";
+
+/*
+	Reshape a matrix (4 double word elements) splitted to 8 parts to 1 double word ND array
+*/
+const char kernelReshapeMat8Parts4DWToArr1DW_PS[] = 
+"il_ps_2_0\n"
+"dcl_cb cb0[1]\n"	// int32[C.physWidth,A.Width]
+"dcl_output_generic o0\n"
+"dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__\n"
+
+"dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+"dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+"dcl_resource_id(2)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+"dcl_resource_id(3)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+"dcl_resource_id(4)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+"dcl_resource_id(5)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+"dcl_resource_id(6)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+"dcl_resource_id(7)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+
+"dcl_literal l0, 4, 8, 0, 0\n"
+
+// compute linear index in the output
+"ftoi r5, vWinCoord0\n"
+"umad r0.x, r5.y, cb0[0].x, r5.x\n"
+
+// compute corresponding 2D index in the input
+"umod r3.x, r0.x, cb0[0].y\n"	// x := index % A.Width
+"udiv r3.y, r0.x, cb0[0].y\n"	// y := index / A.Width
+
+// compute which input from 8 available to use
+"umod r4.y, r3.y, l0.y\n"	// r4.y := y % 8
+// compute which sample to take
+"umod r4.z, r3.x, l0.x\n"	// r4.z := x % 4
+
+"switch r4.y\n"
+
+"	default\n"
+"		switch r4.z\n"
+"			default\n"
+"				sample_resource(0)_sampler(0) r1.x___, r3.xy\n"
+"				mov o0, r1.x\n"
+"			break\n"
+
+"			case 1\n"
+"				sample_resource(0)_sampler(0) r1._y__, r3.xy\n"
+"				mov o0, r1.y\n"
+"			break\n"
+
+"			case 2\n"
+"				sample_resource(0)_sampler(0) r1.__z_, r3.xy\n"
+"				mov o0, r1.z\n"
+"			break\n"
+
+"			case 3\n"
+"				sample_resource(0)_sampler(0) r1.___w, r3.xy\n"
+"				mov o0, r1.w\n"
+"			break\n"
+"		endswitch\n"
+
+"	break\n"
+
+"	case 1\n"
+"		switch r4.z\n"
+"			default\n"
+"				sample_resource(1)_sampler(1) r1.x___, r3.xy\n"
+"				mov o0, r1.x\n"
+"			break\n"
+
+"			case 1\n"
+"				sample_resource(1)_sampler(1) r1._y__, r3.xy\n"
+"				mov o0, r1.y\n"
+"			break\n"
+
+"			case 2\n"
+"				sample_resource(1)_sampler(1) r1.__z_, r3.xy\n"
+"				mov o0, r1.z\n"
+"			break\n"
+
+"			case 3\n"
+"				sample_resource(1)_sampler(1) r1.___w, r3.xy\n"
+"				mov o0, r1.w\n"
+"			break\n"
+"		endswitch\n"
+"	break\n"
+
+"	case 2\n"
+"		switch r4.z\n"
+"			default\n"
+"				sample_resource(2)_sampler(2) r1.x___, r3.xy\n"
+"				mov o0, r1.x\n"
+"			break\n"
+
+"			case 1\n"
+"				sample_resource(2)_sampler(2) r1._y__, r3.xy\n"
+"				mov o0, r1.y\n"
+"			break\n"
+
+"			case 2\n"
+"				sample_resource(2)_sampler(2) r1.__z_, r3.xy\n"
+"				mov o0, r1.z\n"
+"			break\n"
+
+"			case 3\n"
+"				sample_resource(2)_sampler(2) r1.___w, r3.xy\n"
+"				mov o0, r1.w\n"
+"			break\n"
+"		endswitch\n"
+"	break\n"
+
+"	case 3\n"
+"		switch r4.z\n"
+"			default\n"
+"				sample_resource(3)_sampler(3) r1.x___, r3.xy\n"
+"				mov o0, r1.x\n"
+"			break\n"
+
+"			case 1\n"
+"				sample_resource(3)_sampler(3) r1._y__, r3.xy\n"
+"				mov o0, r1.y\n"
+"			break\n"
+
+"			case 2\n"
+"				sample_resource(3)_sampler(3) r1.__z_, r3.xy\n"
+"				mov o0, r1.z\n"
+"			break\n"
+
+"			case 3\n"
+"				sample_resource(3)_sampler(3) r1.___w, r3.xy\n"
+"				mov o0, r1.w\n"
+"			break\n"
+"		endswitch\n"
+"	break\n"
+
+"	case 4\n"
+"		switch r4.z\n"
+"			default\n"
+"				sample_resource(4)_sampler(4) r1.x___, r3.xy\n"
+"				mov o0, r1.x\n"
+"			break\n"
+
+"			case 1\n"
+"				sample_resource(4)_sampler(4) r1._y__, r3.xy\n"
+"				mov o0, r1.y\n"
+"			break\n"
+
+"			case 2\n"
+"				sample_resource(4)_sampler(4) r1.__z_, r3.xy\n"
+"				mov o0, r1.z\n"
+"			break\n"
+
+"			case 3\n"
+"				sample_resource(4)_sampler(4) r1.___w, r3.xy\n"
+"				mov o0, r1.w\n"
+"			break\n"
+"		endswitch\n"
+"	break\n"
+
+"	case 5\n"
+"		switch r4.z\n"
+"			default\n"
+"				sample_resource(5)_sampler(5) r1.x___, r3.xy\n"
+"				mov o0, r1.x\n"
+"			break\n"
+
+"			case 1\n"
+"				sample_resource(5)_sampler(5) r1._y__, r3.xy\n"
+"				mov o0, r1.y\n"
+"			break\n"
+
+"			case 2\n"
+"				sample_resource(5)_sampler(5) r1.__z_, r3.xy\n"
+"				mov o0, r1.z\n"
+"			break\n"
+
+"			case 3\n"
+"				sample_resource(5)_sampler(5) r1.___w, r3.xy\n"
+"				mov o0, r1.w\n"
+"			break\n"
+"		endswitch\n"
+"	break\n"
+
+"	case 6\n"
+"		switch r4.z\n"
+"			default\n"
+"				sample_resource(6)_sampler(6) r1.x___, r3.xy\n"
+"				mov o0, r1.x\n"
+"			break\n"
+
+"			case 1\n"
+"				sample_resource(6)_sampler(6) r1._y__, r3.xy\n"
+"				mov o0, r1.y\n"
+"			break\n"
+
+"			case 2\n"
+"				sample_resource(6)_sampler(6) r1.__z_, r3.xy\n"
+"				mov o0, r1.z\n"
+"			break\n"
+
+"			case 3\n"
+"				sample_resource(6)_sampler(6) r1.___w, r3.xy\n"
+"				mov o0, r1.w\n"
+"			break\n"
+"		endswitch\n"
+"	break\n"
+
+"	case 7\n"
+"		switch r4.z\n"
+"			default\n"
+"				sample_resource(7)_sampler(7) r1.x___, r3.xy\n"
+"				mov o0, r1.x\n"
+"			break\n"
+
+"			case 1\n"
+"				sample_resource(7)_sampler(7) r1._y__, r3.xy\n"
+"				mov o0, r1.y\n"
+"			break\n"
+
+"			case 2\n"
+"				sample_resource(7)_sampler(7) r1.__z_, r3.xy\n"
+"				mov o0, r1.z\n"
+"			break\n"
+
+"			case 3\n"
+"				sample_resource(7)_sampler(7) r1.___w, r3.xy\n"
+"				mov o0, r1.w\n"
+"			break\n"
+"		endswitch\n"
+"	break\n"
+
+"endswitch\n"
+
+"end\n";
+
+/*
+	Transpose a matrix with 4 double word elements
+*/
+const char kernelTransposeMat4DW_PS[] =
+"il_ps_2_0\n"
+"dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__\n"
+"dcl_output_generic o0\n"
+"dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+
+"dcl_literal l0, 4.0f, 4.0f, 1.0f, 2.0f\n"
+
+"flr r0.xy00, vWinCoord0.yx\n" // transposed 2D index 
+"mul r0.y, r0.y, l0.x\n"		// account that we are working with quads 
+
+"add r0.__zw, r0.00yy, l0.00zw\n"	// r0 := [x,y,y+1,y+2]
+"add r1.xy00, r0.xw00, r0.0100\n"	// r1 := [x,y+3]
+
+"mod r2.x, r0.x, l0.x\n"			// x % 4
+"ftoi r2.x, r2.x\n"
+
+"switch r2.x\n"
+
+"	default\n"
+"		sample_resource(0)_sampler(0) r3.x___, r0.xy\n"
+"		sample_resource(0)_sampler(0) r4.x___, r0.xz\n"
+"		sample_resource(0)_sampler(0) r5.x___, r0.xw\n"
+"		sample_resource(0)_sampler(0) r6.x___, r1.xy\n"
+"		mov r3.y, r4.x\n"
+"		mov r3.z, r5.x\n"
+"		mov r3.w, r6.x\n"
+"		mov o0, r3\n"
+"	break\n"
+
+"	case 1\n"
+"		sample_resource(0)_sampler(0) r3._y__, r0.xy\n"
+"		sample_resource(0)_sampler(0) r4._y__, r0.xz\n"
+"		sample_resource(0)_sampler(0) r5._y__, r0.xw\n"
+"		sample_resource(0)_sampler(0) r6._y__, r1.xy\n"
+"		mov r4.x, r3.y\n"
+"		mov r4.z, r5.y\n"
+"		mov r4.w, r6.y\n"
+"		mov o0, r4\n"
+"	break\n"
+
+"	case 2\n"
+"		sample_resource(0)_sampler(0) r3.__z_, r0.xy\n"
+"		sample_resource(0)_sampler(0) r4.__z_, r0.xz\n"
+"		sample_resource(0)_sampler(0) r5.__z_, r0.xw\n"
+"		sample_resource(0)_sampler(0) r6.__z_, r1.xy\n"
+"		mov r5.x, r3.z\n"
+"		mov r5.y, r4.z\n"
+"		mov r5.w, r6.z\n"
+"		mov o0, r5\n"
+"	break\n"
+
+"	case 3\n"
+"		sample_resource(0)_sampler(0) r3.___w, r0.xy\n"
+"		sample_resource(0)_sampler(0) r4.___w, r0.xz\n"
+"		sample_resource(0)_sampler(0) r5.___w, r0.xw\n"
+"		sample_resource(0)_sampler(0) r6.___w, r1.xy\n"
+"		mov r6.x, r3.w\n"
+"		mov r6.y, r4.w\n"
+"		mov r6.z, r5.w\n"
+"		mov o0, r6\n"
+"	break\n"
+
+"endswitch\n"
+
+"end\n";
+
 
 /*
 	Zeroing array memory

@@ -92,6 +92,21 @@ Kernel::Kernel(KernelCode iKernel, CALtarget target, CALresult* err)
 			constFormats = new CALformat[1]; constFormats[0] = CAL_FORMAT_INT_4;
 			break;
 
+		case KernReshapeMat4Parts4DWToArr1DW_PS:
+			kernelStr = kernelReshapeMat4Parts4DWToArr1DW_PS; nInputs = 4; nOutputs = 1; nConstants = 1;
+			constSizes = new long[1]; constSizes[0] = 1;
+			constFormats = new CALformat[1]; constFormats[0] = CAL_FORMAT_INT_4;
+			break;
+
+		case KernReshapeMat8Parts4DWToArr1DW_PS:
+			kernelStr = kernelReshapeMat8Parts4DWToArr1DW_PS; nInputs = 8; nOutputs = 1; nConstants = 1;
+			constSizes = new long[1]; constSizes[0] = 1;
+			constFormats = new CALformat[1]; constFormats[0] = CAL_FORMAT_INT_4;
+			break;
+
+		case KernTransposeMat4DW_PS:
+			kernelStr = kernelTransposeMat4DW_PS; nInputs = 1; nOutputs = 1;
+
 		case KernTranspose3D_PS:
 			kernelStr = kernelTranspose3D_PS; nInputs = 1; nOutputs = 1; nConstants = 1;
 			constSizes = new long[1]; constSizes[0] = 3;

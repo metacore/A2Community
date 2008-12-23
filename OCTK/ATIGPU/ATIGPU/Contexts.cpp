@@ -1019,15 +1019,23 @@ CALresult Context::DoReshape(void)
 			return CAL_RESULT_NOT_SUPPORTED;
 	}
 	else if(!expr->args[0]->isVirtualized && arr->isVirtualized)
-	{
+	{		
 		if(arr->elemSize == 4)
-		{
-			iKernel = KernReshapeMat4DWToArr1DW_PS;			
+		{			
+			if(expr->args[0]->numParts == 0)		
+				iKernel = KernReshapeMat4DWToArr1DW_PS;			
+			else if(expr->args[0]->numParts == 4)
+				iKernel = KernReshapeMat4Parts4DWToArr1DW_PS;
+			else if(expr->args[0]->numParts == 8)
+				iKernel = KernReshapeMat8Parts4DWToArr1DW_PS;
+			else
+				return CAL_RESULT_ERROR;
+
 			constData[0] = arr->physSize[1];		// C.physWidth
-			constData[1] = expr->args[0]->size[1];	// A.Width					
+			constData[1] = expr->args[0]->size[1];	// A.Width
 		}
 		else
-			return CAL_RESULT_NOT_SUPPORTED;
+			return CAL_RESULT_NOT_SUPPORTED;		
 	}
 	else
 		return CAL_RESULT_NOT_SUPPORTED;
@@ -1207,7 +1215,7 @@ CALresult Context::DoTranspose(void)
 	}
 	else if(!expr->args[0]->isVirtualized && !arr->isVirtualized)
 	{		
-		return CAL_RESULT_NOT_SUPPORTED;
+		iKernel = KernTransposeMat4DW_PS;
 	}	
 	else
 		return CAL_RESULT_INVALID_PARAMETER;
@@ -1226,11 +1234,13 @@ CALresult Context::DoTranspose(void)
 	if(err == CAL_RESULT_OK)
 	{		
 		module = modules[iKernel];		
-
-		err = module->constants[0]->SetData(&constData);		
+		
+		if(module->nConstants)
+			err = module->constants[0]->SetData(&constData);		
 		if(err == CAL_RESULT_OK)
 		{
-			err = module->SetConstantsToContext();
+			if(module->nConstants)
+				err = module->SetConstantsToContext();
 			if(err == CAL_RESULT_OK)
 			{	
 				// set the domain of execution
