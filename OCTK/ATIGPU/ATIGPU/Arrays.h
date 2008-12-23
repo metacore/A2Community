@@ -78,6 +78,8 @@ public:
 	CALresult AllocateArray(Array* arr, CALuint flags);	
 	// allocated a matrix splitted in given number of parts parts
 	CALresult AllocateSplittedMatrix(Array* arr, long numParts, CALuint flags);
+	// find an unused array
+	long FindUnused(void);
 };
 
 

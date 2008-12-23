@@ -36,6 +36,13 @@ KernReshapeMatToMatNoBounds_PS,
 // reshape a ND array to matrix
 KernReshapeArr1DWToMat4DW_PS,
 
+// reshape a matrix to ND array
+KernReshapeMat4DWToArr1DW_PS,
+
+// 3D transpose
+KernTranspose3D_PS,
+KernTranspose4D_PS,
+
 // zero memory
 KernZeroMemory_PS,
 
@@ -574,19 +581,19 @@ const char kernelMatMul88Parts8x4by4x4R_PS[] =
 */
 const char kernelReshapeMatToMatNoBounds_PS[] =
 "il_ps_2_0\n"
-"dcl_cb cb0[1]\n"	// [A.width,1/A.width,C.width]
+"dcl_cb cb0[1]\n"	// int32[A.width,C.width]
 "dcl_output_generic o0\n"
 "dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__\n"
 "dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
 
-// compute linear index in the input
-"flr r0.xy, vWinCoord0.xy\n"
-"mad r0.x, r0.y, cb0[0].z, r0.x\n"
-// compute 2D index in the input matrix
-"mul r1.y, r0.x, cb0[0].y\n"	// y := index/A.width
-"mod r1.x, r0.x, cb0[0].x\n"	// x := index % A.width
-"flr r1.xy, r1.xy\n"
+"ftoi r0.xy, vWinCoord0.xy\n"
+"umad r0.x, r0.y, cb0[0].y, r0.x\n"
 
+// compute 2D index in the input matrix
+"udiv r1.y, r0.x, cb0[0].x\n"	// y := index/A.width
+"umod r1.x, r0.x, cb0[0].x\n"	// x := index % A.width
+
+"itof r1, r1\n"
 "sample_resource(0)_sampler(0) o0, r1.xy\n"
 
 "end\n";
@@ -600,26 +607,29 @@ const char kernelReshapeMatToMatNoBounds_PS[] =
 */
 const char kernelReshapeArr1DWToMat4DW_PS[] =
 "il_ps_2_0\n"
-"dcl_cb cb0[1]\n"	// [A.physWidth,1/A.physWidth,C.physWidth,C.width]
+"dcl_cb cb0[1]\n"	// [A.physWidth,C.physWidth,C.width]
 "dcl_output_generic o0\n"
 "dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__\n"
 "dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
 
-"dcl_literal l0, 4.0f, 1.0f, 2.0f, 3.0f\n"
+"dcl_literal l0, 4, 1, 2, 3\n"
+"dcl_literal l1, -1, 0, 0, 0\n"
 
 // compute linear index in the input
-"flr r5.xy, vWinCoord0.xy\n"
-"mul r0.x, r5.x, l0.x\n"	// x := x*4;
-"mad r0.x, r5.y, cb0[0].w, r0.x\n"
+"ftoi r5, vWinCoord0\n"
+"umul r0.x, r5.x, l0.x\n"
+"umad r0.x, r5.y, cb0[0].z, r0.x\n"
 
 // compute 2D position for 4 input elements
-"add r0.xyzw, r0.xxxx, l0.0yzw\n" // [index,index+1,index+2,index+3]
+"iadd r0.xyzw, r0.xxxx, l0.0yzw\n" // [index,index+1,index+2,index+3]
 
 // x coordinates
-"mod r1, r0, cb0[0].xxxx\n"		// [index,index+1,index+2,index+3] % A.physWidth
+"umod r1, r0, cb0[0].xxxx\n"		// [index,index+1,index+2,index+3] % A.physWidth
 // y coordinates
-"mul r2, r0, cb0[0].yyyy\n"		// [index,index+1,index+2,index+3]/A.physWidth
-"flr r2, r2\n"
+"udiv r2, r0, cb0[0].xxxx\n"		// [index,index+1,index+2,index+3]/A.physWidth
+
+"itof r1, r1\n"
+"itof r2, r2\n"
 
 "mov r3.xz, r1.xy\n"
 "mov r3.yw, r2.xy\n"
@@ -631,18 +641,16 @@ const char kernelReshapeArr1DWToMat4DW_PS[] =
 "sample_resource(0)_sampler(0) r2.z, r4.xy\n"
 "sample_resource(0)_sampler(0) r2.w, r4.zw\n"
 
-"sub r1.y, cb0[0].z, r1.1\n"	// r1.y := C.physWidth-1
-"ne r1.x, r5.x, r1.y\n"
-
+"iadd r1.y, cb0[0].y, l1.x\n"	// r1.y := C.physWidth-1
+"ine r1.x, r5.x, r1.y\n"
 "if_logicalnz r1.x\n"	// if x != C.physWidth-1
 "	mov o0, r2\n"
 "else\n"
-
+	
 	// r1.x := C.physWidth*4 - C.width
-"	mul r1.x, cb0[0].z, l0.x\n"
-"	sub r1.x, r1.x, cb0[0].w\n"
-
-"	ftoi r1.x, r1.x\n"
+"	umul r1.x, cb0[0].y, l0.x\n"
+"	umul r1.y, cb0[0].z, l1.x\n"
+"	iadd r1.x, r1.x, r1.y\n"
 
 "	switch r1.x\n"
 
@@ -677,50 +685,252 @@ const char kernelReshapeArr1DWToMat4DW_PS[] =
 */
 const char kernelReshapeMat4DWToArr1DW_PS[] =
 "il_ps_2_0\n"
-"dcl_cb cb0[1]\n"	// [C.physWidth,A.Width,1/A.Width]
+"dcl_cb cb0[1]\n"	// int32[C.physWidth,A.Width]
 "dcl_output_generic o0\n"
 "dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__\n"
 "dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
 
-"dcl_literal l0, 4.0f, 0.25f, 2.0f, 3.0f\n"
+"dcl_literal l0, 4, 0, 0, 0\n"
 
 // compute linear index in the output
-"flr r5.xy, vWinCoord0.xy\n"
-"mad r0.x, r5.y, cb0[0].x, r0.x\n"
-
-"mod r1.x, r0.x, l0.x\n"	// remainder from division by 4
-"mul r0.x, r0.x, l0.y\n"	// division by 4 to get index in quads
+"ftoi r5, vWinCoord0\n"
+"umad r0.x, r5.y, cb0[0].x, r5.x\n"
 
 // compute 2D position in the input
-"mod r2.x, r0.x, cb0[0].y\n"	// x coordinate
-"mul r2.y, r0.x, cb0[0].z\n"	// y coordinate
-"flr r2, r2\n"
+"umod r2.x, r0.x, cb0[0].y\n"	// x coordinate
+"udiv r2.y, r0.x, cb0[0].y\n"	// y coordinate
 
-"ftoi r1.x, r1.x\n"
+"umod r1.x, r2.x, l0.x\n"		// remainder from division by 4
+
+"udiv r2.x, r2.x, l0.x\n"		// division by 4 to get x coordinate in quads
+"itof r2, r2\n"
 
 "switch r1.x\n"
 
 "	default\n"
-"	sample_resource(0)_sampler(0) r3.x, r2.xy\n"
+"	sample_resource(0)_sampler(0) r3.x___, r2.xy\n"
 "	mov o0.x, r3.x\n"
 "	break\n"
 
 "	case 1\n"
-"	sample_resource(0)_sampler(0) r3.y, r2.xy\n"
+"	sample_resource(0)_sampler(0) r3._y__, r2.xy\n"
 "	mov o0.x, r3.y\n"
 "	break\n"
 
 "	case 2\n"
-"	sample_resource(0)_sampler(0) r3.z, r2.xy\n"
+"	sample_resource(0)_sampler(0) r3.__z_, r2.xy\n"
 "	mov o0.x, r3.z\n"
 "	break\n"
 
 "	case 3\n"
-"	sample_resource(0)_sampler(0) r3.w, r2.xy\n"
+"	sample_resource(0)_sampler(0) r3.___w, r2.xy\n"
 "	mov o0.x, r3.w\n"
 "	break\n"
 
 "endswitch\n"
+
+"end\n";
+
+/*
+	Transpose a 3D array
+*/
+const char kernelTranspose3D_PS[] = 
+"il_ps_2_0\n"
+"dcl_cb cb0[3]\n"	// int32[physWidth, C.Ny*C.Nx, C.Nx, 1], int32[tZ, tY, tX, 0], int32[A.Ny*A.Nx, A.Nx, 1, 0]
+"dcl_output_generic o0\n"
+"dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__\n"
+"dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+
+// compute linear index in the output
+"ftoi r5, vWinCoord0\n"
+"umad r0.x, r5.y, cb0[0].x, r5.x\n"
+
+// compute z, y, x coordinates in the output
+"udiv r1.x, r0.x, cb0[0].y\n"	// z := ind/(C.Ny*C.Nx)
+"umod r1.z, r0.x, cb0[0].y\n"	// r1.z := ind - z*C.Ny*C.Nx
+"udiv r1.y, r1.z, cb0[0].z\n"	// y := (ind - z*C.Ny*C.Nx)/C.Nx
+"umod r1.z, r1.z, cb0[0].z\n"	// x := ind - z*C.Ny*C.Nx - y*C.Nx
+
+// shuffle the coordinates
+
+"switch cb0[1].x\n"
+
+"	default\n"
+"	mov r2.x, r1.x\n"
+"	break\n"
+
+"	case 1\n"
+"	mov r2.y, r1.x\n"
+"	break\n"
+
+"	case 2\n"
+"	mov r2.z, r1.x\n"
+"	break\n"
+
+"endswitch\n"
+
+"switch cb0[1].y\n"
+
+"	default\n"
+"	mov r2.x, r1.y\n"
+"	break\n"
+
+"	case 1\n"
+"	mov r2.y, r1.y\n"
+"	break\n"
+
+"	case 2\n"
+"	mov r2.z, r1.y\n"
+"	break\n"
+
+"endswitch\n"
+
+"switch cb0[1].z\n"
+
+"	default\n"
+"	mov r2.x, r1.z\n"
+"	break\n"
+
+"	case 1\n"
+"	mov r2.y, r1.z\n"
+"	break\n"
+
+"	case 2\n"
+"	mov r2.z, r1.z\n"
+"	break\n"
+
+"endswitch\n"
+
+// compute linear index in the input
+"imul r2.xyz, r2.xyz, cb0[2].xyz\n"	// [z*A.Ny*A.Nx, y*A.Nx, x*1]
+
+// horizontal add
+"iadd r2.x, r2.x, r2.y\n"
+"iadd r2.x, r2.x, r2.z\n"
+
+// compute corresponding 2D index in the input
+"umod r3.x, r2.x, cb0[0].x\n"	// x := index % physWidth
+"udiv r3.y, r2.x, cb0[0].x\n"	// y := index / physWidth
+"itof r3, r3\n"
+
+"sample_resource(0)_sampler(0) o0.x, r3.xy\n"
+
+"end\n";
+
+/*
+	Transpose a 3D array
+*/
+const char kernelTranspose4D_PS[] = 
+"il_ps_2_0\n"
+"dcl_cb cb0[3]\n"	// int32[physWidth, C.Nz*C.Ny*C.Nx, C.Ny*C.Nx, C.Nx], int32[tT, tZ, tY, tX], int32[A.Nz*A.Ny*A.Nx, A.Ny*A.Nx, A.Nx, 1]
+"dcl_output_generic o0\n"
+"dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__\n"
+"dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+
+// compute linear index in the output
+"ftoi r5, vWinCoord0\n"
+"umad r0.x, r5.y, cb0[0].x, r5.x\n"
+
+// compute t, z, y, x coordinates in the output
+"udiv r1.x, r0.x, cb0[0].y\n"	// t := ind/(C.Nz*C.Ny*C.Nx)
+"umod r1.w, r0.x, cb0[0].y\n"	// r1.w := ind - t*C.Nz*C.Ny*C.Nx
+"udiv r1.y, r1.w, cb0[0].z\n"	// z := (ind - t*C.Nz*C.Ny*C.Nx)/(C.Ny*C.Nx)
+"umod r1.w, r1.w, cb0[0].z\n"	// r1.w := ind - t*C.Nz*C.Ny*C.Nx - z*(C.Ny*C.Nx)
+"udiv r1.z, r1.w, cb0[0].w\n"	// y := (ind - t*C.Nz*C.Ny*C.Nx - z*(C.Ny*C.Nx))/C.Nx
+"umod r1.w, r1.w, cb0[0].w\n"	// x := (ind - t*C.Nz*C.Ny*C.Nx - z*(C.Ny*C.Nx)) % C.Nx
+
+// shuffle the coordinates
+
+"switch cb0[1].x\n"
+
+"	default\n"
+"	mov r2.x, r1.x\n"
+"	break\n"
+
+"	case 1\n"
+"	mov r2.y, r1.x\n"
+"	break\n"
+
+"	case 2\n"
+"	mov r2.z, r1.x\n"
+"	break\n"
+
+"endswitch\n"
+
+"switch cb0[1].y\n"
+
+"	default\n"
+"	mov r2.x, r1.y\n"
+"	break\n"
+
+"	case 1\n"
+"	mov r2.y, r1.y\n"
+"	break\n"
+
+"	case 2\n"
+"	mov r2.z, r1.y\n"
+"	break\n"
+
+"	case 3\n"
+"	mov r2.w, r1.y\n"
+"	break\n"
+
+"endswitch\n"
+
+"switch cb0[1].z\n"
+
+"	default\n"
+"	mov r2.x, r1.z\n"
+"	break\n"
+
+"	case 1\n"
+"	mov r2.y, r1.z\n"
+"	break\n"
+
+"	case 2\n"
+"	mov r2.z, r1.z\n"
+"	break\n"
+
+"	case 3\n"
+"	mov r2.w, r1.z\n"
+"	break\n"
+
+"endswitch\n"
+
+"switch cb0[1].w\n"
+
+"	default\n"
+"	mov r2.x, r1.w\n"
+"	break\n"
+
+"	case 1\n"
+"	mov r2.y, r1.w\n"
+"	break\n"
+
+"	case 2\n"
+"	mov r2.z, r1.w\n"
+"	break\n"
+
+"	case 3\n"
+"	mov r2.w, r1.w\n"
+"	break\n"
+
+"endswitch\n"
+
+// compute linear index in the input
+"imul r2.xyzw, r2.xyzw, cb0[2].xyzw\n"	// [t*A.Nz*A.Ny*A.Nx, z*A.Ny*A.Nx, y*A.Nx, x*1]
+
+// horizontal add
+"iadd r2.x, r2.x, r2.y\n"
+"iadd r2.x, r2.x, r2.z\n"
+"iadd r2.x, r2.x, r2.w\n"
+
+// compute corresponding 2D index in the input
+"umod r3.x, r2.x, cb0[0].x\n"	// x := index % physWidth
+"udiv r3.y, r2.x, cb0[0].x\n"	// y := index / physWidth
+"itof r3, r3\n"
+
+"sample_resource(0)_sampler(0) o0.x, r3.xy\n"
 
 "end\n";
 

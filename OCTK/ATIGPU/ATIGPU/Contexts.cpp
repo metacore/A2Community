@@ -146,6 +146,10 @@ CALresult Context::SetComputation(ArrayExpression* expr, Array* result, long pri
 			err = SetReshape(expr,result);
 			break;
 
+		case OpTranspose:
+			err = SetTranspose(expr,result);
+			break;
+
 		default:
 			err = CAL_RESULT_INVALID_PARAMETER;
 	}
@@ -414,6 +418,10 @@ CALresult Context::DoComputation(void)
 
 		case OpReshape:
 			err = DoReshape();
+			break;
+
+		case OpTranspose:
+			err = DoTranspose();
 			break;
 
 		default:
@@ -958,7 +966,7 @@ CALresult Context::DoReshape(void)
 	KernelCode iKernel;
 	Module* module;
 	CALdomain domain;		
-	float constData[4];	
+	long constData[4];
 	Array* arr;	
 
 	err = CAL_RESULT_OK;
@@ -990,11 +998,10 @@ CALresult Context::DoReshape(void)
 	else if(!expr->args[0]->isVirtualized && !arr->isVirtualized)
 	{
 		if( !(expr->args[0]->size[1] % expr->args[0]->physNumComponents) && !(arr->size[arr->nDims-1] % arr->physNumComponents) )
-		{
+		{			
 			iKernel = KernReshapeMatToMatNoBounds_PS;
-			constData[0] = (float)(expr->args[0]->physSize[1]);	// A.physWidth		
-			constData[1] = 1.0f/constData[0];					// 1/A.physWidth
-			constData[2] = (float)(arr->physSize[1]);			// C.physWidth						
+			constData[0] = expr->args[0]->physSize[1];	// A.physWidth
+			constData[1] = arr->physSize[1];			// C.physWidth						
 		}
 		else
 			return CAL_RESULT_NOT_SUPPORTED;
@@ -1004,10 +1011,20 @@ CALresult Context::DoReshape(void)
 		if(expr->args[0]->elemSize == 4)
 		{
 			iKernel = KernReshapeArr1DWToMat4DW_PS;
-			constData[0] = (float)(expr->args[0]->physSize[1]);	// A.physWidth		
-			constData[1] = 1.0f/constData[0];					// 1/A.physWidth
-			constData[2] = (float)(arr->physSize[1]);			// C.physWidth
-			constData[3] = (float)(arr->size[1]);				// C.width			
+			constData[0] = expr->args[0]->physSize[1];	// A.physWidth					
+			constData[1] = arr->physSize[1];			// C.physWidth
+			constData[2] = arr->size[1];				// C.width			
+		}
+		else
+			return CAL_RESULT_NOT_SUPPORTED;
+	}
+	else if(!expr->args[0]->isVirtualized && arr->isVirtualized)
+	{
+		if(arr->elemSize == 4)
+		{
+			iKernel = KernReshapeMat4DWToArr1DW_PS;			
+			constData[0] = arr->physSize[1];		// C.physWidth
+			constData[1] = expr->args[0]->size[1];	// A.Width					
 		}
 		else
 			return CAL_RESULT_NOT_SUPPORTED;
@@ -1093,6 +1110,158 @@ CALresult Context::ZeroArrayMemory(Array* arr, CALdomain* domain)
 		// run the program			
 		err = modules[KernZeroMemory_PS]->RunPixelShader(NULL,&arr,NULL,domain);				
 	}	
+
+	return err;
+}
+
+// set a transpose computation
+CALresult Context::SetTranspose(ArrayExpression* expr, Array* result)
+{
+	CALresult err;	
+	
+	err = CAL_RESULT_OK;
+
+	_ASSERT(expr->args[0]->nDims > 2);
+	_ASSERT(result->nDims > 2);
+		
+	if(!expr->args[0]->res)
+	{
+		if( (err = arrs->AllocateArray(expr->args[0],0)) == CAL_RESULT_OK )
+			err = expr->args[0]->SetData(ctx,expr->args[0]->cpuData);
+	}	
+
+	if(err != CAL_RESULT_OK)
+		return err;	
+
+	if(result == expr->args[0])
+	{
+		resultTemp = new Array(result->hDev,result->devInfo,result->devAttribs,result->arrID,result->dType,expr->nDims,expr->size);		
+		err = arrs->AllocateArray(resultTemp,0);
+	}
+	else if(!result->res || !EqualSizes(result->nDims,result->size,expr->nDims,expr->size) )
+	{
+		result->Free();
+		err = arrs->AllocateArray(result,0);
+	}
+
+	return err;
+}
+// perform a transpose computation
+CALresult Context::DoTranspose(void)
+{
+	CALresult err;
+	KernelCode iKernel;
+	Module* module;
+	CALdomain domain;		
+	long constData[12];
+	Array* arr;	
+
+	err = CAL_RESULT_OK;
+
+	if(result != expr->args[0])
+		arr = result;
+	else
+		arr = resultTemp;
+
+	if(expr->args[0]->isVirtualized && arr->isVirtualized)
+	{		
+		if(result->nDims == 3)
+		{
+			iKernel = KernTranspose3D_PS;
+
+			constData[0] = result->physSize[1];				// physWidth
+			constData[1] = result->size[1]*result->size[2];	// C.Ny*C.Nx
+			constData[2] = result->size[2];					// C.Nx
+			constData[3] = 1;
+
+			constData[4] = expr->transpDims[0];
+			constData[5] = expr->transpDims[1];
+			constData[6] = expr->transpDims[2];
+			constData[7] = 0;
+
+			constData[8] = expr->args[0]->size[1]*expr->args[0]->size[2];	// A.Ny*A.Nx
+			constData[9] = expr->args[0]->size[2];							// A.Nx			
+			constData[10] = 1;												// 1
+		}
+		else if(result->nDims == 4)
+		{
+			iKernel = KernTranspose4D_PS;
+
+			constData[0] = result->physSize[1];								// physWidth
+			constData[1] = result->size[1]*result->size[2]*result->size[3];	// C.Nz*C.Ny*C.Nx
+			constData[2] = result->size[2]*result->size[3];					// C.Ny*C.Nx
+			constData[3] = result->size[3];									// C.Nx			
+
+			constData[4] = expr->transpDims[0];
+			constData[5] = expr->transpDims[1];
+			constData[6] = expr->transpDims[2];
+			constData[7] = expr->transpDims[3];;
+			
+			constData[8] = expr->args[0]->size[1]*expr->args[0]->size[2]*expr->args[0]->size[3];	// A.Nz*A.Ny*A.Nx
+			constData[9] = expr->args[0]->size[2]*expr->args[0]->size[3];							// A.Ny*A.Nx
+			constData[10] = expr->args[0]->size[3];													// A.Nx			
+			constData[11] = 1;																		// 1
+		}
+		else
+			return CAL_RESULT_NOT_SUPPORTED;		
+	}
+	else if(!expr->args[0]->isVirtualized && !arr->isVirtualized)
+	{		
+		return CAL_RESULT_NOT_SUPPORTED;
+	}	
+	else
+		return CAL_RESULT_INVALID_PARAMETER;
+
+	// get suited module
+	if(!modules[iKernel])
+	{
+		modules[iKernel] = new Module(hDev,ctx,kernels[iKernel],&err);		
+		if(err != CAL_RESULT_OK)
+		{
+			delete modules[iKernel];
+			modules[iKernel] = NULL;
+		}
+	}
+	
+	if(err == CAL_RESULT_OK)
+	{		
+		module = modules[iKernel];		
+
+		err = module->constants[0]->SetData(&constData);		
+		if(err == CAL_RESULT_OK)
+		{
+			err = module->SetConstantsToContext();
+			if(err == CAL_RESULT_OK)
+			{	
+				// set the domain of execution
+				domain.x = 0;
+				domain.y = 0;		
+				domain.width = arr->physSize[1];
+				domain.height = arr->physSize[0];
+
+				err = module->RunPixelShader(expr->args,&arr,NULL,&domain);
+
+				if( (err == CAL_RESULT_OK) && resultTemp )
+				{					
+					resultTemp->res = result->res;
+					result->res = 0;
+					delete result;
+
+					arrs->Set(arrs->Find(resultTemp->arrID),resultTemp);					
+					result = resultTemp;
+					resultTemp = NULL;
+				}
+				
+				module->ReleaseConstantsFromContext();
+			}
+		}		
+	}	
+
+	if(resultTemp)
+	{
+		delete resultTemp;
+		resultTemp = NULL;
+	}		
 
 	return err;
 }

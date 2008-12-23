@@ -78,7 +78,7 @@ Array::Array(CALdevice hDev, CALdeviceinfo* devInfo, CALdeviceattribs* devAttrib
 
 		physNumComponents = 1;	// this is for more convenient memory access
 		
-		physSize[1] = min(numElements,devInfo->maxResource2DWidth);		
+		physSize[1] = min(numElements,(long)devInfo->maxResource2DWidth);		
 		physSize[0] = GetPaddedNumElements(numElements,physSize[1]);
 
 		physPitch = devInfo->maxResource2DWidth;		
@@ -552,8 +552,14 @@ CALresult Array::GetNamedLocalMem(CALcontext ctx, CALname name, CALmem* mem)
 CALresult ArrayPool::AllocateArray(Array* arr, CALuint flags)
 {
 	CALresult err;
-
-	err = arr->Allocate(flags);
+	long ind;
+	
+	err = arr->Allocate(flags);	
+	while( (err == CAL_RESULT_ERROR) && ((ind = FindUnused()) >= 0) )
+	{
+		Remove(ind);
+		err = arr->Allocate(flags);
+	}	
 
 	// FIXME: provide flexible way of allocating with possible freeing (or moving to remote memory) of unused arrays
 
@@ -598,4 +604,17 @@ CALresult ArrayPool::AllocateSplittedMatrix(Array* arr, long numParts, CALuint f
 		return CAL_RESULT_INVALID_PARAMETER;
 
 	return err;
+}
+
+// find an unused array
+long ArrayPool::FindUnused(void)
+{
+	long i;
+
+	for(i = 0; (i < nObjs) && Get(i)->useCounter; i++);
+
+	if(i < nObjs) 
+		return i; 
+	else 
+		return -1;
 }

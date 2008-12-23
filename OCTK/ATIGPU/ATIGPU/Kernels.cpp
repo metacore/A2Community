@@ -77,13 +77,31 @@ Kernel::Kernel(KernelCode iKernel, CALtarget target, CALresult* err)
 		case KernReshapeMatToMatNoBounds_PS:
 			kernelStr = kernelReshapeMatToMatNoBounds_PS; nInputs = 1; nOutputs = 1; nConstants = 1;
 			constSizes = new long[1]; constSizes[0] = 1;
-			constFormats = new CALformat[1]; constFormats[0] = CAL_FORMAT_FLOAT_4;
+			constFormats = new CALformat[1]; constFormats[0] = CAL_FORMAT_INT_4;
 			break;
 
 		case KernReshapeArr1DWToMat4DW_PS:
 			kernelStr = kernelReshapeArr1DWToMat4DW_PS; nInputs = 1; nOutputs = 1; nConstants = 1;
-			constSizes = new long[1]; constSizes[0] = 2;
-			constFormats = new CALformat[1]; constFormats[0] = CAL_FORMAT_FLOAT_4;
+			constSizes = new long[1]; constSizes[0] = 1;
+			constFormats = new CALformat[1]; constFormats[0] = CAL_FORMAT_INT_4;
+			break;
+
+		case KernReshapeMat4DWToArr1DW_PS:
+			kernelStr = kernelReshapeMat4DWToArr1DW_PS; nInputs = 1; nOutputs = 1; nConstants = 1;
+			constSizes = new long[1]; constSizes[0] = 1;
+			constFormats = new CALformat[1]; constFormats[0] = CAL_FORMAT_INT_4;
+			break;
+
+		case KernTranspose3D_PS:
+			kernelStr = kernelTranspose3D_PS; nInputs = 1; nOutputs = 1; nConstants = 1;
+			constSizes = new long[1]; constSizes[0] = 3;
+			constFormats = new CALformat[1]; constFormats[0] = CAL_FORMAT_INT_4;
+			break;
+
+		case KernTranspose4D_PS:
+			kernelStr = kernelTranspose4D_PS; nInputs = 1; nOutputs = 1; nConstants = 1;
+			constSizes = new long[1]; constSizes[0] = 3;
+			constFormats = new CALformat[1]; constFormats[0] = CAL_FORMAT_INT_4;
 			break;
 
 		case KernSplitMatrixTo4Parts_PS:

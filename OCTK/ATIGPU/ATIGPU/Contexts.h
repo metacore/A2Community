@@ -97,6 +97,10 @@ public:
 	CALresult DoReshape(void);
 	// zero array memory
 	CALresult ZeroArrayMemory(Array* arr, CALdomain* domain);
+	// set a transpose computation
+	CALresult SetTranspose(ArrayExpression* expr, Array* result);
+	// perform a transpose computation
+	CALresult DoTranspose(void);
 };
 
 class ContextPool :
