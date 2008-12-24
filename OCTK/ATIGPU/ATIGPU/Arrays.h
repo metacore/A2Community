@@ -1,18 +1,18 @@
 #pragma once
 #include "ObjectPool.h"
 
+typedef CALresult (*FuncAllocateRes)(CALresource res, long width, long height, BOOL local, CALuint flags);
+
 class Array
 {
 public:	
-	Array(CALdevice hDev, CALdeviceinfo* devInfo, CALdeviceattribs* devAttribs, long arrID, long dType, long nDims, long* size);
+	Array(CALdevice hDev, CALdeviceinfo* devInfo, CALdeviceattribs* devAttribs, long arrID, long dType, long nDims, long* size, void* cpuData);
 	~Array(void);
 
 	// free array resource
 	void Free(void);
 	// allocate array resource
-	CALresult Allocate(CALuint flags);
-	// copy data from one resource to another
-	CALresult Copy(CALcontext ctx, CALresource dstRes, CALresource srcRes);
+	CALresult AllocateRes(CALuint flags);
 	// sets data to GPU memory
 	CALresult SetData(CALcontext ctx, void* cpuData);
 	// gets data from GPU memory
@@ -25,9 +25,12 @@ public:
 	CALresult GetDataFromRes(CALresource res, void* cpuData);	
 	// Get data part from a resource
 	CALresult GetDataPartFromRes(CALresource res, void* cpuData, long iPart);
-
 	// get named local memory handle for given context
 	CALresult GetNamedLocalMem(CALcontext ctx, CALname name, CALmem* mem);
+	// array copy
+	CALresult Copy(CALcontext ctx, Array* dstArr);
+	// returns TRUE if array is a scalar
+	BOOL IsScalar(void);
 
 	CALdevice hDev;			// handle of device on which the array exists	
 	CALdeviceinfo* devInfo;
@@ -61,25 +64,37 @@ public:
 	CALresource res;		// CAL resource	
 
 	long numParts;			// number of parts (in case of matrices)
-	Array** parts;			// matrix parts (to speed up matrix multiplication)
+	Array** parts;			// matrix parts (to speed up matrix multiplication)	
+
+	void* pool;				// array pool which created this array
+
+	BOOL isCopy;			// TRUE when array is a copy of some (original) array
 };
 
 class ArrayPool :
 	public ObjectPool
 {
 public:
-	ArrayPool(void);
+	ArrayPool(CALdevice hDev, CALdeviceinfo* devInfo, CALdeviceattribs* devAttribs);
 	~ArrayPool(void);
 
 	Array* Get(long ind);
 	long Find(long arrID);
 	void Remove(long ind);
+	void Remove(Array* arr);
 	// allocate an array
 	CALresult AllocateArray(Array* arr, CALuint flags);	
 	// allocated a matrix splitted in given number of parts parts
 	CALresult AllocateSplittedMatrix(Array* arr, long numParts, CALuint flags);
 	// find an unused array
 	long FindUnused(void);
+
+	CALdevice hDev;	// CAL device handle
+	CALdeviceinfo* devInfo; 
+	CALdeviceattribs* devAttribs;
+
+	// create a new array object (without allocation)	
+	Array* NewArray(long arrID, long dType, long nDims, long* size, void* cpuData);		
 };
 
 

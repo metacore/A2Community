@@ -24,3 +24,5 @@ long GetPaddedNumElements(long size, long numComponents);
 // returns TRUE if to array sizes are equal
 BOOL EqualSizes(long nDims1, long* size1, long nDims2, long* size2);
 
+// copy data from one resource to another
+CALresult ResCopy(CALcontext ctx, CALresource dstRes, CALresource srcRes);

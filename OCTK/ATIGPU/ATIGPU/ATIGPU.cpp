@@ -4,6 +4,7 @@
 #include "stdafx.h"
 #include "ATIGPU.h"
 #include "Devices.h"
+#include "Common.h"
 
 
 #ifdef _MANAGED
@@ -213,7 +214,7 @@ ATIGPU_API long SetComputation(
 							   long priority,
 							   long flags
 							   )
-{	
+{		
 	Device* dev;	
 	Context* context;
 	Array* arr;	
@@ -240,40 +241,63 @@ ATIGPU_API long SetComputation(
 			
 	inArgs[0] = exprDesc->arg1;
 	inArgs[1] = exprDesc->arg2;
-	inArgs[2] = exprDesc->arg3;			
+	inArgs[2] = exprDesc->arg3;	
 
 	for(i = 0; (i < 3) && inArgs[i]; i++)
 	{
-		// look for already existing array
-		j = 0;
-		while((j < devs->Length()) && ((ind = devs->Get(j)->arrs->Find(inArgs[i]->id)) == -1) ){j++;}
+		// look for already existing array		
+		if( (ind = dev->arrs->Find(inArgs[i]->id)) == -1 )	// first search on the local device
+		{
+			// search on all other available devices
+			for(j = 0; (j < devs->Length()) && (ind == -1); j++)
+			{
+				if(j != devNum)
+					ind = devs->Get(j)->arrs->Find(inArgs[i]->id);
+			}
+		}
 	
 		if(ind == -1)	// create a new array
 		{		
-			arr = new Array(dev->hDev,&dev->info,&dev->attribs,inArgs[i]->id,inArgs[i]->dType,inArgs[i]->nDims,inArgs[i]->size);
-			arr->cpuData = inArgs[i]->data;
+			arr = dev->arrs->NewArray(inArgs[i]->id,inArgs[i]->dType,inArgs[i]->nDims,inArgs[i]->size,inArgs[i]->data);			
 			dev->arrs->Add(arr);	// add new array to the pool
 		}
-		else	// use already existing array		
-			arr = devs->Get(j)->arrs->Get(ind);		
+		else	// use already existing array	
+			arr = devs->Get(j)->arrs->Get(ind);	
 
 		expr1->args[i] = arr;		
 	}	
 		
 	//	Result array	
 
-	// look for already existing array
-	j = 0;
-	while((j < devs->Length()) && ((ind = devs->Get(j)->arrs->Find(resultDesc->id)) == -1) ){j++;}
+	// look for already existing array	
+	if( (ind = dev->arrs->Find(resultDesc->id)) == -1 )	// first search on the local device
+	{
+		// search on all other available devices
+		for(j = 0; (j < devs->Length()) && (ind == -1); j++)
+		{
+			if(j != devNum)
+				ind = devs->Get(j)->arrs->Find(resultDesc->id);
+		}
+	}
 	
 	if(ind == -1)	// create a new array
-	{		
-		arr = new Array(dev->hDev,&dev->info,&dev->attribs,resultDesc->id,resultDesc->dType,resultDesc->nDims,resultDesc->size);		
-		arr->cpuData = resultDesc->data;
+	{	
+		arr = dev->arrs->NewArray(resultDesc->id,resultDesc->dType,resultDesc->nDims,resultDesc->size,resultDesc->data);
 		dev->arrs->Add(arr);	// add new array to the pool
 	}
 	else	// use already existing array	
-		arr = devs->Get(j)->arrs->Get(ind);	
+	{
+		arr = devs->Get(j)->arrs->Get(ind);
+
+		// if array size does not match with actual expression size and array is not within inputs - create a new array
+		if(!EqualSizes(arr->nDims,arr->size,expr1->nDims,expr1->size) && (arr != expr1->args[0]) && (arr != expr1->args[1]) && (arr != expr1->args[2]) )
+		{			
+			devs->Get(j)->arrs->Remove(ind);
+				
+			arr = dev->arrs->NewArray(resultDesc->id,resultDesc->dType,resultDesc->nDims,resultDesc->size,resultDesc->data);
+			dev->arrs->Add(arr);	// add new array to the pool
+		}
+	}
 
 	return context->SetComputation(expr1,arr,priority,flags);
 }
@@ -293,6 +317,10 @@ ATIGPU_API long DoComputation(
 							   )
 {		
 	Device* dev;	
+	Context* context;
+	Array* arr;
+	ArrayPool* arrs;
+	long ind, j;
 
 	if(!isInitialized) 
 		return CAL_RESULT_NOT_INITIALIZED;
@@ -302,10 +330,29 @@ ATIGPU_API long DoComputation(
 	dev = devs->Get(devNum);	
 
 	if( (ctxNum < 0) || (ctxNum >= dev->ctxs->Length()) ) 
-		return CAL_RESULT_INVALID_PARAMETER;		
+		return CAL_RESULT_INVALID_PARAMETER;
+
+	context = dev->ctxs->Get(ctxNum);
+
+	// since result array will be changed remove all its copies!
+	for(j = 0; j < devs->Length(); j++)
+	{
+		if(j != devNum)
+		{
+			arrs = devs->Get(j)->arrs;
+			ind = arrs->Find(context->result->arrID);
+			arr = arrs->Get(ind);
+			if(arr->isCopy)
+			{
+				_ASSERT(!arr->useCounter);
+				_ASSERT(!arr->isReservedForGet);
+				arrs->Remove(ind);
+			}
+		}
+	}	
 
 	// get context object
-	return (dev->ctxs->Get(ctxNum))->DoComputation();	
+	return context->DoComputation();	
 }
 
 /*

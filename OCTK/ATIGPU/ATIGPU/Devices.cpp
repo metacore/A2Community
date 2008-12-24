@@ -60,7 +60,7 @@ Device::Device(long devNum, CALresult* err)
 	}
 
 	ctxs = new ContextPool;	
-	arrs = new ArrayPool;	
+	arrs = new ArrayPool(hDev,&info,&attribs);	
 }
 
 Device::~Device(void)

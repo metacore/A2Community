@@ -2,7 +2,7 @@
 #include "Arrays.h"
 #include "Common.h"
 
-Array::Array(CALdevice hDev, CALdeviceinfo* devInfo, CALdeviceattribs* devAttribs, long arrID, long dType, long nDims, long* size)
+Array::Array(CALdevice hDev, CALdeviceinfo* devInfo, CALdeviceattribs* devAttribs, long arrID, long dType, long nDims, long* size, void* cpuData)
 {	
 	long i;	
 	
@@ -16,12 +16,14 @@ Array::Array(CALdevice hDev, CALdeviceinfo* devInfo, CALdeviceattribs* devAttrib
 	isReservedForGet = FALSE;
 	isVirtualized = FALSE;
 	isGlobalBuf = FALSE;
+	isCopy = FALSE;
 
 	this->hDev = hDev;
 	this->arrID = arrID;		
 	this->dType = dType;
 	this->devInfo = devInfo;
 	this->devAttribs = devAttribs;
+	this->cpuData = cpuData;
 
 	physNumComponents = 4;	// use quads for efficient memory accesses
 	if(dType == TLONGREAL)
@@ -121,8 +123,11 @@ void Array::Free(void)
 }
 
 
-ArrayPool::ArrayPool(void)
+ArrayPool::ArrayPool(CALdevice hDev, CALdeviceinfo* devInfo, CALdeviceattribs* devAttribs)
 {
+	this->hDev = hDev;
+	this->devInfo = devInfo;
+	this->devAttribs = devAttribs;
 }
 
 ArrayPool::~ArrayPool(void)
@@ -137,6 +142,11 @@ void ArrayPool::Remove(long ind)
 		delete arr;
 
 	ObjectPool::Remove(ind);
+}
+
+void ArrayPool::Remove(Array* arr)
+{			
+	Remove(Find(arr->arrID));	
 }
 
 Array* ArrayPool::Get(long ind)
@@ -154,6 +164,17 @@ long ArrayPool::Find(long arrID)
 		return i; 
 	else 
 		return -1;
+}
+
+// create a new array object without allocation
+Array* ArrayPool::NewArray(long arrID, long dType, long nDims, long* size, void* cpuData)
+{
+	Array* arr;
+	
+	arr = new Array(hDev,devInfo,devAttribs,arrID,dType,nDims,size,cpuData);	
+	arr->pool = this;	
+
+	return arr;
 }
 
 ArrayExpression::ArrayExpression(long op, long dType, long nDims, long* size, long* transpDims)
@@ -193,7 +214,7 @@ ArrayExpression::~ArrayExpression(void)
 
 
 // allocate array resource
-CALresult Array::Allocate(CALuint flags)
+CALresult Array::AllocateRes(CALuint flags)
 {
 	CALresult err;
 
@@ -218,40 +239,6 @@ CALresult Array::Allocate(CALuint flags)
 	return err;
 }
 
-// copy data from one resource to another
-CALresult Array::Copy(CALcontext ctx, CALresource dstRes, CALresource srcRes)
-{
-	CALresult err;
-	CALmem srcMem, dstMem;
-	CALevent ev;	
-
-	err = calCtxGetMem(&dstMem,ctx,dstRes);
-	if(err != CAL_RESULT_OK) 
-		return err;
-
-	err = calCtxGetMem(&srcMem,ctx,srcRes);
-	if(err != CAL_RESULT_OK)
-	{
-		calCtxReleaseMem(ctx,dstMem);
-		return err;
-	}
-
-	err = calMemCopy(&ev,ctx,srcMem,dstMem,0);
-	if(err != CAL_RESULT_OK) 
-	{
-		calCtxReleaseMem(ctx,srcMem);
-		calCtxReleaseMem(ctx,dstMem);	
-		return err;
-	}
-
-	while(calCtxIsEventDone(ctx,ev) == CAL_RESULT_PENDING);
-
-	calCtxReleaseMem(ctx,srcMem);
-	calCtxReleaseMem(ctx,dstMem);
-
-	return err;
-}
-
 // sets data to GPU memory
 CALresult Array::SetData(CALcontext ctx, void* cpuData)
 {
@@ -266,7 +253,7 @@ CALresult Array::SetData(CALcontext ctx, void* cpuData)
 		if(err == CAL_RESULT_OK)
 		{
 			if( (err = SetDataToRes(remoteRes,cpuData)) == CAL_RESULT_OK )		
-				err = Copy(ctx,res,remoteRes);
+				err = ResCopy(ctx,res,remoteRes);
 
 			calResFree(remoteRes);
 		}
@@ -279,7 +266,7 @@ CALresult Array::SetData(CALcontext ctx, void* cpuData)
 			for(i = 0; (i < numParts) && (err == CAL_RESULT_OK); i++)
 			{
 				if( (err = SetDataPartToRes(remoteRes,cpuData,i)) == CAL_RESULT_OK)
-					err = Copy(ctx,parts[i]->res,remoteRes);
+					err = ResCopy(ctx,parts[i]->res,remoteRes);
 			}
 
 			calResFree(remoteRes);
@@ -304,7 +291,7 @@ CALresult Array::GetData(CALcontext ctx, void* cpuData)
 		err = calResAllocRemote2D(&remoteRes,&hDev,1,physSize[1],physSize[0],dFormat,0);
 		if(err == CAL_RESULT_OK)
 		{
-			if( (err = Copy(ctx,remoteRes,res)) == CAL_RESULT_OK )										
+			if( (err = ResCopy(ctx,remoteRes,res)) == CAL_RESULT_OK )										
 				err = GetDataFromRes(remoteRes,cpuData);		
 			
 			calResFree(remoteRes);
@@ -317,7 +304,7 @@ CALresult Array::GetData(CALcontext ctx, void* cpuData)
 		{
 			for(i = 0; (i < numParts) && (err == CAL_RESULT_OK); i++)
 			{
-				if( (err = Copy(ctx,remoteRes,parts[i]->res)) == CAL_RESULT_OK )
+				if( (err = ResCopy(ctx,remoteRes,parts[i]->res)) == CAL_RESULT_OK )
 					err = GetDataPartFromRes(remoteRes,cpuData,i);				
 			}
 
@@ -553,12 +540,14 @@ CALresult ArrayPool::AllocateArray(Array* arr, CALuint flags)
 {
 	CALresult err;
 	long ind;
+
+	_ASSERT(arr);
 	
-	err = arr->Allocate(flags);	
+	err = arr->AllocateRes(flags);
 	while( (err == CAL_RESULT_ERROR) && ((ind = FindUnused()) >= 0) )
 	{
 		Remove(ind);
-		err = arr->Allocate(flags);
+		err = arr->AllocateRes(flags);
 	}	
 
 	// FIXME: provide flexible way of allocating with possible freeing (or moving to remote memory) of unused arrays
@@ -572,6 +561,7 @@ CALresult ArrayPool::AllocateSplittedMatrix(Array* arr, long numParts, CALuint f
 	CALresult err;
 	long i, size[2];	
 
+	_ASSERT(arr);
 	_ASSERT(arr->nDims == 2);
 	_ASSERT(!arr->parts);
 
@@ -584,7 +574,7 @@ CALresult ArrayPool::AllocateSplittedMatrix(Array* arr, long numParts, CALuint f
 		
 		arr->parts = new Array*[numParts];
 		for(i = 0; i < numParts; i++)
-			arr->parts[i] = new Array(arr->hDev,arr->devInfo,arr->devAttribs,arr->arrID,arr->dType,2,&size[0]);
+			arr->parts[i] = NewArray(arr->arrID,arr->dType,2,&size[0],NULL);
 
 		for(i = 0; (i < numParts) && (err == CAL_RESULT_OK); i++)
 			err = AllocateArray(arr->parts[i],flags);
@@ -617,4 +607,34 @@ long ArrayPool::FindUnused(void)
 		return i; 
 	else 
 		return -1;
+}
+
+// array copy
+CALresult Array::Copy(CALcontext ctx, Array* dstArr)
+{
+	CALresult err;
+	long i;
+
+	err = CAL_RESULT_OK;
+
+	if(!parts)
+	{
+		_ASSERT(!dstArr->parts);
+		err = ResCopy(ctx,dstArr->res,res);
+	}
+	else
+	{
+		_ASSERT(dstArr->parts);
+		_ASSERT(dstArr->numParts == numParts);
+		for(i = 0; (i < numParts) && (err == CAL_RESULT_OK); i++)
+			err = ResCopy(ctx,dstArr->parts[i]->res,parts[i]->res);
+	}
+
+	return err;
+}
+
+// returns TRUE if array is a scalar
+BOOL Array::IsScalar(void)
+{
+	return (dataSize == elemSize);
 }

@@ -98,9 +98,9 @@ BOOL Context::InitCounterExtension(void)
 // set computation
 CALresult Context::SetComputation(ArrayExpression* expr, Array* result, long priority, long flags)
 {	
-	CALresult err;
-	long i;	
+	CALresult err;	
 	BOOL isReservedForGet0;
+	long i;	
 
 	// increment use counters beforehand!	
 	for(i = 0; (i < 3) && expr->args[i]; i++){expr->args[i]->useCounter++;}	
@@ -264,11 +264,48 @@ long ContextPool::FindUnused(void)
 CALresult Context::SetElementwise(ArrayExpression* expr, Array* result)
 {
 	CALresult err;	
-	long i, numParts;	
-	
-	numParts = max(expr->args[0]->numParts,expr->args[1]->numParts);	
+	Array* arr, *arr1;
+	long i, numParts;
 
 	err = CAL_RESULT_OK;
+
+	// check for the case when array is located on another device
+	for(i = 0; (err == CAL_RESULT_OK) && (i < 2); i++)
+	{
+		if(expr->args[i]->hDev != hDev)
+		{
+			arr1 = expr->args[i];
+			
+			// create array copy on the local device
+			arr = arrs->NewArray(arr1->arrID,arr1->dType,arr1->nDims,arr1->size,arr1->cpuData);						
+
+			if(!arr1->parts)			
+				err = arrs->AllocateArray(arr,0);			
+			else
+				err = arrs->AllocateSplittedMatrix(arr,arr1->numParts,0);
+
+			if(err == CAL_RESULT_OK)
+			{
+				if( (err = arr1->Copy(ctx,arr)) == CAL_RESULT_OK )
+				{
+					expr->args[i] = arr;
+
+					// add to the local pool as a copy
+					arr->isCopy = TRUE;
+					arrs->Add(arr);
+				}
+				else
+					delete arr;
+			}
+			else
+				delete arr;
+		}
+	}
+
+	if(err != CAL_RESULT_OK)
+		return err;
+
+	numParts = max(expr->args[0]->numParts,expr->args[1]->numParts);
 
 	for(i = 0; (err == CAL_RESULT_OK) && (i < 2) && expr->args[i]; i++)
 	{				
@@ -303,23 +340,41 @@ CALresult Context::SetElementwise(ArrayExpression* expr, Array* result)
 		}
 	}
 
-	if(err == CAL_RESULT_OK)
-	{
-		if(!numParts) // no splitted matrices within the arguments
-		{
-			if(result->parts || !EqualSizes(result->nDims,result->size,expr->nDims,expr->size))  // if array is splitted or has incompatible size			
-				result->Free();
-
-			if(!result->res)	
-				err = arrs->AllocateArray(result,0);			
-		}
-		else if(result->res || !result->parts || !EqualSizes(result->nDims,result->size,expr->nDims,expr->size))	// if array resides in the memory as a solid 2D piece or has incompatible size
+	if(err != CAL_RESULT_OK)
+		return err;
+	
+	if(!numParts) // no splitted matrices within the arguments
+	{			
+		if(!result->res)	
 		{
 			result->Free();
-			err = arrs->AllocateSplittedMatrix(result,numParts,0);
+			err = ((ArrayPool*)result->pool)->AllocateArray(result,0);			
 		}
 	}
+	else if(!result->parts)	// if array resides in the memory as a solid 2D memory piece
+	{
+		result->Free();
+		err = ((ArrayPool*)result->pool)->AllocateSplittedMatrix(result,numParts,0);
+	}
 
+	if(err != CAL_RESULT_OK)
+		return err;
+
+	if(result->hDev != hDev)	// if array resides on another device
+	{
+		resultTemp = arrs->NewArray(result->arrID,result->dType,result->nDims,result->size,NULL);
+		if(!result->parts)
+			err = arrs->AllocateArray(resultTemp,0);
+		else
+			err = arrs->AllocateSplittedMatrix(resultTemp,result->numParts,0);		
+
+		if(err != CAL_RESULT_OK)		
+		{
+			delete resultTemp;
+			resultTemp = NULL;
+		}
+	}
+	
 	return err;
 }
 
@@ -443,6 +498,7 @@ CALresult Context::DoElementwise(void)
 	Module* module;
 	CALdomain domain;	
 	Array* parts[2];
+	Array* arr;
 
 	long i;
 	KernelCode iKernel;
@@ -497,38 +553,60 @@ CALresult Context::DoElementwise(void)
 	}
 	
 	if(err == CAL_RESULT_OK)
-	{		
+	{				
 		module = modules[iKernel];
 
 		// set the domain of execution
 		domain.x = 0;
 		domain.y = 0;
 
-		if(!result->parts)
+		if(!resultTemp)
+			arr = result;
+		else
+			arr = resultTemp;
+
+		if(!arr->parts)
 		{
-			domain.width = result->physSize[1];
-			domain.height = result->physSize[0];
+			domain.width = arr->physSize[1];
+			domain.height = arr->physSize[0];
 
 			// run the program			
-			err = module->RunPixelShader(expr->args,&result,NULL,&domain);		
+			err = module->RunPixelShader(expr->args,&arr,NULL,&domain);		
 		}
 		else
 		{
-			domain.width = result->parts[0]->physSize[1];
-			domain.height = result->parts[0]->physSize[0];			
+			domain.width = arr->parts[0]->physSize[1];
+			domain.height = arr->parts[0]->physSize[0];			
 			
 			// run the program for each part separately
-			for(i = 0; i < result->numParts; i++)
+			for(i = 0; i < arr->numParts; i++)
 			{
 				parts[0] = expr->args[0]->parts[i];
 				if(expr->args[1])
 					parts[1] = expr->args[1]->parts[i];
 
-				err = module->RunPixelShader(parts,&result->parts[i],NULL,&domain);
+				err = module->RunPixelShader(parts,&arr->parts[i],NULL,&domain);
 			}			
 		}
 
+		if(resultTemp)
+		{
+			if( (err == CAL_RESULT_OK) && ((err = resultTemp->Copy(ctx,result)) == CAL_RESULT_OK) )
+			{
+				// add temp result as a copy of actual result
+				resultTemp->isCopy = TRUE;
+				arrs->Add(resultTemp);				
+				resultTemp = NULL;
+			}							
+		}
+
 	}	
+
+	if(resultTemp)
+	{
+		delete resultTemp;
+		resultTemp = NULL;
+	}
 
 	return err;
 }
@@ -536,7 +614,9 @@ CALresult Context::DoElementwise(void)
 // set a matrix vector multiply computation
 CALresult Context::SetMatVecMul(ArrayExpression* expr, Array* result)
 {
-	CALresult err;	
+	return CAL_RESULT_NOT_SUPPORTED;
+/*
+	CALresult err;		
 
 	err = CAL_RESULT_OK;	
 
@@ -580,11 +660,14 @@ CALresult Context::SetMatVecMul(ArrayExpression* expr, Array* result)
 	}
 
 	return err;
+*/
 }
 
 // perform a matrix vector multiplication
 CALresult Context::DoMatVecMul(void)
 {
+	return CAL_RESULT_NOT_SUPPORTED;
+/*
 	CALresult err;
 	Module* module;
 	CALdomain domain;
@@ -658,11 +741,14 @@ CALresult Context::DoMatVecMul(void)
 	}
 
 	return err;
+*/
 }
 
 // perform matrix vector multiplication for the case when matrix is splitted into parts
 CALresult Context::DoMatVecMulSplitted(void)
 {
+	return CAL_RESULT_NOT_SUPPORTED;
+/*
 	CALresult err;
 	Module* module;
 	CALdomain domain;
@@ -764,19 +850,58 @@ CALresult Context::DoMatVecMulSplitted(void)
 	}
 
 	return err;
+*/
 }
 
 // set a matrix multiplication computation
 CALresult Context::SetMatMul(ArrayExpression* expr, Array* result)
 {
 	CALresult err;
-	long i;
+	Array* arr, *arr1;
+	long i, j;
 
 	err = CAL_RESULT_OK;
 
 	if(result->isVirtualized || expr->args[0]->isVirtualized || expr->args[1]->isVirtualized)
-		err = CAL_RESULT_NOT_SUPPORTED;
+		return CAL_RESULT_NOT_SUPPORTED;
 
+	// check for the case when array is located on another device
+	for(i = 0; (err == CAL_RESULT_OK) && (i < 2); i++)
+	{
+		if(expr->args[i]->hDev != hDev)
+		{
+			arr1 = expr->args[i];
+			
+			// create array copy on the local device
+			arr = arrs->NewArray(arr1->arrID,arr1->dType,arr1->nDims,arr1->size,arr1->cpuData);						
+
+			if(!arr1->parts)			
+				err = arrs->AllocateArray(arr,0);			
+			else
+				err = arrs->AllocateSplittedMatrix(arr,arr1->numParts,0);
+
+			if(err == CAL_RESULT_OK)
+			{
+				if( (err = arr1->Copy(ctx,arr)) == CAL_RESULT_OK )
+				{
+					expr->args[i] = arr;
+
+					// add to the local pool as a copy
+					arr->isCopy = TRUE;
+					arrs->Add(arr);
+				}
+				else
+					delete arr;
+			}
+			else
+				delete arr;
+		}
+	}
+
+	if(err != CAL_RESULT_OK)
+		return err;
+
+	// set array data if necessary
 	for(i = 0; (i < 2) && (err == CAL_RESULT_OK); i++)
 	{
 		if(!expr->args[i]->res && !expr->args[i]->parts)
@@ -805,6 +930,14 @@ CALresult Context::SetMatMul(ArrayExpression* expr, Array* result)
 					calResFree(expr->args[i]->res);
 					expr->args[i]->res = 0;
 				}
+				else // do cleanup
+				{
+					for(j = 0; j < expr->args[i]->numParts; j++)
+						delete expr->args[i]->parts[j];
+
+					expr->args[i]->parts = NULL;
+					expr->args[i]->numParts = 0;
+				}
 			}
 		}
 	}
@@ -814,21 +947,33 @@ CALresult Context::SetMatMul(ArrayExpression* expr, Array* result)
 
 	if( (result == expr->args[0]) || (result == expr->args[1]) )
 	{
-		// result is within input arguments - create temporary result array
-		_ASSERT(!resultTemp);
+		// result is within input arguments -> create temporary result array
+		resultTemp = arrs->NewArray(result->arrID,result->dType,result->nDims,result->size,result->cpuData);
+		err = arrs->AllocateSplittedMatrix(resultTemp,expr->args[0]->numParts,0);
 
-		resultTemp = new Array(result->hDev,result->devInfo,result->devAttribs,result->arrID,result->dType,result->nDims,result->size);
-		if( (err = arrs->AllocateSplittedMatrix(resultTemp,result->numParts,0)) != CAL_RESULT_OK )
+		if(err != CAL_RESULT_OK)
 		{
 			delete resultTemp;
 			resultTemp = NULL;
 		}
 	}
-	else if(result->res || !result->parts || !EqualSizes(result->nDims,result->size,expr->nDims,expr->size))
+	else if(!result->parts)
 	{
 		result->Free();
-		err = arrs->AllocateSplittedMatrix(result,expr->args[0]->numParts,0);
-	}	
+		err = ((ArrayPool*)result->pool)->AllocateSplittedMatrix(result,expr->args[0]->numParts,0);
+	}
+
+	if(result->hDev != hDev)	// if array resides on another device
+	{
+		resultTemp = arrs->NewArray(result->arrID,result->dType,result->nDims,result->size,NULL);		
+		err = arrs->AllocateSplittedMatrix(resultTemp,result->numParts,0);		
+
+		if(err != CAL_RESULT_OK)		
+		{
+			delete resultTemp;
+			resultTemp = NULL;
+		}
+	}
 
 	return err;
 }
@@ -841,6 +986,7 @@ CALresult Context::DoMatMul(void)
 	CALdomain domain;
 	KernelCode iKernel;	
 	Array* inputs[16];
+	Array* arr;
 	float constData[4];	
 	long i;
 	
@@ -882,31 +1028,48 @@ CALresult Context::DoMatMul(void)
 			err = module->SetConstantsToContext();
 			if(err == CAL_RESULT_OK)
 			{
+				if(!resultTemp)
+					arr = result;
+				else
+					arr = resultTemp;
+
 				// set the domain of execution
 				domain.x = 0;
 				domain.y = 0;		
-				domain.width = result->parts[0]->physSize[1];
-				domain.height = result->parts[0]->physSize[0];	
+				domain.width = arr->parts[0]->physSize[1];
+				domain.height = arr->parts[0]->physSize[0];	
 				
 				for(i = 0; i < expr->args[0]->numParts; i++)				
 					inputs[i] = expr->args[0]->parts[i];
 				for(i = 0; i < expr->args[1]->numParts; i++)
 					inputs[i+expr->args[0]->numParts] = expr->args[1]->parts[i];
+				
+				err = module->RunPixelShader(inputs,arr->parts,NULL,&domain);
 
-				if(!resultTemp)
+				if(resultTemp)
 				{
-					err = module->RunPixelShader(inputs,result->parts,NULL,&domain);
-				}
-				else
-				{
-					if( (err = module->RunPixelShader(inputs,resultTemp->parts,NULL,&domain)) == CAL_RESULT_OK )
-					{						
-						delete result;
-						arrs->Set(arrs->Find(resultTemp->arrID),resultTemp);						
-						result = resultTemp;
-						resultTemp = NULL;
+					if(err == CAL_RESULT_OK)
+					{
+						if(result->hDev == hDev)
+						{							
+							arrs->Set(arrs->Find(result->arrID),resultTemp);
+							delete result;
+							result = resultTemp;
+							resultTemp = NULL;
+
+							// do not forget about the flags!
+							result->useCounter++;
+							result->isReservedForGet = TRUE;
+						}
+						else if( (err = resultTemp->Copy(ctx,result)) == CAL_RESULT_OK )
+						{
+							// add temp result as a copy of actual result
+							resultTemp->isCopy = TRUE;
+							arrs->Add(resultTemp);				
+							resultTemp = NULL;
+						}						
 					}					
-				}								
+				}
 
 				module->ReleaseConstantsFromContext();
 			}
@@ -925,8 +1088,10 @@ CALresult Context::DoMatMul(void)
 // set a reshape computation
 CALresult Context::SetReshape(ArrayExpression* expr, Array* result)
 {
-	CALresult err;	
-	
+	return CAL_RESULT_NOT_SUPPORTED;
+/*
+	CALresult err;		
+
 	err = CAL_RESULT_OK;
 		
 	if(!expr->args[0]->res && !expr->args[0]->parts)
@@ -955,11 +1120,14 @@ CALresult Context::SetReshape(ArrayExpression* expr, Array* result)
 	}
 
 	return err;
+*/
 }
 
 // perform a reshape computation
 CALresult Context::DoReshape(void)
 {
+	return CAL_RESULT_NOT_SUPPORTED;
+/*
 	CALresult err;
 	KernelCode iKernel;
 	Module* module;
@@ -982,7 +1150,7 @@ CALresult Context::DoReshape(void)
 		// no explicit reshape is required!
 
 		if(!resultTemp)
-			err = arr->Copy(ctx,result->res,expr->args[0]->res);
+			err = ResCopy(ctx,result->res,expr->args[0]->res);
 		else
 		{				
 			resultTemp->res = result->res;
@@ -1099,6 +1267,7 @@ CALresult Context::DoReshape(void)
 	}		
 
 	return err;
+*/
 }
 
 
@@ -1132,8 +1301,10 @@ CALresult Context::ZeroArrayMemory(Array* arr, CALdomain* domain)
 // set a transpose computation
 CALresult Context::SetTranspose(ArrayExpression* expr, Array* result)
 {
+	return CAL_RESULT_NOT_SUPPORTED;
+/*
 	CALresult err;	
-	
+
 	err = CAL_RESULT_OK;
 
 	if(expr->args[0]->parts || result->parts)
@@ -1161,10 +1332,13 @@ CALresult Context::SetTranspose(ArrayExpression* expr, Array* result)
 	}
 
 	return err;
+*/
 }
 // perform a transpose computation
 CALresult Context::DoTranspose(void)
 {
+	return CAL_RESULT_NOT_SUPPORTED;
+/*
 	CALresult err;
 	KernelCode iKernel;
 	Module* module;
@@ -1233,11 +1407,11 @@ CALresult Context::DoTranspose(void)
 		else	// just copy the data
 		{
 			if(!expr->args[0]->parts && !arr->parts)
-				err = arr->Copy(ctx,arr->res,expr->args[0]->res);
+				err = ResCopy(ctx,arr->res,expr->args[0]->res);
 			else if(expr->args[0]->parts && arr->parts)
 			{				
 				for(i = 0; (i < arr->numParts) && (err == CAL_RESULT_OK); i++)
-					err = arr->Copy(ctx,arr->parts[i]->res,expr->args[0]->parts[i]->res);
+					err = ResCopy(ctx,arr->parts[i]->res,expr->args[0]->parts[i]->res);
 			}
 			else
 				return CAL_RESULT_NOT_SUPPORTED;
@@ -1302,44 +1476,41 @@ CALresult Context::DoTranspose(void)
 	}		
 
 	return err;
+*/
 }
 
 
 // set an identic operation
 CALresult Context::SetIdentic(ArrayExpression* expr, Array* result)
 {
-	CALresult err;	
-	
+	CALresult err;
+
 	err = CAL_RESULT_OK;
-		
-	if(!expr->args[0]->res || !expr->args[0]->parts)
-	{
-		if( (err = arrs->AllocateArray(expr->args[0],0)) == CAL_RESULT_OK )
-			err = expr->args[0]->SetData(ctx,expr->args[0]->cpuData);
-	}	
 
-	if(err != CAL_RESULT_OK)
-		return err;	
-
-	if(expr->args[0] != result)
+	if(!expr->args[0]->IsScalar())
 	{
-		if(!expr->args[0]->parts)
+		if(expr->args[0] != result)
 		{
-			if(!result->res || result->parts || !EqualSizes(result->nDims,result->size,expr->nDims,expr->size))	
+			if(!expr->args[0]->parts) // src is not a splitted matrix
 			{
-				result->Free();
-				err = arrs->AllocateArray(result,0);
+				if(!result->res)
+				{
+					result->Free();
+					err = ((ArrayPool*)result->pool)->AllocateArray(result,0);
+				}
 			}
-		}
-		else
-		{
-			if(result->res || !result->parts || !EqualSizes(result->nDims,result->size,expr->nDims,expr->size))	
+			else // src is a splitted matrix
 			{
-				result->Free();
-				err = arrs->AllocateSplittedMatrix(result,expr->args[0]->numParts,0);
+				if(!result->parts)
+				{
+					result->Free();
+					err = ((ArrayPool*)result->pool)->AllocateSplittedMatrix(result,expr->args[0]->numParts,0);
+				}
 			}
 		}
 	}
+	else
+		return CAL_RESULT_NOT_SUPPORTED;
 
 	return err;
 }
@@ -1347,20 +1518,23 @@ CALresult Context::SetIdentic(ArrayExpression* expr, Array* result)
 // do an identic operation
 CALresult Context::DoIdentic(void)
 {
-	CALresult err;
-	long i;
+	CALresult err;	
 
 	err = CAL_RESULT_OK;
-
+	
 	if(expr->args[0] != result)
 	{
-		if(!result->parts)
-			err = result->Copy(ctx,result->res,expr->args[0]->res);
+		if(!expr->args[0]->IsScalar())
+		{
+			if(expr->args[0]->res || expr->args[0]->parts)
+				err = expr->args[0]->Copy(ctx,result);
+			else
+				err = result->SetData(ctx,expr->args[0]->cpuData);
+		}
 		else
 		{
-			for(i = 0; (i < result->numParts) && (err == CAL_RESULT_OK); i++)
-				err = result->Copy(ctx,result->parts[i]->res,expr->args[0]->parts[i]->res);
-		}
+			return CAL_RESULT_NOT_SUPPORTED;
+		}			
 	}
 
 	return err;

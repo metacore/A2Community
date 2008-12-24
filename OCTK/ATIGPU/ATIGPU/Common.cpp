@@ -127,3 +127,37 @@ BOOL EqualSizes(long nDims1, long* size1, long nDims2, long* size2)
 	else
 		return FALSE;
 }
+
+// copy data from one resource to another
+CALresult ResCopy(CALcontext ctx, CALresource dstRes, CALresource srcRes)
+{
+	CALresult err;
+	CALmem srcMem, dstMem;
+	CALevent ev;	
+
+	err = calCtxGetMem(&dstMem,ctx,dstRes);
+	if(err != CAL_RESULT_OK) 
+		return err;
+
+	err = calCtxGetMem(&srcMem,ctx,srcRes);
+	if(err != CAL_RESULT_OK)
+	{
+		calCtxReleaseMem(ctx,dstMem);
+		return err;
+	}
+
+	err = calMemCopy(&ev,ctx,srcMem,dstMem,0);
+	if(err != CAL_RESULT_OK) 
+	{
+		calCtxReleaseMem(ctx,srcMem);
+		calCtxReleaseMem(ctx,dstMem);	
+		return err;
+	}
+
+	while(calCtxIsEventDone(ctx,ev) == CAL_RESULT_PENDING);
+
+	calCtxReleaseMem(ctx,srcMem);
+	calCtxReleaseMem(ctx,dstMem);
+
+	return err;
+}
