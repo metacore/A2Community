@@ -101,6 +101,10 @@ public:
 	CALresult SetTranspose(ArrayExpression* expr, Array* result);
 	// perform a transpose computation
 	CALresult DoTranspose(void);
+	// set an identic operation
+	CALresult SetIdentic(ArrayExpression* expr, Array* result);
+	// do an identic operation
+	CALresult DoIdentic(void);
 };
 
 class ContextPool :

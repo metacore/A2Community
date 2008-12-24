@@ -956,6 +956,7 @@ const char kernelReshapeMat4Parts4DWToArr1DW_PS[] =
 
 "dcl_literal l0, 4, 4, 0, 0\n"
 
+/*
 // compute linear index in the output
 "ftoi r5, vWinCoord0\n"
 "umad r0.x, r5.y, cb0[0].x, r5.x\n"
@@ -1069,6 +1070,7 @@ const char kernelReshapeMat4Parts4DWToArr1DW_PS[] =
 "	break\n"
 
 "endswitch\n"
+*/
 
 "end\n";
 
@@ -1108,6 +1110,44 @@ const char kernelReshapeMat8Parts4DWToArr1DW_PS[] =
 "switch r4.y\n"
 
 "	default\n"
+"		call 0\n"
+"	break\n"
+
+"	case 1\n"
+"		call 1\n"
+"	break\n"
+
+"	case 2\n"
+"		call 2\n"
+"	break\n"
+
+"	case 3\n"
+"		call 3\n"
+"	break\n"
+
+"	case 4\n"
+"		call 4\n"
+"	break\n"
+
+"	case 5\n"
+"		call 5\n"
+"	break\n"
+
+"	case 6\n"
+"		call 6\n"
+"	break\n"
+
+"	case 7\n"
+"		call 7\n"
+"	break\n"
+
+"endswitch\n"
+
+/*
+"switch r4.y\n"
+
+"	default\n"
+		
 "		switch r4.z\n"
 "			default\n"
 "				sample_resource(0)_sampler(0) r1.x___, r3.xy\n"
@@ -1133,6 +1173,7 @@ const char kernelReshapeMat8Parts4DWToArr1DW_PS[] =
 "	break\n"
 
 "	case 1\n"
+
 "		switch r4.z\n"
 "			default\n"
 "				sample_resource(1)_sampler(1) r1.x___, r3.xy\n"
@@ -1154,6 +1195,7 @@ const char kernelReshapeMat8Parts4DWToArr1DW_PS[] =
 "				mov o0, r1.w\n"
 "			break\n"
 "		endswitch\n"
+
 "	break\n"
 
 "	case 2\n"
@@ -1301,6 +1343,210 @@ const char kernelReshapeMat8Parts4DWToArr1DW_PS[] =
 "	break\n"
 
 "endswitch\n"
+*/
+
+"endmain\n"
+
+"func 0\n"
+"	switch r4.z\n"
+"		default\n"
+"			sample_resource(0)_sampler(0) r1.x___, r3.xy\n"
+"			mov o0, r1.x\n"
+"		break\n"
+
+"		case 1\n"
+"			sample_resource(0)_sampler(0) r1._y__, r3.xy\n"
+"			mov o0, r1.y\n"
+"		break\n"
+
+"		case 2\n"
+"			sample_resource(0)_sampler(0) r1.__z_, r3.xy\n"
+"			mov o0, r1.z\n"
+"		break\n"
+
+"		case 3\n"
+"			sample_resource(0)_sampler(0) r1.___w, r3.xy\n"
+"			mov o0, r1.w\n"
+"		break\n"
+"	endswitch\n"
+
+"ret\n"
+"endfunc\n"
+
+"func 1\n"
+"	switch r4.z\n"
+"		default\n"
+"			sample_resource(1)_sampler(1) r1.x___, r3.xy\n"
+"			mov o0, r1.x\n"
+"		break\n"
+
+"		case 1\n"
+"			sample_resource(1)_sampler(1) r1._y__, r3.xy\n"
+"			mov o0, r1.y\n"
+"		break\n"
+
+"		case 2\n"
+"			sample_resource(1)_sampler(1) r1.__z_, r3.xy\n"
+"			mov o0, r1.z\n"
+"		break\n"
+
+"		case 3\n"
+"			sample_resource(1)_sampler(1) r1.___w, r3.xy\n"
+"			mov o0, r1.w\n"
+"		break\n"
+"	endswitch\n"
+"ret\n"
+"endfunc\n"
+
+"func 2\n"
+"	switch r4.z\n"
+"		default\n"
+"			sample_resource(2)_sampler(2) r1.x___, r3.xy\n"
+"			mov o0, r1.x\n"
+"		break\n"
+
+"		case 1\n"
+"			sample_resource(2)_sampler(2) r1._y__, r3.xy\n"
+"			mov o0, r1.y\n"
+"		break\n"
+
+"		case 2\n"
+"			sample_resource(2)_sampler(2) r1.__z_, r3.xy\n"
+"			mov o0, r1.z\n"
+"		break\n"
+
+"		case 3\n"
+"			sample_resource(2)_sampler(2) r1.___w, r3.xy\n"
+"			mov o0, r1.w\n"
+"		break\n"
+"	endswitch\n"
+"ret\n"
+"endfunc\n"
+
+"func 3\n"
+"	switch r4.z\n"
+"		default\n"
+"			sample_resource(3)_sampler(3) r1.x___, r3.xy\n"
+"			mov o0, r1.x\n"
+"		break\n"
+
+"		case 1\n"
+"			sample_resource(3)_sampler(3) r1._y__, r3.xy\n"
+"			mov o0, r1.y\n"
+"		break\n"
+
+"		case 2\n"
+"			sample_resource(3)_sampler(3) r1.__z_, r3.xy\n"
+"			mov o0, r1.z\n"
+"		break\n"
+
+"		case 3\n"
+"			sample_resource(3)_sampler(3) r1.___w, r3.xy\n"
+"			mov o0, r1.w\n"
+"		break\n"
+"	endswitch\n"
+"ret\n"
+"endfunc\n"
+
+"func 4\n"
+"	switch r4.z\n"
+"		default\n"
+"			sample_resource(4)_sampler(4) r1.x___, r3.xy\n"
+"			mov o0, r1.x\n"
+"		break\n"
+
+"		case 1\n"
+"			sample_resource(4)_sampler(4) r1._y__, r3.xy\n"
+"			mov o0, r1.y\n"
+"		break\n"
+
+"		case 2\n"
+"			sample_resource(4)_sampler(4) r1.__z_, r3.xy\n"
+"			mov o0, r1.z\n"
+"		break\n"
+
+"		case 3\n"
+"			sample_resource(4)_sampler(4) r1.___w, r3.xy\n"
+"			mov o0, r1.w\n"
+"		break\n"
+"	endswitch\n"
+"ret\n"
+"endfunc\n"
+
+"func 5\n"
+"	switch r4.z\n"
+"		default\n"
+"			sample_resource(5)_sampler(5) r1.x___, r3.xy\n"
+"			mov o0, r1.x\n"
+"		break\n"
+
+"		case 1\n"
+"			sample_resource(5)_sampler(5) r1._y__, r3.xy\n"
+"			mov o0, r1.y\n"
+"		break\n"
+
+"		case 2\n"
+"			sample_resource(5)_sampler(5) r1.__z_, r3.xy\n"
+"			mov o0, r1.z\n"
+"		break\n"
+
+"		case 3\n"
+"			sample_resource(5)_sampler(5) r1.___w, r3.xy\n"
+"			mov o0, r1.w\n"
+"		break\n"
+"	endswitch\n"
+"ret\n"
+"endfunc\n"
+
+"func 6\n"
+"	switch r4.z\n"
+"		default\n"
+"			sample_resource(6)_sampler(6) r1.x___, r3.xy\n"
+"			mov o0, r1.x\n"
+"		break\n"
+
+"		case 1\n"
+"			sample_resource(6)_sampler(6) r1._y__, r3.xy\n"
+"			mov o0, r1.y\n"
+"		break\n"
+
+"		case 2\n"
+"			sample_resource(6)_sampler(6) r1.__z_, r3.xy\n"
+"			mov o0, r1.z\n"
+"		break\n"
+
+"		case 3\n"
+"			sample_resource(6)_sampler(6) r1.___w, r3.xy\n"
+"			mov o0, r1.w\n"
+"		break\n"
+"	endswitch\n"
+"ret\n"
+"endfunc\n"
+
+"func 7\n"
+"	switch r4.z\n"
+"		default\n"
+"			sample_resource(7)_sampler(7) r1.x___, r3.xy\n"
+"			mov o0, r1.x\n"
+"		break\n"
+
+"		case 1\n"
+"			sample_resource(7)_sampler(7) r1._y__, r3.xy\n"
+"			mov o0, r1.y\n"
+"		break\n"
+
+"		case 2\n"
+"			sample_resource(7)_sampler(7) r1.__z_, r3.xy\n"
+"			mov o0, r1.z\n"
+"		break\n"
+
+"		case 3\n"
+"			sample_resource(7)_sampler(7) r1.___w, r3.xy\n"
+"			mov o0, r1.w\n"
+"		break\n"
+"	endswitch\n"
+"ret\n"
+"endfunc\n"
 
 "end\n";
 
@@ -1313,16 +1559,20 @@ const char kernelTransposeMat4DW_PS[] =
 "dcl_output_generic o0\n"
 "dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
 
-"dcl_literal l0, 4.0f, 4.0f, 1.0f, 2.0f\n"
+"dcl_literal l0, 4.0f, 0.25f, 1.0f, 2.0f\n"
 
-"flr r0.xy00, vWinCoord0.yx\n" // transposed 2D index 
-"mul r0.y, r0.y, l0.x\n"		// account that we are working with quads 
+"flr r0.xy00, vWinCoord0.yx00\n"	// transposed 2D index 
+"mul r0.y, r0.y, l0.x\n"			// account that we are working with quads 
 
 "add r0.__zw, r0.00yy, l0.00zw\n"	// r0 := [x,y,y+1,y+2]
-"add r1.xy00, r0.xw00, r0.0100\n"	// r1 := [x,y+3]
 
 "mod r2.x, r0.x, l0.x\n"			// x % 4
 "ftoi r2.x, r2.x\n"
+
+"mul r0.x, r0.x, l0.y\n"			// x := x/4
+"flr r0.x, r0.x\n"
+
+"add r1.xy00, r0.xw00, r0.0100\n"	// r1 := [x,y+3]
 
 "switch r2.x\n"
 
@@ -1369,6 +1619,7 @@ const char kernelTransposeMat4DW_PS[] =
 "		mov r6.z, r5.w\n"
 "		mov o0, r6\n"
 "	break\n"
+
 
 "endswitch\n"
 

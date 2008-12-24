@@ -110,11 +110,10 @@ CALresult Context::SetComputation(ArrayExpression* expr, Array* result, long pri
 
 	switch(expr->op)
 	{
-/*
 		case OpIdentic:
-			//err = SetCommon(expr,result,arrs,TRUE,FALSE);
+			err = SetIdentic(expr,result);
 			break;
-*/
+
 		case OpAdd:
 			err = SetElementwise(expr,result);
 			break;
@@ -382,11 +381,10 @@ CALresult Context::DoComputation(void)
 
 	switch(expr->op)
 	{
-/*
 		case OpIdentic:
 			err = DoIdentic();
 			break;
-*/
+
 		case OpAdd:
 			err = DoElementwise();			
 			break;
@@ -938,7 +936,7 @@ CALresult Context::SetReshape(ArrayExpression* expr, Array* result)
 	}
 	else if(expr->args[0]->parts)
 	{
-		err = CAL_RESULT_NOT_SUPPORTED;
+		err = expr->args[0]->SetData(ctx,expr->args[0]->cpuData);
 	}
 
 	if(err != CAL_RESULT_OK)
@@ -967,7 +965,8 @@ CALresult Context::DoReshape(void)
 	Module* module;
 	CALdomain domain;		
 	long constData[4];
-	Array* arr;	
+	Array* arr;
+	Array** inputs;
 
 	err = CAL_RESULT_OK;
 
@@ -975,6 +974,8 @@ CALresult Context::DoReshape(void)
 		arr = result;
 	else
 		arr = resultTemp;
+
+	inputs = expr->args;
 
 	if(expr->args[0]->isVirtualized && arr->isVirtualized)
 	{
@@ -1025,9 +1026,15 @@ CALresult Context::DoReshape(void)
 			if(expr->args[0]->numParts == 0)		
 				iKernel = KernReshapeMat4DWToArr1DW_PS;			
 			else if(expr->args[0]->numParts == 4)
+			{				
 				iKernel = KernReshapeMat4Parts4DWToArr1DW_PS;
+				inputs = expr->args[0]->parts;
+			}
 			else if(expr->args[0]->numParts == 8)
+			{
 				iKernel = KernReshapeMat8Parts4DWToArr1DW_PS;
+				inputs = expr->args[0]->parts;
+			}
 			else
 				return CAL_RESULT_ERROR;
 
@@ -1067,7 +1074,7 @@ CALresult Context::DoReshape(void)
 				domain.width = arr->physSize[1];
 				domain.height = arr->physSize[0];
 
-				err = module->RunPixelShader(expr->args,&arr,NULL,&domain);
+				err = module->RunPixelShader(inputs,&arr,NULL,&domain);
 
 				if( (err == CAL_RESULT_OK) && resultTemp )
 				{					
@@ -1129,8 +1136,9 @@ CALresult Context::SetTranspose(ArrayExpression* expr, Array* result)
 	
 	err = CAL_RESULT_OK;
 
-	_ASSERT(expr->args[0]->nDims > 2);
-	_ASSERT(result->nDims > 2);
+	if(expr->args[0]->parts || result->parts)
+		return CAL_RESULT_NOT_SUPPORTED;
+
 		
 	if(!expr->args[0]->res)
 	{
@@ -1161,7 +1169,7 @@ CALresult Context::DoTranspose(void)
 	KernelCode iKernel;
 	Module* module;
 	CALdomain domain;		
-	long constData[12];
+	long i, constData[12];
 	Array* arr;	
 
 	err = CAL_RESULT_OK;
@@ -1214,8 +1222,28 @@ CALresult Context::DoTranspose(void)
 			return CAL_RESULT_NOT_SUPPORTED;		
 	}
 	else if(!expr->args[0]->isVirtualized && !arr->isVirtualized)
-	{		
-		iKernel = KernTransposeMat4DW_PS;
+	{	
+		if( (expr->transpDims[0] == 1) && (expr->transpDims[1] == 0) )
+		{
+			if(!expr->args[0]->parts && !arr->parts)
+				iKernel = KernTransposeMat4DW_PS;
+			else
+				return CAL_RESULT_NOT_SUPPORTED;
+		}
+		else	// just copy the data
+		{
+			if(!expr->args[0]->parts && !arr->parts)
+				err = arr->Copy(ctx,arr->res,expr->args[0]->res);
+			else if(expr->args[0]->parts && arr->parts)
+			{				
+				for(i = 0; (i < arr->numParts) && (err == CAL_RESULT_OK); i++)
+					err = arr->Copy(ctx,arr->parts[i]->res,expr->args[0]->parts[i]->res);
+			}
+			else
+				return CAL_RESULT_NOT_SUPPORTED;
+
+			return err;
+		}
 	}	
 	else
 		return CAL_RESULT_INVALID_PARAMETER;
@@ -1272,6 +1300,68 @@ CALresult Context::DoTranspose(void)
 		delete resultTemp;
 		resultTemp = NULL;
 	}		
+
+	return err;
+}
+
+
+// set an identic operation
+CALresult Context::SetIdentic(ArrayExpression* expr, Array* result)
+{
+	CALresult err;	
+	
+	err = CAL_RESULT_OK;
+		
+	if(!expr->args[0]->res || !expr->args[0]->parts)
+	{
+		if( (err = arrs->AllocateArray(expr->args[0],0)) == CAL_RESULT_OK )
+			err = expr->args[0]->SetData(ctx,expr->args[0]->cpuData);
+	}	
+
+	if(err != CAL_RESULT_OK)
+		return err;	
+
+	if(expr->args[0] != result)
+	{
+		if(!expr->args[0]->parts)
+		{
+			if(!result->res || result->parts || !EqualSizes(result->nDims,result->size,expr->nDims,expr->size))	
+			{
+				result->Free();
+				err = arrs->AllocateArray(result,0);
+			}
+		}
+		else
+		{
+			if(result->res || !result->parts || !EqualSizes(result->nDims,result->size,expr->nDims,expr->size))	
+			{
+				result->Free();
+				err = arrs->AllocateSplittedMatrix(result,expr->args[0]->numParts,0);
+			}
+		}
+	}
+
+	return err;
+}
+
+// do an identic operation
+CALresult Context::DoIdentic(void)
+{
+	CALresult err;
+	long i;
+
+	err = CAL_RESULT_OK;
+
+	if(expr->args[0] != result)
+	{
+		if(!result->parts)
+			err = result->Copy(ctx,result->res,expr->args[0]->res);
+		else
+		{
+			for(i = 0; (i < result->numParts) && (err == CAL_RESULT_OK); i++)
+				err = result->Copy(ctx,result->parts[i]->res,expr->args[0]->parts[i]->res);
+		}
+	}
 
 	return err;
 }

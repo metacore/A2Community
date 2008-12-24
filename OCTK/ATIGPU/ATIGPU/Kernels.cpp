@@ -106,6 +106,7 @@ Kernel::Kernel(KernelCode iKernel, CALtarget target, CALresult* err)
 
 		case KernTransposeMat4DW_PS:
 			kernelStr = kernelTransposeMat4DW_PS; nInputs = 1; nOutputs = 1;
+			break;
 
 		case KernTranspose3D_PS:
 			kernelStr = kernelTranspose3D_PS; nInputs = 1; nOutputs = 1; nConstants = 1;
