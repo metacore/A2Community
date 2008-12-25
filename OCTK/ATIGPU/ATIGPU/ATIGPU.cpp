@@ -289,13 +289,21 @@ ATIGPU_API long SetComputation(
 	{
 		arr = devs->Get(j)->arrs->Get(ind);
 
-		// if array size does not match with actual expression size and array is not within inputs - create a new array
-		if(!EqualSizes(arr->nDims,arr->size,expr1->nDims,expr1->size) && (arr != expr1->args[0]) && (arr != expr1->args[1]) && (arr != expr1->args[2]) )
-		{			
-			devs->Get(j)->arrs->Remove(ind);
-				
-			arr = dev->arrs->NewArray(resultDesc->id,resultDesc->dType,resultDesc->nDims,resultDesc->size,resultDesc->data);
-			dev->arrs->Add(arr);	// add new array to the pool
+		// if array size and type do not match with actual expression size and type
+		if( (arr->dType != expr1->dType) || !EqualSizes(arr->nDims,arr->size,expr1->nDims,expr1->size) )
+		{				
+			if( (arr != expr1->args[0]) && (arr != expr1->args[1]) && (arr != expr1->args[2]) )
+			{
+				delete arr;
+				arr = dev->arrs->NewArray(resultDesc->id,resultDesc->dType,resultDesc->nDims,resultDesc->size,resultDesc->data);				
+				devs->Get(j)->arrs->Set(ind,arr);
+			}
+			else
+			{
+				arr->arrID = -3;	// set for further deletion and as a flag that it is overwritten result array
+				arr = dev->arrs->NewArray(resultDesc->id,resultDesc->dType,resultDesc->nDims,resultDesc->size,resultDesc->data);
+				devs->Get(j)->arrs->Add(arr);
+			}
 		}
 	}
 
