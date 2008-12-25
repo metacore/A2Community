@@ -288,7 +288,9 @@ CALresult Context::SetElementwise(ArrayExpression* expr, Array* result)
 			{
 				if( (err = arr1->Copy(ctx,arr)) == CAL_RESULT_OK )
 				{
-					expr->args[i] = arr;
+					arr1->useCounter--;					
+					arr->useCounter++;
+					expr->args[i] = arr;					
 
 					// add to the local pool as a copy
 					arr->isCopy = TRUE;
@@ -629,7 +631,9 @@ CALresult Context::SetMatVecMul(ArrayExpression* expr, Array* result)
 			{
 				if( (err = arr1->Copy(ctx,arr)) == CAL_RESULT_OK )
 				{
-					expr->args[i] = arr;
+					arr1->useCounter--;					
+					arr->useCounter++;
+					expr->args[i] = arr;					
 
 					// add to the local pool as a copy
 					arr->isCopy = TRUE;
@@ -932,7 +936,9 @@ CALresult Context::SetMatMul(ArrayExpression* expr, Array* result)
 			{
 				if( (err = arr1->Copy(ctx,arr)) == CAL_RESULT_OK )
 				{
-					expr->args[i] = arr;
+					arr1->useCounter--;					
+					arr->useCounter++;
+					expr->args[i] = arr;					
 
 					// add to the local pool as a copy
 					arr->isCopy = TRUE;
@@ -1151,7 +1157,9 @@ CALresult Context::SetReshape(ArrayExpression* expr, Array* result)
 		{
 			if( (err = arr1->Copy(ctx,arr)) == CAL_RESULT_OK )
 			{
-				expr->args[0] = arr;
+				arr1->useCounter--;					
+				arr->useCounter++;
+				expr->args[0] = arr;					
 
 				// add to the local pool as a copy
 				arr->isCopy = TRUE;
@@ -1378,7 +1386,9 @@ CALresult Context::SetTranspose(ArrayExpression* expr, Array* result)
 		{
 			if( (err = arr1->Copy(ctx,arr)) == CAL_RESULT_OK )
 			{
-				expr->args[0] = arr;
+				arr1->useCounter--;					
+				arr->useCounter++;
+				expr->args[0] = arr;					
 
 				// add to the local pool as a copy
 				arr->isCopy = TRUE;
