@@ -50,6 +50,10 @@ Kernel::Kernel(KernelCode iKernel, CALtarget target, CALresult* err)
 			kernelStr = kernelEwDivLR_PS; nInputs = 2; nOutputs = 1;
 			break;
 
+		case KernDotProdR_PS:
+			kernelStr = kernelDotProdR_PS; nInputs = 2; nOutputs = 1;
+			break;
+
 		case KernMatVecR_PS: 
 			kernelStr = kernelMatVecR_PS; nInputs = 2; nOutputs = 1; nConstants = 1;
 			constSizes = new long[1]; constSizes[0] = 1;

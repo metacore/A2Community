@@ -543,7 +543,7 @@ CALresult ArrayPool::AllocateArray(Array* arr, CALuint flags)
 
 	_ASSERT(arr);
 	
-	err = arr->AllocateRes(flags);
+	err = arr->AllocateRes(flags);	
 	while( (err == CAL_RESULT_ERROR) && ((ind = FindUnused()) >= 0) )
 	{
 		Remove(ind);
@@ -601,7 +601,7 @@ long ArrayPool::FindUnused(void)
 {
 	long i;
 
-	for(i = 0; (i < nObjs) && Get(i)->useCounter; i++);
+	for(i = 0; (i < nObjs) && (((Array*)objs[i])->useCounter || ((Array*)objs[i])->isReservedForGet); i++);
 
 	if(i < nObjs) 
 		return i; 

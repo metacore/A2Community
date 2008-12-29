@@ -18,6 +18,8 @@ KernEwMulLR_PS,
 KernEwDivR_PS,
 KernEwDivLR_PS,
 
+KernDotProdR_PS,
+
 // matrix vector multiplication
 KernMatVecR_PS,
 KernMatVec4PartsR_PS,
@@ -616,7 +618,7 @@ const char kernelMatMul88Parts2x8x4by2x4x4R_PS[] =
 "dcl_resource_id(14)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
 "dcl_resource_id(15)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
 
-"dcl_literal l0, 2.0f, 0.0f, 0.0f, 0.0f\n"
+"dcl_literal l0, 2.0f, 0.5f, 0.0f, 0.0f\n"
 
 // initialize sample counters of A
 "mov r0.01z0, vWinCoord0.00y0\n"			// r0 := [0,1,y,0]
@@ -636,8 +638,9 @@ const char kernelMatMul88Parts2x8x4by2x4x4R_PS[] =
 "mov r40, r40.0000\n"
 "mov r41, r41.0000\n"
 
-"mov r2.0y00, cb0[0].x\n"	// r2.x is the loop counter, r2.y := A.width
-"sub r2.x, r2.x, l0.x\n"	// account first increment
+"mul r2.0y, l0.y, cb0[0].x\n"	// r2.x is the loop counter, r2.y := floor(A.width/2)
+"flr r2.y, r2.y\n"
+"sub r2.x, r2.x, r2.1\n"		// account first increment
 
 "whileloop\n"
 
@@ -647,9 +650,9 @@ const char kernelMatMul88Parts2x8x4by2x4x4R_PS[] =
 	// increment sample counters of A
 "	add r0.xy, r0.xy, l0.xx\n"
 
-"	add r2.x, r2.x, l0.x\n"	// loop counter ++
+"	add r2.x, r2.x, r2.1\n"	// loop counter ++
 
-"   ge r2.z, r2.x, r2.y\n"	// while(loop counter < A.width)
+"   ge r2.z, r2.x, r2.y\n"	// while(loop counter < floor(A.width/2))
 "   break_logicalnz r2.z\n"
 
 	// load 4 next 4x4 blocks of B
@@ -768,6 +771,94 @@ const char kernelMatMul88Parts2x8x4by2x4x4R_PS[] =
 "	mad r42, r33.y, r15, r42\n"
 "	mad r42, r33.z, r16, r42\n"
 "	mad r41, r33.w, r17, r42\n"
+
+"endloop\n"
+
+"mul r2.x, r2.x, l0.x\n"	// r2.x is the loop counter, r2.y := 2*floor(A.width/2)
+"sub r2.x, r2.x, r2.1\n"	// account first increment
+
+"whileloop\n"
+
+	// increment sample counter of B
+"	add r1.y, r1.y, l0.y\n"
+
+	// increment sample counters of A
+"	add r0.x, r0.x, r0.1\n"
+
+"	add r2.x, r2.x, r2.1\n"	// loop counter ++
+
+"   ge r2.z, r2.x, cb0[0].x\n"	// while(loop counter < A.width)
+"   break_logicalnz r2.z\n"
+
+	// load next 4x4 block of B
+
+"	mod r3.x, r2.x, l0.x\n"	// r3.x := r2.x % 2
+
+"	eq r3.y, r3.x, r3.0\n"
+"	if_logicalnz r3.y\n"	// if r3.x == 0
+"		sample_resource(8)_sampler(8) r10, r1.xy00\n"
+"		sample_resource(9)_sampler(9) r11, r1.xy00\n"
+"		sample_resource(10)_sampler(10) r12, r1.xy00\n"
+"		sample_resource(11)_sampler(11) r13, r1.xy00\n"
+"	else\n"
+"		sample_resource(12)_sampler(12) r10, r1.xy00\n"
+"		sample_resource(13)_sampler(13) r11, r1.xy00\n"
+"		sample_resource(14)_sampler(14) r12, r1.xy00\n"
+"		sample_resource(15)_sampler(15) r13, r1.xy00\n"
+"	endif\n"
+
+	// load next 8x4 block of A
+"	sample_resource(0)_sampler(0) r26, r0.xz00\n"
+"	sample_resource(1)_sampler(1) r27, r0.xz00\n"
+"	sample_resource(2)_sampler(2) r28, r0.xz00\n"
+"	sample_resource(3)_sampler(3) r29, r0.xz00\n"
+"	sample_resource(4)_sampler(4) r30, r0.xz00\n"
+"	sample_resource(5)_sampler(5) r31, r0.xz00\n"
+"	sample_resource(6)_sampler(6) r32, r0.xz00\n"
+"	sample_resource(7)_sampler(7) r33, r0.xz00\n"
+
+	// compute Ablk * Bblk
+
+	// row 1
+"	mad r42, r26.x, r10, r34\n"	// r42 := Ablk[0,0]*Bblk0[0,*] + Cblk[0,*]
+"	mad r42, r26.y, r11, r42\n"	// r42 := Ablk[0,1]*Bblk0[1,*] + r42
+"	mad r42, r26.z, r12, r42\n"	// r42 := Ablk[0,2]*Bblk0[2,*] + r42
+"	mad r34, r26.w, r13, r42\n"	// Cblk[0,*] := Ablk[0,3]*Bblk0[3,*] + r42
+	// row 2
+"	mad r42, r27.x, r10, r35\n"
+"	mad r42, r27.y, r11, r42\n"
+"	mad r42, r27.z, r12, r42\n"
+"	mad r35, r27.w, r13, r42\n"
+	// row 3
+"	mad r42, r28.x, r10, r36\n"
+"	mad r42, r28.y, r11, r42\n"
+"	mad r42, r28.z, r12, r42\n"
+"	mad r36, r28.w, r13, r42\n"
+	// row 4
+"	mad r42, r29.x, r10, r37\n"
+"	mad r42, r29.y, r11, r42\n"
+"	mad r42, r29.z, r12, r42\n"
+"	mad r37, r29.w, r13, r42\n"
+	// row 5
+"	mad r42, r30.x, r10, r38\n"
+"	mad r42, r30.y, r11, r42\n"
+"	mad r42, r30.z, r12, r42\n"
+"	mad r38, r30.w, r13, r42\n"
+	// row 6
+"	mad r42, r31.x, r10, r39\n"
+"	mad r42, r31.y, r11, r42\n"
+"	mad r42, r31.z, r12, r42\n"
+"	mad r39, r31.w, r13, r42\n"
+	// row 7
+"	mad r42, r32.x, r10, r40\n"
+"	mad r42, r32.y, r11, r42\n"
+"	mad r42, r32.z, r12, r42\n"
+"	mad r40, r32.w, r13, r42\n"
+	// row 8
+"	mad r42, r33.x, r10, r41\n"
+"	mad r42, r33.y, r11, r42\n"
+"	mad r42, r33.z, r12, r42\n"
+"	mad r41, r33.w, r13, r42\n"
 
 "endloop\n"
 
@@ -1877,6 +1968,21 @@ const char kernelGetSubMat4DWNoLeftBounds_PS[] =
 "endif\n"
 
 "end\n";
+
+const char kernelDotProdR_PS[] =
+"il_ps_2_0\n"
+"dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__\n"
+"dcl_output_generic o0\n"
+"dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+"dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+
+"sample_resource(0)_sampler(0) r0, vWinCoord0\n"
+"sample_resource(1)_sampler(1) r1, vWinCoord0\n"
+
+"dp4 o0.x, r2, r2.1111\n"	// horizontal add
+
+"end\n";
+
 /*
 	Zeroing array memory
 */

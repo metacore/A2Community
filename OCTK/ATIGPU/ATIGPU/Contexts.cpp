@@ -128,7 +128,11 @@ CALresult Context::SetComputation(ArrayExpression* expr, Array* result, long pri
 
 		case OpEwDiv:
 			err = SetElementwise(expr,result);
-			break;		
+			break;	
+
+		case OpDotProd:
+			err = SetDotProd(expr,result);
+			break;
 
 		case OpMul:
 			if( (expr->args[0]->nDims == 2) && (expr->args[1]->nDims == 1) )			
@@ -165,7 +169,10 @@ CALresult Context::SetComputation(ArrayExpression* expr, Array* result, long pri
 	{			
 		for(i = 0; (i < 3) && expr->args[i]; i++){expr->args[i]->useCounter--;}	
 		result->useCounter--;
-		result->isReservedForGet = isReservedForGet0;			
+		result->isReservedForGet = isReservedForGet0;	
+
+		delete expr;
+		expr = NULL;
 	}
 
 	return err;
@@ -467,6 +474,10 @@ CALresult Context::DoComputation(void)
 
 		case OpEwDiv:
 			err = DoElementwise();
+			break;
+
+		case OpDotProd:
+			err = DoDotProd();
 			break;
 
 		case OpMul:
@@ -1740,27 +1751,27 @@ CALresult Context::SetIdentic(ArrayExpression* expr, Array* result)
 {
 	CALresult err;
 
-	err = CAL_RESULT_OK;
-
-	if(!expr->args[0]->res || !expr->args[0]->parts)	
-	{
-		if( (err = arrs->AllocateArray(expr->args[0],0)) == CAL_RESULT_OK )
-			err = expr->args[0]->SetData(ctx,expr->args[0]->cpuData);
-	}
-
-	if(err != CAL_RESULT_OK)
-		return err;
+	err = CAL_RESULT_OK;		
 
 	if(!expr->args[0]->IsScalar())
 	{
 		if(expr->args[0] != result)
 		{
-			if(!expr->args[0]->parts) // src is not a splitted matrix
+			if(!expr->args[0]->res && !expr->args[0]->parts)
+			{
+				if(!result->res && !result->parts)
+				{
+					if( (err = ((ArrayPool*)result->pool)->AllocateArray(result,0)) == CAL_RESULT_OK )
+						err = result->SetData(ctx,expr->args[0]->cpuData);
+				}
+
+			}
+			else if(!expr->args[0]->parts) // src is not a splitted matrix
 			{
 				if(!result->res)
 				{
 					result->Free();
-					err = ((ArrayPool*)result->pool)->AllocateArray(result,0);
+					err = ((ArrayPool*)result->pool)->AllocateArray(result,0);						
 				}
 			}
 			else // src is a splitted matrix
@@ -1774,7 +1785,7 @@ CALresult Context::SetIdentic(ArrayExpression* expr, Array* result)
 		}
 	}
 	else
-		return CAL_RESULT_NOT_SUPPORTED;
+		return CAL_RESULT_NOT_SUPPORTED;	
 
 	return err;
 }
@@ -1789,13 +1800,13 @@ CALresult Context::DoIdentic(void)
 	if(expr->args[0] != result)
 	{
 		if(!expr->args[0]->IsScalar())
-		{
+		{						
 			if(expr->args[0]->res || expr->args[0]->parts)
 				err = expr->args[0]->Copy(ctx,result);
-			else if(result->cpuData)
-				err = result->SetData(ctx,expr->args[0]->cpuData);
+			else if(expr->args[0]->cpuData)
+				return err;
 			else
-				err = CAL_RESULT_ERROR;
+				err = CAL_RESULT_ERROR;			
 		}
 		else
 		{
@@ -1803,5 +1814,188 @@ CALresult Context::DoIdentic(void)
 		}			
 	}
 
+	return err;
+}
+// perform a dot ptoduct operation
+CALresult Context::DoDotProd(void)
+{
+	CALresult err;
+	Module* module;
+	CALdomain domain;
+	Array* inputs[2];	
+
+	long i;
+	KernelCode iKernel;
+	
+	err = CAL_RESULT_OK;
+
+	switch(expr->dType)
+	{
+		case TREAL:
+		{
+			iKernel = KernDotProdR_PS;			
+
+		}break;		
+		
+		default:
+			return CAL_RESULT_INVALID_PARAMETER;
+	}	
+	
+	// get suited module
+	if(!modules[iKernel])
+	{
+		modules[iKernel] = new Module(hDev,ctx,kernels[iKernel],&err);		
+		if(err != CAL_RESULT_OK)
+		{
+			delete modules[iKernel];
+			modules[iKernel] = NULL;
+		}
+	}
+	
+	if(err == CAL_RESULT_OK)
+	{				
+		module = modules[iKernel];		
+
+		if(!result->parts)
+		{			
+			return CAL_RESULT_NOT_SUPPORTED;
+
+			// run the program			
+			err = module->RunPixelShader(expr->args,&result,NULL,&domain);		
+		}
+		else
+		{						
+			return CAL_RESULT_NOT_SUPPORTED;
+
+			// run the program for each part separately
+			for(i = 0; i < result->numParts; i++)
+			{
+				inputs[0] = expr->args[0]->parts[i];
+				if(expr->args[1])
+					inputs[1] = expr->args[1]->parts[i];
+
+				err = module->RunPixelShader(inputs,&result,NULL,&domain);
+			}			
+		}
+	}	
+	
+	return err;
+}
+
+// set a dot product computation
+CALresult Context::SetDotProd(ArrayExpression* expr, Array* result)
+{
+	CALresult err;	
+	Array* arr, *arr1;
+	long i, j, numParts;
+
+	err = CAL_RESULT_OK;
+
+	// check for the case when array is located on another device
+	for(i = 0; (err == CAL_RESULT_OK) && (i < 2); i++)
+	{
+		if(expr->args[i]->hDev != hDev)
+		{
+			arr1 = expr->args[i];
+			
+			// create array copy on the local device
+			arr = arrs->NewArray(arr1->arrID,arr1->dType,arr1->nDims,arr1->size,arr1->cpuData);						
+
+			if(!arr1->parts)			
+				err = arrs->AllocateArray(arr,0);			
+			else
+				err = arrs->AllocateSplittedMatrix(arr,arr1->numParts,0);
+
+			if(err == CAL_RESULT_OK)
+			{
+				if( (err = arr1->Copy(ctx,arr)) == CAL_RESULT_OK )
+				{
+					arr1->useCounter--;					
+					arr->useCounter++;
+					expr->args[i] = arr;					
+
+					// add to the local pool as a copy
+					arr->isCopy = TRUE;
+					arrs->Add(arr);
+				}
+				else
+					delete arr;
+			}
+			else
+				delete arr;
+		}
+	}
+
+	if(err != CAL_RESULT_OK)
+		return err;
+
+	numParts = max(expr->args[0]->numParts,expr->args[1]->numParts);
+
+	for(i = 0; (err == CAL_RESULT_OK) && (i < 2) && expr->args[i]; i++)
+	{				
+		if(!numParts) // no splitted matrices within the arguments
+		{
+			if(!expr->args[i]->res)	// array does not reside in the memory
+			{
+				// allocate array and set data
+				if( (err = arrs->AllocateArray(expr->args[i],0)) == CAL_RESULT_OK )
+					err = expr->args[i]->SetData(ctx,expr->args[i]->cpuData);
+			}			
+		}
+		else
+		{
+			if(!expr->args[i]->res && !expr->args[i]->parts)	// array does not reside in the memory
+			{
+				// allocate splitted matrix and set data
+				if( (err = arrs->AllocateSplittedMatrix(expr->args[i],numParts,0)) == CAL_RESULT_OK )
+					err = expr->args[i]->SetData(ctx,expr->args[i]->cpuData);
+			}
+			else if(expr->args[i]->res)	// if array resides in the memory as a solid 2D piece
+			{
+				if( (err = arrs->AllocateSplittedMatrix(expr->args[i],numParts,0)) == CAL_RESULT_OK )
+				{
+					if( (err = SplitMatrix(expr->args[i],numParts,expr->args[i]->parts)) == CAL_RESULT_OK )
+					{
+						calResFree(expr->args[i]->res);
+						expr->args[i]->res = 0;
+					}
+					else	// do cleanup
+					{
+						for(j = 0; j < numParts; j++)
+							delete expr->args[i]->parts[j];
+						
+						expr->args[i]->parts = NULL;
+						expr->args[i]->numParts = 0;
+					}	
+				}
+			}
+		}
+	}
+
+	if(err != CAL_RESULT_OK)
+		return err;
+	
+	if(!result->res)	
+	{
+		result->Free();
+		err = ((ArrayPool*)result->pool)->AllocateArray(result,0);			
+	}	
+
+	if( (err == CAL_RESULT_OK) && (result->hDev != hDev) )	// if array resides on another device
+	{		
+		arr = arrs->NewArray(result->arrID,result->dType,result->nDims,result->size,result->cpuData);
+		if(!result->res)
+			err = arrs->AllocateArray(arr,0);		
+
+		if(err == CAL_RESULT_OK)
+		{
+			((ArrayPool*)result->pool)->Remove(result);
+			result = arr;
+			result->useCounter++;
+			result->isReservedForGet = TRUE;
+			arrs->Add(result);
+		}
+	}
+	
 	return err;
 }

@@ -105,6 +105,10 @@ public:
 	CALresult SetIdentic(ArrayExpression* expr, Array* result);
 	// do an identic operation
 	CALresult DoIdentic(void);
+	// perform a dot ptoduct operation
+	CALresult DoDotProd(void);
+	// set a dot product computation
+	CALresult SetDotProd(ArrayExpression* expr, Array* result);
 };
 
 class ContextPool :
