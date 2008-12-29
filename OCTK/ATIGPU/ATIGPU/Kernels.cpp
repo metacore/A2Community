@@ -73,6 +73,12 @@ Kernel::Kernel(KernelCode iKernel, CALtarget target, CALresult* err)
 			constSizes = new long[1]; constSizes[0] = 1;
 			constFormats = new CALformat[1]; constFormats[0] = CAL_FORMAT_FLOAT_4;
 			break;
+		
+		case KernMatMul88Parts2x8x4by2x4x4R_PS:
+			kernelStr = kernelMatMul88Parts2x8x4by2x4x4R_PS; nInputs = 16; nOutputs = 8; nConstants = 1;
+			constSizes = new long[1]; constSizes[0] = 1;
+			constFormats = new CALformat[1]; constFormats[0] = CAL_FORMAT_FLOAT_4;
+			break;
 
 		case KernReshapeMatToMatNoBounds_PS:
 			kernelStr = kernelReshapeMatToMatNoBounds_PS; nInputs = 1; nOutputs = 1; nConstants = 1;

@@ -450,7 +450,7 @@ CALresult Context::DoComputation(void)
 	switch(expr->op)
 	{
 		case OpIdentic:
-			err = DoIdentic();
+			err = DoIdentic();			
 			break;
 
 		case OpAdd:
@@ -478,7 +478,7 @@ CALresult Context::DoComputation(void)
 					err = DoMatVecMulSplitted();
 			}			
 			else if( (expr->args[0]->nDims == 2) && (expr->args[1]->nDims == 2) )
-				err = DoMatMul();
+				err = DoMatMul();				
 
 			break;
 
@@ -912,7 +912,7 @@ CALresult Context::SetMatMul(ArrayExpression* expr, Array* result)
 	Array* arr, *arr1;
 	long i, j;
 
-	err = CAL_RESULT_OK;
+	err = CAL_RESULT_OK;	
 
 	if(result->isVirtualized || expr->args[0]->isVirtualized || expr->args[1]->isVirtualized)
 		return CAL_RESULT_NOT_SUPPORTED;
@@ -935,14 +935,14 @@ CALresult Context::SetMatMul(ArrayExpression* expr, Array* result)
 			if(err == CAL_RESULT_OK)
 			{
 				if( (err = arr1->Copy(ctx,arr)) == CAL_RESULT_OK )
-				{
+				{					
 					arr1->useCounter--;					
 					arr->useCounter++;
 					expr->args[i] = arr;					
 
 					// add to the local pool as a copy
 					arr->isCopy = TRUE;
-					arrs->Add(arr);
+					arrs->Add(arr);					
 				}
 				else
 					delete arr;
@@ -1030,7 +1030,7 @@ CALresult Context::SetMatMul(ArrayExpression* expr, Array* result)
 			result->isReservedForGet = TRUE;
 			arrs->Add(result);
 		}
-	}
+	}	
 
 	return err;
 }
@@ -1053,7 +1053,7 @@ CALresult Context::DoMatMul(void)
 	{
 		switch(expr->args[0]->dType)
 		{
-			case TREAL: iKernel = KernMatMul88Parts8x4by4x4R_PS; break;
+			case TREAL: iKernel = KernMatMul88Parts2x8x4by2x4x4R_PS; break;
 
 			default:
 				return CAL_RESULT_NOT_SUPPORTED;
@@ -1100,9 +1100,8 @@ CALresult Context::DoMatMul(void)
 					inputs[i] = expr->args[0]->parts[i];
 				for(i = 0; i < expr->args[1]->numParts; i++)
 					inputs[i+expr->args[0]->numParts] = expr->args[1]->parts[i];
-				
-				err = module->RunPixelShader(inputs,arr->parts,NULL,&domain);
-
+								
+				err = module->RunPixelShader(inputs,arr->parts,NULL,&domain);				
 				if( (err == CAL_RESULT_OK) && resultTemp )
 				{																	
 					arrs->Set(arrs->Find(result->arrID),resultTemp);
@@ -1743,6 +1742,15 @@ CALresult Context::SetIdentic(ArrayExpression* expr, Array* result)
 
 	err = CAL_RESULT_OK;
 
+	if(!expr->args[0]->res || !expr->args[0]->parts)	
+	{
+		if( (err = arrs->AllocateArray(expr->args[0],0)) == CAL_RESULT_OK )
+			err = expr->args[0]->SetData(ctx,expr->args[0]->cpuData);
+	}
+
+	if(err != CAL_RESULT_OK)
+		return err;
+
 	if(!expr->args[0]->IsScalar())
 	{
 		if(expr->args[0] != result)
@@ -1784,8 +1792,10 @@ CALresult Context::DoIdentic(void)
 		{
 			if(expr->args[0]->res || expr->args[0]->parts)
 				err = expr->args[0]->Copy(ctx,result);
-			else
+			else if(result->cpuData)
 				err = result->SetData(ctx,expr->args[0]->cpuData);
+			else
+				err = CAL_RESULT_ERROR;
 		}
 		else
 		{

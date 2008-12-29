@@ -245,24 +245,32 @@ ATIGPU_API long SetComputation(
 
 	for(i = 0; (i < 3) && inArgs[i]; i++)
 	{
-		// look for already existing array		
+		// look for already existing array
+		j = -1;
 		if( (ind = dev->arrs->Find(inArgs[i]->id)) == -1 )	// first search on the local device
 		{
-			// search on all other available devices
-			for(j = 0; (j < devs->Length()) && (ind == -1); j++)
-			{
+			// search on all other available devices									
+			do{	
+				j++;
 				if(j != devNum)
-					ind = devs->Get(j)->arrs->Find(inArgs[i]->id);
+					ind = devs->Get(j)->arrs->Find(inArgs[i]->id);								
 			}
+			while( (j < devs->Length()-1) && (ind == -1) );
 		}
 	
 		if(ind == -1)	// create a new array
 		{		
 			arr = dev->arrs->NewArray(inArgs[i]->id,inArgs[i]->dType,inArgs[i]->nDims,inArgs[i]->size,inArgs[i]->data);			
+			arr->cpuData = inArgs[i]->data;
 			dev->arrs->Add(arr);	// add new array to the pool
 		}
 		else	// use already existing array	
-			arr = devs->Get(j)->arrs->Get(ind);	
+		{
+			if(j == -1)
+				arr = dev->arrs->Get(ind);	
+			else
+				arr = devs->Get(j)->arrs->Get(ind);
+		}
 
 		expr1->args[i] = arr;		
 	}	
@@ -273,21 +281,27 @@ ATIGPU_API long SetComputation(
 	if( (ind = dev->arrs->Find(resultDesc->id)) == -1 )	// first search on the local device
 	{
 		// search on all other available devices
-		for(j = 0; (j < devs->Length()) && (ind == -1); j++)
-		{
+		j = -1;
+		do{	
+			j++;
 			if(j != devNum)
-				ind = devs->Get(j)->arrs->Find(resultDesc->id);
+				ind = devs->Get(j)->arrs->Find(resultDesc->id);							
 		}
+		while( (j < devs->Length()-1) && (ind == -1) );
 	}
 	
 	if(ind == -1)	// create a new array
 	{	
 		arr = dev->arrs->NewArray(resultDesc->id,resultDesc->dType,resultDesc->nDims,resultDesc->size,resultDesc->data);
+		arr->cpuData = resultDesc->data;
 		dev->arrs->Add(arr);	// add new array to the pool
 	}
 	else	// use already existing array	
 	{
-		arr = devs->Get(j)->arrs->Get(ind);
+		if(j == -1)
+			arr = dev->arrs->Get(ind);	
+		else
+			arr = devs->Get(j)->arrs->Get(ind);
 
 		// if array size and type do not match with actual expression size and type
 		if( (arr->dType != expr1->dType) || !EqualSizes(arr->nDims,arr->size,expr1->nDims,expr1->size) )
@@ -348,13 +362,15 @@ ATIGPU_API long DoComputation(
 		if(j != devNum)
 		{
 			arrs = devs->Get(j)->arrs;
-			ind = arrs->Find(context->result->arrID);
-			arr = arrs->Get(ind);
-			if(arr->isCopy)
+			if( (ind = arrs->Find(context->result->arrID)) != -1 )
 			{
-				_ASSERT(!arr->useCounter);
-				_ASSERT(!arr->isReservedForGet);
-				arrs->Remove(ind);
+				arr = arrs->Get(ind);
+				if(arr->isCopy)
+				{
+					_ASSERT(!arr->useCounter);
+					_ASSERT(!arr->isReservedForGet);
+					arrs->Remove(ind);
+				}
 			}
 		}
 	}	

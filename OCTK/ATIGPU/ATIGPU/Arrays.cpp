@@ -612,15 +612,15 @@ long ArrayPool::FindUnused(void)
 // array copy
 CALresult Array::Copy(CALcontext ctx, Array* dstArr)
 {
-	CALresult err;
+	CALresult err;	
 	long i;
 
 	err = CAL_RESULT_OK;
 
 	if(!parts)
 	{
-		_ASSERT(!dstArr->parts);
-		err = ResCopy(ctx,dstArr->res,res);
+		_ASSERT(!dstArr->parts);		
+		err = ResCopy(ctx,dstArr->res,res);	
 	}
 	else
 	{
