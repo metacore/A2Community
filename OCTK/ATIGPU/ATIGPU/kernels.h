@@ -18,7 +18,10 @@ KernEwMulLR_PS,
 KernEwDivR_PS,
 KernEwDivLR_PS,
 
-KernDotProdR_PS,
+// dot product related kernels
+KernContractAlongXR_PS,
+KernContractAlongYR_PS,
+KernSum1DR_PS,
 
 // matrix vector multiplication
 KernMatVecR_PS,
@@ -1969,17 +1972,115 @@ const char kernelGetSubMat4DWNoLeftBounds_PS[] =
 
 "end\n";
 
-const char kernelDotProdR_PS[] =
+/*
+	Contraction of 2D arrays along X dimension
+*/
+const char kernelContractAlongXR_PS[] =
 "il_ps_2_0\n"
 "dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__\n"
+"dcl_cb cb0[1]\n"  // [A.physWidth,...]
 "dcl_output_generic o0\n"
 "dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
 "dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
 
-"sample_resource(0)_sampler(0) r0, vWinCoord0\n"
-"sample_resource(1)_sampler(1) r1, vWinCoord0\n"
+"mov r4, r4.0000\n"	// initialize accumulator
 
-"dp4 o0.x, r2, r2.1111\n"	// horizontal add
+"mov r0.xy, vWinCoord0.xy\n"
+"sub r0.x, r0.x, r0.1\n"				// account first increment
+
+"mov r2.0y00, cb0[0].x\n"				// r2.x is the loop counter, r2.y := A.width
+"sub r2.x, r2.x, r2.1\n"				// account first increment
+
+"whileloop\n"
+
+"	add r0.x, r0.x, r0.1\n"
+"	add r2.x, r2.x, r2.1\n"				// loop counter ++
+
+"   ge r2.z, r2.x, r2.y\n"				// while(loop counter < A.width)
+"   break_logicalnz r2.z\n"
+
+"	sample_resource(0)_sampler(0) r1, r0.xy\n"
+"	sample_resource(1)_sampler(1) r3, r0.xy\n"
+
+"	mad r4, r1, r3, r4\n"
+
+"endloop\n"
+
+"mov o0, r4\n"
+
+"end\n";
+
+/*
+	Contraction of 2D arrays along Y dimension
+*/
+const char kernelContractAlongYR_PS[] =
+"il_ps_2_0\n"
+"dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__\n"
+"dcl_cb cb0[1]\n" // [A.Height,...]
+"dcl_output_generic o0\n"
+"dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+"dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+
+"mov r4, r4.0000\n"	// initialize accumulator
+
+"mov r0.xy, vWinCoord0.xy\n"
+"sub r0.y, r0.y, r0.1\n"				// account first increment
+
+"mov r2.0y00, cb0[0].x\n"				// r2.x is the loop counter, r2.y := A.Height
+"sub r2.x, r2.x, r2.1\n"				// account first increment
+
+"whileloop\n"
+
+"	add r0.y, r0.y, r0.1\n"
+"	add r2.x, r2.x, r2.1\n"				// loop counter ++
+
+"   ge r2.z, r2.x, r2.y\n"				// while(loop counter < A.Height)
+"   break_logicalnz r2.z\n"
+
+"	sample_resource(0)_sampler(0) r1, r0.xy\n"
+"	sample_resource(1)_sampler(1) r3, r0.xy\n"
+
+"	mad r4, r1, r3, r4\n"
+
+"endloop\n"
+
+"mov o0, r4\n"
+
+"end\n";
+
+/*
+	Sum of all elements of a 1D array
+*/
+const char kernelSum1DR_PS[] =
+"il_ps_2_0\n"
+"dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__\n"
+"dcl_cb cb0[1]\n"  // [A.physWidth,...]
+"dcl_output_generic o0\n"
+"dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+
+"mov r4, r4.0000\n"						// initialize accumulator
+
+"mov r0.xy, r0.00\n"
+"sub r0.x, r0.x, r0.1\n"				// account first increment
+
+"mov r2.0y00, cb0[0].x\n"				// r2.x is the loop counter, r2.y := A.width
+"sub r2.x, r2.x, r2.1\n"				// account first increment
+
+"whileloop\n"
+
+"	add r0.x, r0.x, r0.1\n"
+"	add r2.x, r2.x, r2.1\n"				// loop counter ++
+
+"   ge r2.z, r2.x, r2.y\n"				// while(loop counter < A.width)
+"   break_logicalnz r2.z\n"
+
+"	sample_resource(0)_sampler(0) r1, r0.xy\n"
+
+"	add r4, r4, r1\n"
+
+"endloop\n"
+
+"dp o0.x000, r4, r4.1111\n"
 
 "end\n";
 

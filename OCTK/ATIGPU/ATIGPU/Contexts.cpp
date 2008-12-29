@@ -512,6 +512,12 @@ CALresult Context::DoComputation(void)
 		result->useCounter--;
 	}
 
+	if(resultTemp)	
+	{
+		delete resultTemp;
+		resultTemp = NULL;
+	}
+
 	return err;
 }
 
@@ -737,7 +743,7 @@ CALresult Context::DoMatVecMul(void)
 			iKernel = KernMatVecR_PS; break;
 		}break;
 		
-		default:
+		default:			
 			return CAL_RESULT_INVALID_PARAMETER;
 	}	
 	
@@ -792,13 +798,7 @@ CALresult Context::DoMatVecMul(void)
 				module->ReleaseConstantsFromContext();
 			}
 		}		
-	}
-
-	if(resultTemp)
-	{
-		delete resultTemp;
-		resultTemp = NULL;
-	}
+	}	
 
 	return err;
 }
@@ -830,7 +830,7 @@ CALresult Context::DoMatVecMulSplitted(void)
 					iKernel = KernMatVec4PartsR_PS; break;
 				}break;
 				
-				default:
+				default:					
 					return CAL_RESULT_INVALID_PARAMETER;
 			}
 			break;
@@ -844,7 +844,7 @@ CALresult Context::DoMatVecMulSplitted(void)
 					iKernel = KernMatVec8PartsR_PS; break;
 				}break;
 				
-				default:
+				default:					
 					return CAL_RESULT_INVALID_PARAMETER;
 			}
 			break;
@@ -906,13 +906,7 @@ CALresult Context::DoMatVecMulSplitted(void)
 			}
 		}		
 	}	
-
-	if(resultTemp)
-	{
-		delete resultTemp;
-		resultTemp = NULL;
-	}
-
+	
 	return err;
 }
 
@@ -1066,11 +1060,11 @@ CALresult Context::DoMatMul(void)
 		{
 			case TREAL: iKernel = KernMatMul88Parts2x8x4by2x4x4R_PS; break;
 
-			default:
+			default:				
 				return CAL_RESULT_NOT_SUPPORTED;
 		}
 	}
-	else
+	else		
 		return CAL_RESULT_NOT_SUPPORTED;
 	
 	// get suited module
@@ -1129,12 +1123,6 @@ CALresult Context::DoMatMul(void)
 			}
 		}		
 	}	
-
-	if(resultTemp)
-	{
-		delete resultTemp;
-		resultTemp = NULL;
-	}
 
 	return err;
 }
@@ -1474,7 +1462,7 @@ CALresult Context::DoTranspose(void)
 	else
 		arr = resultTemp;
 
-	if(arr == expr->args[0]) // odentity transposition -> do nothing
+	if(arr == expr->args[0]) // identity transposition -> do nothing
 		return err;
 
 	if(expr->args[0]->isVirtualized && arr->isVirtualized)
@@ -1483,9 +1471,9 @@ CALresult Context::DoTranspose(void)
 		{
 			iKernel = KernTranspose3D_PS;
 
-			constData[0] = arr->physSize[1];				// physWidth
-			constData[1] = arr->size[1]*arr->size[2];	// C.Ny*C.Nx
-			constData[2] = arr->size[2];					// C.Nx
+			constData[0] = arr->physSize[1];								// physWidth
+			constData[1] = arr->size[1]*arr->size[2];						// C.Ny*C.Nx
+			constData[2] = arr->size[2];									// C.Nx
 			constData[3] = 1;
 
 			constData[4] = expr->transpDims[0];
@@ -1516,8 +1504,8 @@ CALresult Context::DoTranspose(void)
 			constData[10] = expr->args[0]->size[3];													// A.Nx			
 			constData[11] = 1;																		// 1
 		}
-		else
-			return CAL_RESULT_NOT_SUPPORTED;		
+		else				
+			return CAL_RESULT_NOT_SUPPORTED;	
 	}
 	else if(!expr->args[0]->isVirtualized && !arr->isVirtualized)
 	{	
@@ -1525,8 +1513,8 @@ CALresult Context::DoTranspose(void)
 		{
 			if(!expr->args[0]->parts && !arr->parts)
 				iKernel = KernTransposeMat4DW_PS;
-			else
-				return CAL_RESULT_NOT_SUPPORTED;
+			else			
+				return CAL_RESULT_NOT_SUPPORTED;		
 		}
 		else	// just copy the data
 		{
@@ -1537,13 +1525,13 @@ CALresult Context::DoTranspose(void)
 				for(i = 0; (i < arr->numParts) && (err == CAL_RESULT_OK); i++)
 					err = expr->args[0]->parts[i]->Copy(ctx,arr->parts[i]);
 			}
-			else
-				return CAL_RESULT_NOT_SUPPORTED;
+			else			
+				return CAL_RESULT_NOT_SUPPORTED;		
 
 			return err;
 		}
 	}	
-	else
+	else	
 		return CAL_RESULT_INVALID_PARAMETER;
 
 	// get suited module
@@ -1595,13 +1583,7 @@ CALresult Context::DoTranspose(void)
 			}
 		}		
 	}	
-
-	if(resultTemp)
-	{
-		delete resultTemp;
-		resultTemp = NULL;
-	}
-
+	
 	return err;
 
 /*
@@ -1734,12 +1716,7 @@ CALresult Context::DoTranspose(void)
 			}
 		}		
 	}	
-
-	if(resultTemp)
-	{
-		delete resultTemp;
-		resultTemp = NULL;
-	}		
+		
 
 	return err;
 */
@@ -1816,71 +1793,6 @@ CALresult Context::DoIdentic(void)
 
 	return err;
 }
-// perform a dot ptoduct operation
-CALresult Context::DoDotProd(void)
-{
-	CALresult err;
-	Module* module;
-	CALdomain domain;
-	Array* inputs[2];	
-
-	long i;
-	KernelCode iKernel;
-	
-	err = CAL_RESULT_OK;
-
-	switch(expr->dType)
-	{
-		case TREAL:
-		{
-			iKernel = KernDotProdR_PS;			
-
-		}break;		
-		
-		default:
-			return CAL_RESULT_INVALID_PARAMETER;
-	}	
-	
-	// get suited module
-	if(!modules[iKernel])
-	{
-		modules[iKernel] = new Module(hDev,ctx,kernels[iKernel],&err);		
-		if(err != CAL_RESULT_OK)
-		{
-			delete modules[iKernel];
-			modules[iKernel] = NULL;
-		}
-	}
-	
-	if(err == CAL_RESULT_OK)
-	{				
-		module = modules[iKernel];		
-
-		if(!result->parts)
-		{			
-			return CAL_RESULT_NOT_SUPPORTED;
-
-			// run the program			
-			err = module->RunPixelShader(expr->args,&result,NULL,&domain);		
-		}
-		else
-		{						
-			return CAL_RESULT_NOT_SUPPORTED;
-
-			// run the program for each part separately
-			for(i = 0; i < result->numParts; i++)
-			{
-				inputs[0] = expr->args[0]->parts[i];
-				if(expr->args[1])
-					inputs[1] = expr->args[1]->parts[i];
-
-				err = module->RunPixelShader(inputs,&result,NULL,&domain);
-			}			
-		}
-	}	
-	
-	return err;
-}
 
 // set a dot product computation
 CALresult Context::SetDotProd(ArrayExpression* expr, Array* result)
@@ -1888,6 +1800,7 @@ CALresult Context::SetDotProd(ArrayExpression* expr, Array* result)
 	CALresult err;	
 	Array* arr, *arr1;
 	long i, j, numParts;
+	long size[2];
 
 	err = CAL_RESULT_OK;
 
@@ -1975,19 +1888,14 @@ CALresult Context::SetDotProd(ArrayExpression* expr, Array* result)
 	if(err != CAL_RESULT_OK)
 		return err;
 	
-	if(!result->res)	
-	{
-		result->Free();
-		err = ((ArrayPool*)result->pool)->AllocateArray(result,0);			
-	}	
+	if(!result->res)		
+		err = ((ArrayPool*)result->pool)->AllocateArray(result,0);	
 
 	if( (err == CAL_RESULT_OK) && (result->hDev != hDev) )	// if array resides on another device
 	{		
-		arr = arrs->NewArray(result->arrID,result->dType,result->nDims,result->size,result->cpuData);
-		if(!result->res)
-			err = arrs->AllocateArray(arr,0);		
+		arr = arrs->NewArray(result->arrID,result->dType,result->nDims,result->size,result->cpuData);						
 
-		if(err == CAL_RESULT_OK)
+		if( (err = arrs->AllocateArray(arr,0)) == CAL_RESULT_OK)
 		{
 			((ArrayPool*)result->pool)->Remove(result);
 			result = arr;
@@ -1996,6 +1904,161 @@ CALresult Context::SetDotProd(ArrayExpression* expr, Array* result)
 			arrs->Add(result);
 		}
 	}
+
+	if(expr->args[0]->physSize[0] > 1)
+	{
+		size[0] = 1;
+		if(!expr->args[0]->parts)
+			size[1] = max(expr->args[0]->size[0],expr->args[0]->physSize[1]);
+		else
+			size[1] = max(expr->args[0]->parts[0]->size[0],expr->args[0]->parts[0]->physSize[1]);
+
+		resultTemp = arrs->NewArray(-1,result->dType,1,&size[0],NULL);
+		if( (err = arrs->AllocateArray(resultTemp,0)) != CAL_RESULT_OK )
+		{
+			delete resultTemp;
+			resultTemp = NULL;
+		}
+	}	
 	
+	return err;
+}
+
+// perform a dot ptoduct operation
+CALresult Context::DoDotProd(void)
+{
+	CALresult err;
+	Module* module;
+	CALdomain domain;
+	Array* input;
+	Array** inputs;
+	float constData[4];
+	
+	KernelCode iKernel, iKernel1;
+	
+	err = CAL_RESULT_OK;	
+
+	switch(expr->dType)
+	{
+		case TREAL:
+		{
+			iKernel = KernSum1DR_PS;			
+
+		}break;		
+		
+		default:			
+			return CAL_RESULT_INVALID_PARAMETER;
+	}	
+	
+	// get suited module
+	if(!modules[iKernel])
+	{
+		modules[iKernel] = new Module(hDev,ctx,kernels[iKernel],&err);		
+		if(err != CAL_RESULT_OK)
+		{
+			delete modules[iKernel];
+			modules[iKernel] = NULL;
+		}
+	}	
+
+	if(err == CAL_RESULT_OK)
+	{			
+
+		if(resultTemp)	// contraction is required
+		{			
+			if(!expr->args[0]->parts)
+			{
+				switch(expr->dType)
+				{
+					case TREAL:
+					{
+						if(expr->args[0]->physSize[1] > expr->args[0]->physSize[0])
+						{							
+							iKernel1 = KernContractAlongYR_PS;
+							constData[0] = (float)expr->args[0]->physSize[0];
+						}
+						else
+						{
+							iKernel1 = KernContractAlongXR_PS;
+							constData[0] = (float)expr->args[0]->physSize[1];
+						}
+
+					}break;		
+
+				default:						
+					return CAL_RESULT_INVALID_PARAMETER;
+				}
+
+				inputs = expr->args;
+			}
+			else						
+				return CAL_RESULT_NOT_SUPPORTED;			
+
+			// get suited module
+			if(!modules[iKernel1])
+			{
+				modules[iKernel1] = new Module(hDev,ctx,kernels[iKernel1],&err);		
+				if(err != CAL_RESULT_OK)
+				{
+					delete modules[iKernel1];
+					modules[iKernel1] = NULL;
+				}
+			}
+
+			if(err == CAL_RESULT_OK)
+			{
+				module = modules[iKernel1];					
+
+				err = module->constants[0]->SetData(&constData);		
+				if(err == CAL_RESULT_OK)
+				{
+					err = module->SetConstantsToContext();
+					if(err == CAL_RESULT_OK)
+					{	
+						// set the domain of execution
+						domain.x = 0;
+						domain.y = 0;		
+						domain.width = resultTemp->physSize[1];
+						domain.height = 1;
+						
+						err = module->RunPixelShader(inputs,&resultTemp,NULL,&domain);
+
+						module->ReleaseConstantsFromContext();
+					}
+				}
+			}
+
+			input = resultTemp;
+		}
+		else
+			input = expr->args[0];
+
+		
+		if(err == CAL_RESULT_OK)
+		{
+			module = modules[iKernel];	
+
+			constData[0] = (float)input->physSize[1];
+
+			err = module->constants[0]->SetData(&constData);		
+			if(err == CAL_RESULT_OK)
+			{
+				err = module->SetConstantsToContext();
+				if(err == CAL_RESULT_OK)
+				{	
+					// set the domain of execution
+					domain.x = 0;
+					domain.y = 0;		
+					domain.width = 1;
+					domain.height = 1;
+
+					err = module->RunPixelShader(&input,&result,NULL,&domain);
+
+					module->ReleaseConstantsFromContext();
+				}
+			}
+		}
+	}		
+
 	return err;
 }
