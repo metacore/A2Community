@@ -56,14 +56,14 @@ Kernel::Kernel(KernelCode iKernel, CALtarget target, CALresult* err)
 			constFormats = new CALformat[1]; constFormats[0] = CAL_FORMAT_FLOAT_4;
 			break;
 
-		case KernEwMulContractSplitted8AlongX4R_PS:
-			kernelStr = kernelEwMulContractSplitted8AlongX4R_PS; nInputs = 16; nOutputs = 1; nConstants = 1;
+		case KernEwMulContract8PartsAlongX4R_PS:
+			kernelStr = kernelEwMulContract8PartsAlongX4R_PS; nInputs = 16; nOutputs = 1; nConstants = 1;
 			constSizes = new long[1]; constSizes[0] = 1;
 			constFormats = new CALformat[1]; constFormats[0] = CAL_FORMAT_FLOAT_4;
 			break;
 
-		case KernEwMulContractSplitted4AlongX4R_PS:
-			kernelStr = kernelEwMulContractSplitted4AlongX4R_PS; nInputs = 8; nOutputs = 1; nConstants = 1;
+		case KernEwMulContract4PartsAlongX4R_PS:
+			kernelStr = kernelEwMulContract4PartsAlongX4R_PS; nInputs = 8; nOutputs = 1; nConstants = 1;
 			constSizes = new long[1]; constSizes[0] = 1;
 			constFormats = new CALformat[1]; constFormats[0] = CAL_FORMAT_FLOAT_4;
 			break;
@@ -80,14 +80,14 @@ Kernel::Kernel(KernelCode iKernel, CALtarget target, CALresult* err)
 			constFormats = new CALformat[1]; constFormats[0] = CAL_FORMAT_FLOAT_4;
 			break;
 
-		case KernEwMulContractSplitted8AlongY4R_PS:
-			kernelStr = kernelEwMulContractSplitted8AlongY4R_PS; nInputs = 16; nOutputs = 1; nConstants = 1;
+		case KernEwMulContract8PartsAlongY4R_PS:
+			kernelStr = kernelEwMulContract8PartsAlongY4R_PS; nInputs = 16; nOutputs = 1; nConstants = 1;
 			constSizes = new long[1]; constSizes[0] = 1;
 			constFormats = new CALformat[1]; constFormats[0] = CAL_FORMAT_FLOAT_4;
 			break;
 
-		case KernEwMulContractSplitted4AlongY4R_PS:
-			kernelStr = kernelEwMulContractSplitted4AlongY4R_PS; nInputs = 8; nOutputs = 1; nConstants = 1;
+		case KernEwMulContract4PartsAlongY4R_PS:
+			kernelStr = kernelEwMulContract4PartsAlongY4R_PS; nInputs = 8; nOutputs = 1; nConstants = 1;
 			constSizes = new long[1]; constSizes[0] = 1;
 			constFormats = new CALformat[1]; constFormats[0] = CAL_FORMAT_FLOAT_4;
 			break;

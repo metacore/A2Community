@@ -2030,9 +2030,9 @@ CALresult Context::DoDotProd(void)
 				{
 					case TREAL: 
 						if(expr->args[0]->numParts == 8)
-							iKernel1 = KernEwMulContractSplitted8AlongY4R_PS; 
+							iKernel1 = KernEwMulContract8PartsAlongY4R_PS; 
 						else
-							iKernel1 = KernEwMulContractSplitted4AlongY4R_PS;
+							iKernel1 = KernEwMulContract4PartsAlongY4R_PS;
 						break;		
 					default: return CAL_RESULT_INVALID_PARAMETER;
 				}												
@@ -2044,9 +2044,9 @@ CALresult Context::DoDotProd(void)
 				{
 					case TREAL: 
 						if(expr->args[0]->numParts == 8)
-							iKernel1 = KernEwMulContractSplitted8AlongX4R_PS;
+							iKernel1 = KernEwMulContract8PartsAlongX4R_PS;
 						else
-							iKernel1 = KernEwMulContractSplitted4AlongX4R_PS;
+							iKernel1 = KernEwMulContract4PartsAlongX4R_PS;
 						break;		
 					default: return CAL_RESULT_INVALID_PARAMETER;
 				}									

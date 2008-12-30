@@ -21,10 +21,10 @@ KernEwDivLR_PS,
 // dot product related kernels
 KernEwMulContractAlongX4R_PS,
 KernEwMulContractAlongY4R_PS,
-KernEwMulContractSplitted8AlongX4R_PS,
-KernEwMulContractSplitted8AlongY4R_PS,
-KernEwMulContractSplitted4AlongX4R_PS,
-KernEwMulContractSplitted4AlongY4R_PS,
+KernEwMulContract8PartsAlongX4R_PS,
+KernEwMulContract8PartsAlongY4R_PS,
+KernEwMulContract4PartsAlongX4R_PS,
+KernEwMulContract4PartsAlongY4R_PS,
 KernEwMulContractAlongX1R_PS,
 KernEwMulContractAlongY1R_PS,
 KernSum1DR_PS,
@@ -2020,7 +2020,7 @@ const char kernelEwMulContractAlongX4R_PS[] =
 	performs contract_alongX(A.*B), where A and B are matrices with 4 component elements 
 	splitted to 8 parts
 */
-const char kernelEwMulContractSplitted8AlongX4R_PS[] =
+const char kernelEwMulContract8PartsAlongX4R_PS[] =
 "il_ps_2_0\n"
 "dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__\n"
 "dcl_cb cb0[1]\n"  // [A.parts[0].physWidth,...]
@@ -2097,7 +2097,7 @@ const char kernelEwMulContractSplitted8AlongX4R_PS[] =
 	performs contract_alongX(A.*B), where A and B are matrices with 4 component elements 
 	splitted to 4 parts
 */
-const char kernelEwMulContractSplitted4AlongX4R_PS[] =
+const char kernelEwMulContract4PartsAlongX4R_PS[] =
 "il_ps_2_0\n"
 "dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__\n"
 "dcl_cb cb0[1]\n"  // [A.parts[0].physWidth,...]
@@ -2229,7 +2229,7 @@ const char kernelEwMulContractAlongY4R_PS[] =
 	performs contract_alongY(A.*B), where A and B are matrices with 4 component elements 
 	splitted to 8 parts
 */
-const char kernelEwMulContractSplitted8AlongY4R_PS[] =
+const char kernelEwMulContract8PartsAlongY4R_PS[] =
 "il_ps_2_0\n"
 "dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__\n"
 "dcl_cb cb0[1]\n" // [A.parts[0].physHeight,...]
@@ -2306,7 +2306,7 @@ const char kernelEwMulContractSplitted8AlongY4R_PS[] =
 	performs contract_alongY(A.*B), where A and B are matrices with 4 component elements 
 	splitted to 4 parts
 */
-const char kernelEwMulContractSplitted4AlongY4R_PS[] =
+const char kernelEwMulContract4PartsAlongY4R_PS[] =
 "il_ps_2_0\n"
 "dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__\n"
 "dcl_cb cb0[1]\n" // [A.parts[0].physHeight,...]
