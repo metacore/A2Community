@@ -50,14 +50,50 @@ Kernel::Kernel(KernelCode iKernel, CALtarget target, CALresult* err)
 			kernelStr = kernelEwDivLR_PS; nInputs = 2; nOutputs = 1;
 			break;
 
-		case KernContractAlongXR_PS:
-			kernelStr = kernelContractAlongXR_PS; nInputs = 2; nOutputs = 1; nConstants = 1;
+		case KernEwMulContractAlongX4R_PS:
+			kernelStr = kernelEwMulContractAlongX4R_PS; nInputs = 2; nOutputs = 1; nConstants = 1;
 			constSizes = new long[1]; constSizes[0] = 1;
 			constFormats = new CALformat[1]; constFormats[0] = CAL_FORMAT_FLOAT_4;
 			break;
 
-		case KernContractAlongYR_PS:
-			kernelStr = kernelContractAlongYR_PS; nInputs = 2; nOutputs = 1; nConstants = 1;
+		case KernEwMulContractSplitted8AlongX4R_PS:
+			kernelStr = kernelEwMulContractSplitted8AlongX4R_PS; nInputs = 16; nOutputs = 1; nConstants = 1;
+			constSizes = new long[1]; constSizes[0] = 1;
+			constFormats = new CALformat[1]; constFormats[0] = CAL_FORMAT_FLOAT_4;
+			break;
+
+		case KernEwMulContractSplitted4AlongX4R_PS:
+			kernelStr = kernelEwMulContractSplitted4AlongX4R_PS; nInputs = 8; nOutputs = 1; nConstants = 1;
+			constSizes = new long[1]; constSizes[0] = 1;
+			constFormats = new CALformat[1]; constFormats[0] = CAL_FORMAT_FLOAT_4;
+			break;
+
+		case KernEwMulContractAlongX1R_PS:
+			kernelStr = kernelEwMulContractAlongX1R_PS; nInputs = 2; nOutputs = 1; nConstants = 1;
+			constSizes = new long[1]; constSizes[0] = 1;
+			constFormats = new CALformat[1]; constFormats[0] = CAL_FORMAT_FLOAT_4;
+			break;
+
+		case KernEwMulContractAlongY4R_PS:
+			kernelStr = kernelEwMulContractAlongY4R_PS; nInputs = 2; nOutputs = 1; nConstants = 1;
+			constSizes = new long[1]; constSizes[0] = 1;
+			constFormats = new CALformat[1]; constFormats[0] = CAL_FORMAT_FLOAT_4;
+			break;
+
+		case KernEwMulContractSplitted8AlongY4R_PS:
+			kernelStr = kernelEwMulContractSplitted8AlongY4R_PS; nInputs = 16; nOutputs = 1; nConstants = 1;
+			constSizes = new long[1]; constSizes[0] = 1;
+			constFormats = new CALformat[1]; constFormats[0] = CAL_FORMAT_FLOAT_4;
+			break;
+
+		case KernEwMulContractSplitted4AlongY4R_PS:
+			kernelStr = kernelEwMulContractSplitted4AlongY4R_PS; nInputs = 8; nOutputs = 1; nConstants = 1;
+			constSizes = new long[1]; constSizes[0] = 1;
+			constFormats = new CALformat[1]; constFormats[0] = CAL_FORMAT_FLOAT_4;
+			break;
+
+		case KernEwMulContractAlongY1R_PS:
+			kernelStr = kernelEwMulContractAlongY1R_PS; nInputs = 2; nOutputs = 1; nConstants = 1;
 			constSizes = new long[1]; constSizes[0] = 1;
 			constFormats = new CALformat[1]; constFormats[0] = CAL_FORMAT_FLOAT_4;
 			break;

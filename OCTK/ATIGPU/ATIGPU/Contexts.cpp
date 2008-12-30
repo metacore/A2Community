@@ -1054,75 +1054,82 @@ CALresult Context::DoMatMul(void)
 	
 	err = CAL_RESULT_OK;
 
-	if( (expr->args[0]->numParts == 8) && (expr->args[1]->numParts == 8) )
+	if(!expr->args[0]->isVirtualized && !expr->args[1]->isVirtualized)
 	{
-		switch(expr->args[0]->dType)
+		if( (expr->args[0]->numParts == 8) && (expr->args[1]->numParts == 8) )
 		{
+			switch(expr->args[0]->dType)
+			{
 			case TREAL: iKernel = KernMatMul88Parts2x8x4by2x4x4R_PS; break;
 
 			default:				
 				return CAL_RESULT_NOT_SUPPORTED;
+			}
 		}
-	}
-	else		
-		return CAL_RESULT_NOT_SUPPORTED;
-	
-	// get suited module
-	if(!modules[iKernel])
-	{
-		modules[iKernel] = new Module(hDev,ctx,kernels[iKernel],&err);		
-		if(err != CAL_RESULT_OK)
+		else		
+			return CAL_RESULT_NOT_SUPPORTED;
+
+		// get suited module
+		if(!modules[iKernel])
 		{
-			delete modules[iKernel];
-			modules[iKernel] = NULL;
+			modules[iKernel] = new Module(hDev,ctx,kernels[iKernel],&err);		
+			if(err != CAL_RESULT_OK)
+			{
+				delete modules[iKernel];
+				modules[iKernel] = NULL;
+			}
 		}
-	}
-	
-	if(err == CAL_RESULT_OK)
-	{		
-		module = modules[iKernel];
 
-		constData[0] = (float)(expr->args[0]->physSize[1]);	// matrix width		
-
-		err = module->constants[0]->SetData(&constData);		
 		if(err == CAL_RESULT_OK)
-		{
-			err = module->SetConstantsToContext();
+		{		
+			module = modules[iKernel];
+
+			constData[0] = (float)(expr->args[0]->physSize[1]);	// matrix width		
+
+			err = module->constants[0]->SetData(&constData);		
 			if(err == CAL_RESULT_OK)
 			{
-				if(!resultTemp)
-					arr = result;
-				else
-					arr = resultTemp;
+				err = module->SetConstantsToContext();
+				if(err == CAL_RESULT_OK)
+				{
+					if(!resultTemp)
+						arr = result;
+					else
+						arr = resultTemp;
 
-				// set the domain of execution
-				domain.x = 0;
-				domain.y = 0;		
-				domain.width = arr->parts[0]->physSize[1];
-				domain.height = arr->parts[0]->physSize[0];	
-				
-				for(i = 0; i < expr->args[0]->numParts; i++)				
-					inputs[i] = expr->args[0]->parts[i];
-				for(i = 0; i < expr->args[1]->numParts; i++)
-					inputs[i+expr->args[0]->numParts] = expr->args[1]->parts[i];
-								
-				err = module->RunPixelShader(inputs,arr->parts,NULL,&domain);				
-				if( (err == CAL_RESULT_OK) && resultTemp )
-				{																	
-					arrs->Set(arrs->Find(result->arrID),resultTemp);
-					delete result;
-					result = resultTemp;
-					resultTemp = NULL;
-						
-					// do not forget about the flags!
-					result->useCounter++;
-					result->isReservedForGet = TRUE;					
+					// set the domain of execution
+					domain.x = 0;
+					domain.y = 0;		
+					domain.width = arr->parts[0]->physSize[1];
+					domain.height = arr->parts[0]->physSize[0];	
+
+					for(i = 0; i < expr->args[0]->numParts; i++)				
+						inputs[i] = expr->args[0]->parts[i];
+					for(i = 0; i < expr->args[1]->numParts; i++)
+						inputs[i+expr->args[0]->numParts] = expr->args[1]->parts[i];
+
+					err = module->RunPixelShader(inputs,arr->parts,NULL,&domain);				
+					if( (err == CAL_RESULT_OK) && resultTemp )
+					{																	
+						arrs->Set(arrs->Find(result->arrID),resultTemp);
+						delete result;
+						result = resultTemp;
+						resultTemp = NULL;
+
+						// do not forget about the flags!
+						result->useCounter++;
+						result->isReservedForGet = TRUE;					
+					}
+
+					module->ReleaseConstantsFromContext();
 				}
-
-				module->ReleaseConstantsFromContext();
-			}
-		}		
-	}	
+			}		
+		}	
+	}
+	else
+	{
+		err = CAL_RESULT_NOT_SUPPORTED;
+	}
 
 	return err;
 }
@@ -1909,9 +1916,11 @@ CALresult Context::SetDotProd(ArrayExpression* expr, Array* result)
 	{
 		size[0] = 1;
 		if(!expr->args[0]->parts)
-			size[1] = max(expr->args[0]->size[0],expr->args[0]->physSize[1]);
+			size[1] = max(expr->args[0]->physSize[0],expr->args[0]->physSize[1]);
 		else
-			size[1] = max(expr->args[0]->parts[0]->size[0],expr->args[0]->parts[0]->physSize[1]);
+			size[1] = max(expr->args[0]->parts[0]->physSize[0],expr->args[0]->parts[0]->physSize[1]);
+
+		size[1] *= expr->args[0]->physNumComponents;
 
 		resultTemp = arrs->NewArray(-1,result->dType,1,&size[0],NULL);
 		if( (err = arrs->AllocateArray(resultTemp,0)) != CAL_RESULT_OK )
@@ -1961,84 +1970,106 @@ CALresult Context::DoDotProd(void)
 		}
 	}	
 
-	if(err == CAL_RESULT_OK)
-	{			
+	if(err != CAL_RESULT_OK)
+		return err;
+				
+	if(expr->args[0]->physSize[0] > 1)	// contraction is required
+	{					
+		if(!expr->args[0]->parts)	// not splitted arrays
+		{
+			if(expr->args[0]->physSize[1] > expr->args[0]->physSize[0])	// which dimension to contract?
+			{	
+				// contract along Y dimension
 
-		if(resultTemp)	// contraction is required
-		{			
-			if(!expr->args[0]->parts)
+				if(!expr->args[0]->isVirtualized)
+				{
+					switch(expr->dType)
+					{
+						case TREAL: iKernel1 = KernEwMulContractAlongY4R_PS; break;		
+						default: return CAL_RESULT_INVALID_PARAMETER;
+					}						
+				}
+				else
+				{
+					switch(expr->dType)
+					{
+						case TREAL: iKernel1 = KernEwMulContractAlongY1R_PS; break;		
+						default: return CAL_RESULT_INVALID_PARAMETER;
+					}						
+				}
+				constData[0] = (float)expr->args[0]->physSize[0];						
+			}
+			else
 			{
+				// contract along X dimension
+
+				if(!expr->args[0]->isVirtualized)
+				{
+					switch(expr->dType)
+					{
+						case TREAL: iKernel1 = KernEwMulContractAlongX4R_PS; break;		
+						default: return CAL_RESULT_INVALID_PARAMETER;
+					}						
+				}
+				else	
+				{
+					switch(expr->dType)
+					{
+						case TREAL: iKernel1 = KernEwMulContractAlongX1R_PS; break;		
+						default: return CAL_RESULT_INVALID_PARAMETER;
+					}						
+				}
+				constData[0] = (float)expr->args[0]->physSize[1];
+			}
+		}
+		else	// case of splitted matrices
+		{
+			if(expr->args[0]->parts[0]->physSize[1] > expr->args[0]->parts[0]->physSize[0])
+			{	
 				switch(expr->dType)
 				{
-					case TREAL:
-					{
-						if(expr->args[0]->physSize[1] > expr->args[0]->physSize[0])
-						{							
-							iKernel1 = KernContractAlongYR_PS;
-							constData[0] = (float)expr->args[0]->physSize[0];
-						}
+					case TREAL: 
+						if(expr->args[0]->numParts == 8)
+							iKernel1 = KernEwMulContractSplitted8AlongY4R_PS; 
 						else
-						{
-							iKernel1 = KernContractAlongXR_PS;
-							constData[0] = (float)expr->args[0]->physSize[1];
-						}
-
-					}break;		
-
-				default:						
-					return CAL_RESULT_INVALID_PARAMETER;
-				}
-
-				inputs = expr->args;
+							iKernel1 = KernEwMulContractSplitted4AlongY4R_PS;
+						break;		
+					default: return CAL_RESULT_INVALID_PARAMETER;
+				}												
+				constData[0] = (float)expr->args[0]->parts[0]->physSize[0];						
 			}
-			else						
-				return CAL_RESULT_NOT_SUPPORTED;			
-
-			// get suited module
-			if(!modules[iKernel1])
-			{
-				modules[iKernel1] = new Module(hDev,ctx,kernels[iKernel1],&err);		
-				if(err != CAL_RESULT_OK)
+			else
+			{	
+				switch(expr->dType)
 				{
-					delete modules[iKernel1];
-					modules[iKernel1] = NULL;
-				}
+					case TREAL: 
+						if(expr->args[0]->numParts == 8)
+							iKernel1 = KernEwMulContractSplitted8AlongX4R_PS;
+						else
+							iKernel1 = KernEwMulContractSplitted4AlongX4R_PS;
+						break;		
+					default: return CAL_RESULT_INVALID_PARAMETER;
+				}									
+				constData[0] = (float)expr->args[0]->parts[0]->physSize[1];
 			}
-
-			if(err == CAL_RESULT_OK)
-			{
-				module = modules[iKernel1];					
-
-				err = module->constants[0]->SetData(&constData);		
-				if(err == CAL_RESULT_OK)
-				{
-					err = module->SetConstantsToContext();
-					if(err == CAL_RESULT_OK)
-					{	
-						// set the domain of execution
-						domain.x = 0;
-						domain.y = 0;		
-						domain.width = resultTemp->physSize[1];
-						domain.height = 1;
-						
-						err = module->RunPixelShader(inputs,&resultTemp,NULL,&domain);
-
-						module->ReleaseConstantsFromContext();
-					}
-				}
-			}
-
-			input = resultTemp;
 		}
-		else
-			input = expr->args[0];
 
-		
+		inputs = expr->args;					
+
+		// get suited module
+		if(!modules[iKernel1])
+		{
+			modules[iKernel1] = new Module(hDev,ctx,kernels[iKernel1],&err);		
+			if(err != CAL_RESULT_OK)
+			{
+				delete modules[iKernel1];
+				modules[iKernel1] = NULL;
+			}
+		}
+
 		if(err == CAL_RESULT_OK)
 		{
-			module = modules[iKernel];	
-
-			constData[0] = (float)input->physSize[1];
+			module = modules[iKernel1];					
 
 			err = module->constants[0]->SetData(&constData);		
 			if(err == CAL_RESULT_OK)
@@ -2049,13 +2080,43 @@ CALresult Context::DoDotProd(void)
 					// set the domain of execution
 					domain.x = 0;
 					domain.y = 0;		
-					domain.width = 1;
+					domain.width = resultTemp->physSize[1];
 					domain.height = 1;
 
-					err = module->RunPixelShader(&input,&result,NULL,&domain);
+					err = module->RunPixelShader(inputs,&resultTemp,NULL,&domain);
 
 					module->ReleaseConstantsFromContext();
 				}
+			}
+		}
+
+		input = resultTemp;
+	}
+	else
+		input = expr->args[0];
+
+
+	if(err == CAL_RESULT_OK)
+	{
+		module = modules[iKernel];	
+
+		constData[0] = (float)input->physSize[1];
+
+		err = module->constants[0]->SetData(&constData);		
+		if(err == CAL_RESULT_OK)
+		{
+			err = module->SetConstantsToContext();
+			if(err == CAL_RESULT_OK)
+			{	
+				// set the domain of execution
+				domain.x = 0;
+				domain.y = 0;		
+				domain.width = 1;
+				domain.height = 1;
+
+				err = module->RunPixelShader(&input,&result,NULL,&domain);
+
+				module->ReleaseConstantsFromContext();
 			}
 		}
 	}		
