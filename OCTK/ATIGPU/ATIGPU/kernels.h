@@ -19,6 +19,7 @@ KernEwDivR_PS,
 KernEwDivLR_PS,
 
 // dot product related kernels
+KernDotProd1DR_PS,
 KernEwMulContractAlongX4R_PS,
 KernEwMulContractAlongY4R_PS,
 KernEwMulContract8PartsAlongX4R_PS,
@@ -1991,7 +1992,7 @@ const char kernelEwMulContractAlongX4R_PS[] =
 
 "mov r4, r4.0000\n"	// initialize accumulator
 
-"mov r0.xy, vWinCoord0.xy\n"
+"mov r0.xy, vWinCoord0.yx\n"
 "sub r0.x, r0.x, r0.1\n"				// account first increment
 
 "mov r2.0y00, cb0[0].x\n"				// r2.x is the loop counter, r2.y := A.width
@@ -2046,7 +2047,7 @@ const char kernelEwMulContract8PartsAlongX4R_PS[] =
 
 "mov r4, r4.0000\n"	// initialize accumulator
 
-"mov r0.xy, vWinCoord0.xy\n"
+"mov r0.xy, vWinCoord0.yx\n"
 "sub r0.x, r0.x, r0.1\n"				// account first increment
 
 "mov r2.0y00, cb0[0].x\n"				// r2.x is the loop counter, r2.y := A.width
@@ -2114,7 +2115,7 @@ const char kernelEwMulContract4PartsAlongX4R_PS[] =
 
 "mov r4, r4.0000\n"	// initialize accumulator
 
-"mov r0.xy, vWinCoord0.xy\n"
+"mov r0.xy, vWinCoord0.yx\n"
 "sub r0.x, r0.x, r0.1\n"				// account first increment
 
 "mov r2.0y00, cb0[0].x\n"				// r2.x is the loop counter, r2.y := A.width
@@ -2162,7 +2163,7 @@ const char kernelEwMulContractAlongX1R_PS[] =
 
 "mov r4, r4.0000\n"	// initialize accumulator
 
-"mov r0.xy, vWinCoord0.xy\n"
+"mov r0.xy, vWinCoord0.yx\n"
 "sub r0.x, r0.x, r0.1\n"				// account first increment
 
 "mov r2.0y00, cb0[0].x\n"				// r2.x is the loop counter, r2.y := A.width
@@ -2183,7 +2184,7 @@ const char kernelEwMulContractAlongX1R_PS[] =
 
 "endloop\n"
 
-"mov o0.x, r4.x\n"
+"mov o0.x000, r4.x\n"
 
 "end\n";
 
@@ -2200,7 +2201,7 @@ const char kernelEwMulContractAlongY4R_PS[] =
 
 "mov r4, r4.0000\n"	// initialize accumulator
 
-"mov r0.xy, vWinCoord0.xy\n"
+"mov r0.x0, vWinCoord0.x\n"
 "sub r0.y, r0.y, r0.1\n"				// account first increment
 
 "mov r2.0y00, cb0[0].x\n"				// r2.x is the loop counter, r2.y := A.Height
@@ -2255,7 +2256,7 @@ const char kernelEwMulContract8PartsAlongY4R_PS[] =
 
 "mov r4, r4.0000\n"						// initialize accumulator
 
-"mov r0.xy, vWinCoord0.xy\n"
+"mov r0.x0, vWinCoord0.x\n"
 "sub r0.y, r0.y, r0.1\n"				// account first increment
 
 "mov r2.0y00, cb0[0].x\n"				// r2.x is the loop counter, r2.y := A.Height
@@ -2324,7 +2325,7 @@ const char kernelEwMulContract4PartsAlongY4R_PS[] =
 
 "mov r4, r4.0000\n"						// initialize accumulator
 
-"mov r0.xy, vWinCoord0.xy\n"
+"mov r0.x0, vWinCoord0.x\n"
 "sub r0.y, r0.y, r0.1\n"				// account first increment
 
 "mov r2.0y00, cb0[0].x\n"				// r2.x is the loop counter, r2.y := A.Height
@@ -2360,7 +2361,8 @@ const char kernelEwMulContract4PartsAlongY4R_PS[] =
 "end\n";
 
 /*
-	performs contract_alongX(A.*B), where A and B are arrays with 1 component elements
+	performs contract_alongX(A.*B), where A and B are arrays with 1 component elements,
+	result is array with 4 component elements
 */
 const char kernelEwMulContractAlongY1R_PS[] =
 "il_ps_2_0\n"
@@ -2370,30 +2372,113 @@ const char kernelEwMulContractAlongY1R_PS[] =
 "dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
 "dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
 
+"dcl_literal l0, 4.0f, 1.0f, 0.0f, 0.0f\n"
+
 "mov r4, r4.0000\n"	// initialize accumulator
 
-"mov r0.xy, vWinCoord0.xy\n"
-"sub r0.y, r0.y, r0.1\n"				// account first increment
+"flr r0.x0, vWinCoord0.x\n"
+"mul r0.x, r0.x, l0.x\n"
+"sub r0.y, r0.y, l0.x\n"				// account first increment
 
 "mov r2.0y00, cb0[0].x\n"				// r2.x is the loop counter, r2.y := A.Height
 "sub r2.x, r2.x, r2.1\n"				// account first increment
 
 "whileloop\n"
 
-"	add r0.y, r0.y, r0.1\n"
-"	add r2.x, r2.x, r2.1\n"				// loop counter ++
+"	add r0.y, r0.y, l0.x\n"
+"	add r2.x, r2.x, l0.x\n"				// loop counter ++
 
-"   ge r2.z, r2.x, r2.y\n"				// while(loop counter < A.Height)
+"   ge r2.z, r0.y, r2.y\n"				// while(loop counter < A.Height)
 "   break_logicalnz r2.z\n"
 
-"	sample_resource(0)_sampler(0) r1.x, r0.xy\n"
-"	sample_resource(1)_sampler(1) r3.x, r0.xy\n"
+"	sample_resource(0)_sampler(0)_aoffimmi(0,0,0) r1.x, r0.xy\n"
+"	sample_resource(0)_sampler(0)_aoffimmi(1,0,0) r1.y, r0.xy\n"
+"	sample_resource(0)_sampler(0)_aoffimmi(2,0,0) r1.z, r0.xy\n"
+"	sample_resource(0)_sampler(0)_aoffimmi(3,0,0) r1.w, r0.xy\n"
 
-"	mad r4.x, r1.x, r3.x, r4.x\n"
+"	sample_resource(1)_sampler(1)_aoffimmi(0,0,0) r3.x, r0.xy\n"
+"	sample_resource(1)_sampler(1)_aoffimmi(1,0,0) r3.y, r0.xy\n"
+"	sample_resource(1)_sampler(1)_aoffimmi(2,0,0) r3.z, r0.xy\n"
+"	sample_resource(1)_sampler(1)_aoffimmi(3,0,0) r3.w, r0.xy\n"
+
+// 
+"	sample_resource(0)_sampler(0)_aoffimmi(0,1,0) r5.x, r0.xy\n"
+"	sample_resource(0)_sampler(0)_aoffimmi(1,1,0) r5.y, r0.xy\n"
+"	sample_resource(0)_sampler(0)_aoffimmi(2,1,0) r5.z, r0.xy\n"
+"	sample_resource(0)_sampler(0)_aoffimmi(3,1,0) r5.w, r0.xy\n"
+
+"	sample_resource(1)_sampler(1)_aoffimmi(0,1,0) r6.x, r0.xy\n"
+"	sample_resource(1)_sampler(1)_aoffimmi(1,1,0) r6.y, r0.xy\n"
+"	sample_resource(1)_sampler(1)_aoffimmi(2,1,0) r6.z, r0.xy\n"
+"	sample_resource(1)_sampler(1)_aoffimmi(3,1,0) r6.w, r0.xy\n"
+
+// 
+"	sample_resource(0)_sampler(0)_aoffimmi(0,2,0) r7.x, r0.xy\n"
+"	sample_resource(0)_sampler(0)_aoffimmi(1,2,0) r7.y, r0.xy\n"
+"	sample_resource(0)_sampler(0)_aoffimmi(2,2,0) r7.z, r0.xy\n"
+"	sample_resource(0)_sampler(0)_aoffimmi(3,2,0) r7.w, r0.xy\n"
+
+"	sample_resource(1)_sampler(1)_aoffimmi(0,2,0) r8.x, r0.xy\n"
+"	sample_resource(1)_sampler(1)_aoffimmi(1,2,0) r8.y, r0.xy\n"
+"	sample_resource(1)_sampler(1)_aoffimmi(2,2,0) r8.z, r0.xy\n"
+"	sample_resource(1)_sampler(1)_aoffimmi(3,2,0) r8.w, r0.xy\n"
+
+// 
+"	sample_resource(0)_sampler(0)_aoffimmi(0,3,0) r9.x, r0.xy\n"
+"	sample_resource(0)_sampler(0)_aoffimmi(1,3,0) r9.y, r0.xy\n"
+"	sample_resource(0)_sampler(0)_aoffimmi(2,3,0) r9.z, r0.xy\n"
+"	sample_resource(0)_sampler(0)_aoffimmi(3,3,0) r9.w, r0.xy\n"
+
+"	sample_resource(1)_sampler(1)_aoffimmi(0,3,0) r10.x, r0.xy\n"
+"	sample_resource(1)_sampler(1)_aoffimmi(1,3,0) r10.y, r0.xy\n"
+"	sample_resource(1)_sampler(1)_aoffimmi(2,3,0) r10.z, r0.xy\n"
+"	sample_resource(1)_sampler(1)_aoffimmi(3,3,0) r10.w, r0.xy\n"
+
+"	mad r4, r1, r3, r4\n"
+"	mad r4, r5, r6, r4\n"
+"	mad r4, r7, r8, r4\n"
+"	mad r4, r9, r10, r4\n"
 
 "endloop\n"
 
-"mov o0.x, r4.x\n"
+"mov o0, r4\n"
+
+"end\n";
+
+/*
+	dot product on 1D arrays
+*/
+const char kernelDotProd1DR_PS[] =
+"il_ps_2_0\n"
+"dcl_cb cb0[1]\n"  // [A.physWidth,...]
+"dcl_output_generic o0\n"
+"dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+"dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+
+"mov r4, r4.0000\n"						// initialize accumulator
+
+"mov r0.xy, r0.00\n"
+"sub r0.x, r0.x, r0.1\n"				// account first increment
+
+"mov r2.0y00, cb0[0].x\n"				// r2.x is the loop counter, r2.y := A.width
+"sub r2.x, r2.x, r2.1\n"				// account first increment
+
+"whileloop\n"
+
+"	add r0.x, r0.x, r0.1\n"
+"	add r2.x, r2.x, r2.1\n"				// loop counter ++
+
+"   ge r2.z, r2.x, r2.y\n"				// while(loop counter < A.width)
+"   break_logicalnz r2.z\n"
+
+"	sample_resource(0)_sampler(0) r1, r0.xy\n"
+"	sample_resource(1)_sampler(1) r3, r0.xy\n"
+
+"	mad r4, r1, r3, r4\n"
+
+"endloop\n"
+
+"dp4 o0.x000, r4, r4.1111\n"
 
 "end\n";
 
@@ -2402,7 +2487,6 @@ const char kernelEwMulContractAlongY1R_PS[] =
 */
 const char kernelSum1DR_PS[] =
 "il_ps_2_0\n"
-"dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__\n"
 "dcl_cb cb0[1]\n"  // [A.physWidth,...]
 "dcl_output_generic o0\n"
 "dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
@@ -2429,7 +2513,7 @@ const char kernelSum1DR_PS[] =
 
 "endloop\n"
 
-"dp o0.x000, r4, r4.1111\n"
+"dp4 o0.x000, r4, r4.1111\n"
 
 "end\n";
 

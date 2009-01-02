@@ -100,7 +100,13 @@ CALresult Context::SetComputation(ArrayExpression* expr, Array* result, long pri
 {	
 	CALresult err;	
 	BOOL isReservedForGet0;
-	long i;	
+	long i;
+
+	if(resultTemp)	
+	{
+		delete resultTemp;
+		resultTemp = NULL;
+	}
 
 	// increment use counters beforehand!	
 	for(i = 0; (i < 3) && expr->args[i]; i++){expr->args[i]->useCounter++;}	
@@ -510,13 +516,7 @@ CALresult Context::DoComputation(void)
 	{		
 		for(i = 0; (i < 3) && (expr->args[i]); i++){expr->args[i]->useCounter--;}	
 		result->useCounter--;
-	}
-
-	if(resultTemp)	
-	{
-		delete resultTemp;
-		resultTemp = NULL;
-	}
+	}	
 
 	return err;
 }
@@ -1807,7 +1807,7 @@ CALresult Context::SetDotProd(ArrayExpression* expr, Array* result)
 	CALresult err;	
 	Array* arr, *arr1;
 	long i, j, numParts;
-	long size[2];
+	long size;
 
 	err = CAL_RESULT_OK;
 
@@ -1913,16 +1913,15 @@ CALresult Context::SetDotProd(ArrayExpression* expr, Array* result)
 	}
 
 	if(expr->args[0]->physSize[0] > 1)
-	{
-		size[0] = 1;
+	{		
 		if(!expr->args[0]->parts)
-			size[1] = max(expr->args[0]->physSize[0],expr->args[0]->physSize[1]);
+			size = max(expr->args[0]->physSize[0],expr->args[0]->physSize[1]);
 		else
-			size[1] = max(expr->args[0]->parts[0]->physSize[0],expr->args[0]->parts[0]->physSize[1]);
+			size = max(expr->args[0]->parts[0]->physSize[0],expr->args[0]->parts[0]->physSize[1]);
 
-		size[1] *= expr->args[0]->physNumComponents;
-
-		resultTemp = arrs->NewArray(-1,result->dType,1,&size[0],NULL);
+		size *= expr->args[0]->physNumComponents;
+		
+		resultTemp = arrs->NewArray(-1,result->dType,1,&size,NULL);
 		if( (err = arrs->AllocateArray(resultTemp,0)) != CAL_RESULT_OK )
 		{
 			delete resultTemp;
@@ -1938,8 +1937,7 @@ CALresult Context::DoDotProd(void)
 {
 	CALresult err;
 	Module* module;
-	CALdomain domain;
-	Array* input;
+	CALdomain domain;	
 	Array** inputs;
 	float constData[4];
 	
@@ -1951,7 +1949,10 @@ CALresult Context::DoDotProd(void)
 	{
 		case TREAL:
 		{
-			iKernel = KernSum1DR_PS;			
+			if(expr->args[0]->physSize[0] > 1)
+				iKernel = KernSum1DR_PS;			
+			else
+				iKernel = KernDotProd1DR_PS;
 
 		}break;		
 		
@@ -2090,17 +2091,17 @@ CALresult Context::DoDotProd(void)
 			}
 		}
 
-		input = resultTemp;
+		inputs = &resultTemp;
 	}
 	else
-		input = expr->args[0];
+		inputs = expr->args;
 
 
 	if(err == CAL_RESULT_OK)
 	{
 		module = modules[iKernel];	
 
-		constData[0] = (float)input->physSize[1];
+		constData[0] = (float)inputs[0]->physSize[1];
 
 		err = module->constants[0]->SetData(&constData);		
 		if(err == CAL_RESULT_OK)
@@ -2114,7 +2115,7 @@ CALresult Context::DoDotProd(void)
 				domain.width = 1;
 				domain.height = 1;
 
-				err = module->RunPixelShader(&input,&result,NULL,&domain);
+				err = module->RunPixelShader(inputs,&result,NULL,&domain);
 
 				module->ReleaseConstantsFromContext();
 			}
