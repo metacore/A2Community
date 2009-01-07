@@ -2486,6 +2486,17 @@ const char kernelSum1CompRow_PS[] =
 
 "end\n";
 
+const char kernelConvolveLines4R_PS[] =
+"il_ps_2_0\n"
+"dcl_cb cb0[1]\n"  // [a0,a1,a2,a3], [0,0,0,0]; [0,a0,a1,a2], [a3,0,0,0]; [0,0,a0,a1], [a2,a3,0,0]; [0,0,0,a0], [a1,a2,a3,0]
+"dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__\n"
+"dcl_output_generic o0\n"
+"dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+
+"sample_resource(0)_sampler(0) r1, vWinCoord0.xy\n"
+
+"end\n";
+
 /*
 	Convolution of set of rows with 2 elements FIR kernel
 */
@@ -2578,7 +2589,7 @@ const char kernelSplitMatrixTo8Parts_PS[] =
 "dcl_literal l0, 3.0f, 8.0f, 1.0f, 2.0f\n"
 
 "flr r0.xy, vWinCoord0.xy\n"
-"mul r0.y, r0.y, l0.y\n"				// r1.xy := [x,y*8] - 2D position of the first row to copy
+"mul r0.y, r0.y, l0.y\n"					// r1.xy := [x,y*8] - 2D position of the first row to copy
 
 "add r0.__zw, r0.00yy, l0.00zw\n"			// r0 := [x,y,y+1,y+2]
 "add r1.xyzw, r0.xyzw, l0.0xxx\n"			// r1 := [x,y+3,y+4,y+5]
