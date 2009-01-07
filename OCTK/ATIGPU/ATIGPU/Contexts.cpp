@@ -100,6 +100,7 @@ CALresult Context::SetComputation(ArrayExpression* expr, Array* result, long pri
 {	
 	CALresult err;	
 	BOOL isReservedForGet0;
+	Array* arr, *arr1;
 	long i;
 
 	if(resultTemp)	
@@ -114,6 +115,58 @@ CALresult Context::SetComputation(ArrayExpression* expr, Array* result, long pri
 	isReservedForGet0 = result->isReservedForGet;
 	result->isReservedForGet = TRUE;
 
+	// check for the case when arguments are located on another device
+	err = CAL_RESULT_OK;
+	if(expr->op != OpIdentic)
+	{
+		for(i = 0; (err == CAL_RESULT_OK) && (i < 3) && (expr->args[i]); i++)
+		{
+			if(expr->args[i]->hDev != hDev)
+			{
+				arr1 = expr->args[i];
+
+				// create array copy on the local device
+				arr = arrs->NewArray(arr1->arrID,arr1->dType,arr1->nDims,arr1->size,arr1->cpuData);						
+
+				if(!arr1->parts)			
+					err = arrs->AllocateArray(arr,0);			
+				else
+					err = arrs->AllocateSplittedMatrix(arr,arr1->numParts,0);
+
+				if(err == CAL_RESULT_OK)
+				{
+					if( (err = arr1->Copy(ctx,arr)) == CAL_RESULT_OK )
+					{					
+						arr1->useCounter--;					
+						arr->useCounter++;
+						expr->args[i] = arr;					
+
+						// add to the local pool as a copy
+						arr->isCopy = TRUE;
+						arrs->Add(arr);					
+					}
+					else
+						delete arr;
+				}
+				else
+					delete arr;
+			}
+		}
+	}
+
+	if(err != CAL_RESULT_OK) // in case of an error set use counters to their previous values		
+	{			
+		for(i = 0; (i < 3) && expr->args[i]; i++){expr->args[i]->useCounter--;}	
+		result->useCounter--;
+		result->isReservedForGet = isReservedForGet0;	
+
+		delete expr;
+		expr = NULL;
+
+		return err;
+	}
+
+	// set computation accoring to the operation code
 	switch(expr->op)
 	{
 		case OpIdentic:
@@ -277,48 +330,10 @@ long ContextPool::FindUnused(void)
 CALresult Context::SetElementwise(ArrayExpression* expr, Array* result)
 {
 	CALresult err;	
-	Array* arr, *arr1;
+	Array* arr;
 	long i, j, numParts;
 
-	err = CAL_RESULT_OK;
-
-	// check for the case when array is located on another device
-	for(i = 0; (err == CAL_RESULT_OK) && (i < 2); i++)
-	{
-		if(expr->args[i]->hDev != hDev)
-		{
-			arr1 = expr->args[i];
-			
-			// create array copy on the local device
-			arr = arrs->NewArray(arr1->arrID,arr1->dType,arr1->nDims,arr1->size,arr1->cpuData);						
-
-			if(!arr1->parts)			
-				err = arrs->AllocateArray(arr,0);			
-			else
-				err = arrs->AllocateSplittedMatrix(arr,arr1->numParts,0);
-
-			if(err == CAL_RESULT_OK)
-			{
-				if( (err = arr1->Copy(ctx,arr)) == CAL_RESULT_OK )
-				{
-					arr1->useCounter--;					
-					arr->useCounter++;
-					expr->args[i] = arr;					
-
-					// add to the local pool as a copy
-					arr->isCopy = TRUE;
-					arrs->Add(arr);
-				}
-				else
-					delete arr;
-			}
-			else
-				delete arr;
-		}
-	}
-
-	if(err != CAL_RESULT_OK)
-		return err;
+	err = CAL_RESULT_OK;	
 
 	numParts = max(expr->args[0]->numParts,expr->args[1]->numParts);
 
@@ -621,51 +636,12 @@ CALresult Context::DoElementwise(void)
 CALresult Context::SetMatVecMul(ArrayExpression* expr, Array* result)
 {
 	CALresult err;
-	Array* arr, *arr1;
-	long i;
+	Array* arr;	
 
 	if(expr->args[0]->isVirtualized || expr->args[1]->isVirtualized)
 		return CAL_RESULT_NOT_SUPPORTED;
 
-	err = CAL_RESULT_OK;
-
-	// check for the case when array is located on another device
-	for(i = 0; (err == CAL_RESULT_OK) && (i < 2); i++)
-	{
-		if(expr->args[i]->hDev != hDev)
-		{
-			arr1 = expr->args[i];
-			
-			// create array copy on the local device
-			arr = arrs->NewArray(arr1->arrID,arr1->dType,arr1->nDims,arr1->size,arr1->cpuData);						
-
-			if(!arr1->parts)			
-				err = arrs->AllocateArray(arr,0);			
-			else
-				err = arrs->AllocateSplittedMatrix(arr,arr1->numParts,0);
-
-			if(err == CAL_RESULT_OK)
-			{
-				if( (err = arr1->Copy(ctx,arr)) == CAL_RESULT_OK )
-				{
-					arr1->useCounter--;					
-					arr->useCounter++;
-					expr->args[i] = arr;					
-
-					// add to the local pool as a copy
-					arr->isCopy = TRUE;
-					arrs->Add(arr);
-				}
-				else
-					delete arr;
-			}
-			else
-				delete arr;
-		}
-	}
-
-	if(err != CAL_RESULT_OK)
-		return err;
+	err = CAL_RESULT_OK;	
 
 	if(!expr->args[0]->res && !expr->args[0]->parts)
 	{
@@ -914,51 +890,13 @@ CALresult Context::DoMatVecMulSplitted(void)
 CALresult Context::SetMatMul(ArrayExpression* expr, Array* result)
 {
 	CALresult err;
-	Array* arr, *arr1;
+	Array* arr;
 	long i, j;
 
 	err = CAL_RESULT_OK;	
 
 	if(result->isVirtualized || expr->args[0]->isVirtualized || expr->args[1]->isVirtualized)
-		return CAL_RESULT_NOT_SUPPORTED;
-
-	// check for the case when array is located on another device
-	for(i = 0; (err == CAL_RESULT_OK) && (i < 2); i++)
-	{
-		if(expr->args[i]->hDev != hDev)
-		{
-			arr1 = expr->args[i];
-			
-			// create array copy on the local device
-			arr = arrs->NewArray(arr1->arrID,arr1->dType,arr1->nDims,arr1->size,arr1->cpuData);						
-
-			if(!arr1->parts)			
-				err = arrs->AllocateArray(arr,0);			
-			else
-				err = arrs->AllocateSplittedMatrix(arr,arr1->numParts,0);
-
-			if(err == CAL_RESULT_OK)
-			{
-				if( (err = arr1->Copy(ctx,arr)) == CAL_RESULT_OK )
-				{					
-					arr1->useCounter--;					
-					arr->useCounter++;
-					expr->args[i] = arr;					
-
-					// add to the local pool as a copy
-					arr->isCopy = TRUE;
-					arrs->Add(arr);					
-				}
-				else
-					delete arr;
-			}
-			else
-				delete arr;
-		}
-	}
-
-	if(err != CAL_RESULT_OK)
-		return err;
+		return CAL_RESULT_NOT_SUPPORTED;	
 
 	// set array data if necessary
 	for(i = 0; (i < 2) && (err == CAL_RESULT_OK); i++)
@@ -1137,48 +1075,13 @@ CALresult Context::DoMatMul(void)
 // set a reshape computation
 CALresult Context::SetReshape(ArrayExpression* expr, Array* result)
 {
-	Array* arr, *arr1;
+	Array* arr;
 	CALresult err;
 
 	err = CAL_RESULT_OK;
 
 	if(result == expr->args[0])	// input and output conicide -> do nothing
-		return err;
-
-	// check for the case when array is located on another device	
-	if(expr->args[0]->hDev != hDev)
-	{
-		arr1 = expr->args[0];
-
-		// create array copy on the local device
-		arr = arrs->NewArray(arr1->arrID,arr1->dType,arr1->nDims,arr1->size,arr1->cpuData);						
-
-		if(!arr1->parts)			
-			err = arrs->AllocateArray(arr,0);			
-		else
-			err = arrs->AllocateSplittedMatrix(arr,arr1->numParts,0);
-
-		if(err == CAL_RESULT_OK)
-		{
-			if( (err = arr1->Copy(ctx,arr)) == CAL_RESULT_OK )
-			{
-				arr1->useCounter--;					
-				arr->useCounter++;
-				expr->args[0] = arr;					
-
-				// add to the local pool as a copy
-				arr->isCopy = TRUE;
-				arrs->Add(arr);
-			}
-			else
-				delete arr;
-		}
-		else
-			delete arr;
-	}
-
-	if(err != CAL_RESULT_OK)
-		return err;
+		return err;	
 	
 	if(!expr->args[0]->res && !expr->args[0]->parts)
 	{
@@ -1361,7 +1264,7 @@ CALresult Context::ZeroArrayMemory(Array* arr, CALdomain* domain)
 CALresult Context::SetTranspose(ArrayExpression* expr, Array* result)
 {
 	CALresult err;	
-	Array* arr, *arr1;
+	Array* arr;
 	long i;
 
 	err = CAL_RESULT_OK;	
@@ -1372,42 +1275,7 @@ CALresult Context::SetTranspose(ArrayExpression* expr, Array* result)
 
 		if(i == result->nDims)	// identity transposition - do nothing
 			return err;
-	}
-
-	// check for the case when array is located on another device	
-	if(expr->args[0]->hDev != hDev)
-	{
-		arr1 = expr->args[0];
-
-		// create array copy on the local device
-		arr = arrs->NewArray(arr1->arrID,arr1->dType,arr1->nDims,arr1->size,arr1->cpuData);						
-
-		if(!arr1->parts)			
-			err = arrs->AllocateArray(arr,0);			
-		else
-			err = arrs->AllocateSplittedMatrix(arr,arr1->numParts,0);
-
-		if(err == CAL_RESULT_OK)
-		{
-			if( (err = arr1->Copy(ctx,arr)) == CAL_RESULT_OK )
-			{
-				arr1->useCounter--;					
-				arr->useCounter++;
-				expr->args[0] = arr;					
-
-				// add to the local pool as a copy
-				arr->isCopy = TRUE;
-				arrs->Add(arr);
-			}
-			else
-				delete arr;
-		}
-		else
-			delete arr;
-	}
-
-	if(err != CAL_RESULT_OK)
-		return err;
+	}	
 
 	if(!expr->args[0]->res && !expr->args[0]->parts)
 	{
@@ -1805,50 +1673,12 @@ CALresult Context::DoIdentic(void)
 CALresult Context::SetDotProd(ArrayExpression* expr, Array* result)
 {
 	CALresult err;	
-	Array* arr, *arr1;
+	Array* arr;
 	long i, j, numParts;
 	long size;
 
 	err = CAL_RESULT_OK;
-
-	// check for the case when array is located on another device
-	for(i = 0; (err == CAL_RESULT_OK) && (i < 2); i++)
-	{
-		if(expr->args[i]->hDev != hDev)
-		{
-			arr1 = expr->args[i];
-			
-			// create array copy on the local device
-			arr = arrs->NewArray(arr1->arrID,arr1->dType,arr1->nDims,arr1->size,arr1->cpuData);						
-
-			if(!arr1->parts)			
-				err = arrs->AllocateArray(arr,0);			
-			else
-				err = arrs->AllocateSplittedMatrix(arr,arr1->numParts,0);
-
-			if(err == CAL_RESULT_OK)
-			{
-				if( (err = arr1->Copy(ctx,arr)) == CAL_RESULT_OK )
-				{
-					arr1->useCounter--;					
-					arr->useCounter++;
-					expr->args[i] = arr;					
-
-					// add to the local pool as a copy
-					arr->isCopy = TRUE;
-					arrs->Add(arr);
-				}
-				else
-					delete arr;
-			}
-			else
-				delete arr;
-		}
-	}
-
-	if(err != CAL_RESULT_OK)
-		return err;
-
+	
 	numParts = max(expr->args[0]->numParts,expr->args[1]->numParts);
 
 	for(i = 0; (err == CAL_RESULT_OK) && (i < 2) && expr->args[i]; i++)
@@ -1913,15 +1743,13 @@ CALresult Context::SetDotProd(ArrayExpression* expr, Array* result)
 	}
 
 	if(expr->args[0]->physSize[0] > 1)
-	{		
+	{	
 		if(!expr->args[0]->parts)
 			size = max(expr->args[0]->physSize[0],expr->args[0]->physSize[1]);
 		else
-			size = max(expr->args[0]->parts[0]->physSize[0],expr->args[0]->parts[0]->physSize[1]);
-
-		size *= expr->args[0]->physNumComponents;
+			size = max(expr->args[0]->parts[0]->physSize[0],expr->args[0]->parts[0]->physSize[1]);		
 		
-		resultTemp = arrs->NewArray(-1,result->dType,1,&size,NULL);
+		resultTemp = arrs->NewArray(-1,result->dType,1,&size,NULL,1);
 		if( (err = arrs->AllocateArray(resultTemp,0)) != CAL_RESULT_OK )
 		{
 			delete resultTemp;
@@ -1940,6 +1768,7 @@ CALresult Context::DoDotProd(void)
 	CALdomain domain;	
 	Array** inputs;
 	float constData[4];
+	long i, n;
 	
 	KernelCode iKernel, iKernel1;
 	
@@ -1950,7 +1779,7 @@ CALresult Context::DoDotProd(void)
 		case TREAL:
 		{
 			if(expr->args[0]->physSize[0] > 1)
-				iKernel = KernSum1DR_PS;			
+				iKernel = KernSum1CompRow_PS;			
 			else
 				iKernel = KernDotProd1DR_PS;
 
@@ -2021,7 +1850,7 @@ CALresult Context::DoDotProd(void)
 					}						
 				}
 				constData[0] = (float)expr->args[0]->physSize[1];
-			}
+			}			
 		}
 		else	// case of splitted matrices
 		{
@@ -2052,10 +1881,8 @@ CALresult Context::DoDotProd(void)
 					default: return CAL_RESULT_INVALID_PARAMETER;
 				}									
 				constData[0] = (float)expr->args[0]->parts[0]->physSize[1];
-			}
-		}
-
-		inputs = expr->args;					
+			}						
+		}				
 
 		// get suited module
 		if(!modules[iKernel1])
@@ -2083,8 +1910,22 @@ CALresult Context::DoDotProd(void)
 					domain.y = 0;		
 					domain.width = resultTemp->physSize[1];
 					domain.height = 1;
+					
+					if(!expr->args[0]->numParts)											
+						err = module->RunPixelShader(expr->args,&resultTemp,NULL,&domain);				
+					else
+					{	
+						n = expr->args[0]->numParts;
+						inputs = new Array*[n*2];						
+						for(i = 0; i < n; i++)
+						{
+							inputs[i] = expr->args[0]->parts[i];
+							inputs[i+n] = expr->args[1]->parts[i];
+						}
 
-					err = module->RunPixelShader(inputs,&resultTemp,NULL,&domain);
+						err = module->RunPixelShader(inputs,&resultTemp,NULL,&domain);
+						delete inputs;
+					}					
 
 					module->ReleaseConstantsFromContext();
 				}

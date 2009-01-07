@@ -2,8 +2,8 @@
 #include "Arrays.h"
 #include "Common.h"
 
-Array::Array(CALdevice hDev, CALdeviceinfo* devInfo, CALdeviceattribs* devAttribs, long arrID, long dType, long nDims, long* size, void* cpuData)
-{	
+Array::Array(CALdevice hDev, CALdeviceinfo* devInfo, CALdeviceattribs* devAttribs, long arrID, long dType, long nDims, long* size, void* cpuData, long numComponents)
+{
 	long i;	
 	
 	res = 0;
@@ -25,10 +25,12 @@ Array::Array(CALdevice hDev, CALdeviceinfo* devInfo, CALdeviceattribs* devAttrib
 	this->devAttribs = devAttribs;
 	this->cpuData = cpuData;
 
-	physNumComponents = 4;	// use quads for efficient memory accesses
-	if(dType == TLONGREAL)
-		physNumComponents = min(physNumComponents,2);	
-	
+	physNumComponents = numComponents;
+	if(dType != TLONGREAL)
+		physNumComponents = min(physNumComponents,4);	
+	else
+		physNumComponents = min(physNumComponents,2);
+
 	// copy array size and count total number of elements
 	this->nDims = nDims;	
 	this->size = new long[nDims]; 	
@@ -47,7 +49,7 @@ Array::Array(CALdevice hDev, CALdeviceinfo* devInfo, CALdeviceattribs* devAttrib
 	if( ((nDims == 1) && (GetPaddedNumElements(size[0],physNumComponents) <= (long)devInfo->maxResource1DWidth)) 
 		|| ((nDims == 2) && (GetPaddedNumElements(size[1],physNumComponents) <= (long)devInfo->maxResource2DWidth) && (size[0] <= (long)devInfo->maxResource2DHeight) ) )
 	{
-		if( (nDims == 2) && (size[0] > 1) )
+		if( (nDims == 2) && (size[0] > 1) && (size[1] > 1) )
 		{			
 			physSize[0] = size[0];
 			physSize[1] = GetPaddedNumElements(size[1],physNumComponents);
@@ -63,9 +65,9 @@ Array::Array(CALdevice hDev, CALdeviceinfo* devInfo, CALdeviceattribs* devAttrib
 			physSize[0] = 1;
 			if(nDims == 1)
 				physSize[1] = GetPaddedNumElements(size[0],physNumComponents);
-			else // matrix with a single row, -> vector
+			else // matrix with a single row/column, -> vector
 			{
-				physSize[1] = GetPaddedNumElements(size[1],physNumComponents);
+				physSize[1] = GetPaddedNumElements(max(size[0],size[1]),physNumComponents);
 				this->nDims = 1;
 			}
 		}		
@@ -93,6 +95,101 @@ Array::Array(CALdevice hDev, CALdeviceinfo* devInfo, CALdeviceattribs* devAttrib
 	// total number of physical elements and total physical data size in bytes
 	physNumElements = physSize[0]*physSize[1];
 	physDataSize = physNumElements*physElemSize;	
+}
+
+Array::Array(CALdevice hDev, CALdeviceinfo* devInfo, CALdeviceattribs* devAttribs, long arrID, long dType, long nDims, long* size, void* cpuData)
+{	
+	long i;	
+	
+	res = 0;
+	numParts = 0;	
+	useCounter = 0;
+
+	cpuData = NULL;
+	parts = NULL;
+
+	isReservedForGet = FALSE;
+	isVirtualized = FALSE;
+	isGlobalBuf = FALSE;
+	isCopy = FALSE;
+
+	this->hDev = hDev;
+	this->arrID = arrID;		
+	this->dType = dType;
+	this->devInfo = devInfo;
+	this->devAttribs = devAttribs;
+	this->cpuData = cpuData;
+
+	physNumComponents = 4;	// use quads for efficient memory accesses
+	if(dType != TLONGREAL)
+		physNumComponents = min(physNumComponents,4);	
+	else
+		physNumComponents = min(physNumComponents,2);
+
+	// copy array size and count total number of elements
+	this->nDims = nDims;	
+	this->size = new long[nDims]; 	
+	numElements = 1;
+	for(i = 0; i < nDims; i++)
+	{
+		this->size[i] = size[i];
+		numElements *= size[i];
+	}
+
+	// total data size in bytes
+	elemSize = GetElementSize(dType);	
+	dataSize = numElements*elemSize;			
+
+	// does it require virtualization?
+	if( ((nDims == 1) && (GetPaddedNumElements(size[0],physNumComponents) <= (long)devInfo->maxResource1DWidth)) 
+		|| ((nDims == 2) && (GetPaddedNumElements(size[1],physNumComponents) <= (long)devInfo->maxResource2DWidth) && (size[0] <= (long)devInfo->maxResource2DHeight) ) )
+	{
+		if( (nDims == 2) && (size[0] > 1) && (size[1] > 1) )
+		{			
+			physSize[0] = size[0];
+			physSize[1] = GetPaddedNumElements(size[1],physNumComponents);
+
+			// padding of matrix height for convenient handling with matrix multiplication
+			if(physSize[0] <= 4)
+				physSize[0] = 4;	// padding to multiple of 4
+			else
+				physSize[0] = 8*GetPaddedNumElements(physSize[0],8);	// padding to multiple of 8	
+		}
+		else
+		{
+			physSize[0] = 1;
+			if(nDims == 1)
+				physSize[1] = GetPaddedNumElements(size[0],physNumComponents);
+			else // matrix with a single row/column, -> vector
+			{
+				physSize[1] = GetPaddedNumElements(max(size[0],size[1]),physNumComponents);
+				this->nDims = 1;
+			}
+		}		
+		
+		// compute pitch in physical elements
+		physPitch = (physSize[1]/devAttribs->pitch_alignment)*devAttribs->pitch_alignment;
+		if(physSize[1] % devAttribs->pitch_alignment) physPitch += devAttribs->pitch_alignment;		
+	}
+	else	// virtualization is required -> represent array in tiled memory layout
+	{
+		isVirtualized = TRUE;		
+
+		physNumComponents = 1;	// this is for more convenient memory access
+		
+		physSize[1] = min(numElements,(long)devInfo->maxResource2DWidth);		
+		physSize[0] = GetPaddedNumElements(numElements,physSize[1]);
+
+		physPitch = devInfo->maxResource2DWidth;		
+	}	
+
+	// format and size of a physical element
+	dFormat = GetFormat(dType,physNumComponents);
+	physElemSize = elemSize*physNumComponents;
+
+	// total number of physical elements and total physical data size in bytes
+	physNumElements = physSize[0]*physSize[1];
+	physDataSize = physNumElements*physElemSize;
 }
 
 
@@ -164,6 +261,16 @@ long ArrayPool::Find(long arrID)
 		return i; 
 	else 
 		return -1;
+}
+
+Array* ArrayPool::NewArray(long arrID, long dType, long nDims, long* size, void* cpuData, long numComponents)
+{
+	Array* arr;
+	
+	arr = new Array(hDev,devInfo,devAttribs,arrID,dType,nDims,size,cpuData,numComponents);	
+	arr->pool = this;	
+
+	return arr;
 }
 
 // create a new array object without allocation

@@ -57,7 +57,7 @@ BOOL APIENTRY DllMain( HMODULE hModule,
 				return FALSE;
 	
 			// initialize CAL interface
-			err = calInit(); isInitialized = (err == CAL_RESULT_OK);
+			err = calInit(); isInitialized = (err == CAL_RESULT_OK) || (err == CAL_RESULT_ALREADY);
 	
 			if(isInitialized)
 			{	

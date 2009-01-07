@@ -7,6 +7,7 @@ class Array
 {
 public:	
 	Array(CALdevice hDev, CALdeviceinfo* devInfo, CALdeviceattribs* devAttribs, long arrID, long dType, long nDims, long* size, void* cpuData);
+	Array(CALdevice hDev, CALdeviceinfo* devInfo, CALdeviceattribs* devAttribs, long arrID, long dType, long nDims, long* size, void* cpuData, long numComponents);
 	~Array(void);
 
 	// free array resource
@@ -94,6 +95,7 @@ public:
 	CALdeviceattribs* devAttribs;
 
 	// create a new array object (without allocation)	
+	Array* NewArray(long arrID, long dType, long nDims, long* size, void* cpuData, long numComponents);
 	Array* NewArray(long arrID, long dType, long nDims, long* size, void* cpuData);		
 };
 

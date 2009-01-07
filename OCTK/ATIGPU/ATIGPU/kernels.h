@@ -28,7 +28,7 @@ KernEwMulContract4PartsAlongX4R_PS,
 KernEwMulContract4PartsAlongY4R_PS,
 KernEwMulContractAlongX1R_PS,
 KernEwMulContractAlongY1R_PS,
-KernSum1DR_PS,
+KernSum1CompRow_PS,
 
 // matrix vector multiplication
 KernMatVecR_PS,
@@ -1980,7 +1980,9 @@ const char kernelGetSubMat4DWNoLeftBounds_PS[] =
 "end\n";
 
 /*
-	performs contract_alongX(A.*B), where A and B are arrays with 4 component elements
+	performs contract_alongX(A.*B), where A and B are matrices with 4 component elements
+
+	result is 1 component row
 */
 const char kernelEwMulContractAlongX4R_PS[] =
 "il_ps_2_0\n"
@@ -2013,13 +2015,15 @@ const char kernelEwMulContractAlongX4R_PS[] =
 
 "endloop\n"
 
-"mov o0, r4\n"
+"dp4 o0.x, r4, r4.1111\n"	// sum up all r4 components
 
 "end\n";
 
 /*
 	performs contract_alongX(A.*B), where A and B are matrices with 4 component elements 
 	splitted to 8 parts
+
+	result is 1 component row
 */
 const char kernelEwMulContract8PartsAlongX4R_PS[] =
 "il_ps_2_0\n"
@@ -2063,40 +2067,42 @@ const char kernelEwMulContract8PartsAlongX4R_PS[] =
 
 "	sample_resource(0)_sampler(0) r1, r0.xy\n"
 "	sample_resource(1)_sampler(1) r3, r0.xy\n"
-"	sample_resource(2)_sampler(2) r4, r0.xy\n"
-"	sample_resource(3)_sampler(3) r5, r0.xy\n"
-"	sample_resource(4)_sampler(4) r6, r0.xy\n"
-"	sample_resource(5)_sampler(5) r7, r0.xy\n"
-"	sample_resource(6)_sampler(6) r8, r0.xy\n"
-"	sample_resource(7)_sampler(7) r9, r0.xy\n"
+"	sample_resource(2)_sampler(2) r5, r0.xy\n"
+"	sample_resource(3)_sampler(3) r6, r0.xy\n"
+"	sample_resource(4)_sampler(4) r7, r0.xy\n"
+"	sample_resource(5)_sampler(5) r8, r0.xy\n"
+"	sample_resource(6)_sampler(6) r9, r0.xy\n"
+"	sample_resource(7)_sampler(7) r10, r0.xy\n"
 
-"	sample_resource(8)_sampler(8) r10, r0.xy\n"
-"	sample_resource(9)_sampler(9) r11, r0.xy\n"
-"	sample_resource(10)_sampler(10) r12, r0.xy\n"
-"	sample_resource(11)_sampler(11) r13, r0.xy\n"
-"	sample_resource(12)_sampler(12) r14, r0.xy\n"
-"	sample_resource(13)_sampler(13) r15, r0.xy\n"
-"	sample_resource(14)_sampler(14) r16, r0.xy\n"
-"	sample_resource(15)_sampler(15) r17, r0.xy\n"
+"	sample_resource(8)_sampler(8) r11, r0.xy\n"
+"	sample_resource(9)_sampler(9) r12, r0.xy\n"
+"	sample_resource(10)_sampler(10) r13, r0.xy\n"
+"	sample_resource(11)_sampler(11) r14, r0.xy\n"
+"	sample_resource(12)_sampler(12) r15, r0.xy\n"
+"	sample_resource(13)_sampler(13) r16, r0.xy\n"
+"	sample_resource(14)_sampler(14) r17, r0.xy\n"
+"	sample_resource(15)_sampler(15) r18, r0.xy\n"
 
-"	mad r4, r1, r10, r4\n"
-"	mad r4, r3, r11, r4\n"
-"	mad r4, r4, r12, r4\n"
+"	mad r4, r1, r11, r4\n"
+"	mad r4, r3, r12, r4\n"
 "	mad r4, r5, r13, r4\n"
 "	mad r4, r6, r14, r4\n"
 "	mad r4, r7, r15, r4\n"
 "	mad r4, r8, r16, r4\n"
 "	mad r4, r9, r17, r4\n"
+"	mad r4, r10, r18, r4\n"
 
 "endloop\n"
 
-"mov o0, r4\n"
+"dp4 o0.x, r4, r4.1111\n"	// sum up all r4 components
 
 "end\n";
 
 /*
 	performs contract_alongX(A.*B), where A and B are matrices with 4 component elements 
 	splitted to 4 parts
+
+	result is 1 component row
 */
 const char kernelEwMulContract4PartsAlongX4R_PS[] =
 "il_ps_2_0\n"
@@ -2108,6 +2114,7 @@ const char kernelEwMulContract4PartsAlongX4R_PS[] =
 "dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
 "dcl_resource_id(2)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
 "dcl_resource_id(3)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+
 "dcl_resource_id(4)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
 "dcl_resource_id(5)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
 "dcl_resource_id(6)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
@@ -2131,22 +2138,22 @@ const char kernelEwMulContract4PartsAlongX4R_PS[] =
 
 "	sample_resource(0)_sampler(0) r1, r0.xy\n"
 "	sample_resource(1)_sampler(1) r3, r0.xy\n"
-"	sample_resource(2)_sampler(2) r4, r0.xy\n"
-"	sample_resource(3)_sampler(3) r5, r0.xy\n"
+"	sample_resource(2)_sampler(2) r5, r0.xy\n"
+"	sample_resource(3)_sampler(3) r6, r0.xy\n"
 
-"	sample_resource(4)_sampler(4) r6, r0.xy\n"
-"	sample_resource(5)_sampler(5) r7, r0.xy\n"
-"	sample_resource(6)_sampler(6) r8, r0.xy\n"
-"	sample_resource(7)_sampler(7) r9, r0.xy\n"
+"	sample_resource(4)_sampler(4) r7, r0.xy\n"
+"	sample_resource(5)_sampler(5) r8, r0.xy\n"
+"	sample_resource(6)_sampler(6) r9, r0.xy\n"
+"	sample_resource(7)_sampler(7) r10, r0.xy\n"
 
-"	mad r4, r1, r6, r4\n"
-"	mad r4, r3, r7, r4\n"
-"	mad r4, r4, r8, r4\n"
+"	mad r4, r1, r7, r4\n"
+"	mad r4, r3, r8, r4\n"
 "	mad r4, r5, r9, r4\n"
+"	mad r4, r6, r10, r4\n"
 
 "endloop\n"
 
-"mov o0, r4\n"
+"dp4 o0.x, r4, r4.1111\n"	// sum up all r4 components
 
 "end\n";
 
@@ -2184,12 +2191,14 @@ const char kernelEwMulContractAlongX1R_PS[] =
 
 "endloop\n"
 
-"mov o0.x000, r4.x\n"
+"mov o0.x, r4.x\n"
 
 "end\n";
 
 /*
-	performs contract_alongY(A.*B), where A and B are arrays with 4 component elements 
+	performs contract_alongY(A.*B), where A and B are matrices with 4 component elements 
+
+	result is 1 component row
 */
 const char kernelEwMulContractAlongY4R_PS[] =
 "il_ps_2_0\n"
@@ -2222,13 +2231,15 @@ const char kernelEwMulContractAlongY4R_PS[] =
 
 "endloop\n"
 
-"mov o0, r4\n"
+"dp4 o0.x, r4, r4.1111\n"	// sum up all r4 components
 
 "end\n";
 
 /*
 	performs contract_alongY(A.*B), where A and B are matrices with 4 component elements 
 	splitted to 8 parts
+
+	result is 1 component row
 */
 const char kernelEwMulContract8PartsAlongY4R_PS[] =
 "il_ps_2_0\n"
@@ -2272,40 +2283,42 @@ const char kernelEwMulContract8PartsAlongY4R_PS[] =
 
 "	sample_resource(0)_sampler(0) r1, r0.xy\n"
 "	sample_resource(1)_sampler(1) r3, r0.xy\n"
-"	sample_resource(2)_sampler(2) r4, r0.xy\n"
-"	sample_resource(3)_sampler(3) r5, r0.xy\n"
-"	sample_resource(4)_sampler(4) r6, r0.xy\n"
-"	sample_resource(5)_sampler(5) r7, r0.xy\n"
-"	sample_resource(6)_sampler(6) r8, r0.xy\n"
-"	sample_resource(7)_sampler(7) r9, r0.xy\n"
+"	sample_resource(2)_sampler(2) r5, r0.xy\n"
+"	sample_resource(3)_sampler(3) r6, r0.xy\n"
+"	sample_resource(4)_sampler(4) r7, r0.xy\n"
+"	sample_resource(5)_sampler(5) r8, r0.xy\n"
+"	sample_resource(6)_sampler(6) r9, r0.xy\n"
+"	sample_resource(7)_sampler(7) r10, r0.xy\n"
 
-"	sample_resource(8)_sampler(8) r10, r0.xy\n"
-"	sample_resource(9)_sampler(9) r11, r0.xy\n"
-"	sample_resource(10)_sampler(10) r12, r0.xy\n"
-"	sample_resource(11)_sampler(11) r13, r0.xy\n"
-"	sample_resource(12)_sampler(12) r14, r0.xy\n"
-"	sample_resource(13)_sampler(13) r15, r0.xy\n"
-"	sample_resource(14)_sampler(14) r16, r0.xy\n"
-"	sample_resource(15)_sampler(15) r17, r0.xy\n"
+"	sample_resource(8)_sampler(8) r11, r0.xy\n"
+"	sample_resource(9)_sampler(9) r12, r0.xy\n"
+"	sample_resource(10)_sampler(10) r13, r0.xy\n"
+"	sample_resource(11)_sampler(11) r14, r0.xy\n"
+"	sample_resource(12)_sampler(12) r15, r0.xy\n"
+"	sample_resource(13)_sampler(13) r16, r0.xy\n"
+"	sample_resource(14)_sampler(14) r17, r0.xy\n"
+"	sample_resource(15)_sampler(15) r18, r0.xy\n"
 
-"	mad r4, r1, r10, r4\n"
-"	mad r4, r3, r11, r4\n"
-"	mad r4, r4, r12, r4\n"
+"	mad r4, r1, r11, r4\n"
+"	mad r4, r3, r12, r4\n"
 "	mad r4, r5, r13, r4\n"
 "	mad r4, r6, r14, r4\n"
 "	mad r4, r7, r15, r4\n"
 "	mad r4, r8, r16, r4\n"
 "	mad r4, r9, r17, r4\n"
+"	mad r4, r10, r18, r4\n"
 
 "endloop\n"
 
-"mov o0, r4\n"
+"dp4 o0.x, r4, r4.1111\n"	// sum up all r4 components
 
 "end\n";
 
 /*
 	performs contract_alongY(A.*B), where A and B are matrices with 4 component elements 
 	splitted to 4 parts
+
+	result is 1 component row
 */
 const char kernelEwMulContract4PartsAlongY4R_PS[] =
 "il_ps_2_0\n"
@@ -2341,22 +2354,22 @@ const char kernelEwMulContract4PartsAlongY4R_PS[] =
 
 "	sample_resource(0)_sampler(0) r1, r0.xy\n"
 "	sample_resource(1)_sampler(1) r3, r0.xy\n"
-"	sample_resource(2)_sampler(2) r4, r0.xy\n"
-"	sample_resource(3)_sampler(3) r5, r0.xy\n"
+"	sample_resource(2)_sampler(2) r5, r0.xy\n"
+"	sample_resource(3)_sampler(3) r6, r0.xy\n"
 
-"	sample_resource(4)_sampler(4) r6, r0.xy\n"
-"	sample_resource(5)_sampler(5) r7, r0.xy\n"
-"	sample_resource(6)_sampler(6) r8, r0.xy\n"
-"	sample_resource(7)_sampler(7) r9, r0.xy\n"
+"	sample_resource(4)_sampler(4) r7, r0.xy\n"
+"	sample_resource(5)_sampler(5) r8, r0.xy\n"
+"	sample_resource(6)_sampler(6) r9, r0.xy\n"
+"	sample_resource(7)_sampler(7) r10, r0.xy\n"
 
-"	mad r4, r1, r6, r4\n"
-"	mad r4, r3, r7, r4\n"
-"	mad r4, r4, r8, r4\n"
+"	mad r4, r1, r7, r4\n"
+"	mad r4, r3, r8, r4\n"
 "	mad r4, r5, r9, r4\n"
+"	mad r4, r6, r10, r4\n"
 
 "endloop\n"
 
-"mov o0, r4\n"
+"dp4 o0.x, r4, r4.1111\n"	// sum up all r4 components
 
 "end\n";
 
@@ -2372,76 +2385,30 @@ const char kernelEwMulContractAlongY1R_PS[] =
 "dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
 "dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
 
-"dcl_literal l0, 4.0f, 1.0f, 0.0f, 0.0f\n"
-
 "mov r4, r4.0000\n"	// initialize accumulator
 
 "flr r0.x0, vWinCoord0.x\n"
-"mul r0.x, r0.x, l0.x\n"
-"sub r0.y, r0.y, l0.x\n"				// account first increment
+"sub r0.y, r0.y, r0.1\n"				// account first increment
 
 "mov r2.0y00, cb0[0].x\n"				// r2.x is the loop counter, r2.y := A.Height
 "sub r2.x, r2.x, r2.1\n"				// account first increment
 
 "whileloop\n"
 
-"	add r0.y, r0.y, l0.x\n"
-"	add r2.x, r2.x, l0.x\n"				// loop counter ++
+"	add r0.y, r0.y, r0.1\n"
+"	add r2.x, r2.x, r2.1\n"				// loop counter ++
 
 "   ge r2.z, r0.y, r2.y\n"				// while(loop counter < A.Height)
 "   break_logicalnz r2.z\n"
 
-"	sample_resource(0)_sampler(0)_aoffimmi(0,0,0) r1.x, r0.xy\n"
-"	sample_resource(0)_sampler(0)_aoffimmi(1,0,0) r1.y, r0.xy\n"
-"	sample_resource(0)_sampler(0)_aoffimmi(2,0,0) r1.z, r0.xy\n"
-"	sample_resource(0)_sampler(0)_aoffimmi(3,0,0) r1.w, r0.xy\n"
+"	sample_resource(0)_sampler(0) r1.x, r0.xy\n"
+"	sample_resource(1)_sampler(1) r3.x, r0.xy\n"
 
-"	sample_resource(1)_sampler(1)_aoffimmi(0,0,0) r3.x, r0.xy\n"
-"	sample_resource(1)_sampler(1)_aoffimmi(1,0,0) r3.y, r0.xy\n"
-"	sample_resource(1)_sampler(1)_aoffimmi(2,0,0) r3.z, r0.xy\n"
-"	sample_resource(1)_sampler(1)_aoffimmi(3,0,0) r3.w, r0.xy\n"
-
-// 
-"	sample_resource(0)_sampler(0)_aoffimmi(0,1,0) r5.x, r0.xy\n"
-"	sample_resource(0)_sampler(0)_aoffimmi(1,1,0) r5.y, r0.xy\n"
-"	sample_resource(0)_sampler(0)_aoffimmi(2,1,0) r5.z, r0.xy\n"
-"	sample_resource(0)_sampler(0)_aoffimmi(3,1,0) r5.w, r0.xy\n"
-
-"	sample_resource(1)_sampler(1)_aoffimmi(0,1,0) r6.x, r0.xy\n"
-"	sample_resource(1)_sampler(1)_aoffimmi(1,1,0) r6.y, r0.xy\n"
-"	sample_resource(1)_sampler(1)_aoffimmi(2,1,0) r6.z, r0.xy\n"
-"	sample_resource(1)_sampler(1)_aoffimmi(3,1,0) r6.w, r0.xy\n"
-
-// 
-"	sample_resource(0)_sampler(0)_aoffimmi(0,2,0) r7.x, r0.xy\n"
-"	sample_resource(0)_sampler(0)_aoffimmi(1,2,0) r7.y, r0.xy\n"
-"	sample_resource(0)_sampler(0)_aoffimmi(2,2,0) r7.z, r0.xy\n"
-"	sample_resource(0)_sampler(0)_aoffimmi(3,2,0) r7.w, r0.xy\n"
-
-"	sample_resource(1)_sampler(1)_aoffimmi(0,2,0) r8.x, r0.xy\n"
-"	sample_resource(1)_sampler(1)_aoffimmi(1,2,0) r8.y, r0.xy\n"
-"	sample_resource(1)_sampler(1)_aoffimmi(2,2,0) r8.z, r0.xy\n"
-"	sample_resource(1)_sampler(1)_aoffimmi(3,2,0) r8.w, r0.xy\n"
-
-// 
-"	sample_resource(0)_sampler(0)_aoffimmi(0,3,0) r9.x, r0.xy\n"
-"	sample_resource(0)_sampler(0)_aoffimmi(1,3,0) r9.y, r0.xy\n"
-"	sample_resource(0)_sampler(0)_aoffimmi(2,3,0) r9.z, r0.xy\n"
-"	sample_resource(0)_sampler(0)_aoffimmi(3,3,0) r9.w, r0.xy\n"
-
-"	sample_resource(1)_sampler(1)_aoffimmi(0,3,0) r10.x, r0.xy\n"
-"	sample_resource(1)_sampler(1)_aoffimmi(1,3,0) r10.y, r0.xy\n"
-"	sample_resource(1)_sampler(1)_aoffimmi(2,3,0) r10.z, r0.xy\n"
-"	sample_resource(1)_sampler(1)_aoffimmi(3,3,0) r10.w, r0.xy\n"
-
-"	mad r4, r1, r3, r4\n"
-"	mad r4, r5, r6, r4\n"
-"	mad r4, r7, r8, r4\n"
-"	mad r4, r9, r10, r4\n"
+"	mad r4.x, r1.x, r3.x, r4.x\n"
 
 "endloop\n"
 
-"mov o0, r4\n"
+"mov o0.x, r4.x\n"
 
 "end\n";
 
@@ -2483,9 +2450,9 @@ const char kernelDotProd1DR_PS[] =
 "end\n";
 
 /*
-	Sum of all elements of a 1D array
+	Sum of all elements of a 1 component row
 */
-const char kernelSum1DR_PS[] =
+const char kernelSum1CompRow_PS[] =
 "il_ps_2_0\n"
 "dcl_cb cb0[1]\n"  // [A.physWidth,...]
 "dcl_output_generic o0\n"
@@ -2507,13 +2474,13 @@ const char kernelSum1DR_PS[] =
 "   ge r2.z, r2.x, r2.y\n"				// while(loop counter < A.width)
 "   break_logicalnz r2.z\n"
 
-"	sample_resource(0)_sampler(0) r1, r0.xy\n"
+"	sample_resource(0)_sampler(0) r1.x, r0.xy\n"
 
-"	add r4, r4, r1\n"
+"	add r4.x, r4.x, r1.x\n"
 
 "endloop\n"
 
-"dp4 o0.x000, r4, r4.1111\n"
+"mov o0, r4\n"
 
 "end\n";
 
