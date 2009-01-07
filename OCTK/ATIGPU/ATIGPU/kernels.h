@@ -30,6 +30,8 @@ KernEwMulContractAlongX1R_PS,
 KernEwMulContractAlongY1R_PS,
 KernSum1CompRow_PS,
 
+KernConvolveRows2R_PS,
+
 // matrix vector multiplication
 KernMatVecR_PS,
 KernMatVec4PartsR_PS,
@@ -2481,6 +2483,50 @@ const char kernelSum1CompRow_PS[] =
 "endloop\n"
 
 "mov o0, r4\n"
+
+"end\n";
+
+/*
+	Convolution of set of rows with 2 elements FIR kernel
+*/
+const char kernelConvolveRows2R_PS[] = 
+"il_ps_2_0\n"
+"dcl_output_generic o0\n"
+"dcl_cb cb0[2]\n"	// [h0,h1,0,0],[0,0,0,0] or [0,0,0,h0],[h1,0,0,0]
+"dcl_cb cb1[2]\n"	// [0,h0,h1,0],[0,0,0,0] or [0,0,0,0],[h0,h1,0,0]
+"dcl_cb cb2[2]\n"	// [0,0,h0,h1],[0,0,0,0] or [0,0,0,0],[0,h0,h1,0]
+"dcl_cb cb3[2]\n"	// [0,0,0,h0],[h1,0,0,0] or [0,0,0,0],[0,0,h0,h1]
+"dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__\n"
+"dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+
+"eq r3.x, cb0[1].x, r3.0\n"
+"if_logicalnz r3.x\n"	// if cb0[1].x == 0
+"	sample_resource(0)_sampler(0) r1, vWinCoord0.xy\n"
+"	sample_resource(0)_sampler(0)_aoffimmi(1,0,0) r2.x000, vWinCoord0.xy\n"
+
+"	mul r4, cb0[0], r1\n"
+"	mul r5, cb1[0], r1\n"
+"	mul r6, cb2[0], r1\n"
+
+"	mul r7, cb3[0], r1\n"
+"	mad r7, cb3[1], r2, r7\n"
+
+"else\n"
+"	sample_resource(0)_sampler(0) r1, vWinCoord0.xy\n"
+"	sample_resource(0)_sampler(0)_aoffimmi(-1,0,0) r2.000w, vWinCoord0.xy\n"
+
+"	mul r4, cb0[1], r1\n"
+"	mad r4, cb0[0], r2, r4\n"
+
+"	mul r5, cb1[1], r1\n"
+"	mul r6, cb2[1], r1\n"
+"	mul r7, cb3[1], r1\n"
+"endif\n"
+
+"dp4 o0.x, r4, r4.1111\n"
+"dp4 o0.y, r5, r5.1111\n"
+"dp4 o0.z, r6, r6.1111\n"
+"dp4 o0.w, r7, r7.1111\n"
 
 "end\n";
 

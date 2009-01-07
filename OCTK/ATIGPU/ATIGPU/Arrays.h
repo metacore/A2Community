@@ -112,5 +112,5 @@ public:
 	long nDims;			// number of dimensions of expression result
 	long* size;			// size of expression result
 	long* transpDims;	// transposed dimensions in case of transposition operation
-	Array* args[3];		// expression arguments
+	Array* args[3];		// expression arguments	
 };

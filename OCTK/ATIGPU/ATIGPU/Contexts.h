@@ -77,12 +77,18 @@ public:
 	Array* result;					// result array for current computation
 	Array* resultTemp;				// a temporary result array
 
+	Array* convArr;					// input array for convolution
+	void* convKernel;				// FIR kernel used for convolution
+	long convKernelLength;			// FIR kernel length
+	long convHotSpot;					// FIR kernel hot spot
+
 	CALdeviceinfo* devInfo;			// device info
 	CALdeviceattribs* devAttribs;	// device attributes 	
 
 	BOOL counterExtSupported;		// TRUE when counter extension is supported	
 	CALcounter idleCounter;			// GPU Idle counter
 	CALcounter cacheHitCounter;		// GPU cache hit counter	
+
 	// perform a matrix vector multiplication
 	CALresult DoMatVecMul(void);
 	// perform matrix vector multiplication for the case when matrix is splitted into parts
@@ -109,6 +115,10 @@ public:
 	CALresult DoDotProd(void);
 	// set a dot product computation
 	CALresult SetDotProd(ArrayExpression* expr, Array* result);
+	// setup a convolve computation
+	CALresult SetConvolveRows(Array* arr, Array* result, void* kernel, long kernelLength, long hotSpot);
+	// perform a convolve computation
+	CALresult DoConvolveRows(void);
 };
 
 class ContextPool :

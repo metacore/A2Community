@@ -659,3 +659,126 @@ ATIGPU_API long GetCacheHitCounter(long devNum, long ctxNum, float* counterVal)
 
 	return dev->ctxs->Get(ctxNum)->GetCacheHitCounter(counterVal);
 }
+
+/*
+	Setup a convolve computation
+
+	devNum - device number
+	ctxNum - compute context number
+	arrDesc - input 2D array description
+	resultDesc - resulting array description
+	kernel - pointer to the FIR kernel samples
+	kernelLength - length of the FIR kernel
+	hotSpot - kernel hot spot
+	priority - computation priority number
+	flags - flags (currently unused)
+
+	returns error code
+*/
+ATIGPU_API long SetConvolveRows(
+						   long devNum, 
+						   long ctxNum,
+						   ArrayDesc* arrDesc,
+						   ArrayDesc* resultDesc,
+						   void* kernel,
+						   long kernelLength,
+						   long hotSpot,
+						   long priority,
+						   long flags
+						   )
+{
+	Device* dev;	
+	Context* context;
+	Array* arr, *arr1;	
+	long j, ind;
+
+	if(!isInitialized) 
+		return CAL_RESULT_NOT_INITIALIZED;
+	if( (devNum < 0) || (devNum >= devs->Length()) ) 
+		return CAL_RESULT_INVALID_PARAMETER;	
+	
+	dev = devs->Get(devNum);	
+
+	if( (ctxNum < 0) || (ctxNum >= dev->ctxs->Length()) ) 
+		return CAL_RESULT_INVALID_PARAMETER;		
+
+	// get context object
+	context = dev->ctxs->Get(ctxNum);
+
+	// Input array
+
+	// look for already existing array
+	j = -1;
+	if( (ind = dev->arrs->Find(arrDesc->id)) == -1 )	// first search on the local device
+	{
+		// search on all other available devices									
+		do{	
+			j++;
+			if(j != devNum)
+				ind = devs->Get(j)->arrs->Find(arrDesc->id);								
+		}
+		while( (j < devs->Length()-1) && (ind == -1) );
+	}
+
+	if(ind == -1)	// create a new array
+	{		
+		arr = dev->arrs->NewArray(arrDesc->id,arrDesc->dType,arrDesc->nDims,arrDesc->size,arrDesc->data);			
+		arr->cpuData = arrDesc->data;
+		dev->arrs->Add(arr);	// add new array to the pool
+	}
+	else	// use already existing array	
+	{
+		if(j == -1)
+			arr = dev->arrs->Get(ind);	
+		else
+			arr = devs->Get(j)->arrs->Get(ind);
+	}
+
+	//	Result array	
+
+	// look for already existing array	
+	if( (ind = dev->arrs->Find(resultDesc->id)) == -1 )	// first search on the local device
+	{
+		// search on all other available devices
+		j = -1;
+		do{	
+			j++;
+			if(j != devNum)
+				ind = devs->Get(j)->arrs->Find(resultDesc->id);							
+		}
+		while( (j < devs->Length()-1) && (ind == -1) );
+	}
+	
+	if(ind == -1)	// create a new array
+	{	
+		arr1 = dev->arrs->NewArray(resultDesc->id,resultDesc->dType,resultDesc->nDims,resultDesc->size,resultDesc->data);
+		arr1->cpuData = resultDesc->data;
+		dev->arrs->Add(arr1);	// add new array to the pool
+	}
+	else	// use already existing array	
+	{
+		if(j == -1)
+			arr1 = dev->arrs->Get(ind);	
+		else
+			arr1 = devs->Get(j)->arrs->Get(ind);
+
+		// if array size and type do not match with actual expression size and type
+		if( (arr1->dType != arr->dType) || !EqualSizes(arr1->nDims,arr1->size,arr->nDims,arr->size) )
+		{				
+			if(arr1 != arr)
+			{
+				delete arr1;
+				arr1 = dev->arrs->NewArray(resultDesc->id,resultDesc->dType,resultDesc->nDims,resultDesc->size,resultDesc->data);				
+				devs->Get(j)->arrs->Set(ind,arr1);
+			}
+			else
+			{
+				arr1->arrID = -3;	// set for further deletion and as a flag that it is overwritten result array
+				arr1 = dev->arrs->NewArray(resultDesc->id,resultDesc->dType,resultDesc->nDims,resultDesc->size,resultDesc->data);
+				devs->Get(j)->arrs->Add(arr1);
+			}
+		}
+	}
+
+	return context->SetConvolveRows(arr,arr1,kernel,kernelLength,hotSpot);
+}

@@ -649,6 +649,7 @@ CALresult ArrayPool::AllocateArray(Array* arr, CALuint flags)
 	long ind;
 
 	_ASSERT(arr);
+	_ASSERT(arr->pool == this);
 	
 	err = arr->AllocateRes(flags);	
 	while( (err == CAL_RESULT_ERROR) && ((ind = FindUnused()) >= 0) )
@@ -669,6 +670,7 @@ CALresult ArrayPool::AllocateSplittedMatrix(Array* arr, long numParts, CALuint f
 	long i, size[2];	
 
 	_ASSERT(arr);
+	_ASSERT(arr->pool == this);
 	_ASSERT(arr->nDims == 2);
 	_ASSERT(!arr->parts);
 

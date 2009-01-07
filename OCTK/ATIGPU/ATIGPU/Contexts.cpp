@@ -11,6 +11,8 @@ Context::Context(CALdevice hDev, CALdeviceinfo* devInfo, CALdeviceattribs* devAt
 	expr = NULL;
 	result = NULL;
 	resultTemp = NULL;
+	convArr = NULL;
+	convKernel = NULL;
 
 	idleCounter = 0;
 	cacheHitCounter = 0;
@@ -107,6 +109,9 @@ CALresult Context::SetComputation(ArrayExpression* expr, Array* result, long pri
 	{
 		delete resultTemp;
 		resultTemp = NULL;
+
+		if(convArr)		
+			convArr = NULL;		
 	}
 
 	// increment use counters beforehand!	
@@ -151,10 +156,21 @@ CALresult Context::SetComputation(ArrayExpression* expr, Array* result, long pri
 				else
 					delete arr;
 			}
+		}		
+
+		if( (err == CAL_RESULT_OK) && (result->hDev != hDev) ) // if result array resides on another device
+		{		
+			arr = arrs->NewArray(result->arrID,result->dType,result->nDims,result->size,result->cpuData);
+						
+			((ArrayPool*)result->pool)->Remove(result);
+			result = arr;
+			result->useCounter++;
+			result->isReservedForGet = TRUE;
+			arrs->Add(result);			
 		}
 	}
 
-	if(err != CAL_RESULT_OK) // in case of an error set use counters to their previous values		
+	if(err != CAL_RESULT_OK) // in case of an error set use counters to their previous values				
 	{			
 		for(i = 0; (i < 3) && expr->args[i]; i++){expr->args[i]->useCounter--;}	
 		result->useCounter--;
@@ -330,7 +346,6 @@ long ContextPool::FindUnused(void)
 CALresult Context::SetElementwise(ArrayExpression* expr, Array* result)
 {
 	CALresult err;	
-	Array* arr;
 	long i, j, numParts;
 
 	err = CAL_RESULT_OK;	
@@ -386,35 +401,17 @@ CALresult Context::SetElementwise(ArrayExpression* expr, Array* result)
 		if(!result->res)	
 		{
 			result->Free();
-			err = ((ArrayPool*)result->pool)->AllocateArray(result,0);			
+			err = arrs->AllocateArray(result,0);			
 		}
 	}
 	else if(!result->parts)	// if array resides in the memory as a solid 2D memory piece
 	{
 		result->Free();
-		err = ((ArrayPool*)result->pool)->AllocateSplittedMatrix(result,numParts,0);
+		err = arrs->AllocateSplittedMatrix(result,numParts,0);
 	}
 
 	if(err != CAL_RESULT_OK)
-		return err;
-
-	if(result->hDev != hDev)	// if array resides on another device
-	{		
-		arr = arrs->NewArray(result->arrID,result->dType,result->nDims,result->size,result->cpuData);
-		if(!result->parts)
-			err = arrs->AllocateArray(arr,0);
-		else
-			err = arrs->AllocateSplittedMatrix(arr,result->numParts,0);
-
-		if(err == CAL_RESULT_OK)
-		{
-			((ArrayPool*)result->pool)->Remove(result);
-			result = arr;
-			result->useCounter++;
-			result->isReservedForGet = TRUE;
-			arrs->Add(result);
-		}
-	}
+		return err;	
 	
 	return err;
 }
@@ -472,11 +469,13 @@ CALresult Context::DoComputation(void)
 	CALresult err;
 	long i;
 
-	if(!expr)	
+	if(!expr && !convArr)	
 		return CAL_RESULT_ERROR;
 
-	switch(expr->op)
+	if(expr)
 	{
+		switch(expr->op)
+		{
 		case OpIdentic:
 			err = DoIdentic();			
 			break;
@@ -524,14 +523,16 @@ CALresult Context::DoComputation(void)
 
 		default:
 			err = CAL_RESULT_INVALID_PARAMETER;
+		}
+	}
+	else if(convArr)
+	{
+		err = DoConvolveRows();
 	}
 	
-	// decrement use counters
-	if(err == CAL_RESULT_OK)
-	{		
-		for(i = 0; (i < 3) && (expr->args[i]); i++){expr->args[i]->useCounter--;}	
-		result->useCounter--;
-	}	
+	// decrement use counters	
+	for(i = 0; (i < 3) && (expr->args[i]); i++){expr->args[i]->useCounter--;}	
+	result->useCounter--;		
 
 	return err;
 }
@@ -635,8 +636,7 @@ CALresult Context::DoElementwise(void)
 // set a matrix vector multiply computation
 CALresult Context::SetMatVecMul(ArrayExpression* expr, Array* result)
 {
-	CALresult err;
-	Array* arr;	
+	CALresult err;	
 
 	if(expr->args[0]->isVirtualized || expr->args[1]->isVirtualized)
 		return CAL_RESULT_NOT_SUPPORTED;
@@ -674,21 +674,7 @@ CALresult Context::SetMatVecMul(ArrayExpression* expr, Array* result)
 			resultTemp = NULL;
 		}
 		
-	}
-	else if(result->hDev != hDev)	// if array resides on another device
-	{
-		arr = arrs->NewArray(result->arrID,result->dType,result->nDims,result->size,result->cpuData);		
-		err = arrs->AllocateArray(arr,0);
-
-		if(err == CAL_RESULT_OK)
-		{
-			((ArrayPool*)result->pool)->Remove(result);
-			result = arr;
-			result->useCounter++;
-			result->isReservedForGet = TRUE;
-			arrs->Add(result);
-		}
-	}
+	}	
 	else if(!result->res)
 	{
 		result->Free();
@@ -889,8 +875,7 @@ CALresult Context::DoMatVecMulSplitted(void)
 // set a matrix multiplication computation
 CALresult Context::SetMatMul(ArrayExpression* expr, Array* result)
 {
-	CALresult err;
-	Array* arr;
+	CALresult err;	
 	long i, j;
 
 	err = CAL_RESULT_OK;	
@@ -957,22 +942,7 @@ CALresult Context::SetMatMul(ArrayExpression* expr, Array* result)
 	else if(!result->parts)
 	{
 		result->Free();
-		err = ((ArrayPool*)result->pool)->AllocateSplittedMatrix(result,expr->args[0]->numParts,0);
-	}
-
-	if(result->hDev != hDev)	// if array resides on another device
-	{
-		arr = arrs->NewArray(result->arrID,result->dType,result->nDims,result->size,result->cpuData);		
-		err = arrs->AllocateSplittedMatrix(arr,result->numParts,0);
-
-		if(err == CAL_RESULT_OK)
-		{
-			((ArrayPool*)result->pool)->Remove(result);
-			result = arr;
-			result->useCounter++;
-			result->isReservedForGet = TRUE;
-			arrs->Add(result);
-		}
+		err = arrs->AllocateSplittedMatrix(result,expr->args[0]->numParts,0);
 	}	
 
 	return err;
@@ -1074,8 +1044,7 @@ CALresult Context::DoMatMul(void)
 
 // set a reshape computation
 CALresult Context::SetReshape(ArrayExpression* expr, Array* result)
-{
-	Array* arr;
+{	
 	CALresult err;
 
 	err = CAL_RESULT_OK;
@@ -1092,21 +1061,7 @@ CALresult Context::SetReshape(ArrayExpression* expr, Array* result)
 	if(err != CAL_RESULT_OK)
 		return err;	
 	
-	if(result->hDev != hDev)	// array resides on another device
-	{
-		arr = arrs->NewArray(result->arrID,result->dType,result->nDims,result->size,result->cpuData);		
-		err = arrs->AllocateArray(arr,0);
-
-		if(err == CAL_RESULT_OK)
-		{
-			((ArrayPool*)result->pool)->Remove(result);
-			result = arr;
-			result->useCounter++;
-			result->isReservedForGet = TRUE;
-			arrs->Add(result);
-		}
-	}
-	else if( (expr->args[0]->arrID != -3)  && (!result->res || result->parts) )	// prefer not to have result being splitted...
+	if( (expr->args[0]->arrID != -3)  && (!result->res || result->parts) )	// prefer not to have result being splitted...
 	{
 		result->Free();
 		err = arrs->AllocateArray(result,0);
@@ -1264,7 +1219,6 @@ CALresult Context::ZeroArrayMemory(Array* arr, CALdomain* domain)
 CALresult Context::SetTranspose(ArrayExpression* expr, Array* result)
 {
 	CALresult err;	
-	Array* arr;
 	long i;
 
 	err = CAL_RESULT_OK;	
@@ -1297,21 +1251,7 @@ CALresult Context::SetTranspose(ArrayExpression* expr, Array* result)
 			delete resultTemp;
 			resultTemp = NULL;
 		}		
-	}
-	else if(result->hDev != hDev)	// if array resides on another device
-	{
-		arr = arrs->NewArray(result->arrID,result->dType,result->nDims,result->size,result->cpuData);		
-		err = arrs->AllocateArray(arr,0);
-
-		if(err == CAL_RESULT_OK)
-		{
-			((ArrayPool*)result->pool)->Remove(result);
-			result = arr;
-			result->useCounter++;
-			result->isReservedForGet = TRUE;
-			arrs->Add(result);
-		}
-	}
+	}	
 	else if(!result->res)	// prefer result being not splitted...
 	{
 		result->Free();
@@ -1672,8 +1612,7 @@ CALresult Context::DoIdentic(void)
 // set a dot product computation
 CALresult Context::SetDotProd(ArrayExpression* expr, Array* result)
 {
-	CALresult err;	
-	Array* arr;
+	CALresult err;		
 	long i, j, numParts;
 	long size;
 
@@ -1726,21 +1665,7 @@ CALresult Context::SetDotProd(ArrayExpression* expr, Array* result)
 		return err;
 	
 	if(!result->res)		
-		err = ((ArrayPool*)result->pool)->AllocateArray(result,0);	
-
-	if( (err == CAL_RESULT_OK) && (result->hDev != hDev) )	// if array resides on another device
-	{		
-		arr = arrs->NewArray(result->arrID,result->dType,result->nDims,result->size,result->cpuData);						
-
-		if( (err = arrs->AllocateArray(arr,0)) == CAL_RESULT_OK)
-		{
-			((ArrayPool*)result->pool)->Remove(result);
-			result = arr;
-			result->useCounter++;
-			result->isReservedForGet = TRUE;
-			arrs->Add(result);
-		}
-	}
+		err = arrs->AllocateArray(result,0);	
 
 	if(expr->args[0]->physSize[0] > 1)
 	{	
@@ -1962,6 +1887,260 @@ CALresult Context::DoDotProd(void)
 			}
 		}
 	}		
+
+	return err;
+}
+
+// Setup a separable convolve computation
+CALresult Context::SetConvolveRows(Array* arr, Array* result, void* kernel, long kernelLength, long hotSpot)
+{
+	CALresult err;	
+	BOOL isReservedForGet0;	
+	Array* arr0;
+
+	if(resultTemp)	
+	{
+		delete resultTemp;
+		resultTemp = NULL;
+
+		// avoid possible problems, when expression is set and uses resultTemp...
+		if(expr)
+			delete expr;
+		expr = NULL;		
+	}
+
+	// increment use counters beforehand!	
+	arr->useCounter++;
+	result->useCounter++;
+	isReservedForGet0 = result->isReservedForGet;
+	result->isReservedForGet = TRUE;
+	
+	err = CAL_RESULT_OK;
+
+	if(arr->hDev != hDev)
+	{		
+		arr0 = arr;
+
+		// create array copy on the local device
+		arr = arrs->NewArray(arr0->arrID,arr0->dType,arr0->nDims,arr0->size,arr0->cpuData);						
+
+		if(!arr0->parts)			
+			err = arrs->AllocateArray(arr,0);			
+		else
+			err = arrs->AllocateSplittedMatrix(arr,arr0->numParts,0);
+
+		if(err == CAL_RESULT_OK)
+		{
+			if( (err = arr0->Copy(ctx,arr)) == CAL_RESULT_OK )
+			{					
+				arr0->useCounter--;					
+				arr->useCounter++;				
+
+				// add to the local pool as a copy
+				arr->isCopy = TRUE;
+				arrs->Add(arr);
+			}
+			else
+				delete arr;
+		}
+		else
+			delete arr;
+	}	
+
+	if(err == CAL_RESULT_OK) 
+	{
+		if(result->hDev != hDev) // if result array resides on another device
+		{		
+			arr = arrs->NewArray(result->arrID,result->dType,result->nDims,result->size,result->cpuData);
+
+			((ArrayPool*)result->pool)->Remove(result);
+			result = arr;
+			result->useCounter++;
+			result->isReservedForGet = TRUE;
+			arrs->Add(result);			
+		}
+	}
+	else // in case of an error set use counters to their previous values		
+	{			
+		arr->useCounter--;
+		result->useCounter--;
+		result->isReservedForGet = isReservedForGet0;
+
+		return err;
+	}		
+
+	if(!arr->res && !arr->parts)
+	{		
+		if( (err = arrs->AllocateArray(arr,0)) == CAL_RESULT_OK )
+			err = arr->SetData(ctx,arr->cpuData);
+	}
+
+	if(err != CAL_RESULT_OK)
+		return err;
+
+	if(result == arr)
+	{
+		// inplace -> create temporary result array
+		resultTemp = arrs->NewArray(result->arrID,result->dType,result->nDims,result->size,result->cpuData);
+		if(!arr->parts)
+			err = arrs->AllocateArray(resultTemp,0);
+		else
+			err = arrs->AllocateSplittedMatrix(resultTemp,arr->numParts,0);
+
+		if(err != CAL_RESULT_OK)
+		{
+			delete resultTemp;
+			resultTemp = NULL;
+		}
+	}
+	else if( (!result->res && !result->parts) || (arr->parts && !result->parts) || (!arr->parts && result->parts) )
+	{
+		result->Free();
+		if(!arr->parts)
+			err = arrs->AllocateArray(result,0);
+		else
+			err = arrs->AllocateSplittedMatrix(result,arr->numParts,0);
+	}
+	
+	if(err != CAL_RESULT_OK)
+		return err;	
+	
+	if(err == CAL_RESULT_OK) // in case of an error set use counters to their previous values		
+	{
+		convArr = arr;
+		convKernel = kernel;
+		convKernelLength = kernelLength;
+		convHotSpot = hotSpot;
+		this->result = result;
+	}
+	else
+	{	
+		convArr = NULL;
+		arr->useCounter--;
+		result->useCounter--;
+		result->isReservedForGet = isReservedForGet0;
+	}
+
+	return err;
+}
+
+// perform a convolve computation
+CALresult Context::DoConvolveRows(void)
+{
+	CALresult err;
+	Module* module;
+	Array* arr;
+	CALdomain domain;
+	KernelCode iKernel;	
+
+	float* f;
+	float constData0[8] = {0,0,0,0, 0,0,0,0};
+	float constData1[8] = {0,0,0,0, 0,0,0,0};
+	float constData2[8] = {0,0,0,0, 0,0,0,0};
+	float constData3[8] = {0,0,0,0, 0,0,0,0};	
+
+	if(convArr->isVirtualized)
+		return CAL_RESULT_NOT_SUPPORTED;
+
+	switch(convKernelLength)
+	{
+		case 2:
+		{
+			switch(convArr->dType)
+			{
+				case TREAL: iKernel = KernConvolveRows2R_PS;
+				default: return CAL_RESULT_NOT_SUPPORTED;
+			}
+
+			f = (float*)convKernel;
+
+			if(convHotSpot == 0)
+			{
+				constData0[0] = f[0]; constData0[1] = f[1];
+				constData1[1] = f[0]; constData1[2] = f[1];
+				constData2[2] = f[0]; constData2[3] = f[1];
+				constData3[3] = f[0]; constData3[4] = f[1];
+			}
+			else
+			{
+				constData0[3] = f[0]; constData0[4] = f[1];
+				constData1[4] = f[0]; constData1[5] = f[1];
+				constData2[5] = f[0]; constData2[6] = f[1];
+				constData3[6] = f[0]; constData3[7] = f[1];
+			}
+			
+		}
+		break;
+
+		default:
+			return CAL_RESULT_NOT_SUPPORTED;
+	}
+
+	
+	// get suited module
+	if(!modules[iKernel])
+	{
+		modules[iKernel] = new Module(hDev,ctx,kernels[iKernel],&err);		
+		if(err != CAL_RESULT_OK)
+		{
+			delete modules[iKernel];
+			modules[iKernel] = NULL;
+		}
+	}		
+
+	if(err == CAL_RESULT_OK)
+	{		
+		module = modules[iKernel];		
+
+		err = module->constants[0]->SetData(&constData0);
+		if(err == CAL_RESULT_OK)
+		{
+			err = module->constants[1]->SetData(&constData1);
+			if(err == CAL_RESULT_OK)
+			{
+				err = module->constants[2]->SetData(&constData2);
+				if(err == CAL_RESULT_OK)
+					err = module->constants[3]->SetData(&constData3);
+			}
+		}				
+
+		if(err == CAL_RESULT_OK)
+		{
+			err = module->SetConstantsToContext();
+			if(err == CAL_RESULT_OK)
+			{
+				if(!resultTemp)
+					arr = result;
+				else
+					arr = resultTemp;
+
+				// set the domain of execution
+				domain.x = 0;
+				domain.y = 0;		
+				domain.width = arr->physSize[1];
+				domain.height = arr->physSize[0];				
+				
+				err = module->RunPixelShader(&convArr,&arr,NULL,&domain);
+
+				if( (err == CAL_RESULT_OK) && resultTemp )
+				{												
+					arrs->Set(arrs->Find(result->arrID),resultTemp);
+					delete result;
+					result = resultTemp;
+					resultTemp = NULL;
+
+					// do not forget about the flags!
+					result->useCounter++;
+					result->isReservedForGet = TRUE;					
+				}
+			}
+		}
+	}
+
+
+	// decrement use counters	
+	convArr->useCounter--;
+	result->useCounter--;		
 
 	return err;
 }

@@ -110,6 +110,14 @@ Kernel::Kernel(KernelCode iKernel, CALtarget target, CALresult* err)
 			constFormats = new CALformat[1]; constFormats[0] = CAL_FORMAT_FLOAT_4;
 			break;
 
+		case KernConvolveRows2R_PS:
+			kernelStr = kernelConvolveRows2R_PS; nInputs = 1; nOutputs = 1; nConstants = 4;
+			constSizes = new long[4]; 
+			constSizes[0] = 2; constSizes[1] = 2; constSizes[2] = 2; constSizes[3] = 2;
+			constFormats = new CALformat[4]; 
+			constFormats[0] = CAL_FORMAT_FLOAT_4; constFormats[1] = CAL_FORMAT_FLOAT_4; constFormats[2] = CAL_FORMAT_FLOAT_4; constFormats[3] = CAL_FORMAT_FLOAT_4;
+			break;
+
 		case KernMatVecR_PS: 
 			kernelStr = kernelMatVecR_PS; nInputs = 2; nOutputs = 1; nConstants = 1;
 			constSizes = new long[1]; constSizes[0] = 1;
