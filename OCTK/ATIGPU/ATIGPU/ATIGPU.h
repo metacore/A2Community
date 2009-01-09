@@ -18,6 +18,11 @@ struct ArrayDesc
 	long nDims;	// number of dimensions	
 	long* size;	// array size
 	void* data;	// array data address
+
+	// for the case of FIR filter matrix
+	ArrayDesc* kernel;	// FIR filter kernel
+	long hotSpot;
+	long boundary;
 };
 
 // array expression description
@@ -197,30 +202,3 @@ ATIGPU_API long GetIdleCounter(long devNum, long ctxNum, float* counterVal);
 	returns error code
 */
 ATIGPU_API long GetCacheHitCounter(long devNum, long ctxNum, float* counterVal);
-
-/*
-	Setup a convolve computation
-
-	devNum - device number
-	ctxNum - compute context number
-	arrDesc - input 2D array description
-	resultDesc - resulting array description
-	kernel - pointer to the FIR kernel samples
-	kernelLength - length of the FIR kernel
-	hotSpot - kernel hot spot
-	priority - computation priority number
-	flags - flags (currently unused)
-
-	returns error code
-*/
-ATIGPU_API long SetConvolveRows(
-						   long devNum, 
-						   long ctxNum,
-						   ArrayDesc* arrDesc,
-						   ArrayDesc* resultDesc,
-						   void* kernel,
-						   long kernelLength,
-						   long hotSpot,
-						   long priority,
-						   long flags
-						   );

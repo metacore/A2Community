@@ -107,6 +107,7 @@ Array::Array(CALdevice hDev, CALdeviceinfo* devInfo, CALdeviceattribs* devAttrib
 
 	cpuData = NULL;
 	parts = NULL;
+	firKernel = NULL;
 
 	isReservedForGet = FALSE;
 	isVirtualized = FALSE;
@@ -197,6 +198,9 @@ Array::~Array(void)
 {
 	if(size)
 		delete size;
+
+	if(firKernel)
+		delete firKernel;
 
 	if(parts)
 	{

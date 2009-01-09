@@ -75,12 +75,7 @@ public:
 
 	ArrayExpression* expr;			// array expression describing current computation
 	Array* result;					// result array for current computation
-	Array* resultTemp;				// a temporary result array
-
-	Array* convArr;					// input array for convolution
-	void* convKernel;				// FIR kernel used for convolution
-	long convKernelLength;			// FIR kernel length
-	long convHotSpot;					// FIR kernel hot spot
+	Array* resultTemp;				// a temporary result array	
 
 	CALdeviceinfo* devInfo;			// device info
 	CALdeviceattribs* devAttribs;	// device attributes 	
@@ -116,7 +111,7 @@ public:
 	// set a dot product computation
 	CALresult SetDotProd(ArrayExpression* expr, Array* result);
 	// setup a convolve computation
-	CALresult SetConvolveRows(Array* arr, Array* result, void* kernel, long kernelLength, long hotSpot);
+	CALresult SetConvolve(ArrayExpression* expr, Array* result);
 	// perform a convolve computation
 	CALresult DoConvolveRows(void);
 };

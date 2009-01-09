@@ -70,6 +70,11 @@ public:
 	void* pool;				// array pool which created this array
 
 	BOOL isCopy;			// TRUE when array is a copy of some (original) array
+
+	// for the case of FIR filter matrix
+	char* firKernel;
+	long hotSpot;
+	long boundary;
 };
 
 class ArrayPool :

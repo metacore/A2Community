@@ -10,9 +10,7 @@ Context::Context(CALdevice hDev, CALdeviceinfo* devInfo, CALdeviceattribs* devAt
 	modules = NULL;	
 	expr = NULL;
 	result = NULL;
-	resultTemp = NULL;
-	convArr = NULL;
-	convKernel = NULL;
+	resultTemp = NULL;	
 
 	idleCounter = 0;
 	cacheHitCounter = 0;
@@ -108,10 +106,7 @@ CALresult Context::SetComputation(ArrayExpression* expr, Array* result, long pri
 	if(resultTemp)	
 	{
 		delete resultTemp;
-		resultTemp = NULL;
-
-		if(convArr)		
-			convArr = NULL;		
+		resultTemp = NULL;			
 	}
 
 	// increment use counters beforehand!	
@@ -214,7 +209,10 @@ CALresult Context::SetComputation(ArrayExpression* expr, Array* result, long pri
 				err = SetMatVecMul(expr,result);
 			else if( (expr->args[0]->nDims == 2) && (expr->args[1]->nDims == 2) )	// matrix multiplication
 			{
-				err = SetMatMul(expr,result);
+				if(!expr->args[0]->firKernel && !expr->args[1]->firKernel)
+					err = SetMatMul(expr,result);
+				else
+					err = SetConvolve(expr,result);
 			}
 			else	
 				err = CAL_RESULT_NOT_SUPPORTED;
@@ -469,70 +467,64 @@ CALresult Context::DoComputation(void)
 	CALresult err;
 	long i;
 
-	if(!expr && !convArr)	
+	if(!expr)	
 		return CAL_RESULT_ERROR;
-
-	if(expr)
+	
+	switch(expr->op)
 	{
-		switch(expr->op)
+	case OpIdentic:
+		err = DoIdentic();			
+		break;
+
+	case OpAdd:
+		err = DoElementwise();			
+		break;
+
+	case OpSub:
+		err = DoElementwise();
+		break;
+
+	case OpEwMul:
+		err = DoElementwise();
+		break;
+
+	case OpEwDiv:
+		err = DoElementwise();
+		break;
+
+	case OpDotProd:
+		err = DoDotProd();
+		break;
+
+	case OpMul:
+		if( (expr->args[0]->nDims == 2) && (expr->args[1]->nDims == 1) )
 		{
-		case OpIdentic:
-			err = DoIdentic();			
-			break;
+			if(expr->args[0]->res)
+				err = DoMatVecMul();
+			else
+				err = DoMatVecMulSplitted();
+		}			
+		else if( (expr->args[0]->nDims == 2) && (expr->args[1]->nDims == 2) )
+			err = DoMatMul();				
 
-		case OpAdd:
-			err = DoElementwise();			
-			break;
+		break;
 
-		case OpSub:
-			err = DoElementwise();
-			break;
+	case OpReshape:
+		err = DoReshape();
+		break;
 
-		case OpEwMul:
-			err = DoElementwise();
-			break;
+	case OpTranspose:
+		err = DoTranspose();
+		break;
 
-		case OpEwDiv:
-			err = DoElementwise();
-			break;
-
-		case OpDotProd:
-			err = DoDotProd();
-			break;
-
-		case OpMul:
-			if( (expr->args[0]->nDims == 2) && (expr->args[1]->nDims == 1) )
-			{
-				if(expr->args[0]->res)
-					err = DoMatVecMul();
-				else
-					err = DoMatVecMulSplitted();
-			}			
-			else if( (expr->args[0]->nDims == 2) && (expr->args[1]->nDims == 2) )
-				err = DoMatMul();				
-
-			break;
-
-		case OpReshape:
-			err = DoReshape();
-			break;
-
-		case OpTranspose:
-			err = DoTranspose();
-			break;
-
-		default:
-			err = CAL_RESULT_INVALID_PARAMETER;
-		}
+	default:
+		err = CAL_RESULT_INVALID_PARAMETER;
 	}
-	else if(convArr)
-	{
-		err = DoConvolveRows();
-	}
+		
 	
 	// decrement use counters	
 	for(i = 0; (i < 3) && (expr->args[i]); i++){expr->args[i]->useCounter--;}	
-	result->useCounter--;		
+	result->useCounter--;
 
 	return err;
 }
@@ -1891,9 +1883,10 @@ CALresult Context::DoDotProd(void)
 	return err;
 }
 
-// Setup a separable convolve computation
-CALresult Context::SetConvolveRows(Array* arr, Array* result, void* kernel, long kernelLength, long hotSpot)
+// Setup a convolve computation
+CALresult Context::SetConvolve(ArrayExpression* expr, Array* result)
 {
+/*
 	CALresult err;	
 	BOOL isReservedForGet0;	
 	Array* arr0;
@@ -2022,11 +2015,13 @@ CALresult Context::SetConvolveRows(Array* arr, Array* result, void* kernel, long
 	}
 
 	return err;
+*/
 }
 
 // perform a convolve computation
 CALresult Context::DoConvolveRows(void)
 {
+/*
 	CALresult err;
 	Module* module;
 	Array* arr;
@@ -2143,4 +2138,5 @@ CALresult Context::DoConvolveRows(void)
 	result->useCounter--;		
 
 	return err;
+*/
 }
