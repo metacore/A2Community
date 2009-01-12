@@ -18,6 +18,10 @@ KernEwMulLR_PS,
 KernEwDivR_PS,
 KernEwDivLR_PS,
 
+// multiplication by a scalar
+KernMulBySR_PS,
+KernMulBySLR_PS,
+
 // dot product related kernels
 KernDotProd1DR_PS,
 KernEwMulContractAlongX4R_PS,
@@ -147,6 +151,30 @@ const char kernelEwMulLR_PS[] =
 "sample_resource(1)_sampler(1) r1, vWinCoord0\n"
 "dmul o0.xy, r0.xy, r1.xy\n"
 "dmul o0.zw, r0.zw, r1.zw\n"
+"end\n";
+
+/* 
+	multiply by a scalar
+*/
+const char kernelMulBySR_PS[] =
+"il_ps_2_0\n"
+"dcl_cb cb0[1]\n"
+"dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__\n"
+"dcl_output_generic o0\n"
+"dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+"sample_resource(0)_sampler(0) r0, vWinCoord0\n"
+"mul o0, r0, cb0[0]\n"
+"end\n";
+
+const char kernelMulBySLR_PS[] =
+"il_ps_2_0\n"
+"dcl_cb cb0[1]\n"
+"dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__\n"
+"dcl_output_generic o0\n"
+"dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)\n"
+"sample_resource(0)_sampler(0) r0, vWinCoord0\n"
+"dmul o0.xy, r0.xy, cb0[0].xy\n"
+"dmul o0.zw, r0.zw, cb0[0].zw\n"
 "end\n";
 
 /*

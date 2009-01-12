@@ -204,6 +204,14 @@ CALresult Context::SetComputation(ArrayExpression* expr, Array* result, long pri
 			err = SetDotProd(expr,result);
 			break;
 
+		case OpDiv:
+			if( (expr->args[0]->IsScalar() && expr->args[1]->IsScalar()) || (expr->args[1]->IsScalar()) )
+			{
+				expr->op = OpEwDiv;
+				err = SetElementwise(expr,result);
+			}
+			break;
+
 		case OpMul:
 			if( (expr->args[0]->nDims == 2) && (expr->args[1]->nDims == 1) )			
 				err = SetMatVecMul(expr,result);
@@ -214,6 +222,8 @@ CALresult Context::SetComputation(ArrayExpression* expr, Array* result, long pri
 				else
 					err = SetConvolve(expr,result);
 			}
+			else if( expr->args[0]->IsScalar() || expr->args[1]->IsScalar() )
+				err = SetScale(expr,result);
 			else	
 				err = CAL_RESULT_NOT_SUPPORTED;
 			break;
@@ -505,7 +515,9 @@ CALresult Context::DoComputation(void)
 				err = DoMatVecMulSplitted();
 		}			
 		else if( (expr->args[0]->nDims == 2) && (expr->args[1]->nDims == 2) )
-			err = DoMatMul();				
+			err = DoMatMul();
+		else if( expr->args[0]->IsScalar() || expr->args[1]->IsScalar() )
+				err = DoScale();
 
 		break;
 
@@ -679,8 +691,6 @@ CALresult Context::SetMatVecMul(ArrayExpression* expr, Array* result)
 // perform a matrix vector multiplication
 CALresult Context::DoMatVecMul(void)
 {
-	return CAL_RESULT_NOT_SUPPORTED;
-
 	CALresult err;
 	Module* module;
 	CALdomain domain;
@@ -746,7 +756,7 @@ CALresult Context::DoMatVecMul(void)
 
 					// do not forget about the flags!
 					result->useCounter++;
-					result->isReservedForGet = TRUE;					
+					result->isReservedForGet = TRUE;
 				}
 
 				module->ReleaseConstantsFromContext();
@@ -1537,7 +1547,7 @@ CALresult Context::SetIdentic(ArrayExpression* expr, Array* result)
 
 	err = CAL_RESULT_OK;		
 
-	if(!expr->args[0]->IsScalar())
+	if(!expr->args[0]->IsScalar() || result->IsScalar())
 	{
 		if(expr->args[0] != result)
 		{
@@ -1583,7 +1593,7 @@ CALresult Context::DoIdentic(void)
 	
 	if(expr->args[0] != result)
 	{
-		if(!expr->args[0]->IsScalar())
+		if(!expr->args[0]->IsScalar() || result->IsScalar())
 		{						
 			if(expr->args[0]->res || expr->args[0]->parts)
 				err = expr->args[0]->Copy(ctx,result);
@@ -2016,6 +2026,8 @@ CALresult Context::SetConvolve(ArrayExpression* expr, Array* result)
 
 	return err;
 */
+
+	return CAL_RESULT_NOT_SUPPORTED;
 }
 
 // perform a convolve computation
@@ -2139,4 +2151,183 @@ CALresult Context::DoConvolveRows(void)
 
 	return err;
 */
+
+	return CAL_RESULT_NOT_SUPPORTED;
+}
+
+// setup a scale computation
+CALresult Context::SetScale(ArrayExpression* expr, Array* result)
+{
+	CALresult err;
+
+	err = CAL_RESULT_OK;
+
+	if(!expr->args[0]->IsScalar())	
+	{
+		if( expr->args[1]->res && (err = expr->args[1]->GetData(ctx,expr->args[1]->cpuData)) != CAL_RESULT_OK )
+			return err;
+
+		if(!expr->args[0]->res && !expr->args[0]->parts)
+		{
+			// allocate array and set data
+			if( (err = arrs->AllocateArray(expr->args[0],0)) == CAL_RESULT_OK )
+				err = expr->args[0]->SetData(ctx,expr->args[0]->cpuData);
+		}
+
+		if(err != CAL_RESULT_OK)
+			return err;
+
+		if(!result->res || !result->parts || (result->res && !expr->args[0]->res) || (result->parts && !expr->args[0]->parts) )
+		{
+			result->Free();
+			if(expr->args[0]->res)
+				err = arrs->AllocateArray(result,0);
+			else
+				err = arrs->AllocateSplittedMatrix(result,expr->args[0]->numParts,0);
+		}
+
+	}
+	else
+	{
+		if( expr->args[0]->res && (err = expr->args[0]->GetData(ctx,expr->args[0]->cpuData)) != CAL_RESULT_OK )
+			return err;
+
+		if(!expr->args[1]->res && !expr->args[1]->parts)
+		{		
+			// allocate array and set data
+			if( (err = arrs->AllocateArray(expr->args[1],0)) == CAL_RESULT_OK )
+				err = expr->args[1]->SetData(ctx,expr->args[1]->cpuData);						
+		}
+
+		if(err != CAL_RESULT_OK)
+			return err;	
+
+		if(!result->res && !result->parts || (result->res && !expr->args[1]->res) || (result->parts && !expr->args[1]->parts) )
+		{
+			result->Free();
+			if(expr->args[1]->res)
+				err = arrs->AllocateArray(result,0);
+			else
+				err = arrs->AllocateSplittedMatrix(result,expr->args[1]->numParts,0);
+		}
+	}
+
+	return err;
+}
+
+// perform a scale computation
+CALresult Context::DoScale(void)
+{
+	CALresult err;
+	Module* module;
+	CALdomain domain;	
+	float constDataF[4];
+	double constDataD[2];
+	void* constData;
+	Array* input;	
+
+	long i;
+	KernelCode iKernel;
+	
+	err = CAL_RESULT_OK;
+
+	switch(expr->dType)
+	{
+		case TREAL: iKernel = KernMulBySR_PS; break;
+		case TLONGREAL: iKernel = KernMulBySLR_PS; break;		
+		
+		default:
+			return CAL_RESULT_INVALID_PARAMETER;
+	}	
+	
+	// get suited module
+	if(!modules[iKernel])
+	{
+		modules[iKernel] = new Module(hDev,ctx,kernels[iKernel],&err);		
+		if(err != CAL_RESULT_OK)
+		{
+			delete modules[iKernel];
+			modules[iKernel] = NULL;
+		}
+	}
+	
+	if(err == CAL_RESULT_OK)
+	{				
+		module = modules[iKernel];
+
+		if(!expr->args[0]->IsScalar())
+		{
+			input = expr->args[0];
+
+			switch(expr->dType)
+			{
+				case TREAL:
+					constDataF[0] = ((float*)(expr->args[1]->cpuData))[0];
+					constDataF[1] = constDataF[0];
+					constDataF[2] = constDataF[0];
+					constDataF[3] = constDataF[0];
+					constData = constDataF;
+					break;
+
+				case TLONGREAL:
+					constDataD[0] = ((double*)(expr->args[1]->cpuData))[0];
+					constDataD[1] = constDataD[0];					
+					constData = constDataD;
+					break;
+			}
+		}
+		else
+		{
+			input = expr->args[1];
+
+			switch(expr->dType)
+			{
+				case TREAL:
+					constDataF[0] = ((float*)(expr->args[0]->cpuData))[0];
+					constDataF[1] = constDataF[0];
+					constDataF[2] = constDataF[0];
+					constDataF[3] = constDataF[0];
+					constData = constDataF;
+					break;
+
+				case TLONGREAL:
+					constDataD[0] = ((double*)(expr->args[0]->cpuData))[0];
+					constDataD[1] = constDataD[0];					
+					constData = constDataD;
+					break;
+			}
+		}
+
+		err = module->constants[0]->SetData(constData);		
+		if(err == CAL_RESULT_OK)
+		{
+			err = module->SetConstantsToContext();
+			if(err == CAL_RESULT_OK)
+			{
+				// set the domain of execution
+				domain.x = 0;
+				domain.y = 0;		
+
+				if(!result->parts)
+				{
+					domain.width = result->physSize[1];
+					domain.height = result->physSize[0];
+
+					// run the program			
+					err = module->RunPixelShader(&input,&result,NULL,&domain);		
+				}
+				else
+				{
+					domain.width = result->parts[0]->physSize[1];
+					domain.height = result->parts[0]->physSize[0];			
+
+					// run the program for each part separately
+					for(i = 0; i < result->numParts; i++)							
+						err = module->RunPixelShader(&(input->parts[i]),&result->parts[i],NULL,&domain);			
+				}
+			}
+		}		
+	}	
+	
+	return err;
 }

@@ -114,6 +114,10 @@ public:
 	CALresult SetConvolve(ArrayExpression* expr, Array* result);
 	// perform a convolve computation
 	CALresult DoConvolveRows(void);
+	// setup a scale computation
+	CALresult SetScale(ArrayExpression* expr, Array* result);
+	// perform a scale computation
+	CALresult DoScale(void);
 };
 
 class ContextPool :
