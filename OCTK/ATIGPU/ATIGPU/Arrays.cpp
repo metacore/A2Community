@@ -2,7 +2,7 @@
 #include "Arrays.h"
 #include "Common.h"
 
-Array::Array(CALdevice hDev, CALdeviceinfo* devInfo, CALdeviceattribs* devAttribs, long arrID, long dType, long nDims, long* size, void* cpuData, long numComponents)
+Array::Array(CALdevice hDev, CALdeviceinfo* devInfo, CALdeviceattribs* devAttribs, __int64 arrID, long dType, long nDims, long* size, void* cpuData, long numComponents)
 {
 	long i;	
 	
@@ -97,7 +97,7 @@ Array::Array(CALdevice hDev, CALdeviceinfo* devInfo, CALdeviceattribs* devAttrib
 	physDataSize = physNumElements*physElemSize;	
 }
 
-Array::Array(CALdevice hDev, CALdeviceinfo* devInfo, CALdeviceattribs* devAttribs, long arrID, long dType, long nDims, long* size, void* cpuData)
+Array::Array(CALdevice hDev, CALdeviceinfo* devInfo, CALdeviceattribs* devAttribs, __int64 arrID, long dType, long nDims, long* size, void* cpuData)
 {	
 	long i;	
 	
@@ -255,7 +255,7 @@ Array* ArrayPool::Get(long ind)
 	return (Array*)ObjectPool::Get(ind);
 }
 
-long ArrayPool::Find(long arrID)
+long ArrayPool::Find(__int64 arrID)
 {
 	long i;
 
@@ -267,7 +267,7 @@ long ArrayPool::Find(long arrID)
 		return -1;
 }
 
-Array* ArrayPool::NewArray(long arrID, long dType, long nDims, long* size, void* cpuData, long numComponents)
+Array* ArrayPool::NewArray(__int64 arrID, long dType, long nDims, long* size, void* cpuData, long numComponents)
 {
 	Array* arr;
 	
@@ -278,7 +278,7 @@ Array* ArrayPool::NewArray(long arrID, long dType, long nDims, long* size, void*
 }
 
 // create a new array object without allocation
-Array* ArrayPool::NewArray(long arrID, long dType, long nDims, long* size, void* cpuData)
+Array* ArrayPool::NewArray(__int64 arrID, long dType, long nDims, long* size, void* cpuData)
 {
 	Array* arr;
 	
@@ -293,8 +293,7 @@ ArrayExpression::ArrayExpression(long op, long dType, long nDims, long* size, lo
 	long i;
 	
 	args[0] = NULL;
-	args[1] = NULL;
-	args[2] = NULL;
+	args[1] = NULL;	
 	
 	this->transpDims = NULL;
 	this->size = NULL;
@@ -331,7 +330,10 @@ CALresult Array::AllocateRes(CALuint flags)
 
 	_ASSERT(!res);
 	
-	err = calResAllocLocal2D(&res,hDev,physSize[1],physSize[0],dFormat,flags);
+	if(IsScalar()) // for scalars use remote memory
+		err = calResAllocRemote1D(&res,&hDev,1,physSize[1],dFormat,flags);
+	else
+		err = calResAllocLocal2D(&res,hDev,physSize[1],physSize[0],dFormat,flags);
 	
 	if(err == CAL_RESULT_WARNING)	// account warnings
 		err = CAL_RESULT_OK;
@@ -394,11 +396,22 @@ CALresult Array::GetData(CALcontext ctx, void* cpuData)
 {
 	CALresult err;
 	CALresource remoteRes;
-	long i;
+	long i;	
 	
-	if(res)
+	if(IsScalar()) // case of a scalar
+	{
+		void* ptr;
+		CALuint pitch;
+		if( (err = calResMap(&ptr,&pitch,res,0)) == CAL_RESULT_OK )
+		{
+			memcpy(cpuData,ptr,elemSize);
+			calResUnmap(res);
+		}
+
+	}
+	else if(res)
 	{		
-		// first copy data to the remote memory,  then to the local using DMA
+		// first copy data to the remote memory, then to the local using DMA
 		err = calResAllocRemote2D(&remoteRes,&hDev,1,physSize[1],physSize[0],dFormat,0);
 		if(err == CAL_RESULT_OK)
 		{

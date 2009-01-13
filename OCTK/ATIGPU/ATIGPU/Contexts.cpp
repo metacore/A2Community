@@ -110,7 +110,7 @@ CALresult Context::SetComputation(ArrayExpression* expr, Array* result, long pri
 	}
 
 	// increment use counters beforehand!	
-	for(i = 0; (i < 3) && expr->args[i]; i++){expr->args[i]->useCounter++;}	
+	for(i = 0; (i < 2) && expr->args[i]; i++){expr->args[i]->useCounter++;}	
 	result->useCounter++;
 	isReservedForGet0 = result->isReservedForGet;
 	result->isReservedForGet = TRUE;
@@ -119,7 +119,7 @@ CALresult Context::SetComputation(ArrayExpression* expr, Array* result, long pri
 	err = CAL_RESULT_OK;
 	if(expr->op != OpIdentic)
 	{
-		for(i = 0; (err == CAL_RESULT_OK) && (i < 3) && (expr->args[i]); i++)
+		for(i = 0; (err == CAL_RESULT_OK) && (i < 2) && (expr->args[i]); i++)
 		{
 			if(expr->args[i]->hDev != hDev)
 			{
@@ -167,7 +167,7 @@ CALresult Context::SetComputation(ArrayExpression* expr, Array* result, long pri
 
 	if(err != CAL_RESULT_OK) // in case of an error set use counters to their previous values				
 	{			
-		for(i = 0; (i < 3) && expr->args[i]; i++){expr->args[i]->useCounter--;}	
+		for(i = 0; (i < 2) && expr->args[i]; i++){expr->args[i]->useCounter--;}	
 		result->useCounter--;
 		result->isReservedForGet = isReservedForGet0;	
 
@@ -250,7 +250,7 @@ CALresult Context::SetComputation(ArrayExpression* expr, Array* result, long pri
 	}
 	else	// in case of an error set use counters to their previous values		
 	{			
-		for(i = 0; (i < 3) && expr->args[i]; i++){expr->args[i]->useCounter--;}	
+		for(i = 0; (i < 2) && expr->args[i]; i++){expr->args[i]->useCounter--;}	
 		result->useCounter--;
 		result->isReservedForGet = isReservedForGet0;	
 
@@ -535,7 +535,7 @@ CALresult Context::DoComputation(void)
 		
 	
 	// decrement use counters	
-	for(i = 0; (i < 3) && (expr->args[i]); i++){expr->args[i]->useCounter--;}	
+	for(i = 0; (i < 2) && (expr->args[i]); i++){expr->args[i]->useCounter--;}	
 	result->useCounter--;
 
 	return err;

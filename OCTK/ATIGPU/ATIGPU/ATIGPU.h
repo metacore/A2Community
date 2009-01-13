@@ -13,7 +13,7 @@
 // array description
 struct ArrayDesc
 {
-	long id;	// array ID
+	__int64 id;	// array ID
 	long dType;	// array data type code
 	long nDims;	// number of dimensions	
 	long* size;	// array size
@@ -34,8 +34,7 @@ struct ArrayExpressionDesc
 	long* size;		// size of expression result
 	long* transpDims;	// transposed dimensions in case of transposition operation
 	ArrayDesc* arg1;	// first argument desription
-	ArrayDesc* arg2;	// second argument desription
-	ArrayDesc* arg3;	// second argument desription	
+	ArrayDesc* arg2;	// second argument desription	
 };
 
 /*
@@ -127,7 +126,7 @@ ATIGPU_API long GetResult(
 	returns error code
 */
 ATIGPU_API long GetArray(						 
-						 long arrID,
+						 __int64 arrID,
 						 void* data
 						 );
 
@@ -139,7 +138,7 @@ ATIGPU_API long GetArray(
 
 	returns error code
 */
-ATIGPU_API long FreeArray(long arrID);
+ATIGPU_API long FreeArray(__int64 arrID);
 
 /*
 	Start GPU idle counter

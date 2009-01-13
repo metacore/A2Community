@@ -240,10 +240,9 @@ ATIGPU_API long SetComputation(
 	// Input arrays
 			
 	inArgs[0] = exprDesc->arg1;
-	inArgs[1] = exprDesc->arg2;
-	inArgs[2] = exprDesc->arg3;	
+	inArgs[1] = exprDesc->arg2;	
 
-	for(i = 0; (i < 3) && inArgs[i]; i++)
+	for(i = 0; (i < 2) && inArgs[i]; i++)
 	{
 		// look for already existing array
 		j = -1;
@@ -313,7 +312,7 @@ ATIGPU_API long SetComputation(
 		// if array size and type do not match with actual expression size and type
 		if( (arr->dType != expr1->dType) || !EqualSizes(arr->nDims,arr->size,expr1->nDims,expr1->size) )
 		{				
-			if( (arr != expr1->args[0]) && (arr != expr1->args[1]) && (arr != expr1->args[2]) )
+			if( (arr != expr1->args[0]) && (arr != expr1->args[1]) )
 			{
 				delete arr;
 				arr = dev->arrs->NewArray(resultDesc->id,resultDesc->dType,resultDesc->nDims,resultDesc->size,resultDesc->data);				
@@ -440,7 +439,7 @@ ATIGPU_API long GetResult(
 	returns error code
 */
 ATIGPU_API long GetArray(						 
-						 long arrID,
+						 __int64 arrID,
 						 void* data
 						 )
 {
@@ -496,7 +495,7 @@ ATIGPU_API long GetArray(
 
 	returns error code
 */
-ATIGPU_API long FreeArray(long arrID)
+ATIGPU_API long FreeArray(__int64 arrID)
 {
 	long j, ind;		
 

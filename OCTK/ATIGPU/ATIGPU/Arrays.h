@@ -6,8 +6,8 @@ typedef CALresult (*FuncAllocateRes)(CALresource res, long width, long height, B
 class Array
 {
 public:	
-	Array(CALdevice hDev, CALdeviceinfo* devInfo, CALdeviceattribs* devAttribs, long arrID, long dType, long nDims, long* size, void* cpuData);
-	Array(CALdevice hDev, CALdeviceinfo* devInfo, CALdeviceattribs* devAttribs, long arrID, long dType, long nDims, long* size, void* cpuData, long numComponents);
+	Array(CALdevice hDev, CALdeviceinfo* devInfo, CALdeviceattribs* devAttribs, __int64 arrID, long dType, long nDims, long* size, void* cpuData);
+	Array(CALdevice hDev, CALdeviceinfo* devInfo, CALdeviceattribs* devAttribs, __int64 arrID, long dType, long nDims, long* size, void* cpuData, long numComponents);
 	~Array(void);
 
 	// free array resource
@@ -37,7 +37,7 @@ public:
 	CALdeviceinfo* devInfo;
 	CALdeviceattribs* devAttribs;
 
-	long arrID;				// array ID		
+	__int64 arrID;				// array ID		
 	long dType;				// data type code		
 	long nDims;				// number of dimensions
 	long* size;				// array size
@@ -85,7 +85,7 @@ public:
 	~ArrayPool(void);
 
 	Array* Get(long ind);
-	long Find(long arrID);
+	long Find(__int64 arrID);
 	void Remove(long ind);
 	void Remove(Array* arr);
 	// allocate an array
@@ -100,8 +100,8 @@ public:
 	CALdeviceattribs* devAttribs;
 
 	// create a new array object (without allocation)	
-	Array* NewArray(long arrID, long dType, long nDims, long* size, void* cpuData, long numComponents);
-	Array* NewArray(long arrID, long dType, long nDims, long* size, void* cpuData);		
+	Array* NewArray(__int64 arrID, long dType, long nDims, long* size, void* cpuData, long numComponents);
+	Array* NewArray(__int64 arrID, long dType, long nDims, long* size, void* cpuData);		
 };
 
 
@@ -117,5 +117,5 @@ public:
 	long nDims;			// number of dimensions of expression result
 	long* size;			// size of expression result
 	long* transpDims;	// transposed dimensions in case of transposition operation
-	Array* args[3];		// expression arguments	
+	Array* args[2];		// expression arguments	
 };
