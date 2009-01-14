@@ -26,3 +26,37 @@ BOOL EqualSizes(long nDims1, long* size1, long nDims2, long* size2);
 
 // copy data from one resource to another
 CALresult ResCopy(CALcontext ctx, CALresource dstRes, CALresource srcRes);
+
+
+typedef struct {
+    LARGE_INTEGER start;
+    LARGE_INTEGER stop;
+} stopWatch;
+
+class CStopWatch {
+
+private:
+	stopWatch timer;
+	LARGE_INTEGER frequency;
+	double LIToSecs( LARGE_INTEGER & L)
+	{
+		return ((double)L.QuadPart /(double)frequency.QuadPart);
+	};
+
+public:
+	CStopWatch()
+	{
+		timer.start.QuadPart=0;
+		timer.stop.QuadPart=0;	
+		QueryPerformanceFrequency( &frequency );
+	};
+
+	void Start( ){QueryPerformanceCounter(&timer.start);};
+	void Stop( ){QueryPerformanceCounter(&timer.stop);};
+	double Elapsed()
+	{
+		LARGE_INTEGER time;
+		time.QuadPart = timer.stop.QuadPart - timer.start.QuadPart;
+		return LIToSecs( time) ;
+	};
+};

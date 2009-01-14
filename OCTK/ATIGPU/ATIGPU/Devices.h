@@ -21,6 +21,8 @@ public:
 	ArrayPool* arrs;			// arrays created on the device	
 	// create a new context and put it to the context pool
 	CALresult NewContext(void);
+
+	CALcontext ctxGet;			// context used for GetArray
 };
 
 class DevicePool :

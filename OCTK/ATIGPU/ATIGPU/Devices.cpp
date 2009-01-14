@@ -9,7 +9,8 @@ Device::Device(long devNum, CALresult* err)
 	hDev = 0;
 	kernels = NULL;
 	ctxs = NULL;
-	arrs = NULL;		
+	arrs = NULL;	
+	ctxGet = 0;
 
 	*err = calDeviceOpen(&hDev,devNum);
 	if(*err != CAL_RESULT_OK)
@@ -61,11 +62,16 @@ Device::Device(long devNum, CALresult* err)
 
 	ctxs = new ContextPool;	
 	arrs = new ArrayPool(hDev,&info,&attribs);	
+
+	*err = calCtxCreate(&ctxGet,hDev);
 }
 
 Device::~Device(void)
 {
 	long i;
+
+	if(ctxGet)
+		calCtxDestroy(ctxGet);
 
 	if(ctxs)
 		delete ctxs;

@@ -11,7 +11,8 @@ Array::Array(CALdevice hDev, CALdeviceinfo* devInfo, CALdeviceattribs* devAttrib
 	useCounter = 0;
 
 	cpuData = NULL;
-	parts = NULL;
+	parts = NULL;	
+	firKernel = NULL;	
 
 	isReservedForGet = FALSE;
 	isVirtualized = FALSE;
@@ -94,7 +95,10 @@ Array::Array(CALdevice hDev, CALdeviceinfo* devInfo, CALdeviceattribs* devAttrib
 
 	// total number of physical elements and total physical data size in bytes
 	physNumElements = physSize[0]*physSize[1];
-	physDataSize = physNumElements*physElemSize;	
+	physDataSize = physNumElements*physElemSize;
+
+	if(calExtGetProc((CALextproc*)&calExtResCreate2D,(CALextid)CAL_EXT_RES_CREATE,"calResCreate2D"))
+		calExtResCreate2D = NULL;
 }
 
 Array::Array(CALdevice hDev, CALdeviceinfo* devInfo, CALdeviceattribs* devAttribs, __int64 arrID, long dType, long nDims, long* size, void* cpuData)
@@ -107,7 +111,7 @@ Array::Array(CALdevice hDev, CALdeviceinfo* devInfo, CALdeviceattribs* devAttrib
 
 	cpuData = NULL;
 	parts = NULL;
-	firKernel = NULL;
+	firKernel = NULL;	
 
 	isReservedForGet = FALSE;
 	isVirtualized = FALSE;
@@ -191,6 +195,9 @@ Array::Array(CALdevice hDev, CALdeviceinfo* devInfo, CALdeviceattribs* devAttrib
 	// total number of physical elements and total physical data size in bytes
 	physNumElements = physSize[0]*physSize[1];
 	physDataSize = physNumElements*physElemSize;
+
+	if(calExtGetProc((CALextproc*)&calExtResCreate2D,(CALextid)CAL_EXT_RES_CREATE,"calResCreate2D"))
+		calExtResCreate2D = NULL;	
 }
 
 
@@ -208,7 +215,7 @@ Array::~Array(void)
 			delete parts[numParts-1];
 
 		delete parts;
-	}
+	}	
 
 	Free();
 }
@@ -326,16 +333,18 @@ ArrayExpression::~ArrayExpression(void)
 // allocate array resource
 CALresult Array::AllocateRes(CALuint flags)
 {
-	CALresult err;
+	CALresult err;	
 
 	_ASSERT(!res);
 	
-	if(IsScalar()) // for scalars use remote memory
-		err = calResAllocRemote1D(&res,&hDev,1,physSize[1],dFormat,flags);
+	if(physSize[0] == 1) // for small 1D arrays use remote memory
+	{
+		err = calResAllocRemote1D(&res,&hDev,1,physSize[1],dFormat,flags);		
+	}
 	else
 		err = calResAllocLocal2D(&res,hDev,physSize[1],physSize[0],dFormat,flags);
 	
-	if(err == CAL_RESULT_WARNING)	// account warnings
+	if(err == CAL_RESULT_WARNING)	// account possible warnings
 		err = CAL_RESULT_OK;
 
 	if(err == CAL_RESULT_OK)
@@ -356,33 +365,67 @@ CALresult Array::AllocateRes(CALuint flags)
 CALresult Array::SetData(CALcontext ctx, void* cpuData)
 {
 	CALresult err;
-	CALresource remoteRes;
+	CALresource tmpRes;
+	void* pBuf = NULL;
 	long i;	
 
 	if(res)
-	{		
-		// first copy data to the remote memory,  then to the local using DMA
-		err = calResAllocRemote2D(&remoteRes,&hDev,1,physSize[1],physSize[0],dFormat,0);
-		if(err == CAL_RESULT_OK)
+	{
+		if(physSize[0] == 1)	// small 1D arrays are stored in the remote memory		
+		{			
+			void* ptr;
+			CALuint pitch;
+			if( (err = calResMap(&ptr,&pitch,res,0)) == CAL_RESULT_OK )
+			{
+				CopyMemory(ptr,cpuData,dataSize);
+				ZeroMemory((char*)ptr+dataSize,physDataSize-dataSize);	// account padding
+				calResUnmap(res);
+			}		
+		}
+		else
 		{
-			if( (err = SetDataToRes(remoteRes,cpuData)) == CAL_RESULT_OK )		
-				err = ResCopy(ctx,res,remoteRes);
+			// first copy data to the remote memory,  then to the local using DMA
+			if(calExtResCreate2D && !(physSize[1] % devAttribs->pitch_alignment) ) // try to use pinned memory
+			{					
+				pBuf = _aligned_malloc(physPitch*physElemSize*physSize[0],devAttribs->surface_alignment);
+				err = calExtResCreate2D(&tmpRes,hDev,pBuf,physSize[1],physSize[0],dFormat,physDataSize,0);
 
-			calResFree(remoteRes);
+				if(err != CAL_RESULT_OK)
+				{
+					_aligned_free(pBuf);
+					pBuf = NULL;
+					err = calResAllocRemote2D(&tmpRes,&hDev,1,physSize[1],physSize[0],dFormat,0);
+				}
+			}
+			else		
+				err = calResAllocRemote2D(&tmpRes,&hDev,1,physSize[1],physSize[0],dFormat,0);		
+
+			if(err == CAL_RESULT_OK)
+			{				
+				err = SetDataToRes(tmpRes,cpuData);								
+
+				if(err == CAL_RESULT_OK)		
+					err = ResCopy(ctx,res,tmpRes);				
+
+				calResFree(tmpRes);
+
+				if(pBuf)
+					_aligned_free(pBuf);
+			}	
 		}
 	}
 	else if(parts)
 	{		
-		err = calResAllocRemote2D(&remoteRes,&hDev,1,parts[0]->physSize[1],parts[0]->physSize[0],dFormat,0);
+		err = calResAllocRemote2D(&tmpRes,&hDev,1,parts[0]->physSize[1],parts[0]->physSize[0],dFormat,0);
 		if(err == CAL_RESULT_OK)
 		{
 			for(i = 0; (i < numParts) && (err == CAL_RESULT_OK); i++)
 			{
-				if( (err = SetDataPartToRes(remoteRes,cpuData,i)) == CAL_RESULT_OK)
-					err = ResCopy(ctx,parts[i]->res,remoteRes);
+				if( (err = SetDataPartToRes(tmpRes,cpuData,i)) == CAL_RESULT_OK)
+					err = ResCopy(ctx,parts[i]->res,tmpRes);
 			}
 
-			calResFree(remoteRes);
+			calResFree(tmpRes);
 		}		
 	}
 	else
@@ -395,44 +438,47 @@ CALresult Array::SetData(CALcontext ctx, void* cpuData)
 CALresult Array::GetData(CALcontext ctx, void* cpuData)
 {
 	CALresult err;
-	CALresource remoteRes;
+	CALresource tmpRes;
 	long i;	
 	
-	if(IsScalar()) // case of a scalar
-	{
-		void* ptr;
-		CALuint pitch;
-		if( (err = calResMap(&ptr,&pitch,res,0)) == CAL_RESULT_OK )
-		{
-			memcpy(cpuData,ptr,elemSize);
-			calResUnmap(res);
-		}
-
-	}
-	else if(res)
+	if(res)
 	{		
-		// first copy data to the remote memory, then to the local using DMA
-		err = calResAllocRemote2D(&remoteRes,&hDev,1,physSize[1],physSize[0],dFormat,0);
-		if(err == CAL_RESULT_OK)
+		if(physSize[0] == 1) // case of small 1D arrays
+		{			
+			void* ptr;
+			CALuint pitch;								
+			if( (err = calResMap(&ptr,&pitch,res,0)) == CAL_RESULT_OK )
+			{				
+				memcpy(cpuData,ptr,dataSize);				
+				calResUnmap(res);
+			}
+		}
+		else
 		{
-			if( (err = ResCopy(ctx,remoteRes,res)) == CAL_RESULT_OK )										
-				err = GetDataFromRes(remoteRes,cpuData);		
-			
-			calResFree(remoteRes);
-		}		
+
+			// first copy data to the remote memory, then to the local using DMA
+			err = calResAllocRemote2D(&tmpRes,&hDev,1,physSize[1],physSize[0],dFormat,0);
+			if(err == CAL_RESULT_OK)
+			{
+				if( (err = ResCopy(ctx,tmpRes,res)) == CAL_RESULT_OK )										
+					err = GetDataFromRes(tmpRes,cpuData);		
+
+				calResFree(tmpRes);
+			}
+		}
 	}	
 	else if(parts)
 	{
-		err = calResAllocRemote2D(&remoteRes,&hDev,1,parts[0]->physSize[1],parts[0]->physSize[0],dFormat,0);
+		err = calResAllocRemote2D(&tmpRes,&hDev,1,parts[0]->physSize[1],parts[0]->physSize[0],dFormat,0);
 		if(err == CAL_RESULT_OK)
 		{
 			for(i = 0; (i < numParts) && (err == CAL_RESULT_OK); i++)
 			{
-				if( (err = ResCopy(ctx,remoteRes,parts[i]->res)) == CAL_RESULT_OK )
-					err = GetDataPartFromRes(remoteRes,cpuData,i);				
+				if( (err = ResCopy(ctx,tmpRes,parts[i]->res)) == CAL_RESULT_OK )
+					err = GetDataPartFromRes(tmpRes,cpuData,i);				
 			}
 
-			calResFree(remoteRes);
+			calResFree(tmpRes);
 		}
 	}
 	else
@@ -448,15 +494,15 @@ CALresult Array::SetDataToRes(CALresource res, void* cpuData)
 	CALuint gpuPitch;
 	long i, numCpuPitch, cpuPitch, pSize;
 	char* gpuPtr;
-	char* cpuPtr;
+	char* cpuPtr;	
 
-	cpuPtr = (char*)cpuData;
+	cpuPtr = (char*)cpuData;		
 
 	err = calResMap((void**)&gpuPtr,&gpuPitch,res,0);
 	if(err != CAL_RESULT_OK) 
-		return err;
+		return err;	
 
-	gpuPitch *= physElemSize; // pitch in number of bytes
+	gpuPitch *= physElemSize; // pitch in number of bytes		
 
 	if( (nDims == 1) && !isVirtualized )
 	{
@@ -495,9 +541,9 @@ CALresult Array::SetDataToRes(CALresource res, void* cpuData)
 			ZeroMemory(gpuPtr+i,physSize[0]*gpuPitch-(numCpuPitch-1)*gpuPitch-i);	// account padding
 		}
 		
-	}		
+	}			
 
-	err = calResUnmap(res);	
+	err = calResUnmap(res);		
 
 	return err;
 }
@@ -585,7 +631,7 @@ CALresult Array::GetDataFromRes(CALresource res, void* cpuData)
 	CALuint gpuPitch;
 	long i, numCpuPitch, cpuPitch, pSize;
 	char* gpuPtr;
-	char* cpuPtr;	
+	char* cpuPtr;			
 
 	cpuPtr = (char*)cpuData;
 
@@ -631,7 +677,7 @@ CALresult Array::GetDataFromRes(CALresource res, void* cpuData)
 		
 	}		
 
-	err = calResUnmap(res);
+	err = calResUnmap(res);	
 
 	return err;
 }
@@ -745,8 +791,13 @@ CALresult Array::Copy(CALcontext ctx, Array* dstArr)
 
 	if(!parts)
 	{
-		_ASSERT(!dstArr->parts);		
-		err = ResCopy(ctx,dstArr->res,res);	
+		_ASSERT(!dstArr->parts);
+		
+		// an optimization to avoid !!!SLOW!!! copying from one device to an other
+		if( (dstArr->hDev != hDev) && (cpuData) ) 
+			err = dstArr->SetData(ctx,cpuData);
+		else
+			err = ResCopy(ctx,dstArr->res,res);	
 	}
 	else
 	{

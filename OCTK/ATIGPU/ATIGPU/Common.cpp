@@ -144,7 +144,7 @@ CALresult ResCopy(CALcontext ctx, CALresource dstRes, CALresource srcRes)
 	{
 		calCtxReleaseMem(ctx,dstMem);
 		return err;
-	}
+	}	
 
 	err = calMemCopy(&ev,ctx,srcMem,dstMem,0);
 	if(err != CAL_RESULT_OK) 
@@ -154,10 +154,10 @@ CALresult ResCopy(CALcontext ctx, CALresource dstRes, CALresource srcRes)
 		return err;
 	}
 
-	while(calCtxIsEventDone(ctx,ev) == CAL_RESULT_PENDING);
+	while(calCtxIsEventDone(ctx,ev) == CAL_RESULT_PENDING);	
 
 	calCtxReleaseMem(ctx,srcMem);
-	calCtxReleaseMem(ctx,dstMem);
+	calCtxReleaseMem(ctx,dstMem);	
 
 	return err;
 }

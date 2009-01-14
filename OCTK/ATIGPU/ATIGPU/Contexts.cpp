@@ -117,6 +117,7 @@ CALresult Context::SetComputation(ArrayExpression* expr, Array* result, long pri
 
 	// check for the case when arguments are located on another device
 	err = CAL_RESULT_OK;
+
 	if(expr->op != OpIdentic)
 	{
 		for(i = 0; (err == CAL_RESULT_OK) && (i < 2) && (expr->args[i]); i++)
@@ -478,7 +479,7 @@ CALresult Context::DoComputation(void)
 	long i;
 
 	if(!expr)	
-		return CAL_RESULT_ERROR;
+		return CAL_RESULT_ERROR;	
 	
 	switch(expr->op)
 	{
@@ -487,7 +488,7 @@ CALresult Context::DoComputation(void)
 		break;
 
 	case OpAdd:
-		err = DoElementwise();			
+		err = DoElementwise();
 		break;
 
 	case OpSub:
@@ -531,8 +532,7 @@ CALresult Context::DoComputation(void)
 
 	default:
 		err = CAL_RESULT_INVALID_PARAMETER;
-	}
-		
+	}		
 	
 	// decrement use counters	
 	for(i = 0; (i < 2) && (expr->args[i]); i++){expr->args[i]->useCounter--;}	

@@ -36,6 +36,9 @@ BOOL isInitialized = FALSE;
 // GPU devices
 DevicePool* devs = NULL;
 
+CStopWatch sset, sdo, sfree, sget;
+double tset, tdo, tfree, tget;
+
 BOOL APIENTRY DllMain( HMODULE hModule,
                        DWORD  ul_reason_for_call,
                        LPVOID lpReserved
@@ -49,7 +52,12 @@ BOOL APIENTRY DllMain( HMODULE hModule,
 	switch (ul_reason_for_call)
 	{
 		case DLL_PROCESS_ATTACH:
-		
+
+			tset = 0;
+			tdo = 0;
+			tfree = 0;
+			tget = 0;
+
 			// only one process can load the library!
 			if(!isLoaded) 
 				isLoaded = TRUE; 
@@ -75,8 +83,8 @@ BOOL APIENTRY DllMain( HMODULE hModule,
 							devs->Add(dev);
 						else
 							delete dev;
-					}
-				}			
+					}					
+				}				
 			}
 	
 			break;
@@ -220,7 +228,7 @@ ATIGPU_API long SetComputation(
 	Array* arr;	
 	ArrayDesc* inArgs[3];
 	ArrayExpression* expr1;	
-	long i, j, ind;
+	long i, j, ind;	
 
 	if(!isInitialized) 
 		return CAL_RESULT_NOT_INITIALIZED;
@@ -325,9 +333,14 @@ ATIGPU_API long SetComputation(
 				devs->Get(j)->arrs->Add(arr);
 			}
 		}
-	}
+	}		
+	
+	sset.Start();
+	CALresult err = context->SetComputation(expr1,arr,priority,flags);
+	sset.Stop();
+	tset += sset.Elapsed();		
 
-	return context->SetComputation(expr1,arr,priority,flags);
+	return err;
 }
 
 
@@ -382,7 +395,12 @@ ATIGPU_API long DoComputation(
 	}	
 
 	// get context object
-	return context->DoComputation();	
+	sdo.Start();
+	CALresult err = context->DoComputation();	
+	sdo.Stop();
+	tdo += sdo.Elapsed();		
+
+	return err;
 }
 
 /*
@@ -445,9 +463,11 @@ ATIGPU_API long GetArray(
 {
 	long j, ind;
 	CALresult err;	
-	Array* arr;
-	CALcontext ctx;
-	void* data1;	
+	Array* arr;	
+	Device* dev;
+	void* data1;		
+
+	sget.Start();	
 
 	if(!isInitialized) 
 		return CAL_RESULT_NOT_INITIALIZED;	
@@ -458,7 +478,8 @@ ATIGPU_API long GetArray(
 	
 	if(ind >= 0)
 	{
-		arr = devs->Get(j)->arrs->Get(ind);
+		dev = devs->Get(j);
+		arr = dev->arrs->Get(ind);
 				
 		data1 = data;
 		if(!data1) 
@@ -467,22 +488,19 @@ ATIGPU_API long GetArray(
 		if(!data1)
 			return CAL_RESULT_INVALID_PARAMETER;
 
-		arr->cpuData = data1;	// set as a new data address!
-		
-		err = calCtxCreate(&ctx,arr->hDev);
-		if(err == CAL_RESULT_OK)
-		{						
-			err = arr->GetData(ctx,data1);				
-			
-			// clear flag
-			if(err == CAL_RESULT_OK)			
-				arr->isReservedForGet = FALSE;
+		arr->cpuData = data1;	// set as a new data address!				
 
-			calCtxDestroy(ctx);
-		}
+		err = arr->GetData(dev->ctxGet,data1);
+
+		// clear flag
+		if(err == CAL_RESULT_OK)			
+			arr->isReservedForGet = FALSE;			
+		
+		sget.Stop();
+		tget += sget.Elapsed();
 	}
 	else
-		err = CAL_RESULT_INVALID_PARAMETER;
+		err = CAL_RESULT_INVALID_PARAMETER;	
 
 	return err;
 }
@@ -497,7 +515,9 @@ ATIGPU_API long GetArray(
 */
 ATIGPU_API long FreeArray(__int64 arrID)
 {
-	long j, ind;		
+	long j, ind;	
+
+	sfree.Start();
 
 	if(!isInitialized) 
 		return CAL_RESULT_NOT_INITIALIZED;	
@@ -506,10 +526,15 @@ ATIGPU_API long FreeArray(__int64 arrID)
 	j = 0;
 	while((j < devs->Length()) && ((ind = devs->Get(j)->arrs->Find(arrID)) == -1) ){j++;}
 	
-	if(ind >= 0)	
-		devs->Get(j)->arrs->Remove(ind);	
+	if(ind >= 0)
+	{
+		devs->Get(j)->arrs->Remove(ind);		
+	}
 	else
 		return CAL_RESULT_INVALID_PARAMETER;
+	
+	sfree.Stop();
+	tfree += sfree.Elapsed();
 
 	return CAL_RESULT_OK;
 }

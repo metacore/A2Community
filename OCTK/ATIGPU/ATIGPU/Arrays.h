@@ -1,5 +1,6 @@
 #pragma once
 #include "ObjectPool.h"
+#include "cal_ext.h"
 
 typedef CALresult (*FuncAllocateRes)(CALresource res, long width, long height, BOOL local, CALuint flags);
 
@@ -75,6 +76,8 @@ public:
 	char* firKernel;
 	long hotSpot;
 	long boundary;
+
+	PFNCALRESCREATE2D calExtResCreate2D;	
 };
 
 class ArrayPool :
