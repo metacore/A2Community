@@ -7,7 +7,6 @@ typedef CALresult (*FuncAllocateRes)(CALresource res, long width, long height, B
 class Array
 {
 public:	
-	Array(CALdevice hDev, CALdeviceinfo* devInfo, CALdeviceattribs* devAttribs, __int64 arrID, long dType, long nDims, long* size, void* cpuData);
 	Array(CALdevice hDev, CALdeviceinfo* devInfo, CALdeviceattribs* devAttribs, __int64 arrID, long dType, long nDims, long* size, void* cpuData, long numComponents);
 	~Array(void);
 
@@ -37,6 +36,8 @@ public:
 	CALdevice hDev;			// handle of device on which the array exists	
 	CALdeviceinfo* devInfo;
 	CALdeviceattribs* devAttribs;
+
+	PFNCALRESCREATE2D calExtResCreate2D;	// extension of a resource constructor
 
 	__int64 arrID;				// array ID		
 	long dType;				// data type code		
@@ -72,12 +73,12 @@ public:
 
 	BOOL isCopy;			// TRUE when array is a copy of some (original) array
 
-	// for the case of FIR filter matrix
-	char* firKernel;
-	long hotSpot;
-	long boundary;
+	BOOL isTransposedMatrix;	// TRUE when arrray is a transposed matrix
 
-	PFNCALRESCREATE2D calExtResCreate2D;	
+	// for the case of a sparse FIR filter matrix
+	BOOL isFIRFilterMatrix;	// TRUE when array is a sparse FIR filter matrix	
+	long hotSpot;
+	long boundary;		
 };
 
 class ArrayPool :

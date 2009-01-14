@@ -268,13 +268,11 @@ ATIGPU_API long SetComputation(
 		if(ind == -1)	// create a new array
 		{		
 			arr = dev->arrs->NewArray(inArgs[i]->id,inArgs[i]->dType,inArgs[i]->nDims,inArgs[i]->size,inArgs[i]->data);			
-			if(!inArgs[i]->kernel)
-				arr->cpuData = inArgs[i]->data;
-			else
-			{
-				arr->firKernel = new char[inArgs[i]->kernel->size[0]*arr->elemSize];
+			if(inArgs[i]->kernel)			
+			{				
 				arr->hotSpot = inArgs[i]->hotSpot;
 				arr->boundary = inArgs[i]->boundary;
+				arr->isTransposedMatrix = inArgs[i]->transposed;
 			}
 			dev->arrs->Add(arr);	// add new array to the pool
 		}
@@ -306,8 +304,7 @@ ATIGPU_API long SetComputation(
 	
 	if(ind == -1)	// create a new array
 	{	
-		arr = dev->arrs->NewArray(resultDesc->id,resultDesc->dType,resultDesc->nDims,resultDesc->size,resultDesc->data);
-		arr->cpuData = resultDesc->data;
+		arr = dev->arrs->NewArray(resultDesc->id,resultDesc->dType,resultDesc->nDims,resultDesc->size,resultDesc->data);		
 		dev->arrs->Add(arr);	// add new array to the pool
 	}
 	else	// use already existing array	

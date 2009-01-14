@@ -111,7 +111,7 @@ public:
 	// set a dot product computation
 	CALresult SetDotProd(ArrayExpression* expr, Array* result);
 	// setup a convolve computation
-	CALresult SetConvolve(ArrayExpression* expr, Array* result);
+	CALresult SetConvolveRows(ArrayExpression* expr, Array* result);
 	// perform a convolve computation
 	CALresult DoConvolveRows(void);
 	// setup a scale computation

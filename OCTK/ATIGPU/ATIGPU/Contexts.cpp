@@ -218,10 +218,10 @@ CALresult Context::SetComputation(ArrayExpression* expr, Array* result, long pri
 				err = SetMatVecMul(expr,result);
 			else if( (expr->args[0]->nDims == 2) && (expr->args[1]->nDims == 2) )	// matrix multiplication
 			{
-				if(!expr->args[0]->firKernel && !expr->args[1]->firKernel)
+				if(!expr->args[0]->isFIRFilterMatrix && !expr->args[1]->isFIRFilterMatrix)
 					err = SetMatMul(expr,result);
 				else
-					err = SetConvolve(expr,result);
+					err = SetConvolveRows(expr,result);
 			}
 			else if( expr->args[0]->IsScalar() || expr->args[1]->IsScalar() )
 				err = SetScale(expr,result);
@@ -1894,8 +1894,9 @@ CALresult Context::DoDotProd(void)
 }
 
 // Setup a convolve computation
-CALresult Context::SetConvolve(ArrayExpression* expr, Array* result)
+CALresult Context::SetConvolveRows(ArrayExpression* expr, Array* result)
 {
+	
 /*
 	CALresult err;	
 	BOOL isReservedForGet0;	
@@ -2038,7 +2039,7 @@ CALresult Context::DoConvolveRows(void)
 	Module* module;
 	Array* arr;
 	CALdomain domain;
-	KernelCode iKernel;	
+	KernelCode iKernel;
 
 	float* f;
 	float constData0[8] = {0,0,0,0, 0,0,0,0};
@@ -2164,6 +2165,7 @@ CALresult Context::SetScale(ArrayExpression* expr, Array* result)
 
 	if(!expr->args[0]->IsScalar())	
 	{
+		// synchronize CPU and GPU content
 		if( expr->args[1]->res && (err = expr->args[1]->GetData(ctx,expr->args[1]->cpuData)) != CAL_RESULT_OK )
 			return err;
 

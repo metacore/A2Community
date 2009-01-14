@@ -23,6 +23,7 @@ struct ArrayDesc
 	ArrayDesc* kernel;	// FIR filter kernel
 	long hotSpot;
 	long boundary;
+	long transposed;
 };
 
 // array expression description
