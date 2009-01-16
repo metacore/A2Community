@@ -249,8 +249,9 @@ ATIGPU_API long SetComputation(
 			
 	inArgs[0] = exprDesc->arg1;
 	inArgs[1] = exprDesc->arg2;	
+	inArgs[2] = exprDesc->arg3;
 
-	for(i = 0; (i < 2) && inArgs[i]; i++)
+	for(i = 0; (i < 3) && inArgs[i]; i++)
 	{
 		// look for already existing array
 		j = -1;
@@ -316,8 +317,9 @@ ATIGPU_API long SetComputation(
 
 		// if array size and type do not match with actual expression size and type
 		if( (arr->dType != expr1->dType) || !EqualSizes(arr->nDims,arr->size,expr1->nDims,expr1->size) )
-		{				
-			if( (arr != expr1->args[0]) && (arr != expr1->args[1]) )
+		{	
+			// avoid problems when the result is within input arguments
+			if( (arr != expr1->args[0]) && (arr != expr1->args[1]) && (arr != expr1->args[2]) )
 			{
 				delete arr;
 				arr = dev->arrs->NewArray(resultDesc->id,resultDesc->dType,resultDesc->nDims,resultDesc->size,resultDesc->data);				
@@ -372,7 +374,7 @@ ATIGPU_API long DoComputation(
 
 	context = dev->ctxs->Get(ctxNum);
 
-	// since result array will be changed remove all its copies!
+	// since result array will be changed remove all its copies residing on other devices!
 	for(j = 0; j < devs->Length(); j++)
 	{
 		if(j != devNum)

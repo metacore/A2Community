@@ -34,8 +34,9 @@ struct ArrayExpressionDesc
 	long nDims;		// number of dimensions of expression result
 	long* size;		// size of expression result
 	long* transpDims;	// transposed dimensions in case of transposition operation
-	ArrayDesc* arg1;	// first argument desription
-	ArrayDesc* arg2;	// second argument desription	
+	ArrayDesc* arg1;	// description of first argument
+	ArrayDesc* arg2;	// description of second argument
+	ArrayDesc* arg3;	// description of third argument
 };
 
 /*
