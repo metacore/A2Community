@@ -1,0 +1,15 @@
+il_ps_2_0
+;
+;	Clear GPU array's memory
+; 
+;	inputs: 0
+;	outputs: 1
+;	data type: any
+;	nComponents: any
+;	constants: 0
+;	kernel type: PS
+;
+dcl_output_generic o0
+mov r0, r0.0000
+mov o0, r0
+end
