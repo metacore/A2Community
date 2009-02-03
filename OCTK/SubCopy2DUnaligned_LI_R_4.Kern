@@ -1,7 +1,7 @@
 il_ps_2_0
 ;
 ;	2D subarray copy for the case when arrays are non virtualized and copy regions are not aligned to
-;	nComponents (srcOrigin[1] MOD nComponents # 0) OR (dstOrigin[1] MOD nComponents # 0) OR (size[1] MOD nComponents) # 0)
+;	nComponents (srcOrigin[1] MOD nComponents # 0) OR (dstOrigin[1] MOD nComponents # 0) OR (subSize[1] MOD nComponents) # 0)
 ; 
 ;	inputs: 2 (src,dst)
 ;	outputs: 1 (dst)

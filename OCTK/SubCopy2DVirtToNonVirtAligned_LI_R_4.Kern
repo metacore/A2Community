@@ -1,21 +1,22 @@
 il_ps_2_0
 ;
 ;	2D subarray copy for the case when source array is virtualized, destination is not virtualized, and copy regions are aligned to
-;	nComponents (dstOrigin[1] MOD nComponents = 0) & (size[1] MOD nComponents) = 0)
+;	nComponents (dstOrigin[1] MOD nComponents = 0) & (subSize[1] MOD nComponents) = 0)
 ; 
 ;	inputs: 1 (src)
 ;	outputs: 1 (dst)
 ;	data type: LONGINT/REAL
 ;	nComponents: 4 - for the output, 1 - for the input (virtualized)
-;	constants: 1 (LONGINT) : [srcOrigin[1]-dstOrigin[1],srcOrigin[0]-dstOrigin[0],dst.Width,dst.physWidth]
+;	constants: 1 (LONGINT) : [srcOrigin[1]-dstOrigin[1],srcOrigin[0]-dstOrigin[0],src.Width,src.physWidth]
 ;	kernel type: PS
 ;
 dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__ ; origin in the output range
 dcl_output_generic o0
 dcl_cb cb0[1]
 dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float) ; src array
+dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float) ; dst array
 
-dcl_literal l0, 4, 0, 0, 0
+dcl_literal l0, 4, -1, 0, 0
 
 ; compute non-virtual position in the input
 ftoi r0.xy, vWinCoord0.xy
@@ -23,14 +24,47 @@ umul r0.x, r0.x, l0.x ; output position in single-component elements
 iadd r0.xy, r0.xy, cb0[0].xy ; input position in single-component elements
 
 ; compute linear index in the input
-;
+umad r1.x, r0.y, cb0[0].z, r0.x ; ind := y*src.Width + x
 
-; compute 2D virtaul position in the input
-;
+; compute 2D virtual position in the input
+udiv r1.y, r1.x, cb0[0].w ; y := ind DIV src.physWidth
+umod r1.x, r1.x, cb0[0].w ; x := ind MOD src.physWidth
 
-sample_resource(0)_sampler(0)_aoffimmi(0,0,0) o0.x, r0.xy
-sample_resource(0)_sampler(0)_aoffimmi(1,0,0) o0.y, r0.xy
-sample_resource(0)_sampler(0)_aoffimmi(2,0,0) o0.z, r0.xy
-sample_resource(0)_sampler(0)_aoffimmi(3,0,0) o0.w, r0.xy
+umad r4.x, r1.x, l0.y, cb0[0].w ; r4.x := src.physWidth - x
+
+ige r4.x, r4.x, l0.x ; src.physWidth - x >= 4
+if_logicalnz
+	
+	sample_resource(0)_sampler(0)_aoffimmi(0,0,0) o0.x, r1.xy
+	sample_resource(0)_sampler(0)_aoffimmi(1,0,0) o0.y, r1.xy
+	sample_resource(0)_sampler(0)_aoffimmi(2,0,0) o0.z, r1.xy
+	sample_resource(0)_sampler(0)_aoffimmi(3,0,0) o0.w, r1.xy
+else
+	
+	itof r1.xy, r1.xy
+	itof r4.x, cb0[0].w
+	
+	add r1.zw, r1.xy, r1.10
+	ge r4.z, r1.z, r4.x ; x+1 >= src.physWidth
+	if_logicalnz
+		add r1.0w, r1.0w, r1.01 ; INC(y)
+	endif
+	
+	add r2.xy, r1.zw, r1.10
+	ge r4.z, r2.x, r4.x ; x+2 >= src.physWidth
+	if_logicalnz
+		add r2.0y, r2.0y, r2.01 ; INC(y)
+	endif
+	
+	ge r4.z, r2.z, r4.x ; x+3 >= src.physWidth
+	if_logicalnz
+		add r2.0w, r2.0w, r2.01 ; INC(y)
+	endif
+	
+	sample_resource(0)_sampler(0) o0.x, r1.xy
+	sample_resource(0)_sampler(0) o0.y, r1.zw
+	sample_resource(0)_sampler(0) o0.z, r2.xy
+	sample_resource(0)_sampler(0) o0.w, r2.zw
+endif
 
 end

@@ -25,14 +25,14 @@ umad r0.x, r0.y, cb0[0].w, r0.x ; ind := y*dst.physWidth + x
 udiv r0.y, r0.x, cb0[0].z ; y := ind DIV dst.Width
 umod r0.x, r0.x, cb0[0].z
 
-ilt r1.x, r0.xy, cb0[1].xy ; [x,y] < [dstOrigin[1],dstOrigin[0]]
-inot r1.x, r1.x ; [x,y] >= [dstOrigin[1],dstOrigin[0]]
-ilt r1.y, r0.xy, cb0[1].zw ; [x,y] < [dstOrigin[1]+subSize[1]-1,dstOrigin[0]+subSize[0]-1]
-ieq r1.z, r0.xy, cb0[1].zw ; [x,y] = [dstOrigin[1]+subSize[1]-1,dstOrigin[0]+subSize[0]-1]
+ilt r1.xy, r0.xy, cb0[1].xy ; [x,y] < [dstOrigin[1],dstOrigin[0]]
+inot r1.xy, r1.xy ;  ~([x,y] < [dstOrigin[1],dstOrigin[0]]) -> [x,y] >= [dstOrigin[1],dstOrigin[0]]
+ilt r2.xy, r0.xy, cb0[1].zw ; [x,y] < [dstOrigin[1]+subSize[1]-1,dstOrigin[0]+subSize[0]-1]
+and r1.xy, r1.xy, r2.xy
+ieq r2.xy, r0.xy, cb0[1].zw ; [x,y] = [dstOrigin[1]+subSize[1]-1,dstOrigin[0]+subSize[0]-1]
+ior r1.xy, r1.xy, r2.xy ; ([x,y] >= [dstOrigin[1],dstOrigin[0]]) & ([x,y] <= [dstOrigin[1]+subSize[1]-1,dstOrigin[0]+subSize[0]-1])
 
 and r1.x, r1.x, r1.y
-ior r1.x, r1.x, r1.z ; ([x,y] >= [dstOrigin[1],dstOrigin[0]]) & ([x,y] <= [dstOrigin[1]+subSize[1]-1,dstOrigin[0]+subSize[0]-1])
-
 if_logicalnz r1.x
 
 	; compute 2D position in the input, in single-component elements
@@ -66,8 +66,7 @@ if_logicalnz r1.x
 	endswitch	
 			
 else
-	sample_resource(1)_sampler(1) r1.x, vWinCoord0.xy
-	mov o0.x, r1.x
+	sample_resource(1)_sampler(1) o0.x, vWinCoord0.xy	
 endif
 
 end
