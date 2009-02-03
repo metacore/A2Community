@@ -7,7 +7,7 @@ il_ps_2_0
 ;	outputs: 1 (dst)
 ;	data type: LONGINT/REAL
 ;	nComponents: 4 (same for input and output)
-;	constants: 1,  2 x 4 (REAL) : [srcOrigin[1],srcOrigin[0],dstOrigin[1],dstOrigin[0]];  [size[1],size[0],4*(srcOrigin[1] DIV 4),4*(dstOrigin[1] DIV 4)]
+;	constants: 1,  2 x 4 (LONGINT) : [srcOrigin[1],srcOrigin[0],dstOrigin[1],dstOrigin[0]];  [subSize[1],subSize[0],dstOrigin[1] DIV 4,...]
 ;	kernel type: PS
 ;
 dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__ ; origin in the output range
@@ -16,136 +16,136 @@ dcl_cb cb0[2]
 dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float) ; src array
 dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float) ; dst array
 
-dcl_literal l0, 4.0f, 0.25f, 0.0f, 0.0f
+dcl_literal l0, 4, -1, -1, 0
 
-; dst position in single-component elements
-flr r0.xy, vWinCoord0.xy ; floor([x,y])
-mul r0.x, r0.x, l0.x ; [x,y]*4
+ftoi r0.xy, vWinCoord0.xy ; convert output position in multi-component elements  to integers
+mov r0.z, r0.x ; r0.z := Int(vWinCoord0.x)
 
-sub r2.xy, cb0[0].xy, cb0[0].zw ; [srcOrigin[1]-dstOrigin[1],srcOrigin[0]-dstOrigin[0]]
+; output position in single-component elements
+umul r0.x, r0.x, l0.x ; x*4
 
-; src position in single-component elements
-add r1.xy, r0.xy, r2.xy
+; account unaligned dstOrigin[1]
+ieq r4.x, r0.z, cb0[1].z ; Int(vWinCoord0.x) = dstOrigin[1] DIV 4
+if_logicalnz r4.x
+	umod r4.x, cb0[0].z, l0.x ; dstOrigin[1] MOD 4
+	iadd r0.x, r0.x, r4.x
+endif
 
-; src position in multicomponent elements
-mul r2.xy, r1.xy, l0.y1 ; [x,y] ./ [4,1]
-flr r2.x, r2.x
+; input position in single-component elements
+umad r1.xy, cb0[0].zw, l0.yz, cb0[0].xy ; [srcOrigin[1],srcOrigin[0]] - [dstOrigin[1],dstOrigin[0]]
+iadd r1.xy, r0.xy, r1.xy
 
-; read src data
+umod r4.x, r1.x, l0.x ; input.x MOD 4
+udiv r1.x, r1.x, l0.x ; input position in multi-component elements
+itof r1.xy, r1.xy
 
-sub r4.x, cb0[0].x, cb0[1].z ; srcOrigin[1] - 4*(srcOrigin[1] DIV 4)
-ftoi r4.x, r4.x
-
-switch r4.x		
+switch r4.x
 	
 	case 0
-		sample_resource(0)_sampler(0) r3.xyzw, r2.xy
+		sample_resource(0)_sampler(0) r3.xyzw, r1.xy
 	break
 		
-	case 1
-		sample_resource(0)_sampler(0) r3._yzw, r2.xy		
-		sample_resource(0)_sampler(0)_aoffimmi(1,0,0) r3.x___, r2.xy
+	case 1		
+		sample_resource(0)_sampler(0) r3._yzw, r1.xy		
+		sample_resource(0)_sampler(0)_aoffimmi(1,0,0) r3.x___, r1.xy
 		mov r3.xyzw, r3.yzwx
 	break
 	
 	case 2
-		sample_resource(0)_sampler(0) r3.__zw, r2.xy
-		sample_resource(0)_sampler(0)_aoffimmi(1,0,0) r3.xy__, r2.xy		
+		sample_resource(0)_sampler(0) r3.__zw, r1.xy
+		sample_resource(0)_sampler(0)_aoffimmi(1,0,0) r3.xy__, r1.xy		
 		mov r3.xyzw, r3.zwxy
 	break
 	
 	case 3
-		sample_resource(0)_sampler(0) r3.___w, r2.xy
-		sample_resource(0)_sampler(0)_aoffimmi(1,0,0) r3.xyz_, r2.xy
+		sample_resource(0)_sampler(0) r3.___w, r1.xy
+		sample_resource(0)_sampler(0)_aoffimmi(1,0,0) r3.xyz_, r1.xy
 		mov r3.xyzw, r3.wxyz
 	break
 endswitch
 
 ; write to the output
 
-add r4.x, cb0[0].z, cb0[1].x ; dstOrigin[1] + size[1]	
-sub r4.x, r4.x, r4.1 ; dstOrigin[1] + size[1] - 1	
-mul r4.y, r4.x, l0.y ; x/4
-flr r4.y, r4.y	; floor((dstOrigin[1] + size[1] - 1)/4)
+iadd r4.x, cb0[0].z, cb0[1].x ; dstOrigin[1] + subSize[1]	
+iadd r4.x, r4.x, l0.y ; dstOrigin[1] + subSize[1] - 1 ; right dst bound in single-component elements	
+udiv r4.y, r4.x, l0.x ; (dstOrigin[1] + subSize[1] - 1) DIV 4 ; right dst bound in multi-component elements
 
-ne r4.z, r0.x, cb0[1].w ; output.x # 4*(dstOrigin[1] DIV 4) -> not the left bound
-if_logicalnz r4.z
+ine r4.z, r0.z, cb0[1].z ; output.x # (dstOrigin[1] DIV 4) -> not the left dst bound
+if_logicalnz r4.z		
 	
-	ne r4.z, vWinCoord0.x, r4.y ; vWinCoord0.x # (dstOrigin[1] + size[1] - 1) DIV 4 -> not the right bound
+	ine r4.z, r0.z, r4.y ; Int(vWinCoord0.x) # (dstOrigin[1] + subSize[1] - 1) DIV 4 -> not the right dst bound
 	if_logicalnz r4.z
 		mov o0.xyzw, r3.xyzw
 	else
-		sub r4.x, r4.x, r0.x ; dstOrigin[1] + size[1] - 1 - output.x					
-		ftoi r4.x, r4.x
 		
-		switch r4.x
+		umod r4.z, r4.x, l0.x ; (dstOrigin[1] + subSize[1] - 1) MOD 4
+		
+		switch r4.z
 			
+			case 0
+				sample_resource(1)_sampler(1) r3._yzw, vWinCoord0.xy
+				mov o0, r3
+			break
+			
+			case 1
+				sample_resource(1)_sampler(1) r3.__zw, vWinCoord0.xy
+				mov o0, r3
+			break
+			
+			case 2
+				sample_resource(1)_sampler(1) r3.___w, vWinCoord0.xy
+				mov o0, r3
+			break
+			
+			case 3
+				mov o0, r3
+			break
+		endswitch
+		
+	endif	
+	
+else ; the left dst bound
+
+	ine r4.z, r0.z, r4.y ; Int(vWinCoord0.x) # (dstOrigin[1] + subSize[1] - 1) DIV 4 -> not the right dst bound
+	if_logicalnz r4.z
+			
+		umod r4.z, cb0[0].z, l0.x ; dstOrigin[1] MOD 4
+		
+		switch r4.z						
+		
 			case 0
 				mov o0, r3
 			break
 			
 			case 1
-				sample_resource(1)_sampler(1) r3._yzw, vWinCoord0.xy	
-				mov o0, r3
-			break
-			
-			case 2
-				sample_resource(1)_sampler(1) r3.__zw, vWinCoord0.xy
-				mov o0, r3
-			break
-			
-			case 3
-				sample_resource(1)_sampler(1) r3.___w, vWinCoord0.xy
-				mov o0, r3
-			break
-						
-		endswitch				
-		
-	endif
-		
-else	; the left bound
-	
-	ne r4.z, vWinCoord0.x, r4.y ; vWinCoord0.x # (dstOrigin[1] + size[1] - 1) DIV 4 -> not the right bound
-	if_logicalnz r4.z				
-		
-		sub r4.x, cb0[0].z, r0.x; dstOrigin[1]  - output.x
-		ftoi r4.x, r4.x
-		
-		switch r4.x						
-			
-			case 1
-				mov r3.yzw, r3.xyz							
+				mov r3.0yzw, r3.0xyz
 				sample_resource(1)_sampler(1) r3.x___, vWinCoord0.xy
 				mov o0, r3
 			break
 			
 			case 2
-				mov r3.zw, r3.xy
+				mov r3.00zw, r3.00xy
 				sample_resource(1)_sampler(1) r3.xy__, vWinCoord0.xy
 				mov o0, r3
 			break
 			
 			case 3
-				mov r3.w, r3.x
+				mov r3.000w, r3.000x
 				sample_resource(1)_sampler(1) r3.xyz_, vWinCoord0.xy
 				mov o0, r3
 			break
-			
-			case 4
-				mov o0, r3
-			break
+									
 		endswitch				
-		
-	else ; very specific case when size[1] <= nComponents
-		
-		sub r4.x, cb0[0].z, r0.x; dstOrigin[1]  - output.x
-		ftoi r4.x, r4.x
-		ftoi r4.y, cb0[1].x ; size[1]
+			
+	else ; very specific case when subSize[1] <= nComponents			
+	
+		umod r4.x, cb0[0].z, l0.x; dstOrigin[1] MOD 4		
 		
 		switch r4.x
 			
 			case 0				
-				switch r4.y
+				switch cb0[1].x ; subSize[1]
+				
 					case 1
 						sample_resource(1)_sampler(1) r3._yzw, vWinCoord0.xy
 						mov o0, r3
@@ -153,11 +153,15 @@ else	; the left bound
 					
 					case 2
 						sample_resource(1)_sampler(1) r3.__zw, vWinCoord0.xy
-						mov o0, r3
+					mov o0, r3
 					break
 					
 					case 3
 						sample_resource(1)_sampler(1) r3.___w, vWinCoord0.xy
+						mov o0, r3
+					break
+					
+					case 4
 						mov o0, r3
 					break
 										
@@ -165,7 +169,7 @@ else	; the left bound
 			break
 			
 			case 1
-				switch r4.y
+				switch cb0[1].x ; subSize[1]
 					case 1
 						mov r3.y, r3.x
 						sample_resource(1)_sampler(1) r3.x_zw, vWinCoord0.xy	
@@ -173,13 +177,13 @@ else	; the left bound
 					break
 					
 					case 2
-						mov r3.yz, r3.xy
+						mov r3.0yz0, r3.0xy0
 						sample_resource(1)_sampler(1) r3.x__w, vWinCoord0.xy	
 						mov o0, r3
 					break
 					
 					case 3
-						mov r3.yzw, r3.xyz
+						mov r3.0yzw, r3.0xyz
 						sample_resource(1)_sampler(1) r3.x___, vWinCoord0.xy	
 						mov o0, r3
 					break										
@@ -187,7 +191,7 @@ else	; the left bound
 			break
 			
 			case 2
-				switch r4.y
+				switch cb0[1].x ; subSize[1]
 					case 1
 						mov r3.z, r3.x
 						sample_resource(1)_sampler(1) r3.xy_w, vWinCoord0.xy	
@@ -195,7 +199,7 @@ else	; the left bound
 					break
 					
 					case 2
-						mov r3.zw, r3.xy
+						mov r3.00zw, r3.00xy
 						sample_resource(1)_sampler(1) r3.xy__, vWinCoord0.xy
 						mov o0, r3
 					break										
@@ -204,13 +208,13 @@ else	; the left bound
 			
 			case 3				
 				mov r3.w, r3.x
-				sample_resource(1)_sampler(1) r3.xyz_, vWinCoord0.xy	
+				sample_resource(1)_sampler(1) r3.xyz_, vWinCoord0.xy
 				mov o0, r3
 			break
 		endswitch				
 		
-	endif	
-	
-endif
+	endif
+
+endif								
 
 end
