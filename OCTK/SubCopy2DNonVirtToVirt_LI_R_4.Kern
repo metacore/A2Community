@@ -64,7 +64,7 @@ if_logicalnz r1.x
 			mov o0.x, r1.w
 		break
 	endswitch	
-			
+
 else
 	sample_resource(1)_sampler(1) o0.x, vWinCoord0.xy	
 endif

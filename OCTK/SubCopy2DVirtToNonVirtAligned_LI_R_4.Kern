@@ -32,39 +32,43 @@ umod r1.x, r1.x, cb0[0].w ; x := ind MOD src.physWidth
 
 umad r4.x, r1.x, l0.y, cb0[0].w ; r4.x := src.physWidth - x
 
-ige r4.x, r4.x, l0.x ; src.physWidth - x >= 4
-if_logicalnz
+itof r1.xy, r1.xy
+
+ige r4.z, r4.x, l0.x ; src.physWidth - x >= 4
+if_logicalnz r4.z		
 	
 	sample_resource(0)_sampler(0)_aoffimmi(0,0,0) o0.x, r1.xy
 	sample_resource(0)_sampler(0)_aoffimmi(1,0,0) o0.y, r1.xy
 	sample_resource(0)_sampler(0)_aoffimmi(2,0,0) o0.z, r1.xy
 	sample_resource(0)_sampler(0)_aoffimmi(3,0,0) o0.w, r1.xy
+		
 else
 	
-	itof r1.xy, r1.xy
-	itof r4.x, cb0[0].w
+	itof r5.x, cb0[0].w
 	
-	add r1.zw, r1.xy, r1.10
-	ge r4.z, r1.z, r4.x ; x+1 >= src.physWidth
-	if_logicalnz
-		add r1.0w, r1.0w, r1.01 ; INC(y)
+	add r2.xy, r1.xy, r1.10
+	ge r5.z, r2.x, r5.x ; x+1 >= src.physWidth
+	if_logicalnz r5.z
+		add r2.0y, r2.y, r2.1 ; INC(y)
 	endif
 	
-	add r2.xy, r1.zw, r1.10
-	ge r4.z, r2.x, r4.x ; x+2 >= src.physWidth
-	if_logicalnz
-		add r2.0y, r2.0y, r2.01 ; INC(y)
+	add r3.xy, r2.xy, r2.10
+	ge r5.z, r3.x, r5.x ; x+1 >= src.physWidth
+	if_logicalnz r5.z
+		add r3.0y, r3.y, r3.1 ; INC(y)
 	endif
 	
-	ge r4.z, r2.z, r4.x ; x+3 >= src.physWidth
-	if_logicalnz
-		add r2.0w, r2.0w, r2.01 ; INC(y)
+	add r4.xy, r3.xy, r3.10
+	ge r5.z, r4.x, r5.x ; x+1 >= src.physWidth
+	if_logicalnz r5.z
+		add r4.0y, r4.y, r4.1 ; INC(y)
 	endif
 	
 	sample_resource(0)_sampler(0) o0.x, r1.xy
-	sample_resource(0)_sampler(0) o0.y, r1.zw
-	sample_resource(0)_sampler(0) o0.z, r2.xy
-	sample_resource(0)_sampler(0) o0.w, r2.zw
+	sample_resource(0)_sampler(0) o0.y, r2.xy
+	sample_resource(0)_sampler(0) o0.z, r3.xy
+	sample_resource(0)_sampler(0) o0.w, r4.xy
+		
 endif
 
 end
