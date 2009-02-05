@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="ISO-8859-1" standalone="yes"?>
+
+<Kernels>
+
+	<KernAddR_PS nConstants="0">
+	
+		<IL_code>
+			il_ps_2_0		
+			dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__
+			dcl_output_generic o0
+			dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+			dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+			sample_resource(0)_sampler(0) r0, vWinCoord0
+			sample_resource(1)_sampler(1) r1, vWinCoord0
+			add o0, r0, r1
+			end
+		</IL_code>	
+	</KernAddR_PS>
+	
+</Kernels>
