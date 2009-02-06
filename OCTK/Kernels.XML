@@ -1,20 +1,612 @@
 <?xml version="1.0" encoding="ISO-8859-1" standalone="yes"?>
 
 <Kernels>
-
-	<KernAddR_PS nConstants="0">
 	
-		<IL_code>
-			il_ps_2_0		
-			dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__
-			dcl_output_generic o0
-			dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
-			dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
-			sample_resource(0)_sampler(0) r0, vWinCoord0
-			sample_resource(1)_sampler(1) r1, vWinCoord0
-			add o0, r0, r1
-			end
-		</IL_code>	
-	</KernAddR_PS>
+	<ILKernel name = "SubCopy2DAligned_LI_R_LR">		
+<![CDATA[
+il_ps_2_0
+;
+;	2D subarray copy for the case when arrays are non virtualized and copy regions are aligned to
+;	nComponents (srcOrigin[1] MOD nComponents = 0) & (dstOrigin[1] MOD nComponents = 0) & (size[1] MOD nComponents) = 0)
+;	for both input and output
+; 
+;	inputs: 1
+;	outputs: 1
+;	data type: LONGINT/REAL/LONGREAL
+;	nComponents: any
+;	constants: 1 (REAL) : [(srcOrigin[1]-dstOrigin[1]) DIV nComponents,srcOrigin[0]-dstOrigin[0],...,...]
+;
+dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__ ; origin in the output range
+dcl_output_generic o0
+dcl_cb cb0[1]
+dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+
+add r0.xy, vWinCoord0.xy, cb0[0].xy	; compute position in the input
+sample_resource(0)_sampler(0) r1, r0
+mov o0, r1
+end
+]]>
+	</ILKernel>
+	
+	<ILKernel name = "SubCopy2DUnaligned_LI_R_4">
+<![CDATA[
+il_ps_2_0
+;
+;	2D subarray copy for the case when arrays are non virtualized and copy regions are not aligned to
+;	nComponents (srcOrigin[1] MOD nComponents # 0) OR (dstOrigin[1] MOD nComponents # 0) OR (subSize[1] MOD nComponents) # 0)
+; 
+;	inputs: 2 (src,dst)
+;	outputs: 1 (dst)
+;	data type: LONGINT/REAL
+;	nComponents: 4 (same for input and output)
+;	constants: 1,  2 x 4 (LONGINT) : [srcOrigin[1],srcOrigin[0],dstOrigin[1],dstOrigin[0]];  [subSize[1],subSize[0],dstOrigin[1] DIV 4,...]
+;
+dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__ ; origin in the output range
+dcl_output_generic o0
+dcl_cb cb0[2]
+dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float) ; src array
+dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float) ; dst array
+
+dcl_literal l0, 4, -1, -1, 0
+
+ftoi r0.xy, vWinCoord0.xy ; convert output position in multi-component elements  to integers
+mov r0.z, r0.x ; r0.z := Int(vWinCoord0.x)
+
+; output position in single-component elements
+umul r0.x, r0.x, l0.x ; x*4
+
+; account unaligned dstOrigin[1]
+ieq r4.x, r0.z, cb0[1].z ; Int(vWinCoord0.x) = dstOrigin[1] DIV 4
+if_logicalnz r4.x
+	umod r4.x, cb0[0].z, l0.x ; dstOrigin[1] MOD 4
+	iadd r0.x, r0.x, r4.x
+endif
+
+; input position in single-component elements
+umad r1.xy, cb0[0].zw, l0.yz, cb0[0].xy ; [srcOrigin[1],srcOrigin[0]] - [dstOrigin[1],dstOrigin[0]]
+iadd r1.xy, r0.xy, r1.xy
+
+umod r4.x, r1.x, l0.x ; input.x MOD 4
+udiv r1.x, r1.x, l0.x ; input position in multi-component elements
+itof r1.xy, r1.xy
+
+switch r4.x
+	
+	case 0
+		sample_resource(0)_sampler(0) r3.xyzw, r1.xy
+	break
+		
+	case 1		
+		sample_resource(0)_sampler(0) r3._yzw, r1.xy		
+		sample_resource(0)_sampler(0)_aoffimmi(1,0,0) r3.x___, r1.xy
+		mov r3.xyzw, r3.yzwx
+	break
+	
+	case 2
+		sample_resource(0)_sampler(0) r3.__zw, r1.xy
+		sample_resource(0)_sampler(0)_aoffimmi(1,0,0) r3.xy__, r1.xy		
+		mov r3.xyzw, r3.zwxy
+	break
+	
+	case 3
+		sample_resource(0)_sampler(0) r3.___w, r1.xy
+		sample_resource(0)_sampler(0)_aoffimmi(1,0,0) r3.xyz_, r1.xy
+		mov r3.xyzw, r3.wxyz
+	break
+endswitch
+
+; write to the output
+
+iadd r4.x, cb0[0].z, cb0[1].x ; dstOrigin[1] + subSize[1]	
+iadd r4.x, r4.x, l0.y ; dstOrigin[1] + subSize[1] - 1 ; right dst bound in single-component elements	
+udiv r4.y, r4.x, l0.x ; (dstOrigin[1] + subSize[1] - 1) DIV 4 ; right dst bound in multi-component elements
+
+ine r4.z, r0.z, cb0[1].z ; output.x # (dstOrigin[1] DIV 4) -> not the left dst bound
+if_logicalnz r4.z		
+	
+	ine r4.z, r0.z, r4.y ; Int(vWinCoord0.x) # (dstOrigin[1] + subSize[1] - 1) DIV 4 -> not the right dst bound
+	if_logicalnz r4.z
+		mov o0.xyzw, r3.xyzw
+	else
+		
+		umod r4.z, r4.x, l0.x ; (dstOrigin[1] + subSize[1] - 1) MOD 4
+		
+		switch r4.z
+			
+			case 0
+				sample_resource(1)_sampler(1) r3._yzw, vWinCoord0.xy
+				mov o0, r3
+			break
+			
+			case 1
+				sample_resource(1)_sampler(1) r3.__zw, vWinCoord0.xy
+				mov o0, r3
+			break
+			
+			case 2
+				sample_resource(1)_sampler(1) r3.___w, vWinCoord0.xy
+				mov o0, r3
+			break
+			
+			case 3
+				mov o0, r3
+			break
+		endswitch
+		
+	endif	
+	
+else ; the left dst bound
+
+	ine r4.z, r0.z, r4.y ; Int(vWinCoord0.x) # (dstOrigin[1] + subSize[1] - 1) DIV 4 -> not the right dst bound
+	if_logicalnz r4.z
+			
+		umod r4.z, cb0[0].z, l0.x ; dstOrigin[1] MOD 4
+		
+		switch r4.z						
+		
+			case 0
+				mov o0, r3
+			break
+			
+			case 1
+				mov r3.0yzw, r3.0xyz
+				sample_resource(1)_sampler(1) r3.x___, vWinCoord0.xy
+				mov o0, r3
+			break
+			
+			case 2
+				mov r3.00zw, r3.00xy
+				sample_resource(1)_sampler(1) r3.xy__, vWinCoord0.xy
+				mov o0, r3
+			break
+			
+			case 3
+				mov r3.000w, r3.000x
+				sample_resource(1)_sampler(1) r3.xyz_, vWinCoord0.xy
+				mov o0, r3
+			break
+									
+		endswitch				
+			
+	else ; very specific case when subSize[1] <= nComponents			
+	
+		umod r4.x, cb0[0].z, l0.x; dstOrigin[1] MOD 4		
+		
+		switch r4.x
+			
+			case 0				
+				switch cb0[1].x ; subSize[1]
+				
+					case 1
+						sample_resource(1)_sampler(1) r3._yzw, vWinCoord0.xy
+						mov o0, r3
+					break
+					
+					case 2
+						sample_resource(1)_sampler(1) r3.__zw, vWinCoord0.xy
+					mov o0, r3
+					break
+					
+					case 3
+						sample_resource(1)_sampler(1) r3.___w, vWinCoord0.xy
+						mov o0, r3
+					break
+					
+					case 4
+						mov o0, r3
+					break
+										
+				endswitch;
+			break
+			
+			case 1
+				switch cb0[1].x ; subSize[1]
+					case 1
+						mov r3.y, r3.x
+						sample_resource(1)_sampler(1) r3.x_zw, vWinCoord0.xy	
+						mov o0, r3
+					break
+					
+					case 2
+						mov r3.0yz0, r3.0xy0
+						sample_resource(1)_sampler(1) r3.x__w, vWinCoord0.xy	
+						mov o0, r3
+					break
+					
+					case 3
+						mov r3.0yzw, r3.0xyz
+						sample_resource(1)_sampler(1) r3.x___, vWinCoord0.xy	
+						mov o0, r3
+					break										
+				endswitch;
+			break
+			
+			case 2
+				switch cb0[1].x ; subSize[1]
+					case 1
+						mov r3.z, r3.x
+						sample_resource(1)_sampler(1) r3.xy_w, vWinCoord0.xy	
+						mov o0, r3
+					break
+					
+					case 2
+						mov r3.00zw, r3.00xy
+						sample_resource(1)_sampler(1) r3.xy__, vWinCoord0.xy
+						mov o0, r3
+					break										
+				endswitch;
+			break
+			
+			case 3				
+				mov r3.w, r3.x
+				sample_resource(1)_sampler(1) r3.xyz_, vWinCoord0.xy
+				mov o0, r3
+			break
+		endswitch				
+		
+	endif
+
+endif								
+
+end				
+]]>	
+	</ILKernel>
+	
+	<ILKernel name = "SubCopy2DNonVirtToVirt_LI_R_4">					
+<![CDATA[
+il_ps_2_0
+;
+;	2D subarray copy for the case when source array is not virtualized and destination is virtualized
+; 
+;	inputs: 1 (src)
+;	outputs: 1 (dst)
+;	data type: LONGINT/REAL
+;	nComponents: 4 - for the input, 1 - for the output (virtualized)
+;	constants: 1, 2x4 (LONGINT) : [srcOrigin[1]-dstOrigin[1],srcOrigin[0]-dstOrigin[0],dst.Width,dst.physWidth]; [dstOrigin[1],dstOrigin[0],dstOrigin[1]+subSize[1]-1,dstOrigin[0]+subSize[0]-1]
+;
+dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__ ; origin in the output range
+dcl_output_generic o0
+dcl_cb cb0[2]
+dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float) ; src array
+dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float) ; dst array
+
+dcl_literal l0, 4, 0, 0, 0
+
+; compute linear index in the output
+ftoi r0.xy, vWinCoord0.xy
+umad r0.x, r0.y, cb0[0].w, r0.x ; ind := y*dst.physWidth + x
+
+; compute non-virtual position in the output
+udiv r0.y, r0.x, cb0[0].z ; y := ind DIV dst.Width
+umod r0.x, r0.x, cb0[0].z
+
+ilt r1.xy, r0.xy, cb0[1].xy ; [x,y] < [dstOrigin[1],dstOrigin[0]]
+inot r1.xy, r1.xy ;  ~([x,y] < [dstOrigin[1],dstOrigin[0]]) -> [x,y] >= [dstOrigin[1],dstOrigin[0]]
+ilt r2.xy, r0.xy, cb0[1].zw ; [x,y] < [dstOrigin[1]+subSize[1]-1,dstOrigin[0]+subSize[0]-1]
+and r1.xy, r1.xy, r2.xy
+ieq r2.xy, r0.xy, cb0[1].zw ; [x,y] = [dstOrigin[1]+subSize[1]-1,dstOrigin[0]+subSize[0]-1]
+ior r1.xy, r1.xy, r2.xy ; ([x,y] >= [dstOrigin[1],dstOrigin[0]]) & ([x,y] <= [dstOrigin[1]+subSize[1]-1,dstOrigin[0]+subSize[0]-1])
+
+and r1.x, r1.x, r1.y
+if_logicalnz r1.x
+
+	; compute 2D position in the input, in single-component elements
+	iadd r0.xy, r0.xy, cb0[0].xy
+
+	umod r0.z, r0.x, l0.x ; x MOD 4
+
+	udiv r0.x, r0.x, l0.x ; input position in multi-component elements
+	itof r0.xy, r0.xy ; convert [x,y] to floats
+
+	switch r0.z
+		
+		case 0
+			sample_resource(0)_sampler(0) o0.x, r0.xy
+		break
+		
+		case 1
+			sample_resource(0)_sampler(0) r1._y__, r0.xy
+			mov o0.x, r1.y
+		break
+		
+		case 2
+			sample_resource(0)_sampler(0) r1.__z_, r0.xy
+			mov o0.x, r1.z
+		break
+	
+		case 3
+			sample_resource(0)_sampler(0) r1.___w, r0.xy
+			mov o0.x, r1.w
+		break
+	endswitch	
+
+else
+	sample_resource(1)_sampler(1) o0.x, vWinCoord0.xy	
+endif
+
+end				
+]]>	
+	</ILKernel>
+	
+	<ILKernel name = "SubCopy2DVirtToNonVirtAligned_LI_R_4">	
+<![CDATA[
+il_ps_2_0
+;
+;	2D subarray copy for the case when source array is virtualized, destination is not virtualized, and copy regions are aligned to
+;	nComponents (dstOrigin[1] MOD nComponents = 0) & (subSize[1] MOD nComponents) = 0)
+; 
+;	inputs: 1 (src)
+;	outputs: 1 (dst)
+;	data type: LONGINT/REAL
+;	nComponents: 4 - for the output, 1 - for the input (virtualized)
+;	constants: 1 (LONGINT) : [srcOrigin[1]-dstOrigin[1],srcOrigin[0]-dstOrigin[0],src.Width,src.physWidth]
+;
+dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__ ; origin in the output range
+dcl_output_generic o0
+dcl_cb cb0[1]
+dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float) ; src array
+dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float) ; dst array
+
+dcl_literal l0, 4, -1, 0, 0
+
+; compute non-virtual position in the input
+ftoi r0.xy, vWinCoord0.xy
+umul r0.x, r0.x, l0.x ; output position in single-component elements
+iadd r0.xy, r0.xy, cb0[0].xy ; input position in single-component elements
+
+; compute linear index in the input
+umad r1.x, r0.y, cb0[0].z, r0.x ; ind := y*src.Width + x
+
+; compute 2D virtual position in the input
+udiv r1.y, r1.x, cb0[0].w ; y := ind DIV src.physWidth
+umod r1.x, r1.x, cb0[0].w ; x := ind MOD src.physWidth
+
+umad r4.x, r1.x, l0.y, cb0[0].w ; r4.x := src.physWidth - x
+
+itof r1.xy, r1.xy
+
+ige r4.z, r4.x, l0.x ; src.physWidth - x >= 4
+if_logicalnz r4.z		
+	
+	sample_resource(0)_sampler(0)_aoffimmi(0,0,0) o0.x, r1.xy
+	sample_resource(0)_sampler(0)_aoffimmi(1,0,0) o0.y, r1.xy
+	sample_resource(0)_sampler(0)_aoffimmi(2,0,0) o0.z, r1.xy
+	sample_resource(0)_sampler(0)_aoffimmi(3,0,0) o0.w, r1.xy
+		
+else
+	
+	itof r5.x, cb0[0].w
+	
+	add r2.xy, r1.xy, r1.10
+	ge r5.z, r2.x, r5.x ; x+1 >= src.physWidth
+	if_logicalnz r5.z
+		add r2.0y, r2.y, r2.1 ; INC(y)
+	endif
+	
+	add r3.xy, r2.xy, r2.10
+	ge r5.z, r3.x, r5.x ; x+1 >= src.physWidth
+	if_logicalnz r5.z
+		add r3.0y, r3.y, r3.1 ; INC(y)
+	endif
+	
+	add r4.xy, r3.xy, r3.10
+	ge r5.z, r4.x, r5.x ; x+1 >= src.physWidth
+	if_logicalnz r5.z
+		add r4.0y, r4.y, r4.1 ; INC(y)
+	endif
+	
+	sample_resource(0)_sampler(0) o0.x, r1.xy
+	sample_resource(0)_sampler(0) o0.y, r2.xy
+	sample_resource(0)_sampler(0) o0.z, r3.xy
+	sample_resource(0)_sampler(0) o0.w, r4.xy
+		
+endif
+
+end
+]]>	
+	</ILKernel>
+	
+	<ILKernel name = "ClearMemory">
+<![CDATA[
+il_ps_2_0
+;
+;	Clear GPU memory resource
+; 
+;	inputs: 0
+;	outputs: 1
+;	data type: any
+;	nComponents: any
+;	constants: 0
+;
+dcl_output_generic o0
+mov r0, r0.0000
+mov o0, r0
+end
+]]>						
+	</ILKernel>
+	
+	<ILKernel name = "Add_R_4">
+<![CDATA[
+il_ps_2_0
+;
+;	Array addition
+; 
+;	inputs: 2
+;	outputs: 1
+;	data type: REAL
+;	nComponents: 4
+;	constants: 0
+;
+dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__
+dcl_output_generic o0
+dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+sample_resource(0)_sampler(0) r0, vWinCoord0
+sample_resource(1)_sampler(1) r1, vWinCoord0
+add o0, r0, r1
+end		
+]]>
+	</ILKernel>
+	
+	<ILKernel name = "Add_R_1">
+<![CDATA[
+il_ps_2_0
+;
+;	Array addition
+; 
+;	inputs: 2
+;	outputs: 1
+;	data type: REAL
+;	nComponents: 1
+;	constants: 0
+;
+dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__
+dcl_output_generic o0
+dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+sample_resource(0)_sampler(0) r0.x, vWinCoord0
+sample_resource(1)_sampler(1) r1.x, vWinCoord0
+add o0.x, r0.x, r1.x
+end		
+]]>
+	</ILKernel>
+	
+	<ILKernel name = "Sub_R_4">
+<![CDATA[
+il_ps_2_0
+;
+;	Array subtraction
+; 
+;	inputs: 2
+;	outputs: 1
+;	data type: REAL
+;	nComponents: 4
+;	constants: 0
+;
+dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__
+dcl_output_generic o0
+dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+sample_resource(0)_sampler(0) r0, vWinCoord0
+sample_resource(1)_sampler(1) r1, vWinCoord0
+sub o0, r0, r1
+end		
+]]>
+	</ILKernel>
+	
+	<ILKernel name = "Sub_R_1">
+<![CDATA[
+il_ps_2_0
+;
+;	Array subtraction
+; 
+;	inputs: 2
+;	outputs: 1
+;	data type: REAL
+;	nComponents: 1
+;	constants: 0
+;
+dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__
+dcl_output_generic o0
+dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+sample_resource(0)_sampler(0) r0.x, vWinCoord0
+sample_resource(1)_sampler(1) r1.x, vWinCoord0
+sub o0.x, r0.x, r1.x
+end		
+]]>
+	</ILKernel>
+	
+	<ILKernel name = "EwMul_R_4">
+<![CDATA[
+il_ps_2_0
+;
+;	Elementwise multiplication
+; 
+;	inputs: 2
+;	outputs: 1
+;	data type: REAL
+;	nComponents: 4
+;	constants: 0
+;
+dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__
+dcl_output_generic o0
+dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+sample_resource(0)_sampler(0) r0, vWinCoord0
+sample_resource(1)_sampler(1) r1, vWinCoord0
+mul o0, r0, r1
+end
+]]>
+	</ILKernel>
+	
+	<ILKernel name = "EwMul_R_1">
+<![CDATA[
+il_ps_2_0
+;
+;	Elementwise multiplication
+; 
+;	inputs: 2
+;	outputs: 1
+;	data type: REAL
+;	nComponents: 1
+;	constants: 0
+;
+dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__
+dcl_output_generic o0
+dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+sample_resource(0)_sampler(0) r0.x, vWinCoord0
+sample_resource(1)_sampler(1) r1.x, vWinCoord0
+mul o0.x, r0.x, r1.x
+end
+]]>
+	</ILKernel>
+	
+	<ILKernel name = "EwDiv_R_4">
+<![CDATA[
+il_ps_2_0
+;
+;	Elementwise multiplication
+; 
+;	inputs: 2
+;	outputs: 1
+;	data type: REAL
+;	nComponents: 4
+;	constants: 0
+;
+dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__
+dcl_output_generic o0
+dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+sample_resource(0)_sampler(0) r0, vWinCoord0
+sample_resource(1)_sampler(1) r1, vWinCoord0
+div_zeroop(inf_else_max) o0, r0, r1
+end
+]]>
+	</ILKernel>
+	
+	<ILKernel name = "EwDiv_R_1">
+<![CDATA[
+il_ps_2_0
+;
+;	Elementwise multiplication
+; 
+;	inputs: 2
+;	outputs: 1
+;	data type: REAL
+;	nComponents: 1
+;	constants: 0
+;
+dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__
+dcl_output_generic o0
+dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+sample_resource(0)_sampler(0) r0.x, vWinCoord0
+sample_resource(1)_sampler(1) r1.x, vWinCoord0
+div_zeroop(inf_else_max) o0.x, r0.x, r1.x
+end
+]]>
+	</ILKernel>
 	
 </Kernels>
