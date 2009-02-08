@@ -425,7 +425,7 @@ end
 ]]>						
 	</ILKernel>
 	
-	<ILKernel name = "Add_R_4">
+	<ILKernel name = "Add_R">
 <![CDATA[
 il_ps_2_0
 ;
@@ -434,7 +434,7 @@ il_ps_2_0
 ;	inputs: 2
 ;	outputs: 1
 ;	data type: REAL
-;	nComponents: 4
+;	nComponents: any
 ;	constants: 0
 ;
 dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__
@@ -448,30 +448,29 @@ end
 ]]>
 	</ILKernel>
 	
-	<ILKernel name = "Add_R_1">
+	<ILKernel name = "AddScalar_R">
 <![CDATA[
 il_ps_2_0
 ;
-;	Array addition
+;	Array + Scalar
 ; 
-;	inputs: 2
+;	inputs: 1
 ;	outputs: 1
 ;	data type: REAL
-;	nComponents: 1
+;	nComponents: any
 ;	constants: 0
 ;
 dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__
 dcl_output_generic o0
+dcl_cb cb0[1] ; [scalar,scalar,scalar,scalar]
 dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
-dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
-sample_resource(0)_sampler(0) r0.x, vWinCoord0
-sample_resource(1)_sampler(1) r1.x, vWinCoord0
-add o0.x, r0.x, r1.x
+sample_resource(0)_sampler(0) r0, vWinCoord0
+add o0, r0, cb0[0]
 end		
 ]]>
 	</ILKernel>
 	
-	<ILKernel name = "Sub_R_4">
+	<ILKernel name = "Sub_R">
 <![CDATA[
 il_ps_2_0
 ;
@@ -480,7 +479,7 @@ il_ps_2_0
 ;	inputs: 2
 ;	outputs: 1
 ;	data type: REAL
-;	nComponents: 4
+;	nComponents: any
 ;	constants: 0
 ;
 dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__
@@ -493,40 +492,39 @@ sub o0, r0, r1
 end		
 ]]>
 	</ILKernel>
-	
-	<ILKernel name = "Sub_R_1">
+		
+	<ILKernel name = "ScalarSub_R">
 <![CDATA[
 il_ps_2_0
 ;
-;	Array subtraction
+;	Scalar - Array
 ; 
-;	inputs: 2
+;	inputs: 1
 ;	outputs: 1
 ;	data type: REAL
-;	nComponents: 1
+;	nComponents: any
 ;	constants: 0
 ;
 dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__
 dcl_output_generic o0
+dcl_cb cb0[1] ; [scalar,scalar,scalar,scalar]
 dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
-dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
-sample_resource(0)_sampler(0) r0.x, vWinCoord0
-sample_resource(1)_sampler(1) r1.x, vWinCoord0
-sub o0.x, r0.x, r1.x
+sample_resource(0)_sampler(0) r0, vWinCoord0
+sub o0, cb0[0], r0
 end		
 ]]>
 	</ILKernel>
 	
-	<ILKernel name = "EwMul_R_4">
+	<ILKernel name = "EwMul_R">
 <![CDATA[
 il_ps_2_0
 ;
 ;	Elementwise multiplication
 ; 
-;	inputs: 2
+;	inputs: 1
 ;	outputs: 1
 ;	data type: REAL
-;	nComponents: 4
+;	nComponents: any
 ;	constants: 0
 ;
 dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__
@@ -540,30 +538,29 @@ end
 ]]>
 	</ILKernel>
 	
-	<ILKernel name = "EwMul_R_1">
+	<ILKernel name = "MulByScalar_R">
 <![CDATA[
 il_ps_2_0
 ;
-;	Elementwise multiplication
+;	Array * Scalar
 ; 
-;	inputs: 2
+;	inputs: 1
 ;	outputs: 1
 ;	data type: REAL
-;	nComponents: 1
+;	nComponents: any
 ;	constants: 0
 ;
 dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__
 dcl_output_generic o0
+dcl_cb cb0[1] ; [scalar,scalar,scalar,scalar]
 dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
-dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
-sample_resource(0)_sampler(0) r0.x, vWinCoord0
-sample_resource(1)_sampler(1) r1.x, vWinCoord0
-mul o0.x, r0.x, r1.x
-end
+sample_resource(0)_sampler(0) r0, vWinCoord0
+mul o0, r0, cb0[0]
+end		
 ]]>
-	</ILKernel>
+	</ILKernel>	
 	
-	<ILKernel name = "EwDiv_R_4">
+	<ILKernel name = "EwDiv_R">
 <![CDATA[
 il_ps_2_0
 ;
@@ -572,7 +569,7 @@ il_ps_2_0
 ;	inputs: 2
 ;	outputs: 1
 ;	data type: REAL
-;	nComponents: 4
+;	nComponents: any
 ;	constants: 0
 ;
 dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__
@@ -586,27 +583,521 @@ end
 ]]>
 	</ILKernel>
 	
-	<ILKernel name = "EwDiv_R_1">
+	<ILKernel name = "DivByScalar_R">
 <![CDATA[
 il_ps_2_0
 ;
-;	Elementwise multiplication
+;	Array / Scalar
 ; 
-;	inputs: 2
+;	inputs: 1
 ;	outputs: 1
 ;	data type: REAL
-;	nComponents: 1
+;	nComponents: any
 ;	constants: 0
 ;
 dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__
 dcl_output_generic o0
+dcl_cb cb0[1] ; [scalar,scalar,scalar,scalar]
 dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
-dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
-sample_resource(0)_sampler(0) r0.x, vWinCoord0
-sample_resource(1)_sampler(1) r1.x, vWinCoord0
-div_zeroop(inf_else_max) o0.x, r0.x, r1.x
-end
+sample_resource(0)_sampler(0) r0, vWinCoord0
+div_zeroop(inf_else_max) o0, r0, cb0[0]
+end		
+]]>
+	</ILKernel>	
+	
+	<ILKernel name = "ScalarEwDiv_R">
+<![CDATA[
+il_ps_2_0
+;
+;	Scalar ./ Array
+; 
+;	inputs: 1
+;	outputs: 1
+;	data type: REAL
+;	nComponents: any
+;	constants: 0
+;
+dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__
+dcl_output_generic o0
+dcl_cb cb0[1] ; [scalar,scalar,scalar,scalar]
+dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+sample_resource(0)_sampler(0) r0, vWinCoord0
+div_zeroop(inf_else_max) o0, cb0[0], r0
+end		
 ]]>
 	</ILKernel>
+	
+	<ILKernel name = "AddSplitted8_R">
+<![CDATA[
+il_ps_2_0
+;
+;	Addition of splitted matrices with 8 parts
+; 
+;	inputs: 16
+;	outputs: 8
+;	data type: REAL
+;	nComponents: any
+;	constants: 0
+;
+dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__
+dcl_output_generic o0
+dcl_output_generic o1
+dcl_output_generic o2
+dcl_output_generic o3
+dcl_output_generic o4
+dcl_output_generic o5
+dcl_output_generic o6
+dcl_output_generic o7
+
+dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(2)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(3)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(4)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(5)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(6)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(7)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+
+dcl_resource_id(8)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(9)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(10)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(11)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(12)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(13)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(14)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(15)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+
+sample_resource(0)_sampler(0) r0, vWinCoord0
+sample_resource(1)_sampler(1) r1, vWinCoord0
+sample_resource(2)_sampler(2) r2, vWinCoord0
+sample_resource(3)_sampler(3) r3, vWinCoord0
+sample_resource(4)_sampler(4) r4, vWinCoord0
+sample_resource(5)_sampler(5) r5, vWinCoord0
+sample_resource(6)_sampler(6) r6, vWinCoord0
+sample_resource(7)_sampler(7) r7, vWinCoord0
+
+sample_resource(8)_sampler(8) r8, vWinCoord0
+sample_resource(9)_sampler(9) r9, vWinCoord0
+sample_resource(10)_sampler(10) r10, vWinCoord0
+sample_resource(11)_sampler(11) r11, vWinCoord0
+sample_resource(12)_sampler(12) r12, vWinCoord0
+sample_resource(13)_sampler(13) r13, vWinCoord0
+sample_resource(14)_sampler(14) r14, vWinCoord0
+sample_resource(15)_sampler(15) r15, vWinCoord0
+
+add o0, r0, r8
+add o1, r1, r9
+add o2, r2, r10
+add o3, r3, r11
+add o4, r4, r12
+add o5, r5, r13
+add o6, r6, r14
+add o7, r7, r15
+
+end		
+]]>
+	</ILKernel>		
+	
+	<ILKernel name = "SubSplitted8_R">
+<![CDATA[
+il_ps_2_0
+;
+;	Subtraction of splitted matrices with 8 parts
+; 
+;	inputs: 16
+;	outputs: 8
+;	data type: REAL
+;	nComponents: any
+;	constants: 0
+;
+dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__
+dcl_output_generic o0
+dcl_output_generic o1
+dcl_output_generic o2
+dcl_output_generic o3
+dcl_output_generic o4
+dcl_output_generic o5
+dcl_output_generic o6
+dcl_output_generic o7
+
+dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(2)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(3)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(4)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(5)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(6)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(7)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+
+dcl_resource_id(8)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(9)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(10)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(11)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(12)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(13)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(14)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(15)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+
+sample_resource(0)_sampler(0) r0, vWinCoord0
+sample_resource(1)_sampler(1) r1, vWinCoord0
+sample_resource(2)_sampler(2) r2, vWinCoord0
+sample_resource(3)_sampler(3) r3, vWinCoord0
+sample_resource(4)_sampler(4) r4, vWinCoord0
+sample_resource(5)_sampler(5) r5, vWinCoord0
+sample_resource(6)_sampler(6) r6, vWinCoord0
+sample_resource(7)_sampler(7) r7, vWinCoord0
+
+sample_resource(8)_sampler(8) r8, vWinCoord0
+sample_resource(9)_sampler(9) r9, vWinCoord0
+sample_resource(10)_sampler(10) r10, vWinCoord0
+sample_resource(11)_sampler(11) r11, vWinCoord0
+sample_resource(12)_sampler(12) r12, vWinCoord0
+sample_resource(13)_sampler(13) r13, vWinCoord0
+sample_resource(14)_sampler(14) r14, vWinCoord0
+sample_resource(15)_sampler(15) r15, vWinCoord0
+
+sub o0, r0, r8
+sub o1, r1, r9
+sub o2, r2, r10
+sub o3, r3, r11
+sub o4, r4, r12
+sub o5, r5, r13
+sub o6, r6, r14
+sub o7, r7, r15
+
+end		
+]]>
+	</ILKernel>	
+	
+	<ILKernel name = "EwMulSplitted8_R">
+<![CDATA[
+il_ps_2_0
+;
+;	Elementwise multiplication of splitted matrices with 8 parts
+; 
+;	inputs: 16
+;	outputs: 8
+;	data type: REAL
+;	nComponents: any
+;	constants: 0
+;
+dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__
+dcl_output_generic o0
+dcl_output_generic o1
+dcl_output_generic o2
+dcl_output_generic o3
+dcl_output_generic o4
+dcl_output_generic o5
+dcl_output_generic o6
+dcl_output_generic o7
+
+dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(2)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(3)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(4)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(5)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(6)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(7)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+
+dcl_resource_id(8)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(9)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(10)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(11)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(12)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(13)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(14)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(15)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+
+sample_resource(0)_sampler(0) r0, vWinCoord0
+sample_resource(1)_sampler(1) r1, vWinCoord0
+sample_resource(2)_sampler(2) r2, vWinCoord0
+sample_resource(3)_sampler(3) r3, vWinCoord0
+sample_resource(4)_sampler(4) r4, vWinCoord0
+sample_resource(5)_sampler(5) r5, vWinCoord0
+sample_resource(6)_sampler(6) r6, vWinCoord0
+sample_resource(7)_sampler(7) r7, vWinCoord0
+
+sample_resource(8)_sampler(8) r8, vWinCoord0
+sample_resource(9)_sampler(9) r9, vWinCoord0
+sample_resource(10)_sampler(10) r10, vWinCoord0
+sample_resource(11)_sampler(11) r11, vWinCoord0
+sample_resource(12)_sampler(12) r12, vWinCoord0
+sample_resource(13)_sampler(13) r13, vWinCoord0
+sample_resource(14)_sampler(14) r14, vWinCoord0
+sample_resource(15)_sampler(15) r15, vWinCoord0
+
+mul o0, r0, r8
+mul o1, r1, r9
+mul o2, r2, r10
+mul o3, r3, r11
+mul o4, r4, r12
+mul o5, r5, r13
+mul o6, r6, r14
+mul o7, r7, r15
+
+end		
+]]>
+	</ILKernel>	
+	
+	<ILKernel name = "EwDivSplitted8_R">
+<![CDATA[
+il_ps_2_0
+;
+;	Elementwise division of splitted matrices with 8 parts
+; 
+;	inputs: 16
+;	outputs: 8
+;	data type: REAL
+;	nComponents: any
+;	constants: 0
+;
+dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__
+dcl_output_generic o0
+dcl_output_generic o1
+dcl_output_generic o2
+dcl_output_generic o3
+dcl_output_generic o4
+dcl_output_generic o5
+dcl_output_generic o6
+dcl_output_generic o7
+
+dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(2)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(3)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(4)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(5)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(6)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(7)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+
+dcl_resource_id(8)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(9)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(10)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(11)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(12)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(13)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(14)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(15)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+
+sample_resource(0)_sampler(0) r0, vWinCoord0
+sample_resource(1)_sampler(1) r1, vWinCoord0
+sample_resource(2)_sampler(2) r2, vWinCoord0
+sample_resource(3)_sampler(3) r3, vWinCoord0
+sample_resource(4)_sampler(4) r4, vWinCoord0
+sample_resource(5)_sampler(5) r5, vWinCoord0
+sample_resource(6)_sampler(6) r6, vWinCoord0
+sample_resource(7)_sampler(7) r7, vWinCoord0
+
+sample_resource(8)_sampler(8) r8, vWinCoord0
+sample_resource(9)_sampler(9) r9, vWinCoord0
+sample_resource(10)_sampler(10) r10, vWinCoord0
+sample_resource(11)_sampler(11) r11, vWinCoord0
+sample_resource(12)_sampler(12) r12, vWinCoord0
+sample_resource(13)_sampler(13) r13, vWinCoord0
+sample_resource(14)_sampler(14) r14, vWinCoord0
+sample_resource(15)_sampler(15) r15, vWinCoord0
+
+div_zeroop(inf_else_max) o0, r0, r8
+div_zeroop(inf_else_max) o1, r1, r9
+div_zeroop(inf_else_max) o2, r2, r10
+div_zeroop(inf_else_max) o3, r3, r11
+div_zeroop(inf_else_max) o4, r4, r12
+div_zeroop(inf_else_max) o5, r5, r13
+div_zeroop(inf_else_max) o6, r6, r14
+div_zeroop(inf_else_max) o7, r7, r15
+
+end		
+]]>
+	</ILKernel>	
+	
+	<ILKernel name = "AddSplitted4_R">
+<![CDATA[
+il_ps_2_0
+;
+;	Addition of splitted matrices with 4 parts
+; 
+;	inputs: 8
+;	outputs: 4
+;	data type: REAL
+;	nComponents: any
+;	constants: 0
+;
+dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__
+dcl_output_generic o0
+dcl_output_generic o1
+dcl_output_generic o2
+dcl_output_generic o3
+
+dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(2)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(3)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+
+dcl_resource_id(4)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(5)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(6)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(7)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+
+sample_resource(0)_sampler(0) r0, vWinCoord0
+sample_resource(1)_sampler(1) r1, vWinCoord0
+sample_resource(2)_sampler(2) r2, vWinCoord0
+sample_resource(3)_sampler(3) r3, vWinCoord0
+
+sample_resource(4)_sampler(4) r4, vWinCoord0
+sample_resource(5)_sampler(5) r5, vWinCoord0
+sample_resource(6)_sampler(6) r6, vWinCoord0
+sample_resource(7)_sampler(7) r7, vWinCoord0
+
+add o0, r0, r4
+add o1, r1, r5
+add o2, r2, r6
+add o3, r3, r7
+
+end		
+]]>
+	</ILKernel>	
+	
+	<ILKernel name = "SubSplitted4_R">
+<![CDATA[
+il_ps_2_0
+;
+;	Subtraction of splitted matrices with 4 parts
+; 
+;	inputs: 8
+;	outputs: 4
+;	data type: REAL
+;	nComponents: any
+;	constants: 0
+;
+dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__
+dcl_output_generic o0
+dcl_output_generic o1
+dcl_output_generic o2
+dcl_output_generic o3
+
+dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(2)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(3)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+
+dcl_resource_id(4)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(5)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(6)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(7)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+
+
+sample_resource(0)_sampler(0) r0, vWinCoord0
+sample_resource(1)_sampler(1) r1, vWinCoord0
+sample_resource(2)_sampler(2) r2, vWinCoord0
+sample_resource(3)_sampler(3) r3, vWinCoord0
+
+sample_resource(4)_sampler(4) r4, vWinCoord0
+sample_resource(5)_sampler(5) r5, vWinCoord0
+sample_resource(6)_sampler(6) r6, vWinCoord0
+sample_resource(7)_sampler(7) r7, vWinCoord0
+
+sub o0, r0, r4
+sub o1, r1, r5
+sub o2, r2, r6
+sub o3, r3, r7
+
+end		
+]]>
+	</ILKernel>		
+	
+	<ILKernel name = "EwMulSplitted4_R">
+<![CDATA[
+il_ps_2_0
+;
+;	Elementwise multiplication of splitted matrices with 4 parts
+; 
+;	inputs: 8
+;	outputs: 4
+;	data type: REAL
+;	nComponents: any
+;	constants: 0
+;
+dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__
+dcl_output_generic o0
+dcl_output_generic o1
+dcl_output_generic o2
+dcl_output_generic o3
+
+dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(2)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(3)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+
+dcl_resource_id(4)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(5)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(6)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(7)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+
+sample_resource(0)_sampler(0) r0, vWinCoord0
+sample_resource(1)_sampler(1) r1, vWinCoord0
+sample_resource(2)_sampler(2) r2, vWinCoord0
+sample_resource(3)_sampler(3) r3, vWinCoord0
+
+sample_resource(4)_sampler(4) r4, vWinCoord0
+sample_resource(5)_sampler(5) r5, vWinCoord0
+sample_resource(6)_sampler(6) r6, vWinCoord0
+sample_resource(7)_sampler(7) r7, vWinCoord0
+
+mul o0, r0, r4
+mul o1, r1, r5
+mul o2, r2, r6
+mul o3, r3, r7
+
+end		
+]]>
+	</ILKernel>	
+	
+	<ILKernel name = "EwDivSplitted4_R">
+<![CDATA[
+il_ps_2_0
+;
+;	Elementwise division of splitted matrices with 4 parts
+; 
+;	inputs: 8
+;	outputs: 4
+;	data type: REAL
+;	nComponents: any
+;	constants: 0
+;
+dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__
+dcl_output_generic o0
+dcl_output_generic o1
+dcl_output_generic o2
+dcl_output_generic o3
+
+dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(2)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(3)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+
+dcl_resource_id(4)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(5)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(6)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(7)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+
+sample_resource(0)_sampler(0) r0, vWinCoord0
+sample_resource(1)_sampler(1) r1, vWinCoord0
+sample_resource(2)_sampler(2) r2, vWinCoord0
+sample_resource(3)_sampler(3) r3, vWinCoord0
+
+sample_resource(4)_sampler(4) r4, vWinCoord0
+sample_resource(5)_sampler(5) r5, vWinCoord0
+sample_resource(6)_sampler(6) r6, vWinCoord0
+sample_resource(7)_sampler(7) r7, vWinCoord0
+
+div_zeroop(inf_else_max) o0, r0, r4
+div_zeroop(inf_else_max) o1, r1, r5
+div_zeroop(inf_else_max) o2, r2, r6
+div_zeroop(inf_else_max) o3, r3, r7
+
+end		
+]]>
+	</ILKernel>	
 	
 </Kernels>
