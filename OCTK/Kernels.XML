@@ -1098,6 +1098,521 @@ div_zeroop(inf_else_max) o3, r3, r7
 
 end		
 ]]>
-	</ILKernel>	
+	</ILKernel>
+	
+	<ILKernel name = "MatMulSplitted8_R">		
+<![CDATA[
+il_ps_2_0
+;
+;	Multiplication of matrices splitted into 8 parts: C := A*B
+; 
+;	inputs: 16
+;	outputs: 8
+;	data type: REAL
+;	nComponents: 4
+;	constants: 1, 1x4 (REAL) : [A.physWidth,...,...,...]
+;
+dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__
+dcl_cb cb0[1]	; [A.physWidth,...]
+
+dcl_output_generic o0
+dcl_output_generic o1
+dcl_output_generic o2
+dcl_output_generic o3
+dcl_output_generic o4
+dcl_output_generic o5
+dcl_output_generic o6
+dcl_output_generic o7
+
+; parts of A
+dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(2)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(3)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(4)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(5)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(6)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(7)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+
+; parts of B
+dcl_resource_id(8)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(9)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(10)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(11)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(12)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(13)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(14)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(15)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+
+dcl_literal l0, 2.0f, 0.5f, 0.0f, 0.0f
+
+; initialize sample counters of A
+mov r0.0y, vWinCoord0.y		; r0 := [0,y]
+sub r0.x, r0.x, r0.1				; account first increment
+
+; initialize sample counter of B
+mov r1.x0, vWinCoord0.x		; [x,0]
+sub r1.y, r1.y, l0.y				; account first increment
+
+; clear float4 accumulators for 8x4 * 4x4 matrix multiply result
+mov r34, r34.0000	
+mov r35, r35.0000
+mov r36, r36.0000
+mov r37, r37.0000
+mov r38, r38.0000	
+mov r39, r39.0000
+mov r40, r40.0000
+mov r41, r41.0000
+
+mov r2.0y00, cb0[0].x			; r2.x is the loop counter, r2.y := A.width
+sub r2.x, r2.x, r2.1				; account first increment
+
+whileloop
+
+	; increment sample counter of B
+	add r1.y, r1.y, l0.y
+
+	; increment sample counter of A
+	add r0.x, r0.x, r0.1
+
+	add r2.x, r2.x, r2.1	; loop counter ++
+
+   	ge r2.z, r2.x, r2.y	; while(loop counter < A.physWidth)
+   	break_logicalnz r2.z
+
+	; load next 4x4 block of B
+
+	mod r3.x, r2.x, l0.x	; r3.x := r2.x % 2
+
+	eq r3.y, r3.x, r3.0
+	if_logicalnz r3.y	; if r3.x == 0
+		sample_resource(8)_sampler(8) r10, r1.xy00
+		sample_resource(9)_sampler(9) r11, r1.xy00
+		sample_resource(10)_sampler(10) r12, r1.xy00
+		sample_resource(11)_sampler(11) r13, r1.xy00
+	else
+		sample_resource(12)_sampler(12) r10, r1.xy00
+		sample_resource(13)_sampler(13) r11, r1.xy00
+		sample_resource(14)_sampler(14) r12, r1.xy00
+		sample_resource(15)_sampler(15) r13, r1.xy00
+	endif
+
+	; load next 8x4 block of A
+	sample_resource(0)_sampler(0) r26, r0.xy00
+	sample_resource(1)_sampler(1) r27, r0.xy00
+	sample_resource(2)_sampler(2) r28, r0.xy00
+	sample_resource(3)_sampler(3) r29, r0.xy00
+	sample_resource(4)_sampler(4) r30, r0.xy00
+	sample_resource(5)_sampler(5) r31, r0.xy00
+	sample_resource(6)_sampler(6) r32, r0.xy00
+	sample_resource(7)_sampler(7) r33, r0.xy00
+
+	; compute Ablk * Bblk
+
+	; row 1
+	mad r42, r26.x, r10, r34	; r42 := Ablk[0,0]*Bblk0[0,*] + Cblk[0,*]
+	mad r42, r26.y, r11, r42	; r42 := Ablk[0,1]*Bblk0[1,*] + r42
+	mad r42, r26.z, r12, r42	; r42 := Ablk[0,2]*Bblk0[2,*] + r42
+	mad r34, r26.w, r13, r42	; Cblk[0,*] := Ablk[0,3]*Bblk0[3,*] + r42
+	; row 2
+	mad r42, r27.x, r10, r35
+	mad r42, r27.y, r11, r42
+	mad r42, r27.z, r12, r42
+	mad r35, r27.w, r13, r42
+	; row 3
+	mad r42, r28.x, r10, r36
+	mad r42, r28.y, r11, r42
+	mad r42, r28.z, r12, r42
+	mad r36, r28.w, r13, r42
+	; row 4
+	mad r42, r29.x, r10, r37
+	mad r42, r29.y, r11, r42
+	mad r42, r29.z, r12, r42
+	mad r37, r29.w, r13, r42
+	; row 5
+	mad r42, r30.x, r10, r38
+	mad r42, r30.y, r11, r42
+	mad r42, r30.z, r12, r42
+	mad r38, r30.w, r13, r42
+	; row 6
+	mad r42, r31.x, r10, r39
+	mad r42, r31.y, r11, r42
+	mad r42, r31.z, r12, r42
+	mad r39, r31.w, r13, r42
+	; row 7
+	mad r42, r32.x, r10, r40
+	mad r42, r32.y, r11, r42
+	mad r42, r32.z, r12, r42
+	mad r40, r32.w, r13, r42
+	; row 8
+	mad r42, r33.x, r10, r41
+	mad r42, r33.y, r11, r42
+	mad r42, r33.z, r12, r42
+	mad r41, r33.w, r13, r42
+
+endloop
+
+; store the result
+mov o0, r34
+mov o1, r35
+mov o2, r36
+mov o3, r37
+mov o4, r38
+mov o5, r39
+mov o6, r40
+mov o7, r41
+
+end
+]]>
+	</ILKernel>
+	
+	<ILKernel name = "MatMulSplitted8Unroll2_R">		
+<![CDATA[
+il_ps_2_0
+;
+;	Multiplication of matrices splitted into 8 parts: C := A*B
+; 	use loop unrolling by 2
+;
+;	inputs: 16
+;	outputs: 8
+;	data type: REAL
+;	nComponents: 4
+;	constants: 1, 1x4 (REAL) : [A.physWidth,...,...,...]
+;
+dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__
+dcl_cb cb0[1]	; [A.physWidth,...]
+
+dcl_output_generic o0
+dcl_output_generic o1
+dcl_output_generic o2
+dcl_output_generic o3
+dcl_output_generic o4
+dcl_output_generic o5
+dcl_output_generic o6
+dcl_output_generic o7
+
+dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(2)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(3)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(4)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(5)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(6)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(7)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+
+dcl_resource_id(8)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(9)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(10)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(11)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+
+dcl_resource_id(12)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(13)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(14)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(15)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+
+dcl_literal l0, 2.0f, 0.5f, 0.0f, 0.0f
+
+; initialize sample counters of A
+mov r0.01z0, vWinCoord0.00y0		; r0 := [0,1,y,0]
+sub r0.xy, r0.xy, l0.xx					; account first increment
+
+; initialize sample counter of B
+mov r1.x0, vWinCoord0.x			; [x,0,1,...]
+sub r1.y, r1.y, r1.1					; account first increment
+
+; clear float4 accumulators for 8x4 * 4x4 matrix multiply result
+mov r34, r34.0000	
+mov r35, r35.0000
+mov r36, r36.0000
+mov r37, r37.0000
+mov r38, r38.0000	
+mov r39, r39.0000
+mov r40, r40.0000
+mov r41, r41.0000
+
+mul r2.0y, l0.y, cb0[0].x	; r2.x is the loop counter, r2.y := floor(A.physWidth/2)
+flr r2.y, r2.y
+sub r2.x, r2.x, r2.1		; account first increment
+
+whileloop
+
+	; increment sample counter of B
+	add r1.y, r1.y, r1.1
+
+	; increment sample counters of A
+	add r0.xy, r0.xy, l0.xx
+
+	add r2.x, r2.x, r2.1	; loop counter ++
+
+   ge r2.z, r2.x, r2.y	; while(loop counter < floor(A.physWidth/2))
+   break_logicalnz r2.z
+
+	; load 4 next 4x4 blocks of B
+	sample_resource(8)_sampler(8) r10, r1.xy00
+	sample_resource(9)_sampler(9) r11, r1.xy00
+	sample_resource(10)_sampler(10) r12, r1.xy00
+	sample_resource(11)_sampler(11) r13, r1.xy00
+
+	sample_resource(12)_sampler(12) r14, r1.xy00
+	sample_resource(13)_sampler(13) r15, r1.xy00
+	sample_resource(14)_sampler(14) r16, r1.xy00
+	sample_resource(15)_sampler(15) r17, r1.xy00
+
+	; load next 8x4 block of A
+	sample_resource(0)_sampler(0) r26, r0.xz00
+	sample_resource(1)_sampler(1) r27, r0.xz00
+	sample_resource(2)_sampler(2) r28, r0.xz00
+	sample_resource(3)_sampler(3) r29, r0.xz00
+	sample_resource(4)_sampler(4) r30, r0.xz00
+	sample_resource(5)_sampler(5) r31, r0.xz00
+	sample_resource(6)_sampler(6) r32, r0.xz00
+	sample_resource(7)_sampler(7) r33, r0.xz00
+
+	; compute Ablk * Bblk0
+
+	; row 1
+	mad r42, r26.x, r10, r34	; r42 := Ablk[0,0]*Bblk0[0,*] + Cblk[0,*]
+	mad r42, r26.y, r11, r42	; r42 := Ablk[0,1]*Bblk0[1,*] + r42
+	mad r42, r26.z, r12, r42	; r42 := Ablk[0,2]*Bblk0[2,*] + r42
+	mad r34, r26.w, r13, r42	; Cblk[0,*] := Ablk[0,3]*Bblk0[3,*] + r42
+	; row 2
+	mad r42, r27.x, r10, r35
+	mad r42, r27.y, r11, r42
+	mad r42, r27.z, r12, r42
+	mad r35, r27.w, r13, r42
+	; row 3
+	mad r42, r28.x, r10, r36
+	mad r42, r28.y, r11, r42
+	mad r42, r28.z, r12, r42
+	mad r36, r28.w, r13, r42
+	; row 4
+	mad r42, r29.x, r10, r37
+	mad r42, r29.y, r11, r42
+	mad r42, r29.z, r12, r42
+	mad r37, r29.w, r13, r42
+	; row 5
+	mad r42, r30.x, r10, r38
+	mad r42, r30.y, r11, r42
+	mad r42, r30.z, r12, r42
+	mad r38, r30.w, r13, r42
+	; row 6
+	mad r42, r31.x, r10, r39
+	mad r42, r31.y, r11, r42
+	mad r42, r31.z, r12, r42
+	mad r39, r31.w, r13, r42
+	; row 7
+	mad r42, r32.x, r10, r40
+	mad r42, r32.y, r11, r42
+	mad r42, r32.z, r12, r42
+	mad r40, r32.w, r13, r42
+	; row 8
+	mad r42, r33.x, r10, r41
+	mad r42, r33.y, r11, r42
+	mad r42, r33.z, r12, r42
+	mad r41, r33.w, r13, r42
+
+	; load next 8x4 block of A
+	sample_resource(0)_sampler(0) r26, r0.yz00
+	sample_resource(1)_sampler(1) r27, r0.yz00
+	sample_resource(2)_sampler(2) r28, r0.yz00
+	sample_resource(3)_sampler(3) r29, r0.yz00
+	sample_resource(4)_sampler(4) r30, r0.yz00
+	sample_resource(5)_sampler(5) r31, r0.yz00
+	sample_resource(6)_sampler(6) r32, r0.yz00
+	sample_resource(7)_sampler(7) r33, r0.yz00
+
+	; compute Ablk * Bblk1
+
+	; row 1
+	mad r42, r26.x, r14, r34	; r42 := Ablk[0,0]*Bblk1[0,*] + Cblk[0,*]
+	mad r42, r26.y, r15, r42	; r42 := Ablk[0,1]*Bblk1[1,*] + r42
+	mad r42, r26.z, r16, r42	; r42 := Ablk[0,2]*Bblk1[2,*] + r42
+	mad r34, r26.w, r17, r42	; Cblk[0,*] := Ablk[0,3]*Bblk1[3,*] + r42
+	; row 2
+	mad r42, r27.x, r14, r35
+	mad r42, r27.y, r15, r42
+	mad r42, r27.z, r16, r42
+	mad r35, r27.w, r17, r42
+	; row 3
+	mad r42, r28.x, r14, r36
+	mad r42, r28.y, r15, r42
+	mad r42, r28.z, r16, r42
+	mad r36, r28.w, r17, r42
+	; row 4
+	mad r42, r29.x, r14, r37
+	mad r42, r29.y, r15, r42
+	mad r42, r29.z, r16, r42
+	mad r37, r29.w, r17, r42
+	; row 5
+	mad r42, r30.x, r14, r38
+	mad r42, r30.y, r15, r42
+	mad r42, r30.z, r16, r42
+	mad r38, r30.w, r17, r42
+	; row 6
+	mad r42, r31.x, r14, r39
+	mad r42, r31.y, r15, r42
+	mad r42, r31.z, r16, r42
+	mad r39, r31.w, r17, r42
+	; row 7
+	mad r42, r32.x, r14, r40
+	mad r42, r32.y, r15, r42
+	mad r42, r32.z, r16, r42
+	mad r40, r32.w, r17, r42
+	; row 8
+	mad r42, r33.x, r14, r41
+	mad r42, r33.y, r15, r42
+	mad r42, r33.z, r16, r42
+	mad r41, r33.w, r17, r42
+
+endloop
+
+mul r2.x, r2.x, l0.x	; r2.x is the loop counter, r2.y := 2*floor(A.width/2)
+sub r2.x, r2.x, r2.1	; account first increment
+
+whileloop
+
+	; increment sample counter of B
+	add r1.y, r1.y, l0.y
+
+	; increment sample counters of A
+	add r0.x, r0.x, r0.1
+
+	add r2.x, r2.x, r2.1	; loop counter ++
+
+   ge r2.z, r2.x, cb0[0].x	; while(loop counter < A.width)
+   break_logicalnz r2.z
+
+	; load next 4x4 block of B
+
+	mod r3.x, r2.x, l0.x	; r3.x := r2.x % 2
+
+	eq r3.y, r3.x, r3.0
+	if_logicalnz r3.y	; if r3.x == 0
+		sample_resource(8)_sampler(8) r10, r1.xy00
+		sample_resource(9)_sampler(9) r11, r1.xy00
+		sample_resource(10)_sampler(10) r12, r1.xy00
+		sample_resource(11)_sampler(11) r13, r1.xy00
+	else
+		sample_resource(12)_sampler(12) r10, r1.xy00
+		sample_resource(13)_sampler(13) r11, r1.xy00
+		sample_resource(14)_sampler(14) r12, r1.xy00
+		sample_resource(15)_sampler(15) r13, r1.xy00
+	endif
+
+	; load next 8x4 block of A
+	sample_resource(0)_sampler(0) r26, r0.xz00
+	sample_resource(1)_sampler(1) r27, r0.xz00
+	sample_resource(2)_sampler(2) r28, r0.xz00
+	sample_resource(3)_sampler(3) r29, r0.xz00
+	sample_resource(4)_sampler(4) r30, r0.xz00
+	sample_resource(5)_sampler(5) r31, r0.xz00
+	sample_resource(6)_sampler(6) r32, r0.xz00
+	sample_resource(7)_sampler(7) r33, r0.xz00
+
+	; compute Ablk * Bblk
+
+	; row 1
+	mad r42, r26.x, r10, r34	; r42 := Ablk[0,0]*Bblk0[0,*] + Cblk[0,*]
+	mad r42, r26.y, r11, r42	; r42 := Ablk[0,1]*Bblk0[1,*] + r42
+	mad r42, r26.z, r12, r42	; r42 := Ablk[0,2]*Bblk0[2,*] + r42
+	mad r34, r26.w, r13, r42	; Cblk[0,*] := Ablk[0,3]*Bblk0[3,*] + r42
+	; row 2
+	mad r42, r27.x, r10, r35
+	mad r42, r27.y, r11, r42
+	mad r42, r27.z, r12, r42
+	mad r35, r27.w, r13, r42
+	; row 3
+	mad r42, r28.x, r10, r36
+	mad r42, r28.y, r11, r42
+	mad r42, r28.z, r12, r42
+	mad r36, r28.w, r13, r42
+	; row 4
+	mad r42, r29.x, r10, r37
+	mad r42, r29.y, r11, r42
+	mad r42, r29.z, r12, r42
+	mad r37, r29.w, r13, r42
+	; row 5
+	mad r42, r30.x, r10, r38
+	mad r42, r30.y, r11, r42
+	mad r42, r30.z, r12, r42
+	mad r38, r30.w, r13, r42
+	; row 6
+	mad r42, r31.x, r10, r39
+	mad r42, r31.y, r11, r42
+	mad r42, r31.z, r12, r42
+	mad r39, r31.w, r13, r42
+	; row 7
+	mad r42, r32.x, r10, r40
+	mad r42, r32.y, r11, r42
+	mad r42, r32.z, r12, r42
+	mad r40, r32.w, r13, r42
+	; row 8
+	mad r42, r33.x, r10, r41
+	mad r42, r33.y, r11, r42
+	mad r42, r33.z, r12, r42
+	mad r41, r33.w, r13, r42
+
+endloop
+
+; store the result
+mov o0, r34
+mov o1, r35
+mov o2, r36
+mov o3, r37
+mov o4, r38
+mov o5, r39
+mov o6, r40
+mov o7, r41
+end
+]]>
+	</ILKernel>
+
+	<ILKernel name = "ConvolveLines5R">		
+<![CDATA[
+il_ps_2_0
+;
+;	Convolve set of lines using up to 5 coefficients FIR filter: y[k] = sum_m(h[m]*x[k+m])
+; 
+;	inputs: 1
+;	outputs: 1
+;	data type: REAL
+;	nComponents: 4
+;	constants: 4, 2x4 (REAL)
+;
+dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__ ; origin in the output range
+dcl_output_generic o0
+
+dcl_cb cb0[2]	; [h0,h1,h2,h3],[h4,0,0,0]
+dcl_cb cb1[2]	; [0,h0,h1,h2],[h3,h4,0,0]
+dcl_cb cb2[2]	; [0,0,h0,h1],[h2,h3,h4,0]
+dcl_cb cb3[2]	; [0,0,0,h0],[h1,h2,h3,h4]
+
+dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+
+; load input data
+
+;sample_resource(0)_sampler(0) r0, vWinCoord0
+;sample_resource(0)_sampler(0)_aoffimmi(1,0,0) r1, vWinCoord0
+
+mul r2, r0, cb0[0]
+mad r2, r1, cb0[1], r2
+
+mul r3, r0, cb1[0]
+mad r3, r1, cb1[1], r3
+
+mul r4, r0, cb2[0]
+mad r4, r1, cb2[1], r4
+
+mul r5, r0, cb3[0]
+mad r5, r1, cb3[1], r5
+
+dp4 o0.x, r2, r2.1111
+dp4 o0.y, r3, r3.1111
+dp4 o0.z, r4, r4.1111
+dp4 o0.w, r5, r5.1111
+
+end
+]]>
+	</ILKernel>
 	
 </Kernels>
