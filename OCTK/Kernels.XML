@@ -1566,6 +1566,127 @@ mov o7, r41
 end
 ]]>
 	</ILKernel>
+	
+	<ILKernel name = "MatVecMulSplitted8_R">
+<![CDATA[
+il_ps_2_0
+;
+;	Matrix vector multiplication with matrix being splitted into 8 parts: C := A*b
+; 
+;	inputs: 9
+;	outputs: 1
+;	data type: REAL
+;	nComponents: 4
+;	constants: 1, 1x4 (REAL) : [A.physWidth,...,...,...]
+;
+dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__
+dcl_output_generic o0
+
+dcl_cb cb0[1]
+
+dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(2)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(3)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(4)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(5)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(6)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(7)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+
+dcl_resource_id(8)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+
+dcl_literal l0, 0.0f, 0.5f, 0.0f, 0.0f
+
+mov r0, r0.0000	; r0.xy is [x,y] of the first rhs element
+
+flr r2.y, vWinCoord0.x
+mul r2.y, r2.y, l0.y
+flr r1.0y, r2.y			; r1.xy -> [x,y] of first element in input row
+sub r2.y, r2.y, r1.y	; remainder of division by 2
+
+sub r0.x, r0.x, r0.1		; account first increment
+sub r1.x, r1.x, r1.1		; account first increment
+
+mov r20, r20.0000
+mov r21, r21.0000
+mov r22, r22.0000
+mov r23, r23.0000
+
+mov r10, r10.0000			; loop counter
+sub r10.x, r10.x, r10.1	; account first increment
+
+mov r11, cb0[0]
+
+eq r2.z, r2.y, r2.0
+if_logicalnz r2.z	; if r2.y == 0
+
+	whileloop
+
+		; increment counters of row elements
+		add r0.x, r0.x, r0.1
+		add r1.x, r1.x, r1.1
+
+		add r10.x, r10.x, r10.1	; loop counter ++
+		ge r10.y, r10.x, r11.x	; while(loop counter < cb0[0].x)
+		break_logicalnz r10.y
+
+		; load next part of rhs
+		sample_resource(8)_sampler(8) r5, r0.xy
+
+		; load next parts from 4 rows
+		sample_resource(0)_sampler(0) r6, r1.xy
+		sample_resource(1)_sampler(1) r7, r1.xy
+		sample_resource(2)_sampler(2) r8, r1.xy
+		sample_resource(3)_sampler(3) r9, r1.xy
+
+		; do elementwise multiply	
+		mad r20, r5, r6, r20
+		mad r21, r5, r7, r21
+		mad r22, r5, r8, r22
+		mad r23, r5, r9, r23
+	endloop
+
+else
+
+	whileloop
+
+		; increment counters of row elements
+		add r0.x, r0.x, r0.1
+		add r1.x, r1.x, r1.1
+
+		add r10.x, r10.x, r10.1	; loop counter ++
+		ge r10.y, r10.x, r11.x	; while(loop counter < cb0[0].x)
+		break_logicalnz r10.y
+
+		; load next part of rhs
+		sample_resource(8)_sampler(8) r5, r0.xy
+
+		; load next parts from 4 rows
+		sample_resource(4)_sampler(4) r6, r1.xy
+		sample_resource(5)_sampler(5) r7, r1.xy
+		sample_resource(6)_sampler(6) r8, r1.xy
+		sample_resource(7)_sampler(7) r9, r1.xy
+
+		; do elementwise multiply	
+		mad r20, r5, r6, r20
+		mad r21, r5, r7, r21
+		mad r22, r5, r8, r22
+		mad r23, r5, r9, r23
+	endloop
+
+endif
+
+; now do final horizontal add
+dp4 r30.x, r20, r20.1111	; r +* ones == r.x+r.y+r.z+r.w
+dp4 r30.y, r21, r21.1111
+dp4 r30.z, r22, r22.1111
+dp4 r30.w, r23, r23.1111
+
+mov o0, r30
+
+end
+]]>
+	</ILKernel>
 
 	<ILKernel name = "ConvolveLines5R">		
 <![CDATA[
@@ -1577,42 +1698,161 @@ il_ps_2_0
 ;	outputs: 1
 ;	data type: REAL
 ;	nComponents: 4
-;	constants: 4, 2x4 (REAL)
+;	constants: 2, 8x4 (REAL) and 1x4 (REAL)
 ;
 dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__ ; origin in the output range
 dcl_output_generic o0
 
-dcl_cb cb0[2]	; [h0,h1,h2,h3],[h4,0,0,0]
-dcl_cb cb1[2]	; [0,h0,h1,h2],[h3,h4,0,0]
-dcl_cb cb2[2]	; [0,0,h0,h1],[h2,h3,h4,0]
-dcl_cb cb3[2]	; [0,0,0,h0],[h1,h2,h3,h4]
+dcl_cb cb0[8]	; [h0,h1,h2,h3],[h4,0,0,0]
+					; [0,h0,h1,h2],[h3,h4,0,0]
+					; [0,0,h0,h1],[h2,h3,h4,0]
+					; [0,0,0,h0],[h1,h2,h3,h4]
+					
+dcl_cb cb1[1]	; [hotSpot,...,...,...]
 
 dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
 
+dcl_literal l0, 4.0f, 0.25f, 0.0f, 0.0f
+dcl_literal l1, 4, 0, 0, 0
+
+; output position in single component elements
+flr r0.xy, vWinCoord0.xy
+mul r0.x, r0.x, l0.x
+
+; input position in single component elements
+sub r0.x, r0.x, cb1[0].x ; x - hotSpot
+ftoi r13.x, r0.x
+
+; input position in multi component elements
+mul r0.x, r0.x, l0.y ; x / 4
+flr r20.xy, r0.xy
+
+umod r13.x, r13.x, l1.x ; x MOD 4
+
 ; load input data
 
-;sample_resource(0)_sampler(0) r0, vWinCoord0
-;sample_resource(0)_sampler(0)_aoffimmi(1,0,0) r1, vWinCoord0
+ine r13.y, r13.x, r1.0 ; (x MOD 4) # 0
+if_logicalnz r13.y
 
-mul r2, r0, cb0[0]
-mad r2, r1, cb0[1], r2
+	sample_resource(0)_sampler(0) r10, r20.xy
+	sample_resource(0)_sampler(0)_aoffimmi(1,0,0) r11, r20.xy
+	sample_resource(0)_sampler(0)_aoffimmi(2,0,0) r12, r20.xy
+	
+	call 0 ; get input data in r0, r1
+else
+	
+	sample_resource(0)_sampler(0) r0, r20.xy	
+	sample_resource(0)_sampler(0)_aoffimmi(1,0,0) r1, r20.xy
+endif
 
-mul r3, r0, cb1[0]
-mad r3, r1, cb1[1], r3
+call 1
+mov o0, r10
 
-mul r4, r0, cb2[0]
-mad r4, r1, cb2[1], r4
+endmain
 
-mul r5, r0, cb3[0]
-mad r5, r1, cb3[1], r5
+; function giving input data in r0 and r1 registers given r10, r11, r12 and r13.x = (x MOD 4)
+func 0
+	
+	switch r13.x
+		
+		case 1
+			mov r0.xyz_, r10.yzw0
+			mov r0.w, r11.x
+			
+			mov r1.xyz_, r11.yzw0
+			mov r1.w, r12.x
+		break
+		
+		case 2
+			mov r0.xy__, r10.zw00
+			mov r0.__zw, r11.00xy
+			
+			mov r1.xy__, r11.zw00
+			mov r1.__zw, r12.00xy
+		break
+		
+		case 3
+			mov r0.x___, r10.w000
+			mov r0._yzw, r11.0xyz
+			
+			mov r1.x___, r11.w000
+			mov r1._yzw, r12.0xyz
+		break
+			
+	endswitch
 
-dp4 o0.x, r2, r2.1111
-dp4 o0.y, r3, r3.1111
-dp4 o0.z, r4, r4.1111
-dp4 o0.w, r5, r5.1111
+ret	
+endfunc
+
+; function for computing the convolution given r0 and r1, result is returned in r10
+func 1
+	mul r10, r0, cb0[0]
+	mad r10, r1, cb0[1], r10
+
+	mul r11, r0, cb0[2]
+	mad r11, r1, cb0[3], r11
+
+	mul r12, r0, cb0[4]
+	mad r12, r1, cb0[5], r12
+
+	mul r13, r0, cb0[6]
+	mad r13, r1, cb0[7], r13
+	
+	dp4 r10.x, r10, r10.1111
+	dp4 r10.y, r11, r11.1111
+	dp4 r10.z, r12, r12.1111
+	dp4 r10.w, r13, r13.1111
+ret
+endfunc
 
 end
 ]]>
-	</ILKernel>
+	</ILKernel>		
+	
+	<ILKernel name = "InnerProd1D_R">
+<![CDATA[
+il_ps_2_0
+;
+;	Inner product of 1D non-virtualized arrays: s := a+*b
+; 
+;	inputs: 1
+;	outputs: 1
+;	data type: REAL
+;	nComponents: 4
+;	constants: 1, 1x4 (REAL) [a.physWidth,...,...,...]
+;
+dcl_cb cb0[1]  ; [a.physWidth,...]
+dcl_output_generic o0
+dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+
+mov r4, r4.0000				; initialize accumulator
+
+mov r0.xy, r0.00
+sub r0.x, r0.x, r0.1				; account first increment
+
+mov r2.0y00, cb0[0].x			; r2.x is the loop counter, r2.y := A.width
+sub r2.x, r2.x, r2.1				; account first increment
+
+whileloop
+
+	add r0.x, r0.x, r0.1
+	add r2.x, r2.x, r2.1			; loop counter ++
+
+	ge r2.z, r2.x, r2.y			; while(loop counter < A.width)
+	break_logicalnz r2.z
+
+	sample_resource(0)_sampler(0) r1, r0.xy
+	sample_resource(1)_sampler(1) r3, r0.xy
+
+	mad r4, r1, r3, r4
+
+endloop
+
+dp4 o0.x000, r4, r4.1111
+
+end		
+]]>
+	</ILKernel>	
 	
 </Kernels>
