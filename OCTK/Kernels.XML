@@ -7,13 +7,14 @@
 il_ps_2_0
 ;
 ;	2D subarray copy for the case when arrays are non virtualized and copy regions are aligned to
-;	nComponents (srcOrigin[1] MOD nComponents = 0) & (dstOrigin[1] MOD nComponents = 0) & (size[1] MOD nComponents) = 0)
+;	nComponents (srcOrigin[1] MOD nComponents = 0) & (dstOrigin[1] MOD nComponents = 0) 
+;	& (subSize[1] MOD nComponents) = 0)
 ;	for both input and output
 ; 
 ;	inputs: 1
 ;	outputs: 1
 ;	data type: LONGINT/REAL/LONGREAL
-;	nComponents: any
+;	nComponents: any (but same for input and output)
 ;	constants: 1 (REAL) : [(srcOrigin[1]-dstOrigin[1]) DIV nComponents,srcOrigin[0]-dstOrigin[0],...,...]
 ;
 dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__ ; origin in the output range
@@ -404,6 +405,208 @@ endif
 
 end
 ]]>	
+	</ILKernel>
+	
+	<ILKernel name = "SubCopy2DSplit8ToNonVirtAligned_LI_R_LR">		
+<![CDATA[
+il_ps_2_0
+;
+;	2D subarray copy for the case when input array is splitted into 8 parts, output array is not virtualized
+;	and copy regions are aligned to nComponents (srcOrigin[1] MOD nComponents = 0) 
+;	& (dstOrigin[1] MOD nComponents = 0) & (subSize[1] MOD nComponents) = 0) for both input and output
+; 
+;	inputs: 8
+;	outputs: 1
+;	data type: LONGINT/REAL/LONGREAL
+;	nComponents: any (but same for input and output)
+;	constants: 1 (REAL) : [(srcOrigin[1]-dstOrigin[1]) DIV nComponents,srcOrigin[0]-dstOrigin[0],...,...]
+;
+dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__ ; origin in the output range
+dcl_output_generic o0
+
+dcl_cb cb0[1]
+dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(2)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(3)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(4)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(5)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(6)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(7)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+
+dcl_literal l0, 8, 0, 0, 0
+
+; compute position in the input
+add r0.xy, vWinCoord0.xy, cb0[0].xy
+
+ftoi r0, r0
+umod r1.z, r0.y, l0.x ; r1.z = y MOD 8
+udiv r0.y, r0.y, l0.x ; y := y DIV 8
+itof r0, r0
+
+switch r1.z
+	
+	case 0
+		sample_resource(0)_sampler(0) r1, r0
+	break
+	
+	case 1
+		sample_resource(1)_sampler(1) r1, r0
+	break
+	
+	case 2
+		sample_resource(2)_sampler(2) r1, r0
+	break
+	
+	case 3
+		sample_resource(3)_sampler(3) r1, r0
+	break
+	
+	case 4
+		sample_resource(4)_sampler(4) r1, r0
+	break
+	
+	case 5
+		sample_resource(5)_sampler(5) r1, r0
+	break
+	
+	case 6
+		sample_resource(6)_sampler(6) r1, r0
+	break
+	
+	case 7
+		sample_resource(7)_sampler(7) r1, r0
+	break
+	
+endswitch
+
+mov o0, r1
+
+end
+]]>
+	</ILKernel>
+	
+	<ILKernel name = "SubCopy2DSplit4ToNonVirtAligned_LI_R_LR">		
+<![CDATA[
+il_ps_2_0
+;
+;	2D subarray copy for the case when input array is splitted into 4 parts, output array is not virtualized
+;	and copy regions are aligned to nComponents (srcOrigin[1] MOD nComponents = 0) 
+;	& (dstOrigin[1] MOD nComponents = 0) & (size[1] MOD nComponents) = 0) for both input and output
+; 
+;	inputs: 4
+;	outputs: 1
+;	data type: LONGINT/REAL/LONGREAL
+;	nComponents: any (but same for input and output)
+;	constants: 1 (REAL) : [(srcOrigin[1]-dstOrigin[1]) DIV nComponents,srcOrigin[0]-dstOrigin[0],...,...]
+;
+dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__ ; origin in the output range
+dcl_output_generic o0
+
+dcl_cb cb0[1]
+dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(2)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(3)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+
+dcl_literal l0, 4, 0, 0, 0
+
+; compute position in the input
+add r0.xy, vWinCoord0.xy, cb0[0].xy
+
+ftoi r0, r0
+umod r1.z, r0.y, l0.x ; r1.z = y MOD 4
+udiv r0.y, r0.y, l0.x ; y := y DIV 4
+itof r0, r0
+
+switch r1.z
+	
+	case 0
+		sample_resource(0)_sampler(0) r1, r0
+	break
+	
+	case 1
+		sample_resource(1)_sampler(1) r1, r0
+	break
+	
+	case 2
+		sample_resource(2)_sampler(2) r1, r0
+	break
+	
+	case 3
+		sample_resource(3)_sampler(3) r1, r0
+	break	
+	
+endswitch
+
+mov o0, r1
+
+end
+]]>
+	</ILKernel>
+	
+	<ILKernel name = "SubCopy2DSplit8ToSplit8Aligned_LI_R_LR">		
+<![CDATA[
+il_ps_2_0
+;
+;	2D subarray copy for the case of splitted arrays and copy regions are aligned to
+;	nComponents (srcOrigin[1] MOD nComponents = 0) & (dstOrigin[1] MOD nComponents = 0) 
+;	& (subSize[1] MOD nComponents = 0) and 
+;	(srcOrigin[0] MOD 8 = 0) & (dstOrigin[0] MOD 8 = 0) & (size[0] MOD 8 = 0)
+;	for both input and output
+; 
+;	inputs: 8
+;	outputs: 8
+;	data type: LONGINT/REAL/LONGREAL
+;	nComponents: any (but same for input and output)
+;	constants: 1 (REAL) : [(srcOrigin[1]-dstOrigin[1]) DIV nComponents,(srcOrigin[0]-dstOrigin[0]) DIV 8,...,...]
+;
+dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__ ; origin in the output range
+
+dcl_output_generic o0
+dcl_output_generic o1
+dcl_output_generic o2
+dcl_output_generic o3
+dcl_output_generic o4
+dcl_output_generic o5
+dcl_output_generic o6
+dcl_output_generic o7
+
+dcl_cb cb0[1]
+
+dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(2)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(3)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(4)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(5)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(6)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(7)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+
+add r0.xy, vWinCoord0.xy, cb0[0].xy	; compute position in the input
+
+; load input data
+sample_resource(0)_sampler(0) r1, r0
+sample_resource(1)_sampler(1) r2, r0
+sample_resource(2)_sampler(2) r3, r0
+sample_resource(3)_sampler(3) r4, r0
+sample_resource(4)_sampler(4) r5, r0
+sample_resource(5)_sampler(5) r6, r0
+sample_resource(6)_sampler(6) r7, r0
+sample_resource(7)_sampler(7) r8, r0
+
+; store to the output
+mov o0, r1
+mov o1, r2
+mov o2, r3
+mov o3, r4
+mov o4, r5
+mov o5, r6
+mov o6, r7
+mov o7, r8
+
+end
+]]>
 	</ILKernel>
 	
 	<ILKernel name = "ClearMemory">
@@ -2526,5 +2729,256 @@ endfunc
 end		
 ]]>
 	</ILKernel>
+	
+	<ILKernel name = "Transpose3D">
+<![CDATA[
+il_ps_2_0
+;
+;	3D Array transposition
+; 
+;	inputs: 1
+;	outputs: 1
+;	data type: any
+;	nComponents: 1
+;	constants: 1, 3x4 (LONGINT) [physWidth, newNy*newNx, newNx, 1], [tZ, tY, tX, 0], [oldNy*oldNx, oldNx, 1, 0]
+;
+dcl_cb cb0[3]
+dcl_output_generic o0
+dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__
+dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+
+; compute linear index in the output
+ftoi r5, vWinCoord0
+umad r0.x, r5.y, cb0[0].x, r5.x
+
+; compute z, y, x coordinates in the output
+udiv r1.x, r0.x, cb0[0].y	; z := ind/(newNy*newNx)
+umod r1.z, r0.x, cb0[0].y	; r1.z := ind - z*newNy*newNx
+udiv r1.y, r1.z, cb0[0].z	; y := (ind - z*newNy*newNx)/newNx
+umod r1.z, r1.z, cb0[0].z	; x := ind - z*newNy*newNx - y*newNx
+
+; shuffle the coordinates
+
+switch cb0[1].x
+
+	default
+		mov r2.x, r1.x
+	break
+
+	case 1
+		mov r2.y, r1.x
+	break
+
+	case 2
+		mov r2.z, r1.x
+	break
+
+endswitch
+
+switch cb0[1].y
+
+	default
+		mov r2.x, r1.y
+	break
+
+	case 1
+		mov r2.y, r1.y
+	break
+
+	case 2
+		mov r2.z, r1.y
+	break
+
+endswitch
+
+switch cb0[1].z
+
+	default
+		mov r2.x, r1.z
+	break
+
+	case 1
+		mov r2.y, r1.z
+	break
+
+	case 2
+		mov r2.z, r1.z
+	break
+
+endswitch
+
+; compute linear index in the input
+imul r2.xyz, r2.xyz, cb0[2].xyz	; [z*oldNy*oldNx, y*oldNx, x*1]
+
+; horizontal add
+iadd r2.x, r2.x, r2.y
+iadd r2.x, r2.x, r2.z
+
+; compute corresponding 2D index in the input
+umod r3.x, r2.x, cb0[0].x	; x := index MOD physWidth
+udiv r3.y, r2.x, cb0[0].x	; y := index DIV physWidth
+itof r3, r3
+
+sample_resource(0)_sampler(0) o0, r3.xy
+
+end
+]]>
+	</ILKernel>
+	
+	<ILKernel name = "Transpose4D">
+<![CDATA[
+il_ps_2_0
+;
+;	4D Array transposition
+; 
+;	inputs: 1
+;	outputs: 1
+;	data type: any
+;	nComponents: 1
+;	constants: 1, 3x4 (LONGINT) [physWidth, newNz*newNy*newNx, newNy*newNx, newNx], 
+;											[tT, tZ, tY, tX], [oldNz*oldNy*oldNx, oldNy*oldNx, oldNx, 1]
+;
+dcl_cb cb0[3]
+dcl_output_generic o0
+dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__
+dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+
+; compute linear index in the output
+ftoi r5, vWinCoord0
+umad r0.x, r5.y, cb0[0].x, r5.x
+
+; compute t, z, y, x coordinates in the output
+udiv r1.x, r0.x, cb0[0].y	; t := ind/(newNz*newNy*newNx)
+umod r1.w, r0.x, cb0[0].y	; r1.w := ind - t*newNz*newNy*newNx
+udiv r1.y, r1.w, cb0[0].z	; z := (ind - t*newNz*newNy*newNx)/(newNy*newNx)
+umod r1.w, r1.w, cb0[0].z	; r1.w := ind - t*newNz*newNy*newNx - z*(newNy*newNx)
+udiv r1.z, r1.w, cb0[0].w	; y := (ind - t*newNz*newNy*newNx - z*(newNy*newNx))/newNx
+umod r1.w, r1.w, cb0[0].w	; x := (ind - t*newNz*newNy*newNx - z*(newNy*newNx)) MOD newNx
+
+; shuffle the coordinates
+
+switch cb0[1].x
+
+	default
+		mov r2.x, r1.x
+	break
+
+	case 1
+		mov r2.y, r1.x
+	break
+
+	case 2
+		mov r2.z, r1.x
+	break
+
+endswitch
+
+switch cb0[1].y
+
+	default
+		mov r2.x, r1.y
+	break
+
+	case 1
+		mov r2.y, r1.y
+	break
+
+	case 2
+		mov r2.z, r1.y
+	break
+
+	case 3
+		mov r2.w, r1.y
+	break
+
+endswitch
+
+switch cb0[1].z
+
+	default
+		mov r2.x, r1.z
+	break
+
+	case 1
+		mov r2.y, r1.z
+	break
+
+	case 2
+		mov r2.z, r1.z
+	break
+
+	case 3
+		mov r2.w, r1.z
+	break
+
+endswitch
+
+switch cb0[1].w
+
+	default
+		mov r2.x, r1.w
+	break
+
+	case 1
+		mov r2.y, r1.w
+	break
+
+	case 2
+		mov r2.z, r1.w
+	break
+
+	case 3
+		mov r2.w, r1.w
+	break
+
+endswitch
+
+; compute linear index in the input
+imul r2.xyzw, r2.xyzw, cb0[2].xyzw	; [t*oldNz*oldNy*oldNx, z*oldNy*oldNx, y*oldNx, x*1]
+
+; horizontal add
+iadd r2.x, r2.x, r2.y
+iadd r2.x, r2.x, r2.z
+iadd r2.x, r2.x, r2.w
+
+; compute corresponding 2D index in the input
+umod r3.x, r2.x, cb0[0].x	; x := index MOD physWidth
+udiv r3.y, r2.x, cb0[0].x	; y := index DIV physWidth
+itof r3, r3
+
+sample_resource(0)_sampler(0) o0, r3.xy
+
+end
+]]>
+	</ILKernel>
+	
+	<ILKernel name = "ReshapeNDToSplitted8_R">
+<![CDATA[
+il_ps_2_0
+;
+;	Reshape a ND array to a splitted matrix
+; 
+;	inputs: 2
+;	outputs: 8
+;	data type: REAL
+;	nComponents: 1 for input, 4 for output
+;	constants: 0
+;
+dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__
+dcl_output_generic o0
+dcl_output_generic o1
+dcl_output_generic o2
+dcl_output_generic o3
+dcl_output_generic o4
+dcl_output_generic o5
+dcl_output_generic o6
+dcl_output_generic o7
+
+dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+
+
+end		
+]]>
+	</ILKernel>		
 	
 </Kernels>
