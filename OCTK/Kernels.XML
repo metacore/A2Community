@@ -2432,25 +2432,62 @@ dcl_num_thread_per_group 64
 ;	constants: 0
 ;
 
-mov r0, g[0]
-mov r1, g[1]
-mov r2, g[2]
-mov r3, g[3]
+dcl_literal l0, 16, 0, 0, 0
 
-call 3
+umul r16.x, vaTid.x, l0.x
 
-fence_memory
+; load input matrix
 
-mov g[0], r0
-mov g[1], r1
-mov g[2], r2
-mov g[3], r3
+mov r0, g[r16.x]
+mov r1, g[r16.x+1]
+mov r2, g[r16.x+2]
+mov r3, g[r16.x+3]
+
+mov r4, g[r16.x+4]
+mov r5, g[r16.x+5]
+mov r6, g[r16.x+6]
+mov r7, g[r16.x+7]
+
+mov r8, g[r16.x+8]
+mov r9, g[r16.x+9]
+mov r10, g[r16.x+10]
+mov r11, g[r16.x+11]
+
+mov r12, g[r16.x+12]
+mov r13, g[r16.x+13]
+mov r14, g[r16.x+14]
+mov r15, g[r16.x+15]
+
+call 4
+
+umul r16.x, vaTid.x, l0.x
+
+; store matrix inverse
+mov g[r16.x], r0
+mov g[r16.x+1], r1
+mov g[r16.x+2], r2
+mov g[r16.x+3], r3
+
+mov g[r16.x+4], r4
+mov g[r16.x+5], r5
+mov g[r16.x+6], r6
+mov g[r16.x+7], r7
+
+mov g[r16.x+8], r8
+mov g[r16.x+9], r9
+mov g[r16.x+10], r10
+mov g[r16.x+11], r11
+
+mov g[r16.x+12], r12
+mov g[r16.x+13], r13
+mov g[r16.x+14], r14
+mov g[r16.x+15], r15
 
 endmain
 
 ; 2x2 matrix multiplication
 ;	r0: [x, y; z,w] - lhs, r1: [x, y; z,w] - rhs
-;	result is in r0, uses r>100 as stack
+;	result is in r0, uses r>=100 as stack
 func 0
 	; push to the stack
 	mov r100, r2
@@ -2470,10 +2507,10 @@ endfunc
 
 ; 4x4 matrix multiplication
 ;	r0, r1, r2, r3 - lhs, r4, r5, r6, r7 - rhs
-;	result is in r0, r1, r2, r3, uses r>100 as stack
+;	result is in r0, r1, r2, r3, uses r>=101 as stack
 func 1
 	; push to the stack
-	mov r100, r8
+	mov r101, r8
 	
 	; row 1
 	mul r8, r0.xxxx, r4
@@ -2500,12 +2537,12 @@ func 1
 	mad r3, r3.wwww, r7, r8					
 	
 	; pop from the stack
-	mov r8, r100
+	mov r8, r101
 ret
 endfunc
 
 ; inversion of a 2x2 matrix
-; matrix is stored in r0, result is given in r0, function uses r>100 as stack
+; matrix is stored in r0, result is given in r0, function uses r>=102 as stack
 ;	r0: 
 ;		[ x  y ]
 ;		[ z w ]
@@ -2516,7 +2553,7 @@ endfunc
 ;					* ---------------
 ;		[ -z  x ]		x*w - y*z
 func 2
-	mov r100, r1 ; push r1 to the stack
+	mov r102, r1 ; push r1 to the stack
 	
 	mul r1.xy, r0.xy00, r0.wz00 ; [x*w,y*z]
 	sub r1.x, r1.x, r1.y ; x*w-y*z
@@ -2525,12 +2562,12 @@ func 2
 	mov r0.yz, r0_neg(yz)
 	div_zeroop(inf_else_max) r0, r0, r1.xxxx ; ./(x*w-y*z)
 	
-	mov r1, r100 ; pop r1 from the stack
+	mov r1, r102 ; pop r1 from the stack
 ret
 endfunc
 
 ; inversion of a 4x4 matrix
-; matrix is stored in r0, r1, r2, r3, result is given in same registers, function uses r>100 as stack
+; matrix is stored in r0, r1, r2, r3, result is given in same registers, function uses r>=103 as stack
 ;
 ;		[ r0.x  r0.y | r0.z r0.w ]
 ;		[ r1.x  r1.y | r1.z r1.w ]		[ A | B ]
@@ -2551,9 +2588,9 @@ endfunc
 ;		ID := W-Y*IB
 ;
 func 3
-	mov r100, r4
-	mov r101, r5
-	mov r102, r6
+	mov r103, r4
+	mov r104, r5
+	mov r105, r6
 	
 	; C
 	mov r4, r3.00xy
@@ -2626,103 +2663,201 @@ func 3
 	mov r3.xy__, r4.zw00
 	
 	; pop from the stack
-	mov r4, r100
-	mov r5, r101
-	mov r6, r102	
+	mov r4, r103
+	mov r5, r104
+	mov r6, r105	
 ret
 endfunc
 
-; inversion of an 8x8 matrix
-; matrix is stored in r6-r21  result is given in same registers, 
-; function uses r>100 as stack
+; inversion of a 8x8 matrix
+; matrix is stored in r0-r15, result is given in same registers, function uses r>=106 as stack
 ;
-;		[ r6    r7   |  r10   r11 ]
-;		[ r8    r9   |  r12   r13 ]
-;		----------------------------
-;		[ r14  r15 |  r18   r19 ]
-;		[ r16  r17 |  r20   r21 ]
+;		[ r0   |  r1  ]
+;		[ r2   |  r3  ]		
+;		[ r4   |  r5  ] 
+;		[ r6   |  r7  ]		[ A | B ]
+;		---------------- =	--------- 
+;		[ r8   | r9   ] 		[C  | D]
+;		[ r10 | r11 ]		
+;		[ r12 | r13 ] 
+;		[ r14 | r15 ]
 ;
 ; inverse:
 ;
-;		[ A | B ]
-;		---------
-;		[ C | D ]
 ;	
-;		W := inv([r18-r21])
-;		X := [r10-r13] * W
-;		Y := W*[r14-r17]
+;		W := inv(D)
+;		X := B*W
+;		Y := W*C
 ;
-;		A := inv([r6-r9] - X * [r14-r17])
-;		B := -A*X
-;		C := -Y*A
-;		D := W-Y*B
+;		IA := inv(A-X*C)
+;		IB := -IA*X
+;		IC := -Y*IA
+;		ID := W-Y*IB
 ;
 func 4
+;	; push to the stack
+;	mov r106, r16
+;	mov r107, r17
+;	mov r108, r18
+;	mov r109, r19	
+;	mov r110, r20
+;	mov r111, r21
+;	mov r112, r22
+;	mov r113, r23
 	
-	; push to the stack
-	mov r100, r0
-	mov r101, r1
-	mov r102, r22
-	mov r103, r23
-	mov r104, r24
-	mov r105, r25
-	
-	; compute W
-	mov r2, r18
-	mov r3, r19
-	mov r4, r20
-	mov r5, r21
-	call 3 ; [r2-r5] = W = inv([r18-r21])
-	
+	; keep r0-r7 unchanged
+	mov r16, r0
+	mov r17, r1
 	mov r18, r2
-	mov r19, r3
+	mov r19, r3	
 	mov r20, r4
-	mov r21, r5	
-	; [r18-r21] = W
+	mov r21, r5
+	mov r22, r6
+	mov r23, r7
 	
-	mov r0, r10
+	; compute W = inv(D)
+	
+	; load D
+	mov r0, r9
 	mov r1, r11
-	mov r2, r12
-	mov r3, r13
+	mov r2, r13
+	mov r3, r15
+	call 3 ; r0-r3 = W = inv(D)
 	
-	mov r4, r2
-	mov r5, r3
-	mov r6, r4
-	mov r7, r5
-	
-	call 1 ; r0-r3 = X = [r10-r13] * W
-	
-	mov r10, r0
+	; store W
+	mov r9, r0
 	mov r11, r1
-	mov r12, r2
-	mov r13, r3
-	; [r10-r13] = X
+	mov r13, r2
+	mov r15, r3		
 	
-	mov r0, r18
+	; load B to r0-r3
+	mov r0, r17
 	mov r1, r19
-	mov r2, r20
-	mov r3, r21
+	mov r2, r21
+	mov r3, r23
 	
-	mov r4, r14
-	mov r5, r15
-	mov r6, r16
-	mov r7, r17
+	; load W to r4-r7
+	mov r4, r9
+	mov r5, r11
+	mov r6, r13
+	mov r7, r15
+	call 1 ; r0-r3 = X = B*W
 	
-	call 1 ; r0-r3 = Y = W*[r14-r17]
+	; store X in B
+	mov r17, r0
+	mov r19, r1
+	mov r21, r2
+	mov r23, r3
 	
-	mov r22, r0
-	mov r23, r1
-	mov r24, r2
-	mov r25, r3
-	; [r22-r25] = Y
+	; load C
+	mov r4, r8
+	mov r5, r10
+	mov r6, r12
+	mov r7, r14
+	call 1 ; r0-r3 = X*C
 	
-	; pop from the stack
-	mov r0, r100
-	mov r1, r101
-	mov r22, r102
-	mov r23,  r103
-	mov r24, r104
-	mov r25, r105
+	; compute A-X*C
+	sub r0, r16, r0
+	sub r1, r18, r1
+	sub r2, r20, r2
+	sub r3, r22, r3
+	call 3 ; r0-r3 = IA = inv(A-X*C)
+	
+	; store IA
+	mov r16, r0
+	mov r18, r1
+	mov r20, r2
+	mov r22, r3
+	
+	;load X
+	mov r4, r17_neg(xyzw)
+	mov r5, r19_neg(xyzw)
+	mov r6, r21_neg(xyzw)
+	mov r7, r23_neg(xyzw)
+	call 1 ; r0-r3 = IB = -IA*X
+	
+	; store IB
+	mov r17, r0
+	mov r19, r1
+	mov r21, r2
+	mov r23, r3
+	
+	; compute Y
+	;
+	
+	; load W and C
+	mov r0, r9
+	mov r1, r11
+	mov r2, r13
+	mov r3, r15
+	
+	mov r4, r8
+	mov r5, r10
+	mov r6, r12
+	mov r7, r14
+	call 1 ; r0-r3 = Y = W*C
+	
+	; store Y in C
+	mov r8, r0
+	mov r10, r1
+	mov r12, r2
+	mov r14, r3
+	
+	; load IB
+	mov r4, r17	
+	mov r5, r19
+	mov r6, r21
+	mov r7, r23
+	call 1 ; r0-r3 = Y*IB
+	
+	; compute ID = W-Y*IB
+	sub r9, r9, r0
+	sub r11, r11, r1
+	sub r13, r13, r2
+	sub r15, r15, r3
+	
+	; compute IC = -Y*IA 
+	
+	; load Y
+	mov r0, r8
+	mov r1, r10
+	mov r2, r12
+	mov r3, r14
+	
+	; load IA
+	mov r4, r16_neg(xyzw)
+	mov r5, r18_neg(xyzw)
+	mov r6, r20_neg(xyzw)
+	mov r7, r22_neg(xyzw)
+	call 1 ; r0-r3 = IC
+	
+	; store IC
+	mov r8, r0
+	mov r10, r1
+	mov r12, r2
+	mov r14, r3
+	
+	; store IA
+	mov r0, r16
+	mov r2, r18
+	mov r4, r20
+	mov r6, r22
+	
+	; store IB
+	mov r1, r17
+	mov r3, r19
+	mov r5, r21
+	mov r7, r23
+	
+;	; pop from the stack
+;	mov r16, r106
+;	mov r17, r107
+;	mov r18, r108
+;	mov r19, r109
+;	mov r20, r110
+;	mov r21, r111
+;	mov r22, r112
+;	mov r23, r113
 ret
 endfunc
 
