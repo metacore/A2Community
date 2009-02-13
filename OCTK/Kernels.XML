@@ -2010,7 +2010,294 @@ endfunc
 
 end
 ]]>
-	</ILKernel>		
+	</ILKernel>
+	
+	<ILKernel name = "ConvolveLines9_R">		
+<![CDATA[
+il_ps_2_0
+;
+;	Convolve set of lines using up to 9 coefficients FIR filter: y[k] = sum_m(h[m]*x[k+m])
+; 
+;	inputs: 1
+;	outputs: 1
+;	data type: REAL
+;	nComponents: 4
+;	constants: 2, 12x4 (REAL) and 1x4 (REAL)
+;
+dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__ ; origin in the output range
+dcl_output_generic o0
+
+dcl_cb cb0[12]	; [h0,h1,h2,h3],[h4,h5,h6,h7],[h8,0,0,0]
+					; [0,h0,h1,h2],[h3,h4,h5,h6],[h7,h8,0,0]
+					; [0,0,h0,h1],[h2,h3,h4,h5],[h6,h7,h8,0]
+					; [0,0,0,h0],[h1,h2,h3,h4],[h5,h6,h7,h8]
+					
+dcl_cb cb1[1]	; [hotSpot,...,...,...]
+
+dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+
+dcl_literal l0, 4.0f, 0.25f, 0.0f, 0.0f
+dcl_literal l1, 4, 0, 0, 0
+
+; output position in single component elements
+flr r0.xy, vWinCoord0.xy
+mul r0.x, r0.x, l0.x ; x := x*4
+
+; input position in single component elements
+sub r0.x, r0.x, cb1[0].x ; x - hotSpot
+ftoi r13.x, r0.x
+
+; input position in multi component elements
+mul r0.x, r0.x, l0.y ; x / 4
+flr r20.xy, r0.xy
+
+umod r14.x, r13.x, l1.x ; x MOD 4
+
+; load input data
+
+ine r13.y, r13.x, r13.0 ; (x MOD 4) # 0
+if_logicalnz r13.y
+
+	sample_resource(0)_sampler(0) r10, r20.xy
+	sample_resource(0)_sampler(0)_aoffimmi(1,0,0) r11, r20.xy
+	sample_resource(0)_sampler(0)_aoffimmi(2,0,0) r12, r20.xy
+	sample_resource(0)_sampler(0)_aoffimmi(3,0,0) r13, r20.xy
+	
+	call 0 ; get input data in r0, r1, r2
+else
+	
+	sample_resource(0)_sampler(0) r0, r20.xy	
+	sample_resource(0)_sampler(0)_aoffimmi(1,0,0) r1, r20.xy
+	sample_resource(0)_sampler(0)_aoffimmi(2,0,0) r2, r20.xy
+endif
+
+call 1
+mov o0, r10
+
+endmain
+
+; function giving input data in r0, r1, r2 registers given r10, r11, r12, r13 and r14.x = (x MOD 4)
+func 0
+	
+	switch r14.x
+		
+		case 1
+			mov r0.xyz_, r10.yzw0
+			mov r0.w, r11.x
+			
+			mov r1.xyz_, r11.yzw0
+			mov r1.w, r12.x
+			
+			mov r2.xyz_, r12.yzw0
+			mov r2.w, r13.x
+		break
+		
+		case 2
+			mov r0.xy__, r10.zw00
+			mov r0.__zw, r11.00xy
+			
+			mov r1.xy__, r11.zw00
+			mov r1.__zw, r12.00xy
+			
+			mov r2.xy__, r12.zw00
+			mov r2.__zw, r13.00xy
+		break
+		
+		case 3
+			mov r0.x___, r10.w000
+			mov r0._yzw, r11.0xyz
+			
+			mov r1.x___, r11.w000
+			mov r1._yzw, r12.0xyz
+			
+			mov r2.x___, r12.w000
+			mov r2._yzw, r13.0xyz
+		break
+			
+	endswitch
+
+ret	
+endfunc
+
+; function for computing the convolution given r0, r1, r2,  result is returned in r10
+func 1
+	mul r10, r0, cb0[0]
+	mad r10, r1, cb0[1], r10
+	mad r10, r2, cb0[2], r10
+
+	mul r11, r0, cb0[3]
+	mad r11, r1, cb0[4], r11
+	mad r11, r2, cb0[5], r11
+
+	mul r12, r0, cb0[6]
+	mad r12, r1, cb0[7], r12
+	mad r12, r2, cb0[8], r12
+
+	mul r13, r0, cb0[9]
+	mad r13, r1, cb0[10], r13
+	mad r13, r2, cb0[11], r13
+	
+	dp4 r10.x, r10, r10.1111
+	dp4 r10.y, r11, r11.1111
+	dp4 r10.z, r12, r12.1111
+	dp4 r10.w, r13, r13.1111
+ret
+endfunc
+
+end
+]]>
+	</ILKernel>
+	
+	<ILKernel name = "ConvolveLines12_R">		
+<![CDATA[
+il_ps_2_0
+;
+;	Convolve set of lines using up to 12 coefficients FIR filter: y[k] = sum_m(h[m]*x[k+m])
+; 
+;	inputs: 1
+;	outputs: 1
+;	data type: REAL
+;	nComponents: 4
+;	constants: 2, 16x4 (REAL) and 1x4 (REAL)
+;
+dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__ ; origin in the output range
+dcl_output_generic o0
+
+dcl_cb cb0[12]	; [h0,h1,h2,h3],[h4,h5,h6,h7],[h8,h9,h10,h11],[h12,0,0,0]
+					; [0,h0,h1,h2],[h3,h4,h5,h6],[h7,h8,h9,h10],[h11,h12,0,0]
+					; [0,0,h0,h1],[h2,h3,h4,h5],[h6,h7,h8,h9],[h10,h11,h12,0]
+					; [0,0,0,h0],[h1,h2,h3,h4],[h5,h6,h7,h8],[h9,h10,h11,h12]
+					
+dcl_cb cb1[1]	; [hotSpot,...,...,...]
+
+dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+
+dcl_literal l0, 4.0f, 0.25f, 0.0f, 0.0f
+dcl_literal l1, 4, 0, 0, 0
+
+; output position in single component elements
+flr r0.xy, vWinCoord0.xy
+mul r0.x, r0.x, l0.x ; x := x*4
+
+; input position in single component elements
+sub r0.x, r0.x, cb1[0].x ; x - hotSpot
+ftoi r13.x, r0.x
+
+; input position in multi component elements
+mul r0.x, r0.x, l0.y ; x / 4
+flr r20.xy, r0.xy
+
+umod r15.x, r13.x, l1.x ; x MOD 4
+
+; load input data
+
+ine r13.y, r13.x, r13.0 ; (x MOD 4) # 0
+if_logicalnz r13.y
+
+	sample_resource(0)_sampler(0) r10, r20.xy
+	sample_resource(0)_sampler(0)_aoffimmi(1,0,0) r11, r20.xy
+	sample_resource(0)_sampler(0)_aoffimmi(2,0,0) r12, r20.xy
+	sample_resource(0)_sampler(0)_aoffimmi(3,0,0) r13, r20.xy
+	sample_resource(0)_sampler(0)_aoffimmi(4,0,0) r14, r20.xy
+	
+	call 0 ; get input data in r0, r1, r2, r3
+else
+	
+	sample_resource(0)_sampler(0) r0, r20.xy	
+	sample_resource(0)_sampler(0)_aoffimmi(1,0,0) r1, r20.xy
+	sample_resource(0)_sampler(0)_aoffimmi(2,0,0) r2, r20.xy
+	sample_resource(0)_sampler(0)_aoffimmi(3,0,0) r3, r20.xy
+endif
+
+call 1
+mov o0, r10
+
+endmain
+
+; function giving input data in r0, r1, r2, r3 registers given r10, r11, r12, r13, r14 and r15.x = (x MOD 4)
+func 0
+	
+	switch r15.x
+		
+		case 1
+			mov r0.xyz_, r10.yzw0
+			mov r0.w, r11.x
+			
+			mov r1.xyz_, r11.yzw0
+			mov r1.w, r12.x
+			
+			mov r2.xyz_, r12.yzw0
+			mov r2.w, r13.x
+			
+			mov r3.xyz_, r13.yzw0
+			mov r3.w, r14.x
+		break
+		
+		case 2
+			mov r0.xy__, r10.zw00
+			mov r0.__zw, r11.00xy
+			
+			mov r1.xy__, r11.zw00
+			mov r1.__zw, r12.00xy
+			
+			mov r2.xy__, r12.zw00
+			mov r2.__zw, r13.00xy
+			
+			mov r3.xy__, r13.zw00
+			mov r3.__zw, r14.00xy
+		break
+		
+		case 3
+			mov r0.x___, r10.w000
+			mov r0._yzw, r11.0xyz
+			
+			mov r1.x___, r11.w000
+			mov r1._yzw, r12.0xyz
+			
+			mov r2.x___, r12.w000
+			mov r2._yzw, r13.0xyz
+			
+			mov r3.x___, r13.w000
+			mov r3._yzw, r14.0xyz
+		break
+			
+	endswitch
+
+ret	
+endfunc
+
+; function for computing the convolution given r0, r1, r2, r3  result is returned in r10
+func 1
+	mul r10, r0, cb0[0]
+	mad r10, r1, cb0[1], r10
+	mad r10, r2, cb0[2], r10
+	mad r10, r3, cb0[3], r10
+
+	mul r11, r0, cb0[4]
+	mad r11, r1, cb0[5], r11
+	mad r11, r2, cb0[6], r11
+	mad r11, r3, cb0[7], r11
+
+	mul r12, r0, cb0[8]
+	mad r12, r1, cb0[9], r12
+	mad r12, r2, cb0[10], r12
+	mad r12, r3, cb0[11], r12
+
+	mul r13, r0, cb0[12]
+	mad r13, r1, cb0[13], r13
+	mad r13, r2, cb0[14], r13
+	mad r13, r3, cb0[15], r13	
+	
+	dp4 r10.x, r10, r10.1111
+	dp4 r10.y, r11, r11.1111
+	dp4 r10.z, r12, r12.1111
+	dp4 r10.w, r13, r13.1111
+ret
+endfunc
+
+end
+]]>
+	</ILKernel>
 	
 	<ILKernel name = "TransposeSplitted8_R">
 <![CDATA[
