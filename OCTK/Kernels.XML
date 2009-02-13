@@ -2045,17 +2045,17 @@ mul r0.x, r0.x, l0.x ; x := x*4
 
 ; input position in single component elements
 sub r0.x, r0.x, cb1[0].x ; x - hotSpot
-ftoi r13.x, r0.x
+ftoi r14.x, r0.x
 
 ; input position in multi component elements
 mul r0.x, r0.x, l0.y ; x / 4
 flr r20.xy, r0.xy
 
-umod r14.x, r13.x, l1.x ; x MOD 4
+umod r14.x, r14.x, l1.x ; x MOD 4
 
 ; load input data
 
-ine r13.y, r13.x, r13.0 ; (x MOD 4) # 0
+ine r14.y, r14.x, r14.0 ; (x MOD 4) # 0
 if_logicalnz r13.y
 
 	sample_resource(0)_sampler(0) r10, r20.xy
@@ -2181,18 +2181,18 @@ mul r0.x, r0.x, l0.x ; x := x*4
 
 ; input position in single component elements
 sub r0.x, r0.x, cb1[0].x ; x - hotSpot
-ftoi r13.x, r0.x
+ftoi r15.x, r0.x
 
 ; input position in multi component elements
 mul r0.x, r0.x, l0.y ; x / 4
 flr r20.xy, r0.xy
 
-umod r15.x, r13.x, l1.x ; x MOD 4
+umod r15.x, r15.x, l1.x ; x MOD 4
 
 ; load input data
 
-ine r13.y, r13.x, r13.0 ; (x MOD 4) # 0
-if_logicalnz r13.y
+ine r15.y, r15.x, r15.0 ; (x MOD 4) # 0
+if_logicalnz r15.y
 
 	sample_resource(0)_sampler(0) r10, r20.xy
 	sample_resource(0)_sampler(0)_aoffimmi(1,0,0) r11, r20.xy
