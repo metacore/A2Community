@@ -3,7 +3,7 @@
 <?xml-stylesheet type="text/xsl" href="http://bluebottle.ethz.ch/bluebottle.xsl" ?>
 <Text>
 <Span style="Normal"><![CDATA[MODULE srImage;
-IMPORT  srBase, Out := DebugLog;
+IMPORT  srBase, Out := DbgOut;
 
 CONST
 	W=2*srBase.W;
