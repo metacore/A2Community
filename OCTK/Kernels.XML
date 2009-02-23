@@ -3152,7 +3152,7 @@ end
 ]]>
 	</ILKernel>
 	
-	<ILKernel name = "Transpose3D">
+	<ILKernel name = "Transpose3D_LI_R_LR">
 <![CDATA[
 il_ps_2_0
 ;
@@ -3160,7 +3160,7 @@ il_ps_2_0
 ; 
 ;	inputs: 1
 ;	outputs: 1
-;	data type: any
+;	data type: LONGINT/REAL/LONGREAL
 ;	nComponents: 1
 ;	constants: 1, 3x4 (LONGINT) [physWidth, newNy*newNx, newNx, 1], [tZ, tY, tX, 0], [oldNy*oldNx, oldNx, 1, 0]
 ;
@@ -3247,7 +3247,7 @@ end
 ]]>
 	</ILKernel>
 	
-	<ILKernel name = "Transpose4D">
+	<ILKernel name = "Transpose4D_LI_R_LR">
 <![CDATA[
 il_ps_2_0
 ;
@@ -3255,7 +3255,7 @@ il_ps_2_0
 ; 
 ;	inputs: 1
 ;	outputs: 1
-;	data type: any
+;	data type: LONGINT/REAL/LONGREAL
 ;	nComponents: 1
 ;	constants: 1, 3x4 (LONGINT) [physWidth, newNz*newNy*newNx, newNy*newNx, newNx], 
 ;											[tT, tZ, tY, tX], [oldNz*oldNy*oldNx, oldNy*oldNx, oldNx, 1]
@@ -3401,6 +3401,141 @@ dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(floa
 
 end		
 ]]>
-	</ILKernel>		
+	</ILKernel>	
+	
+	<ILKernel name = "Transpose2DVirtToVirt_LI_R_LR">
+<![CDATA[
+il_ps_2_0
+;
+;	Transposition of a 2D virtualized array resulting in a virtualized array: C := A.Transpose
+; 
+;	inputs: 1
+;	outputs: 1
+;	global buffer: No
+;	data type: LONGINT/REAL/LONGREAL
+;	nComponents: 1
+;	constants: 1, 1x4 (LONGINT)
+;	
+dcl_cb cb0[1] ; [physWidth,A.width,C.width,...]
+dcl_output_generic o0
+dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__
+dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+
+; compute linear index in the output
+ftoi r0.xy, vWinCoord0.xy
+umad r0.x, r0.y, cb0[0].x, r0.x ; ind := y*physWidth + x
+
+; compute non-virtual position in the output
+udiv r0.y, r0.x, cb0[0].z ; y := ind DIV C.Width
+umod r0.x, r0.x, cb0[0].z
+
+; non-virtual position in the input
+mov r0.xy, r0.yx
+
+; linear index in the input
+umad r0.x, r0.y, cb0[0].y, r0.x
+
+; virtual position in the input
+udiv r0.y, r0.x, cb0[0].x ; y := ind DIV physWidth
+umod r0.x, r0.x, cb0[0].x
+
+itof r0.xy, r0.xy
+sample_resource(0)_sampler(0) o0, r0.xy
+
+end
+]]>
+	</ILKernel>
+	
+<ILKernel name = "ConvolveLines5Virt_R">		
+<![CDATA[
+il_cs_2_0
+dcl_num_thread_per_group 64
+;
+;	Convolve set of lines in virtual layout using up to 5 coefficients FIR filter: y[k] = sum_m(h[m]*x[k+m])
+; 
+;	inputs: 1
+;	outputs: 0
+;	data type: REAL
+;	global buffer: Yes
+;	nComponents: 1
+;	constants: 2, 8x4 (REAL) and 1x4 (LONGINT)
+;
+dcl_cb cb0[8]	; [h0,h1,h2,h3],[h4,0,0,0]
+					; [0,h0,h1,h2],[h3,h4,0,0]
+					; [0,0,h0,h1],[h2,h3,h4,0]
+					; [0,0,0,h0],[h1,h2,h3,h4]
+					
+dcl_cb cb1[1]	; [hotSpot,width,physWidth,...]
+
+dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+
+; compute linear index of first row element
+umul r20.x, vaTid.x, cb1[0].y ; iRow*width
+
+; virtual position in the input
+udiv r20.y, r20.x, cb0[0].z ; y := ind DIV physWidth
+umod r20.x, r20.x, cb0[0].z
+
+whileloop
+	
+endloop
+
+endmain
+
+; function for computing the convolution given r0 and r1, result is returned in r10
+func 1
+	mul r10, r0, cb0[0]
+	mad r10, r1, cb0[1], r10
+
+	mul r11, r0, cb0[2]
+	mad r11, r1, cb0[3], r11
+
+	mul r12, r0, cb0[4]
+	mad r12, r1, cb0[5], r12
+
+	mul r13, r0, cb0[6]
+	mad r13, r1, cb0[7], r13
+	
+	dp4 r10.x, r10, r10.1111
+	dp4 r10.y, r11, r11.1111
+	dp4 r10.z, r12, r12.1111
+	dp4 r10.w, r13, r13.1111
+ret
+endfunc
+
+end
+]]>
+	</ILKernel>	
+
+<ILKernel name = "TestCS">
+<![CDATA[
+il_cs_2_0
+dcl_num_thread_per_group 64
+dcl_lds_size_per_thread 16
+dcl_lds_sharing_mode _wavefrontRel
+;
+;	testing compute shader
+; 
+;	inputs: 0
+;	outputs: 0
+;	global buffer: Yes
+;	data type: REAL
+;	nComponents: 1
+;	constants: 0
+;
+
+itof r1.x, vaTid.x
+
+fence_lds_memory
+
+lds_write_vec mem.x, r1.x
+
+fence_lds_memory
+
+lds_read_vec g[0].x, r2.00
+
+end
+]]>
+	</ILKernel>	
 	
 </Kernels>
