@@ -3446,12 +3446,13 @@ end
 ]]>
 	</ILKernel>
 	
-<ILKernel name = "ConvolveLines5Virt_R">		
+<ILKernel name = "ConvolveLines5Virt_R">
 <![CDATA[
 il_cs_2_0
 dcl_num_thread_per_group 64
 ;
-;	Convolve set of lines in virtual layout using up to 5 coefficients FIR filter: y[k] = sum_m(h[m]*x[k+m])
+;	Convolve set of lines in a virtualized memory layout with 5 taps FIR kernel
+;	each thread processes a single line
 ; 
 ;	inputs: 1
 ;	outputs: 0
@@ -3465,24 +3466,115 @@ dcl_cb cb0[8]	; [h0,h1,h2,h3],[h4,0,0,0]
 					; [0,0,h0,h1],[h2,h3,h4,0]
 					; [0,0,0,h0],[h1,h2,h3,h4]
 					
-dcl_cb cb1[1]	; [hotSpot,width,physWidth,...]
-
+dcl_cb cb1[1]	; [hotSpot,width,physWidth,boundary]
 dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
 
-; compute linear index of first row element
-umul r20.x, vaTid.x, cb1[0].y ; iRow*width
+dcl_literal l0, 4, -4, -1, 1
 
-; virtual position in the input
-udiv r20.y, r20.x, cb0[0].z ; y := ind DIV physWidth
-umod r20.x, r20.x, cb0[0].z
+; compute linear index of first element of line to process
+umul r20.x, vaTid.x, cb1[0].y ; iLine*width
+
+; output index
+iadd r21.x, r20.x, cb1[0].x ; inp.ind + hotSpot
+umod r21.z, r21.x, l0.x ; out.ind MOD 4
+imad r21.z, r21.z, l0.z, l0.x ; 4 - (out.ind MOD 4)
+
+; shift pointers to be aligned to 4 components
+iadd r20.x, r20.x, r21.z
+iadd r21.x, r21.x, r21.z
+udiv r21.x, r21.x, l0.x ; output position in quads
+
+; compute right input bound
+iadd r21.y, cb1[0].y, l0.y ; width - 4
+imad r21.y, r21.z, l0.z, r21.y ; width-4-(4 - (out.ind MOD 4))
+udiv r21.y, r21.y, l0.x ; (width-4-(4 - (out.ind MOD 4))) DIV 4
+umul r21.y, r21.y, l0.x ; 4*((width-4-(4 - (out.ind MOD 4))) DIV 4)
+iadd r21.y, r20.x, r21.y
+
+ine r20.z, cb1[0].x, r20.0 ; hotSpot # 0
+if_logicalnz r20.z	
+	; process left boundary	
+endif
+
+; load first quads
+call 0
+mov r0, r9
+
+iadd r20.x, r20.x, l0.x
+call 0
+mov r1, r9
+
+; compute result
+call 1
+mov g[r21.x], r10
 
 whileloop
 	
+	iadd r20.x, r20.x, l0.x ; INC(inp.ind,4)
+	iadd r21.x, r21.x, l0.w ; INC(out.ind,1)
+	
+	ige r21.z, r20.x, r21.y ; inp.ind >= right bound
+	break_logicalnz r21.z
+				
+	mov r0, r1 ; keep old quad
+	call 0 ; load new quad
+	mov r1, r9
+	
+	; compute result
+	call 1
+	
+	; store result
+	mov g[r21.x], r10	
 endloop
+
+; process right boundary
 
 endmain
 
-; function for computing the convolution given r0 and r1, result is returned in r10
+; loading next quad given linear index in r20.x, loaded quad is in r9, r20.x is not incremented, uses r22.xyz
+; TODO: optimize!!!
+func 0	
+	
+	mov r22.z, r20.x		
+	
+	umod r22.x, r22.z, cb1[0].z
+	udiv r22.y, r22.z, cb1[0].z
+	
+	iadd r22.w, r22.x, l0.x
+	lt r22.w, r22.w, cb1[0].z
+	if_logicalnz r22.w
+		sample_resource(0)_sampler(0)_aoffimmi(0,0,0) r9.x, r22.xy
+		sample_resource(0)_sampler(0)_aoffimmi(1,0,0) r9.y, r22.xy
+		sample_resource(0)_sampler(0)_aoffimmi(2,0,0) r9.z, r22.xy
+		sample_resource(0)_sampler(0)_aoffimmi(3,0,0) r9.w, r22.xy
+	else		
+		umod r22.x, r22.z, cb1[0].z
+		udiv r22.y, r22.z, cb1[0].z
+		itof r22.xy, r22.xy
+		sample_resource(0)_sampler(0) r9.x, r22.xy
+		
+		iadd r22.z, r22.z, l0.w
+		umod r22.x, r22.z, cb1[0].z
+		udiv r22.y, r22.z, cb1[0].z
+		itof r22.xy, r22.xy
+		sample_resource(0)_sampler(0) r9.y, r22.xy
+		
+		iadd r22.z, r22.z, l0.w
+		umod r22.x, r22.z, cb1[0].z
+		udiv r22.y, r22.z, cb1[0].z
+		itof r22.xy, r22.xy
+		sample_resource(0)_sampler(0) r9.z, r22.xy
+		
+		iadd r22.z, r22.z, l0.w
+		umod r22.x, r22.z, cb1[0].z
+		udiv r22.y, r22.z, cb1[0].z
+		itof r22.xy, r22.xy
+		sample_resource(0)_sampler(0) r9.w, r22.xy		
+	endif	
+ret
+endfunc
+
+; function for computing the convolution given r0 and r1, result is returned in r10, uses r11-r13
 func 1
 	mul r10, r0, cb0[0]
 	mad r10, r1, cb0[1], r10
@@ -3506,6 +3598,170 @@ endfunc
 end
 ]]>
 	</ILKernel>	
+	
+
+<ILKernel name = "ConvolveLines9Virt_R">
+<![CDATA[
+il_cs_2_0
+dcl_num_thread_per_group 64
+;
+;	Convolve set of lines in a virtualized memory layout with 9 taps FIR kernel
+;	each thread processes a single line
+; 
+;	inputs: 1
+;	outputs: 0
+;	data type: REAL
+;	global buffer: Yes
+;	nComponents: 1
+;	constants: 2, 8x4 (REAL) and 1x4 (LONGINT)
+;
+dcl_cb cb0[12]	; [h0,h1,h2,h3],[h4,h5,h6,h7],[h8,0,0,0]
+					; [0,h0,h1,h2],[h3,h4,h5,h6],[h7,h8,0,0]
+					; [0,0,h0,h1],[h2,h3,h4,h5],[h6,h7,h8,0]
+					; [0,0,0,h0],[h1,h2,h3,h4],[h5,h6,h7,h8]
+					
+dcl_cb cb1[1]	; [hotSpot,width,physWidth,boundary]
+dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+
+dcl_literal l0, 4, -8, -1, 1
+
+; compute linear index of first element of line to process
+umul r20.x, vaTid.x, cb1[0].y ; iLine*width
+
+; output index
+iadd r21.x, r20.x, cb1[0].x ; inp.ind + hotSpot
+umod r21.z, r21.x, l0.x ; out.ind MOD 4
+imad r21.z, r21.z, l0.z, l0.x ; 4 - (out.ind MOD 4)
+
+; shift pointers to be aligned to 4 components
+iadd r20.x, r20.x, r21.z
+iadd r21.x, r21.x, r21.z
+udiv r21.x, r21.x, l0.x ; output position in quads
+
+; compute right input bound
+iadd r21.y, cb1[0].y, l0.y ; width - 8
+imad r21.y, r21.z, l0.z, r21.y ; width-8-(4 - (out.ind MOD 4))
+udiv r21.y, r21.y, l0.x ; (width-8-(4 - (out.ind MOD 4))) DIV 4
+umul r21.y, r21.y, l0.x ; 4*((width-8-(4 - (out.ind MOD 4))) DIV 4)
+iadd r21.y, r20.x, r21.y
+
+ine r20.z, cb1[0].x, r20.0 ; hotSpot # 0
+if_logicalnz r20.z	
+	; process left boundary	
+endif
+
+; load first quads
+call 0
+mov r0, r9
+
+iadd r20.x, r20.x, l0.x
+call 0
+mov r1, r9
+
+iadd r20.x, r20.x, l0.x
+call 0
+mov r2, r9
+
+; compute result
+call 1
+mov g[r21.x], r10
+
+whileloop
+	
+	iadd r20.x, r20.x, l0.x ; INC(inp.ind,4)
+	iadd r21.x, r21.x, l0.w ; INC(out.ind,1)
+	
+	ige r21.z, r20.x, r21.y ; inp.ind >= right bound
+	break_logicalnz r21.z
+				
+	mov r0, r1 ; keep old quads
+	mov r1, r2
+	call 0 ; load new quad
+	mov r2, r9
+	
+	; compute result
+	call 1
+	
+	; store result
+	mov g[r21.x], r10
+endloop
+
+; process right boundary
+
+endmain
+
+; loading next quad given linear index in r20.x, loaded quad is in r9, r20.x is not incremented, uses r22.xyz
+; TODO: optimize!!!
+func 0	
+	
+	mov r22.z, r20.x		
+	
+	umod r22.x, r22.z, cb1[0].z
+	udiv r22.y, r22.z, cb1[0].z
+	
+	iadd r22.w, r22.x, l0.x
+	lt r22.w, r22.w, cb1[0].z
+	if_logicalnz r22.w
+		sample_resource(0)_sampler(0)_aoffimmi(0,0,0) r9.x, r22.xy
+		sample_resource(0)_sampler(0)_aoffimmi(1,0,0) r9.y, r22.xy
+		sample_resource(0)_sampler(0)_aoffimmi(2,0,0) r9.z, r22.xy
+		sample_resource(0)_sampler(0)_aoffimmi(3,0,0) r9.w, r22.xy
+	else		
+		umod r22.x, r22.z, cb1[0].z
+		udiv r22.y, r22.z, cb1[0].z
+		itof r22.xy, r22.xy
+		sample_resource(0)_sampler(0) r9.x, r22.xy
+		
+		iadd r22.z, r22.z, l0.w
+		umod r22.x, r22.z, cb1[0].z
+		udiv r22.y, r22.z, cb1[0].z
+		itof r22.xy, r22.xy
+		sample_resource(0)_sampler(0) r9.y, r22.xy
+		
+		iadd r22.z, r22.z, l0.w
+		umod r22.x, r22.z, cb1[0].z
+		udiv r22.y, r22.z, cb1[0].z
+		itof r22.xy, r22.xy
+		sample_resource(0)_sampler(0) r9.z, r22.xy
+		
+		iadd r22.z, r22.z, l0.w
+		umod r22.x, r22.z, cb1[0].z
+		udiv r22.y, r22.z, cb1[0].z
+		itof r22.xy, r22.xy
+		sample_resource(0)_sampler(0) r9.w, r22.xy		
+	endif	
+ret
+endfunc
+
+; function for computing the convolution given r0, r1, r2,  result is returned in r10, uses r11, r12, r13
+func 1
+	mul r10, r0, cb0[0]
+	mad r10, r1, cb0[1], r10
+	mad r10, r2, cb0[2], r10
+
+	mul r11, r0, cb0[3]
+	mad r11, r1, cb0[4], r11
+	mad r11, r2, cb0[5], r11
+
+	mul r12, r0, cb0[6]
+	mad r12, r1, cb0[7], r12
+	mad r12, r2, cb0[8], r12
+
+	mul r13, r0, cb0[9]
+	mad r13, r1, cb0[10], r13
+	mad r13, r2, cb0[11], r13
+	
+	dp4 r10.x, r10, r10.1111
+	dp4 r10.y, r11, r11.1111
+	dp4 r10.z, r12, r12.1111
+	dp4 r10.w, r13, r13.1111
+ret
+endfunc
+
+end
+]]>
+	</ILKernel>	
+	
 
 <ILKernel name = "TestCS">
 <![CDATA[
