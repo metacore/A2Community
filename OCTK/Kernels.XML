@@ -1891,7 +1891,7 @@ end
 ]]>
 	</ILKernel>
 
-	<ILKernel name = "ConvolveLines5_R">		
+	<ILKernel name = "ConvolveRows5_R">		
 <![CDATA[
 il_ps_2_0
 ;
@@ -2012,7 +2012,7 @@ end
 ]]>
 	</ILKernel>
 	
-	<ILKernel name = "ConvolveLines9_R">		
+	<ILKernel name = "ConvolveRows9_R">		
 <![CDATA[
 il_ps_2_0
 ;
@@ -2148,7 +2148,7 @@ end
 ]]>
 	</ILKernel>
 	
-	<ILKernel name = "ConvolveLines12_R">		
+	<ILKernel name = "ConvolveRows12_R">		
 <![CDATA[
 il_ps_2_0
 ;
@@ -2422,7 +2422,7 @@ end
 ]]>
 	</ILKernel>	
 	
-	<ILKernel name = "ConvolveLines5Down2_R">		
+	<ILKernel name = "ConvolveRows5Down2_R">		
 <![CDATA[
 il_ps_2_0
 ;
@@ -2577,7 +2577,7 @@ end
 ]]>
 	</ILKernel>
 	
-	<ILKernel name = "ConvolveLines5Up2_R">		
+	<ILKernel name = "ConvolveRows5Up2_R">		
 <![CDATA[
 il_ps_2_0
 ;
@@ -3446,7 +3446,7 @@ end
 ]]>
 	</ILKernel>
 	
-<ILKernel name = "ConvolveLines5Virt_R">
+<ILKernel name = "ConvolveRows5Virt_R">
 <![CDATA[
 il_cs_2_0
 dcl_num_thread_per_group 64
@@ -3600,7 +3600,7 @@ end
 	</ILKernel>	
 	
 
-<ILKernel name = "ConvolveLines9Virt_R">
+<ILKernel name = "ConvolveRows9Virt_R">
 <![CDATA[
 il_cs_2_0
 dcl_num_thread_per_group 64
