@@ -134,7 +134,7 @@ if_logicalnz r4.z
 			break
 		endswitch
 		
-	endif	
+	endif
 	
 else ; the left dst bound
 
@@ -3792,6 +3792,115 @@ lds_read_vec g[0].x, r2.00
 
 end
 ]]>
-	</ILKernel>	
+	</ILKernel>
+	
+<ILKernel name = "Convolve3DX5_R">
+<![CDATA[
+il_cs_2_0
+dcl_num_thread_per_group 64
+;
+;	Convolve 3D virtualized array along X (last) direction with up to 5 taps FIR filter
+; 
+;	inputs: 1
+;	outputs: 0
+;	global buffer: Yes
+;	data type: REAL
+;	nComponents: 4
+;	constants: 2, 8x4 (REAL) and 2x4 (LONGINT)
+;
+
+dcl_cb cb0[8]	; [h0,h1,h2,h3],[h4,0,0,0]
+					; [0,h0,h1,h2],[h3,h4,0,0]
+					; [0,0,h0,h1],[h2,h3,h4,0]
+					; [0,0,0,h0],[h1,h2,h3,h4]
+					
+dcl_cb cb1[1]	; [hotSpot,width,physWidth,xPitch], [boundary,...]
+
+; hotSpot has to be aligned to multiple of 4, for this you can add some leading zeros
+
+dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+
+dcl_literal l0, 1, 5, 4, -1
+
+umul r20.x, vaTid.x, cb1[0].w ; iLine*xPitch -> output index in quads
+
+umul r21.z, r20.x, l0.z ; output index in single elements
+imad r21.z, cb1[0].x, l0.w, r21.z ; iLine*xPitch*4 - hotSpot -> input linear index in single elements
+udiv r21.z, r21.z, l0.z ; input linear index in quads
+
+; 2D input index
+umod r21.x, r21.z, cb1[0].z ; ind MOD physWidth
+udiv r21.y, r21.z, cb1[0].z ; ind DIV physWidth
+itof r21.xy, r21.xy
+itof r21.z, cb1[0].z
+
+mov r20.y, r20.0 ; output samples counter
+
+; load first quads
+call 0
+mov r0, r30
+call 0
+mov r1, r30
+
+call 1 ; compute result
+mov g[r20.x], r22 ; store result
+
+whileloop
+	
+	iadd r20.xy, r20.xy, l0.xz00
+	
+	ige r20.z, r20.y, cb1[0].y ; counter >= width
+	break_logicalnz r20.z
+				
+	mov r0, r1 ; keep old quad
+	call 0 ; load new quad
+	mov r1, r30
+		
+	call 1 ; compute result	
+	mov g[r20.x], r22 ; store result	
+endloop
+
+endmain
+
+; get next input quad, output is stored in r30
+func 0
+	
+	; load next quad
+	sample_resource(0)_sampler(0) r30, r21.xy
+	
+	; increment input index
+	lt r21.w, r21.x, r21.z
+	if_logicalnz r21.w
+		add r21.x, r21.x, r21.1
+	else
+		add r21.0y, r21.y, r21.1
+	endif				
+ret
+endfunc
+
+; function for computing the convolution given r0 and r1, result is stored in r22, uses r23-r25
+func 1
+	mul r22, r0, cb0[0]
+	mad r22, r1, cb0[1], r22
+
+	mul r23, r0, cb0[2]
+	mad r23, r1, cb0[3], r23
+
+	mul r24, r0, cb0[4]
+	mad r24, r1, cb0[5], r24
+
+	mul r25, r0, cb0[6]
+	mad r25, r1, cb0[7], r25
+	
+	dp4 r22.x, r22, r22.1111
+	dp4 r22.y, r23, r23.1111
+	dp4 r22.z, r24, r24.1111
+	dp4 r22.w, r25, r25.1111
+ret
+endfunc
+
+end
+]]>
+	</ILKernel>		
 	
 </Kernels>
