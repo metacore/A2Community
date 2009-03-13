@@ -3816,58 +3816,103 @@ dcl_cb cb0[8]	; [h0,h1,h2,h3],[h4,0,0,0]
 					
 dcl_cb cb1[1]	; [hotSpot,width,physWidth,xPitch], [boundary,...]
 
-; hotSpot has to be aligned to multiple of 4, for this you can add some leading zeros
+; hotSpot - has to be aligned to be multiple of 4
 
 dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
 
-dcl_literal l0, 1, 5, 4, -1
+dcl_literal l0, 1, 16, 4, -1
+dcl_literal l1, 4.0f, 0.0f, 0.0f, 0.0f
 
 umul r20.x, vaTid.x, cb1[0].w ; iLine*xPitch -> output index in quads
 
-umul r21.z, r20.x, l0.z ; output index in single elements
-imad r21.z, cb1[0].x, l0.w, r21.z ; iLine*xPitch*4 - hotSpot -> input linear index in single elements
-udiv r21.z, r21.z, l0.z ; input linear index in quads
-
 ; 2D input index
-umod r21.x, r21.z, cb1[0].z ; ind MOD physWidth
-udiv r21.y, r21.z, cb1[0].z ; ind DIV physWidth
+umod r21.x, r20.x, cb1[0].z ; ind MOD physWidth
+udiv r21.y, r20.x, cb1[0].z ; ind DIV physWidth
 itof r21.xy, r21.xy
+
 itof r21.z, cb1[0].z
+sub r21.z, r21.z, r21.1 ; r21.z = physWidth-1
 
-mov r20.y, r20.0 ; output samples counter
+mov r20.yz, r20.00
 
-; load first quads
-call 0
-mov r0, r30
-call 0
-mov r1, r30
-
-call 1 ; compute result
-mov g[r20.x], r22 ; store result
-
-whileloop
+; if needed process left boundary
+ine r20.w, cb1[0].x, r20.0
+if_logicalnz r20.w
 	
-	iadd r20.xy, r20.xy, l0.xz00
-	
-	ige r20.z, r20.y, cb1[0].y ; counter >= width
-	break_logicalnz r20.z
-				
-	mov r0, r1 ; keep old quad
-	call 0 ; load new quad
+	call 4 ; get next quad with account of boundaries
+	mov r0, r30
+	iadd r20.y, r20.y, l0.z ; increment input sample counter
+	call 4 ; get next quad with account of boundaries
 	mov r1, r30
+	iadd r20.y, r20.y, l0.z ; increment input sample counter	
+	
+	call 1 ; compute result
+	mov g[r20.x], r22
+	iadd r20.x, r20.x, l0.x ; increment output index
+
+	iadd r20.z, r20.z, l0.z ; increment output sample counter
+	
+	whileloop				
+		ige r20.w, r20.z, cb1[0].x ; counter >= hotSpot
+		break_logicalnz r20.w
 		
-	call 1 ; compute result	
-	mov g[r20.x], r22 ; store result	
+		mov r0, r1
+		call 4 ; get new quad with account of boundaries
+		mov r1, r30
+		iadd r20.y, r20.y, l0.z ; increment input sample counter
+		call 1 ; compute result
+		mov g[r20.x], r22
+		iadd r20.x, r20.x, l0.x ; increment output index
+		iadd r20.z, r20.z, l0.z ; increment output sample counter
+	endloop
+		
+else	
+	call 0
+	mov r1, r30
+endif
+
+; process 4 quads at once in a loop
+udiv r20.z, cb1[0].y, l0.z ; width DIV 4
+iadd r20.z, r20.z, l0.w ; (width DIV 4) - 1 - > -1 because 1 quad was already loaded
+udiv r20.z, r20.z, l0.z ; ((width DIV 4) - 1) DIV 4 ; number of loops -> NQQ
+
+mov r20.y, r20.0
+whileloop	
+	ige r20.w, r20.y, r20.z ; ((width DIV 4) - 2) DIV 4
+	break_logicalnz r20.w
+	
+	call 3 ; compute 4 output quads
+	iadd r20.y, r20.y, l0.x ; increment loop counter
+endloop
+
+; process remaining single quads without boundaries
+udiv r20.w, cb1[0].y, l0.z ; width DIV 4
+iadd r20.w, r20.w, l0.w ; (width DIV 4) - 1
+umul r20.z, r20.z, l0.z ; NQQ*4
+imad r20.z, r20.z, l0.w, r20.w ; (width  DIV 4)-(NQQ*4)
+
+mov r20.y, r20.0
+whileloop
+	ige r20.w, r20.y, r20.z ; (width  DIV 4)-(NQQ*4)
+	break_logicalnz r20.w
+	
+	mov r0, r1	
+	call 0
+	mov r1, r30
+	call 1
+	mov g[r20.x], r22
+	
+	iadd r20.x, r20.x, l0.x ; increment output index
+	iadd r20.y, r20.y, l0.x ; increment loop counter
 endloop
 
 endmain
 
-; get next input quad, output is stored in r30
-func 0
-	
+; get next input quad and increment input counter, output is stored in r30
+func 0	
 	; load next quad
 	sample_resource(0)_sampler(0) r30, r21.xy
-	
+		
 	; increment input index
 	lt r21.w, r21.x, r21.z
 	if_logicalnz r21.w
@@ -3899,8 +3944,378 @@ func 1
 ret
 endfunc
 
+; get next 4 input quads and increment input counter, output is stored in r30, r31, r32, r33
+func 2
+	
+	; check physical bound	
+	add r30.y, r21.x, l1.x ; x + 4
+	lt r30.w, r30.y, r21.z ; x+4 <= physWidth
+	if_logicalnz r30.w
+		sample_resource(0)_sampler(0)_aoffimmi(0,0,0) r30, r21.xy
+		sample_resource(0)_sampler(0)_aoffimmi(1,0,0) r31, r21.xy
+		sample_resource(0)_sampler(0)_aoffimmi(2,0,0) r32, r21.xy
+		sample_resource(0)_sampler(0)_aoffimmi(3,0,0) r33, r21.xy		
+		
+		add r21.x, r21.x, l1.x ; increment index
+	else			
+		; compute 2D indices for other 3 quads beyond r21.xy
+		lt r31.w, r21.x, r21.z
+		if_logicalnz r31.w
+			add r31.xy, r21.xy, r21.10
+		else
+			add r31.0y, r21.0y, r21.01
+		endif
+		
+		lt r32.w, r31.x, r21.z
+		if_logicalnz r32.w
+			add r32.xy, r31.xy, r31.10
+		else
+			add r32.0y, r31.0y, r31.01
+		endif
+		
+		lt r33.w, r32.x, r21.z
+		if_logicalnz r33.w
+			add r33.xy, r32.xy, r32.10
+		else
+			add r33.0y, r32.0y, r32.01
+		endif
+		
+		; do not forget about increment	
+		mov r30.xy, r21.xy
+				
+		lt r33.w, r33.x, r21.z
+		if_logicalnz r33.w
+			add r21.xy, r33.xy, r33.10
+		else
+			add r21.0y, r33.0y, r33.01
+		endif
+		
+		sample_resource(0)_sampler(0) r30, r30.xy
+		sample_resource(0)_sampler(0) r31, r31.xy
+		sample_resource(0)_sampler(0) r32, r32.xy
+		sample_resource(0)_sampler(0) r33, r33.xy
+	endif			
+ret
+endfunc
+
+; compute 4 output quads at once, without handling of boundaries
+func 3
+	call 2 ; load 4 quads at once
+	mov r0, r1
+	mov r1, r30
+	call 1 ; compute result
+	mov r34, r22
+	
+	mov r0, r1
+	mov r1, r31
+	call 1 ; compute result
+	mov r35, r22
+
+	mov r0, r1
+	mov r1, r32
+	call 1 ; compute result
+	mov r36, r22
+	
+	mov r0, r1
+	mov r1, r33
+	call 1 ; compute result
+	
+	; store to result
+	mov g[r20.x], r34
+	mov g[r20.x+1], r35
+	mov g[r20.x+2], r36
+	mov g[r20.x+3], r22
+ret
+endfunc
+
+; get next quad with account of boundaries given index r20.y (curent input sample), returned quad is in r30
+func 4
+	
+	ilt r20.w, r20.y, cb1[0].x ; counter < hotSpot
+	if_logicalnz r20.w
+		mov r30, r30.0000
+	else
+		; right boundary
+		;;;;;
+		
+		call 0 ; ordinary load with increment of input index
+	endif
+ret
+endfunc
+
 end
 ]]>
-	</ILKernel>		
+	</ILKernel>
+	
+<ILKernel name = "Convolve3DX9_R">
+<![CDATA[
+il_cs_2_0
+dcl_num_thread_per_group 64
+;
+;	Convolve 3D virtualized array along X (last) direction with up to 9 taps FIR filter
+; 
+;	inputs: 1
+;	outputs: 0
+;	global buffer: Yes
+;	data type: REAL
+;	nComponents: 4
+;	constants: 2, 12x4 (REAL) and 2x4 (LONGINT)
+;
+
+dcl_cb cb0[12]	; [h0,h1,h2,h3],[h4,h5,h6,h7],[h8,0,0,0]
+					; [0,h0,h1,h2],[h3,h4,h5,h6],[h7,h8,0,0]
+					; [0,0,h0,h1],[h2,h3,h4,h5],[h6,h7,h8,0]
+					; [0,0,0,h0],[h1,h2,h3,h4],[h5,h6,h7,h8]
+					
+dcl_cb cb1[1]	; [hotSpot,width,physWidth,xPitch], [boundary,...]
+
+; hotSpot - has to be aligned to be multiple of 4
+
+dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+
+dcl_literal l0, 1, 16, 4, -1
+dcl_literal l1, 4.0f, 0.0f, 0.0f, 0.0f
+dcl_literal l2, -2, 2, 0, 0
+
+umul r20.x, vaTid.x, cb1[0].w ; iLine*xPitch -> output index in quads
+
+; 2D input index
+umod r21.x, r20.x, cb1[0].z ; ind MOD physWidth
+udiv r21.y, r20.x, cb1[0].z ; ind DIV physWidth
+itof r21.xy, r21.xy
+
+itof r21.z, cb1[0].z
+sub r21.z, r21.z, r21.1 ; r21.z = physWidth-1
+
+mov r20.yz, r20.00
+
+; if needed process left boundary
+ine r20.w, cb1[0].x, r20.0
+if_logicalnz r20.w
+	
+	call 4 ; get next quad with account of boundaries
+	mov r0, r30
+	iadd r20.y, r20.y, l0.z ; increment input sample counter
+	call 4 ; get next quad with account of boundaries
+	mov r1, r30
+	iadd r20.y, r20.y, l0.z ; increment input sample counter
+	call 4 ; get next quad with account of boundaries
+	mov r2, r30
+	iadd r20.y, r20.y, l0.z ; increment input sample counter
+	
+	call 1 ; compute result
+	mov g[r20.x], r22
+	iadd r20.x, r20.x, l0.x ; increment output index
+
+	iadd r20.z, r20.z, l0.z ; increment output sample counter
+	
+	whileloop				
+		ige r20.w, r20.z, cb1[0].x ; counter >= hotSpot
+		break_logicalnz r20.w
+		
+		mov r0, r1
+		mov r1, r2
+		call 4 ; get new quad with account of boundaries
+		mov r2, r30
+		iadd r20.y, r20.y, l0.z ; increment input sample counter
+		call 1 ; compute result
+		mov g[r20.x], r22
+		iadd r20.x, r20.x, l0.x ; increment output index
+		iadd r20.z, r20.z, l0.z ; increment output sample counter
+	endloop
+		
+else		
+	call 0
+	mov r1, r30
+	call 0
+	mov r2, r30
+endif
+
+; process 4 quads at once in a loop
+udiv r20.z, cb1[0].y, l0.z ; width DIV 4
+iadd r20.z, r20.z, l2.x ; (width DIV 4) - 2 - > -2 because 2 quads were already loaded
+udiv r20.z, r20.z, l0.z ; ((width DIV 4) - 2) DIV 4 ; number of loops -> NQQ
+
+mov r20.y, r20.0
+whileloop	
+	ige r20.w, r20.y, r20.z ; ((width DIV 4) - 2) DIV 4
+	break_logicalnz r20.w
+	
+	call 3 ; compute 4 output quads
+	iadd r20.y, r20.y, l0.x ; increment loop counter
+endloop
+
+; process remaining single quads without boundaries
+udiv r20.w, cb1[0].y, l0.z ; width DIV 4
+iadd r20.w, r20.w, l2.x ; (width DIV 4) - 2
+umul r20.z, r20.z, l0.z ; NQQ*4
+imad r20.z, r20.z, l0.w, r20.w ; (width  DIV 4)-(NQQ*4)
+
+mov r20.y, r20.0
+whileloop
+	ige r20.w, r20.y, r20.z ; (width  DIV 4)-(NQQ*4)
+	break_logicalnz r20.w
+	
+	mov r0, r1
+	mov r1, r2
+	call 0
+	mov r2, r30
+	call 1
+	mov g[r20.x], r22
+	
+	iadd r20.x, r20.x, l0.x ; increment output index
+	iadd r20.y, r20.y, l0.x ; increment loop counter
+endloop
+
+endmain
+
+; get next input quad and increment input counter, output is stored in r30
+func 0	
+	; load next quad
+	sample_resource(0)_sampler(0) r30, r21.xy
+		
+	; increment input index
+	lt r21.w, r21.x, r21.z
+	if_logicalnz r21.w
+		add r21.x, r21.x, r21.1
+	else
+		add r21.0y, r21.y, r21.1
+	endif				
+ret
+endfunc
+
+; function for computing the convolution given r0, r1, r2 result is stored in r22, uses r23-r25
+func 1	
+	mul r22, r0, cb0[0]
+	mad r22, r1, cb0[1], r22
+	mad r22, r2, cb0[2], r22
+
+	mul r23, r0, cb0[3]
+	mad r23, r1, cb0[4], r23
+	mad r23, r2, cb0[5], r23
+
+	mul r24, r0, cb0[6]
+	mad r24, r1, cb0[7], r24
+	mad r24, r2, cb0[8], r24
+
+	mul r25, r0, cb0[9]
+	mad r25, r1, cb0[10], r25
+	mad r25, r2, cb0[11], r25
+	
+	dp4 r22.x, r22, r22.1111
+	dp4 r22.y, r23, r23.1111
+	dp4 r22.z, r24, r24.1111
+	dp4 r22.w, r25, r25.1111
+ret
+endfunc
+
+; get next 4 input quads and increment input counter, output is stored in r30, r31, r32, r33
+func 2
+	
+	; check physical bound	
+	add r30.y, r21.x, l1.x ; x + 4
+	lt r30.w, r30.y, r21.z ; x+4 < physWidth
+	if_logicalnz r30.w
+		sample_resource(0)_sampler(0)_aoffimmi(0,0,0) r30, r21.xy
+		sample_resource(0)_sampler(0)_aoffimmi(1,0,0) r31, r21.xy
+		sample_resource(0)_sampler(0)_aoffimmi(2,0,0) r32, r21.xy
+		sample_resource(0)_sampler(0)_aoffimmi(3,0,0) r33, r21.xy		
+		
+		add r21.x, r21.x, l1.x ; increment index
+	else			
+		; compute 2D indices for other 3 quads beyond r21.xy
+		lt r31.w, r21.x, r21.z
+		if_logicalnz r31.w
+			add r31.xy, r21.xy, r21.10
+		else
+			add r31.0y, r21.0y, r21.01
+		endif
+		
+		lt r32.w, r31.x, r21.z
+		if_logicalnz r32.w
+			add r32.xy, r31.xy, r31.10
+		else
+			add r32.0y, r31.0y, r31.01
+		endif
+		
+		lt r33.w, r32.x, r21.z
+		if_logicalnz r33.w
+			add r33.xy, r32.xy, r32.10
+		else
+			add r33.0y, r32.0y, r32.01
+		endif
+		
+		; do not forget about increment	
+		mov r30.xy, r21.xy
+				
+		lt r33.w, r33.x, r21.z
+		if_logicalnz r33.w
+			add r21.xy, r33.xy, r33.10
+		else
+			add r21.0y, r33.0y, r33.01
+		endif
+		
+		sample_resource(0)_sampler(0) r30, r30.xy
+		sample_resource(0)_sampler(0) r31, r31.xy
+		sample_resource(0)_sampler(0) r32, r32.xy
+		sample_resource(0)_sampler(0) r33, r33.xy
+	endif			
+ret
+endfunc
+
+; compute 4 output quads at once, without handling of boundaries
+func 3
+	call 2 ; load 4 quads at once
+	mov r0, r1
+	mov r1, r2
+	mov r2, r30
+	call 1 ; compute result
+	mov r34, r22
+	
+	mov r0, r1
+	mov r1, r2
+	mov r2, r31
+	call 1 ; compute result
+	mov r35, r22
+
+	mov r0, r1
+	mov r1, r2
+	mov r2, r32
+	call 1 ; compute result
+	mov r36, r22
+	
+	mov r0, r1
+	mov r1, r2
+	mov r2, r33
+	call 1 ; compute result
+	
+	; store to result
+	mov g[r20.x], r34
+	mov g[r20.x+1], r35
+	mov g[r20.x+2], r36
+	mov g[r20.x+3], r22
+	
+	iadd r20.x, r20.x, l0.z ; increment output index
+ret
+endfunc
+
+; get next quad with account of boundaries given index r20.y (curent input sample), returned quad is in r30
+func 4
+	
+	ilt r20.w, r20.y, cb1[0].x ; counter < hotSpot
+	if_logicalnz r20.w
+		mov r30, r30.0000
+	else
+		; right boundary
+		;;;;;
+		
+		call 0 ; ordinary load with increment of input index
+	endif
+ret
+endfunc
+
+end
+]]>
+	</ILKernel>	
 	
 </Kernels>
