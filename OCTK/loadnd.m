@@ -37,6 +37,10 @@ switch n
     case 6
         dType = 'double'; frmt = 'double=>double';
     case 7
+        dType = 'single'; frmt = 'single=>single';
+    case 8
+        dType = 'double'; frmt = 'double=>double';    
+    case 9
         dType = 'uint8'; frmt = 'uint8=>uint8';
 end;
 
@@ -46,11 +50,16 @@ ndim = fread(file,1,'int32');
 
 % data size
 sz = fread(file,ndim,'int32')';
-x = fread(file,prod(sz),frmt); 
+if (n ~= 7) && (n ~= 8)
+    x = fread(file,prod(sz),frmt);    
+else
+    x = fread(file,[2 prod(sz)],frmt); 
+    x = complex(x(1,:),x(2,:));
+end;
 fclose(file);
 
 % if more than 1D permute
-if ndim > 1
+if ndim > 1    
     x = reshape(x,sz(end:-1:1));
     ord = 1:length(sz);
     x = permute(x,ord(end:-1:1));
