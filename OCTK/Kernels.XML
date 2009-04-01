@@ -1550,7 +1550,7 @@ whileloop
    ge r2.z, r2.x, r2.y	; while(loop counter < floor(A.physWidth/2))
    break_logicalnz r2.z
 
-	; load 4 next 4x4 blocks of B
+	; load 2 next 4x4 blocks of B
 	sample_resource(8)_sampler(8) r10, r1.xy00
 	sample_resource(9)_sampler(9) r11, r1.xy00
 	sample_resource(10)_sampler(10) r12, r1.xy00
@@ -4316,6 +4316,101 @@ endfunc
 
 end
 ]]>
-	</ILKernel>	
+	</ILKernel>
+	
+<ILKernel name = "ReshapeVirtToVirt_LI_R">
+<![CDATA[
+il_ps_2_0
+;
+;	Reshape a virtualized array to a virtualized array
+; 
+;	inputs: 1
+;	outputs: 1
+;	data type: LONGINT, REAL
+;	nComponents: 4)
+;	constants: 2, 2x4 (LONGINT)
+;
+
+dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__
+dcl_output_generic o0
+
+dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+
+dcl_cb cb0[2] ; [xPitchSrc,xPitchDst,physWidth,xSizeSrc], [xSizeDst,...]
+
+dcl_literal l0, 4, 1, 0, 0
+
+flr r0, vWinCoord0.xy ; 2D output position in quads
+umad r0.x, r0.y, cb0[0].z, r0.x ; linear index of current quad in the output
+udiv r0.y, r0.x, cb0[0].y ; line number of current quad
+umod r1.y, r0.x, cb0[0].y ; position of the quad within the line
+umul r0.x, r1.y, l0.x ; single element position within the line
+umad r0.x, r0.y, cb0[1].x, r0.x ; nLines*xSizeDst + ind -> actual linear index in single elements
+
+udiv r0.y, r0.x, cb0[0].w ; line number in the input
+umod r0.x, r0.x, cb0[0].w ; single element position within the line
+umul r0.z, cb0[0].x, l0.x ; xPitchSrc*4
+umad r0.x, r0.y, r0.z, r0.x ; single element position with account of input's padding
+umod r0.z, r0.x, l0.x ; 4 components misalignment
+udiv r1.x, r0.x, l0.x ; linear index in quads
+
+; 2D input position in quads
+udiv r0.y, r1.x, cb0[0].z
+umod r0.x, r1.x, cb0[0].z
+
+; load input data
+
+switch r0.z
+	case 0 ; no misalignment
+		sample_resource(0)_sampler(0) r2, r0.xy
+	case 1
+		; increment linear index and compute 2D position of the next quad
+		iadd r1.x, r1.x, l0.y
+		udiv r0.w, r1.x, cb0[0].z
+		umod r0.z, r1.x, cb0[0].z
+		sample_resource(0)_sampler(0) r2._yzw, r0.xy		
+		sample_resource(0)_sampler(0) r2.x___, r0.zw
+		mov r2.xyzw, r2.yzwx
+	case 2
+		; increment linear index and compute 2D position of the next quad
+		iadd r1.x, r1.x, l0.y
+		udiv r0.w, r1.x, cb0[0].z
+		umod r0.z, r1.x, cb0[0].z
+		sample_resource(0)_sampler(0) r2.__zw, r0.xy		
+		sample_resource(0)_sampler(0) r2.xy__, r0.zw
+		mov r2.xyzw, r2.zwxy
+	case 3
+		; increment linear index and compute 2D position of the next quad
+		iadd r1.x, r1.x, l0.y
+		udiv r0.w, r1.x, cb0[0].z
+		umod r0.z, r1.x, cb0[0].z
+		sample_resource(0)_sampler(0) r2.___w, r0.xy		
+		sample_resource(0)_sampler(0) r2.xyz_, r0.zw
+		mov r2.xyzw, r2.wxyz
+endswitch
+
+iadd r1.y, r1.y, l0.y ; position of the output quad within the line + 1
+ine r0.z, r1.y, cb0[0].y ; ind+1 # xPitchSrc
+if_logicalnz r0.z
+	mov o0, r2
+else
+	
+	umod r0.z, cb0[1].x, l0.x ; misalignment xSizeDst MOD 4
+	switch r0.z
+		case 0 ; no misalignment
+			mov o0, r2
+		case 1
+			mov o0.x000, r2.x
+		case 2
+			mov o0.xy00, r2.xy
+		case 3
+			mov o0.xyz0, r2.xyz
+	endswitch
+	
+endif
+
+end		
+]]>
+	</ILKernel>
 	
 </Kernels>
