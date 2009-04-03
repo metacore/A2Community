@@ -3292,6 +3292,10 @@ switch cb0[1].x
 	case 2
 		mov r2.z, r1.x
 	break
+	
+	case 3
+		mov r2.w, r1.x
+	break
 
 endswitch
 
@@ -4327,7 +4331,7 @@ il_ps_2_0
 ;	inputs: 1
 ;	outputs: 1
 ;	data type: LONGINT, REAL
-;	nComponents: 4)
+;	nComponents: 4
 ;	constants: 2, 2x4 (LONGINT)
 ;
 
@@ -4519,30 +4523,1912 @@ else
 		
 endif
 
+iadd r1.y, r1.y, l0.y ; increment position of the output quad within the line
+ieq r0.z, r1.y, cb0[0].y ; ind+1 = xPitchDst
+if_logicalnz r0.z
+	
+	umod r0.z, cb0[1].x, l0.x ; misalignment xSizeDst MOD 4
+	switch r0.z
+		case 0 ; no misalignment
+			break
+		case 1
+			mov r2, r2.x000
+			break
+		case 2
+			mov r2, r2.xy00
+			break
+		case 3
+			mov r2, r2.xyz0
+			break
+	endswitch
+	
+endif
+
 mov o0, r2
 
-;iadd r1.y, r1.y, l0.y ; position of the output quad within the line + 1
-;ine r0.z, r1.y, cb0[0].y ; ind+1 # xPitchSrc
-;if_logicalnz r0.z
-;	mov o0, r2
-;else
-;	
-;	umod r0.z, cb0[1].x, l0.x ; misalignment xSizeDst MOD 4
-;	switch r0.z
-;		case 0 ; no misalignment
-;			mov o0, r2
-;		case 1
-;			mov o0.x000, r2.x
-;		case 2
-;			mov o0.xy00, r2.xy
-;		case 3
-;			mov o0.xyz0, r2.xyz
-;	endswitch
-;	
-;endif
-
-end		
+end
 ]]>
 	</ILKernel>
+	
+<ILKernel name = "ReshapeVirtToSplit8_LI_R">
+<![CDATA[
+il_ps_2_0
+;
+;	Reshape a virtualized array to a matrix splitted into 8 parts 
+; 
+;	inputs: 1
+;	outputs: 8
+;	data type: LONGINT, REAL
+;	nComponents: 4
+;	constants: 2, 2x4 (LONGINT)
+;
+
+dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__
+dcl_output_generic o0
+dcl_output_generic o1
+dcl_output_generic o2
+dcl_output_generic o3
+dcl_output_generic o4
+dcl_output_generic o5
+dcl_output_generic o6
+dcl_output_generic o7
+
+dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+
+dcl_cb cb0[2] ; [xPitchSrc,xPitchDst,physWidthSrc,xSizeSrc], [xSizeDst,...]
+; in this case xPitchDst = physWidthDst
+
+dcl_literal l0, 4, 1, -1, 8
+
+; ************** part 1 **************
+; output quad is stored in r2
+
+ftoi r0, vWinCoord0.xy ; 2D output position in quads
+mov r1.y, r0.x ; remember position in quads within the row
+umul r0.x, r0.x, l0.x ; x in single elements
+umul r1.x, r0.y, l0.w ; y*8
+umad r0.x, r1.x, cb0[1].x, r0.x ; y*8*xSizeDst + x -> actual linear index in single elements
+mov r4.w, r0.x ; remember index value for not to recomputing it again for other matrix parts
+
+udiv r0.y, r0.x, cb0[0].w ; line number in the input
+umod r4.x, r0.x, cb0[0].w ; single element position within the line
+umul r0.z, cb0[0].x, l0.x ; xPitchSrc*4
+umad r0.x, r0.y, r0.z, r4.x ; single element position with account of input's padding
+umod r4.y, r0.x, l0.x ; 4 components misalignment
+udiv r1.x, r0.x, l0.x ; linear index in quads
+
+; 2D input position in quads
+udiv r0.y, r1.x, cb0[0].z
+umod r0.x, r1.x, cb0[0].z
+
+; increment linear index and compute 2D position of the next quad
+iadd r1.x, r1.x, l0.y
+udiv r0.w, r1.x, cb0[0].z
+umod r0.z, r1.x, cb0[0].z
+itof r0, r0
+
+umod r1.z, cb0[0].w, l0.x ; xSizeSrc MOD 4
+ieq r1.z, r1.z, r1.0 ; no padding in input
+imad r4.x, r4.x, l0.z, cb0[0].w ; xSizeSrc - single element position within the line
+ige r1.w, r4.x, l0.x
+ior r1.z, r1.z, r1.w ; (xSizeSrc MOD 4 = 0) OR (xSizeSrc - indWithinLine >= 4)
+
+if_logicalnz r1.z
+
+	switch r4.y
+		case 0 ; no misalignment			
+			sample_resource(0)_sampler(0) r2, r0.xy
+			break
+		case 1			
+			sample_resource(0)_sampler(0) r2._yzw, r0.xy		
+			sample_resource(0)_sampler(0) r2.x___, r0.zw
+			mov r2.xyzw, r2.yzwx
+			break
+		case 2
+			sample_resource(0)_sampler(0) r2.__zw, r0.xy		
+			sample_resource(0)_sampler(0) r2.xy__, r0.zw
+			mov r2.xyzw, r2.zwxy
+			break
+		case 3
+			sample_resource(0)_sampler(0) r2.___w, r0.xy		
+			sample_resource(0)_sampler(0) r2.xyz_, r0.zw
+			mov r2.xyzw, r2.wxyz
+			break
+	endswitch
+	
+else
+	
+	switch r4.y
+	
+		case 0 ; no misalignment
+			
+			switch r4.x
+				case 1					
+					sample_resource(0)_sampler(0) r2.x___, r0.xy
+					sample_resource(0)_sampler(0) r3.xyz_, r0.zw
+					mov r2._yzw, r3.0xyz
+					break
+				
+				case 2					
+					sample_resource(0)_sampler(0) r2.xy__, r0.xy
+					sample_resource(0)_sampler(0) r3.xy__, r0.zw
+					mov r2.__zw, r3.00xy
+					break
+					
+				case 3
+					sample_resource(0)_sampler(0) r2.xyz_, r0.xy
+					sample_resource(0)_sampler(0) r3.x___, r0.zw
+					mov r2.___w, r3.000x
+					break	
+			endswitch
+			
+			break
+		case 1
+			
+			switch r4.x
+				case 1					
+					sample_resource(0)_sampler(0) r2._y__, r0.xy
+					sample_resource(0)_sampler(0) r3.xyz_, r0.zw
+					mov r2.x, r2.y
+					mov r2._yzw, r3.0xyz
+					break
+				
+				case 2					
+					sample_resource(0)_sampler(0) r2._yz_, r0.xy
+					sample_resource(0)_sampler(0) r3.xy__, r0.zw
+					mov r2.xy00, r2.yz00
+					mov r2.__zw, r3.00xy
+					break
+					
+				case 3					
+					sample_resource(0)_sampler(0) r2._yzw, r0.xy
+					sample_resource(0)_sampler(0) r3.x___, r0.zw
+					mov r2.xyz0, r2.yzw0
+					mov r2.___w, r3.x
+					break	
+			endswitch
+			
+			break
+		case 2
+			
+			switch r4.x
+				case 1					
+					sample_resource(0)_sampler(0) r2.__z_, r0.xy
+					sample_resource(0)_sampler(0) r3.xyz_, r0.zw
+					mov r2.x, r2.z
+					mov r2._yzw, r3.0xyz
+					break
+				
+				case 2				
+					sample_resource(0)_sampler(0) r2.__zw, r0.xy
+					sample_resource(0)_sampler(0) r3.xy__, r0.zw
+					mov r2.xy00, r2.zw00
+					mov r2.__zw, r3.00xy
+					break
+					
+				case 3
+					iadd r1.x, r1.x, l0.y
+					udiv r4.y, r1.x, cb0[0].z
+					umod r4.x, r1.x, cb0[0].z
+					itof r4.xy, r4.xy
+					sample_resource(0)_sampler(0) r2.__zw, r0.xy
+					sample_resource(0)_sampler(0) r3.x___, r0.zw
+					sample_resource(0)_sampler(0) r2.x___, r4.xy
+					mov r2.xy0w, r2.zw0x
+					mov r2.__z_, r3.00x0
+					break	
+									
+			endswitch
+			
+			break
+		case 3
+			
+			switch r4.x
+				case 1					
+					sample_resource(0)_sampler(0) r2.___w, r0.xy
+					sample_resource(0)_sampler(0) r3.xyz_, r0.zw
+					mov r2.x, r2.w
+					mov r2._yzw, r3.0xyz
+					break
+				
+				case 2
+					iadd r1.x, r1.x, l0.y
+					udiv r4.y, r1.x, cb0[0].z
+					umod r4.x, r1.x, cb0[0].z
+					itof r4.xy, r4.xy
+					sample_resource(0)_sampler(0) r2.___w, r0.xy
+					sample_resource(0)_sampler(0) r3.x___, r0.zw
+					sample_resource(0)_sampler(0) r2.xy__, r4.xy
+					mov r2.x0zw, r2.w0xy
+					mov r2._y__, r3.0x00
+					break
+					
+				case 3
+					iadd r1.x, r1.x, l0.y
+					udiv r4.y, r1.x, cb0[0].z
+					umod r4.x, r1.x, cb0[0].z
+					itof r4.xy, r4.xy
+					sample_resource(0)_sampler(0) r2.___w, r0.xy
+					sample_resource(0)_sampler(0) r3.xy__, r0.zw
+					sample_resource(0)_sampler(0) r2.x___, r4.xy
+					mov r2.x00w, r2.w00x
+					mov r2._yz_, r3.0xy0
+					break
+									
+			endswitch
+			
+			break
+	endswitch
+		
+endif
+
+; ************** part 2 **************
+; output quad is stored in r5
+
+iadd r4.w, r4.w, cb0[1].x ; y*8*xSizeDst + x + i*xSizeDst* -> actual linear index in single elements
+mov r0.x, r4.w
+
+udiv r0.y, r0.x, cb0[0].w ; line number in the input
+umod r4.x, r0.x, cb0[0].w ; single element position within the line
+umul r0.z, cb0[0].x, l0.x ; xPitchSrc*4
+umad r0.x, r0.y, r0.z, r4.x ; single element position with account of input's padding
+umod r4.y, r0.x, l0.x ; 4 components misalignment
+udiv r1.x, r0.x, l0.x ; linear index in quads
+
+; 2D input position in quads
+udiv r0.y, r1.x, cb0[0].z
+umod r0.x, r1.x, cb0[0].z
+
+; increment linear index and compute 2D position of the next quad
+iadd r1.x, r1.x, l0.y
+udiv r0.w, r1.x, cb0[0].z
+umod r0.z, r1.x, cb0[0].z
+itof r0, r0
+
+umod r1.z, cb0[0].w, l0.x ; xSizeSrc MOD 4
+ieq r1.z, r1.z, r1.0 ; no padding in input
+imad r4.x, r4.x, l0.z, cb0[0].w ; xSizeSrc - single element position within the line
+ige r1.w, r4.x, l0.x
+ior r1.z, r1.z, r1.w ; (xSizeSrc MOD 4 = 0) OR (xSizeSrc - indWithinLine >= 4)
+
+if_logicalnz r1.z
+
+	switch r4.y
+		case 0 ; no misalignment			
+			sample_resource(0)_sampler(0) r5, r0.xy
+			break
+		case 1			
+			sample_resource(0)_sampler(0) r5._yzw, r0.xy		
+			sample_resource(0)_sampler(0) r5.x___, r0.zw
+			mov r5.xyzw, r5.yzwx
+			break
+		case 2
+			sample_resource(0)_sampler(0) r5.__zw, r0.xy		
+			sample_resource(0)_sampler(0) r5.xy__, r0.zw
+			mov r5.xyzw, r5.zwxy
+			break
+		case 3
+			sample_resource(0)_sampler(0) r5.___w, r0.xy		
+			sample_resource(0)_sampler(0) r5.xyz_, r0.zw
+			mov r5.xyzw, r5.wxyz
+			break
+	endswitch
+	
+else
+	
+	switch r4.y
+	
+		case 0 ; no misalignment
+			
+			switch r4.x
+				case 1					
+					sample_resource(0)_sampler(0) r5.x___, r0.xy
+					sample_resource(0)_sampler(0) r3.xyz_, r0.zw
+					mov r5._yzw, r3.0xyz
+					break
+				
+				case 2					
+					sample_resource(0)_sampler(0) r5.xy__, r0.xy
+					sample_resource(0)_sampler(0) r3.xy__, r0.zw
+					mov r5.__zw, r3.00xy
+					break
+					
+				case 3
+					sample_resource(0)_sampler(0) r5.xyz_, r0.xy
+					sample_resource(0)_sampler(0) r3.x___, r0.zw
+					mov r5.___w, r3.000x
+					break	
+			endswitch
+			
+			break
+		case 1
+			
+			switch r4.x
+				case 1					
+					sample_resource(0)_sampler(0) r5._y__, r0.xy
+					sample_resource(0)_sampler(0) r3.xyz_, r0.zw
+					mov r5.x, r5.y
+					mov r5._yzw, r3.0xyz
+					break
+				
+				case 2					
+					sample_resource(0)_sampler(0) r5._yz_, r0.xy
+					sample_resource(0)_sampler(0) r3.xy__, r0.zw
+					mov r5.xy00, r5.yz00
+					mov r5.__zw, r3.00xy
+					break
+					
+				case 3					
+					sample_resource(0)_sampler(0) r5._yzw, r0.xy
+					sample_resource(0)_sampler(0) r3.x___, r0.zw
+					mov r5.xyz0, r5.yzw0
+					mov r5.___w, r3.x
+					break	
+			endswitch
+			
+			break
+		case 2
+			
+			switch r4.x
+				case 1					
+					sample_resource(0)_sampler(0) r5.__z_, r0.xy
+					sample_resource(0)_sampler(0) r3.xyz_, r0.zw
+					mov r5.x, r5.z
+					mov r5._yzw, r3.0xyz
+					break
+				
+				case 2				
+					sample_resource(0)_sampler(0) r5.__zw, r0.xy
+					sample_resource(0)_sampler(0) r3.xy__, r0.zw
+					mov r5.xy00, r5.zw00
+					mov r5.__zw, r3.00xy
+					break
+					
+				case 3
+					iadd r1.x, r1.x, l0.y
+					udiv r4.y, r1.x, cb0[0].z
+					umod r4.x, r1.x, cb0[0].z
+					itof r4.xy, r4.xy
+					sample_resource(0)_sampler(0) r5.__zw, r0.xy
+					sample_resource(0)_sampler(0) r3.x___, r0.zw
+					sample_resource(0)_sampler(0) r5.x___, r4.xy
+					mov r5.xy0w, r5.zw0x
+					mov r5.__z_, r3.00x0
+					break	
+									
+			endswitch
+			
+			break
+		case 3
+			
+			switch r4.x
+				case 1					
+					sample_resource(0)_sampler(0) r5.___w, r0.xy
+					sample_resource(0)_sampler(0) r3.xyz_, r0.zw
+					mov r5.x, r5.w
+					mov r5._yzw, r3.0xyz
+					break
+				
+				case 2
+					iadd r1.x, r1.x, l0.y
+					udiv r4.y, r1.x, cb0[0].z
+					umod r4.x, r1.x, cb0[0].z
+					itof r4.xy, r4.xy
+					sample_resource(0)_sampler(0) r5.___w, r0.xy
+					sample_resource(0)_sampler(0) r3.x___, r0.zw
+					sample_resource(0)_sampler(0) r5.xy__, r4.xy
+					mov r5.x0zw, r5.w0xy
+					mov r5._y__, r3.0x00
+					break
+					
+				case 3
+					iadd r1.x, r1.x, l0.y
+					udiv r4.y, r1.x, cb0[0].z
+					umod r4.x, r1.x, cb0[0].z
+					itof r4.xy, r4.xy
+					sample_resource(0)_sampler(0) r5.___w, r0.xy
+					sample_resource(0)_sampler(0) r3.xy__, r0.zw
+					sample_resource(0)_sampler(0) r5.x___, r4.xy
+					mov r5.x00w, r5.w00x
+					mov r5._yz_, r3.0xy0
+					break
+									
+			endswitch
+			
+			break
+	endswitch
+		
+endif
+
+
+; ************** part 3 **************
+; output quad is stored in r6
+
+iadd r4.w, r4.w, cb0[1].x ; y*8*xSizeDst + x + i*xSizeDst* -> actual linear index in single elements
+mov r0.x, r4.w
+
+udiv r0.y, r0.x, cb0[0].w ; line number in the input
+umod r4.x, r0.x, cb0[0].w ; single element position within the line
+umul r0.z, cb0[0].x, l0.x ; xPitchSrc*4
+umad r0.x, r0.y, r0.z, r4.x ; single element position with account of input's padding
+umod r4.y, r0.x, l0.x ; 4 components misalignment
+udiv r1.x, r0.x, l0.x ; linear index in quads
+
+; 2D input position in quads
+udiv r0.y, r1.x, cb0[0].z
+umod r0.x, r1.x, cb0[0].z
+
+; increment linear index and compute 2D position of the next quad
+iadd r1.x, r1.x, l0.y
+udiv r0.w, r1.x, cb0[0].z
+umod r0.z, r1.x, cb0[0].z
+itof r0, r0
+
+umod r1.z, cb0[0].w, l0.x ; xSizeSrc MOD 4
+ieq r1.z, r1.z, r1.0 ; no padding in input
+imad r4.x, r4.x, l0.z, cb0[0].w ; xSizeSrc - single element position within the line
+ige r1.w, r4.x, l0.x
+ior r1.z, r1.z, r1.w ; (xSizeSrc MOD 4 = 0) OR (xSizeSrc - indWithinLine >= 4)
+
+if_logicalnz r1.z
+
+	switch r4.y
+		case 0 ; no misalignment			
+			sample_resource(0)_sampler(0) r6, r0.xy
+			break
+		case 1			
+			sample_resource(0)_sampler(0) r6._yzw, r0.xy		
+			sample_resource(0)_sampler(0) r6.x___, r0.zw
+			mov r6.xyzw, r6.yzwx
+			break
+		case 2
+			sample_resource(0)_sampler(0) r6.__zw, r0.xy		
+			sample_resource(0)_sampler(0) r6.xy__, r0.zw
+			mov r6.xyzw, r6.zwxy
+			break
+		case 3
+			sample_resource(0)_sampler(0) r6.___w, r0.xy		
+			sample_resource(0)_sampler(0) r6.xyz_, r0.zw
+			mov r6.xyzw, r6.wxyz
+			break
+	endswitch
+	
+else
+	
+	switch r4.y
+	
+		case 0 ; no misalignment
+			
+			switch r4.x
+				case 1					
+					sample_resource(0)_sampler(0) r6.x___, r0.xy
+					sample_resource(0)_sampler(0) r3.xyz_, r0.zw
+					mov r6._yzw, r3.0xyz
+					break
+				
+				case 2					
+					sample_resource(0)_sampler(0) r6.xy__, r0.xy
+					sample_resource(0)_sampler(0) r3.xy__, r0.zw
+					mov r6.__zw, r3.00xy
+					break
+					
+				case 3
+					sample_resource(0)_sampler(0) r6.xyz_, r0.xy
+					sample_resource(0)_sampler(0) r3.x___, r0.zw
+					mov r6.___w, r3.000x
+					break	
+			endswitch
+			
+			break
+		case 1
+			
+			switch r4.x
+				case 1					
+					sample_resource(0)_sampler(0) r6._y__, r0.xy
+					sample_resource(0)_sampler(0) r3.xyz_, r0.zw
+					mov r6.x, r6.y
+					mov r6._yzw, r3.0xyz
+					break
+				
+				case 2					
+					sample_resource(0)_sampler(0) r6._yz_, r0.xy
+					sample_resource(0)_sampler(0) r3.xy__, r0.zw
+					mov r6.xy00, r6.yz00
+					mov r6.__zw, r3.00xy
+					break
+					
+				case 3					
+					sample_resource(0)_sampler(0) r6._yzw, r0.xy
+					sample_resource(0)_sampler(0) r3.x___, r0.zw
+					mov r6.xyz0, r6.yzw0
+					mov r6.___w, r3.x
+					break	
+			endswitch
+			
+			break
+		case 2
+			
+			switch r4.x
+				case 1					
+					sample_resource(0)_sampler(0) r6.__z_, r0.xy
+					sample_resource(0)_sampler(0) r3.xyz_, r0.zw
+					mov r6.x, r6.z
+					mov r6._yzw, r3.0xyz
+					break
+				
+				case 2				
+					sample_resource(0)_sampler(0) r6.__zw, r0.xy
+					sample_resource(0)_sampler(0) r3.xy__, r0.zw
+					mov r6.xy00, r6.zw00
+					mov r6.__zw, r3.00xy
+					break
+					
+				case 3
+					iadd r1.x, r1.x, l0.y
+					udiv r4.y, r1.x, cb0[0].z
+					umod r4.x, r1.x, cb0[0].z
+					itof r4.xy, r4.xy
+					sample_resource(0)_sampler(0) r6.__zw, r0.xy
+					sample_resource(0)_sampler(0) r3.x___, r0.zw
+					sample_resource(0)_sampler(0) r6.x___, r4.xy
+					mov r6.xy0w, r6.zw0x
+					mov r6.__z_, r3.00x0
+					break	
+									
+			endswitch
+			
+			break
+		case 3
+			
+			switch r4.x
+				case 1					
+					sample_resource(0)_sampler(0) r6.___w, r0.xy
+					sample_resource(0)_sampler(0) r3.xyz_, r0.zw
+					mov r6.x, r6.w
+					mov r6._yzw, r3.0xyz
+					break
+				
+				case 2
+					iadd r1.x, r1.x, l0.y
+					udiv r4.y, r1.x, cb0[0].z
+					umod r4.x, r1.x, cb0[0].z
+					itof r4.xy, r4.xy
+					sample_resource(0)_sampler(0) r6.___w, r0.xy
+					sample_resource(0)_sampler(0) r3.x___, r0.zw
+					sample_resource(0)_sampler(0) r6.xy__, r4.xy
+					mov r6.x0zw, r6.w0xy
+					mov r6._y__, r3.0x00
+					break
+					
+				case 3
+					iadd r1.x, r1.x, l0.y
+					udiv r4.y, r1.x, cb0[0].z
+					umod r4.x, r1.x, cb0[0].z
+					itof r4.xy, r4.xy
+					sample_resource(0)_sampler(0) r6.___w, r0.xy
+					sample_resource(0)_sampler(0) r3.xy__, r0.zw
+					sample_resource(0)_sampler(0) r6.x___, r4.xy
+					mov r6.x00w, r6.w00x
+					mov r6._yz_, r3.0xy0
+					break
+									
+			endswitch
+			
+			break
+	endswitch
+		
+endif
+
+
+; ************** part 4 **************
+; output quad is stored in r7
+
+iadd r4.w, r4.w, cb0[1].x ; y*8*xSizeDst + x + i*xSizeDst* -> actual linear index in single elements
+mov r0.x, r4.w
+
+udiv r0.y, r0.x, cb0[0].w ; line number in the input
+umod r4.x, r0.x, cb0[0].w ; single element position within the line
+umul r0.z, cb0[0].x, l0.x ; xPitchSrc*4
+umad r0.x, r0.y, r0.z, r4.x ; single element position with account of input's padding
+umod r4.y, r0.x, l0.x ; 4 components misalignment
+udiv r1.x, r0.x, l0.x ; linear index in quads
+
+; 2D input position in quads
+udiv r0.y, r1.x, cb0[0].z
+umod r0.x, r1.x, cb0[0].z
+
+; increment linear index and compute 2D position of the next quad
+iadd r1.x, r1.x, l0.y
+udiv r0.w, r1.x, cb0[0].z
+umod r0.z, r1.x, cb0[0].z
+itof r0, r0
+
+umod r1.z, cb0[0].w, l0.x ; xSizeSrc MOD 4
+ieq r1.z, r1.z, r1.0 ; no padding in input
+imad r4.x, r4.x, l0.z, cb0[0].w ; xSizeSrc - single element position within the line
+ige r1.w, r4.x, l0.x
+ior r1.z, r1.z, r1.w ; (xSizeSrc MOD 4 = 0) OR (xSizeSrc - indWithinLine >= 4)
+
+if_logicalnz r1.z
+
+	switch r4.y
+		case 0 ; no misalignment			
+			sample_resource(0)_sampler(0) r7, r0.xy
+			break
+		case 1			
+			sample_resource(0)_sampler(0) r7._yzw, r0.xy		
+			sample_resource(0)_sampler(0) r7.x___, r0.zw
+			mov r7.xyzw, r7.yzwx
+			break
+		case 2
+			sample_resource(0)_sampler(0) r7.__zw, r0.xy		
+			sample_resource(0)_sampler(0) r7.xy__, r0.zw
+			mov r7.xyzw, r7.zwxy
+			break
+		case 3
+			sample_resource(0)_sampler(0) r7.___w, r0.xy		
+			sample_resource(0)_sampler(0) r7.xyz_, r0.zw
+			mov r7.xyzw, r7.wxyz
+			break
+	endswitch
+	
+else
+	
+	switch r4.y
+	
+		case 0 ; no misalignment
+			
+			switch r4.x
+				case 1					
+					sample_resource(0)_sampler(0) r7.x___, r0.xy
+					sample_resource(0)_sampler(0) r3.xyz_, r0.zw
+					mov r7._yzw, r3.0xyz
+					break
+				
+				case 2					
+					sample_resource(0)_sampler(0) r7.xy__, r0.xy
+					sample_resource(0)_sampler(0) r3.xy__, r0.zw
+					mov r7.__zw, r3.00xy
+					break
+					
+				case 3
+					sample_resource(0)_sampler(0) r7.xyz_, r0.xy
+					sample_resource(0)_sampler(0) r3.x___, r0.zw
+					mov r7.___w, r3.000x
+					break	
+			endswitch
+			
+			break
+		case 1
+			
+			switch r4.x
+				case 1					
+					sample_resource(0)_sampler(0) r7._y__, r0.xy
+					sample_resource(0)_sampler(0) r3.xyz_, r0.zw
+					mov r7.x, r7.y
+					mov r7._yzw, r3.0xyz
+					break
+				
+				case 2					
+					sample_resource(0)_sampler(0) r7._yz_, r0.xy
+					sample_resource(0)_sampler(0) r3.xy__, r0.zw
+					mov r7.xy00, r7.yz00
+					mov r7.__zw, r3.00xy
+					break
+					
+				case 3					
+					sample_resource(0)_sampler(0) r7._yzw, r0.xy
+					sample_resource(0)_sampler(0) r3.x___, r0.zw
+					mov r7.xyz0, r7.yzw0
+					mov r7.___w, r3.x
+					break	
+			endswitch
+			
+			break
+		case 2
+			
+			switch r4.x
+				case 1					
+					sample_resource(0)_sampler(0) r7.__z_, r0.xy
+					sample_resource(0)_sampler(0) r3.xyz_, r0.zw
+					mov r7.x, r7.z
+					mov r7._yzw, r3.0xyz
+					break
+				
+				case 2				
+					sample_resource(0)_sampler(0) r7.__zw, r0.xy
+					sample_resource(0)_sampler(0) r3.xy__, r0.zw
+					mov r7.xy00, r7.zw00
+					mov r7.__zw, r3.00xy
+					break
+					
+				case 3
+					iadd r1.x, r1.x, l0.y
+					udiv r4.y, r1.x, cb0[0].z
+					umod r4.x, r1.x, cb0[0].z
+					itof r4.xy, r4.xy
+					sample_resource(0)_sampler(0) r7.__zw, r0.xy
+					sample_resource(0)_sampler(0) r3.x___, r0.zw
+					sample_resource(0)_sampler(0) r7.x___, r4.xy
+					mov r7.xy0w, r7.zw0x
+					mov r7.__z_, r3.00x0
+					break	
+									
+			endswitch
+			
+			break
+		case 3
+			
+			switch r4.x
+				case 1					
+					sample_resource(0)_sampler(0) r7.___w, r0.xy
+					sample_resource(0)_sampler(0) r3.xyz_, r0.zw
+					mov r7.x, r7.w
+					mov r7._yzw, r3.0xyz
+					break
+				
+				case 2
+					iadd r1.x, r1.x, l0.y
+					udiv r4.y, r1.x, cb0[0].z
+					umod r4.x, r1.x, cb0[0].z
+					itof r4.xy, r4.xy
+					sample_resource(0)_sampler(0) r7.___w, r0.xy
+					sample_resource(0)_sampler(0) r3.x___, r0.zw
+					sample_resource(0)_sampler(0) r7.xy__, r4.xy
+					mov r7.x0zw, r7.w0xy
+					mov r7._y__, r3.0x00
+					break
+					
+				case 3
+					iadd r1.x, r1.x, l0.y
+					udiv r4.y, r1.x, cb0[0].z
+					umod r4.x, r1.x, cb0[0].z
+					itof r4.xy, r4.xy
+					sample_resource(0)_sampler(0) r7.___w, r0.xy
+					sample_resource(0)_sampler(0) r3.xy__, r0.zw
+					sample_resource(0)_sampler(0) r7.x___, r4.xy
+					mov r7.x00w, r7.w00x
+					mov r7._yz_, r3.0xy0
+					break
+									
+			endswitch
+			
+			break
+	endswitch
+		
+endif
+
+; ************** part 5 **************
+; output quad is stored in r8
+
+iadd r4.w, r4.w, cb0[1].x ; y*8*xSizeDst + x + i*xSizeDst* -> actual linear index in single elements
+mov r0.x, r4.w
+
+udiv r0.y, r0.x, cb0[0].w ; line number in the input
+umod r4.x, r0.x, cb0[0].w ; single element position within the line
+umul r0.z, cb0[0].x, l0.x ; xPitchSrc*4
+umad r0.x, r0.y, r0.z, r4.x ; single element position with account of input's padding
+umod r4.y, r0.x, l0.x ; 4 components misalignment
+udiv r1.x, r0.x, l0.x ; linear index in quads
+
+; 2D input position in quads
+udiv r0.y, r1.x, cb0[0].z
+umod r0.x, r1.x, cb0[0].z
+
+; increment linear index and compute 2D position of the next quad
+iadd r1.x, r1.x, l0.y
+udiv r0.w, r1.x, cb0[0].z
+umod r0.z, r1.x, cb0[0].z
+itof r0, r0
+
+umod r1.z, cb0[0].w, l0.x ; xSizeSrc MOD 4
+ieq r1.z, r1.z, r1.0 ; no padding in input
+imad r4.x, r4.x, l0.z, cb0[0].w ; xSizeSrc - single element position within the line
+ige r1.w, r4.x, l0.x
+ior r1.z, r1.z, r1.w ; (xSizeSrc MOD 4 = 0) OR (xSizeSrc - indWithinLine >= 4)
+
+if_logicalnz r1.z
+
+	switch r4.y
+		case 0 ; no misalignment			
+			sample_resource(0)_sampler(0) r8, r0.xy
+			break
+		case 1			
+			sample_resource(0)_sampler(0) r8._yzw, r0.xy		
+			sample_resource(0)_sampler(0) r8.x___, r0.zw
+			mov r8.xyzw, r8.yzwx
+			break
+		case 2
+			sample_resource(0)_sampler(0) r8.__zw, r0.xy		
+			sample_resource(0)_sampler(0) r8.xy__, r0.zw
+			mov r8.xyzw, r8.zwxy
+			break
+		case 3
+			sample_resource(0)_sampler(0) r8.___w, r0.xy		
+			sample_resource(0)_sampler(0) r8.xyz_, r0.zw
+			mov r8.xyzw, r8.wxyz
+			break
+	endswitch
+	
+else
+	
+	switch r4.y
+	
+		case 0 ; no misalignment
+			
+			switch r4.x
+				case 1					
+					sample_resource(0)_sampler(0) r8.x___, r0.xy
+					sample_resource(0)_sampler(0) r3.xyz_, r0.zw
+					mov r8._yzw, r3.0xyz
+					break
+				
+				case 2					
+					sample_resource(0)_sampler(0) r8.xy__, r0.xy
+					sample_resource(0)_sampler(0) r3.xy__, r0.zw
+					mov r8.__zw, r3.00xy
+					break
+					
+				case 3
+					sample_resource(0)_sampler(0) r8.xyz_, r0.xy
+					sample_resource(0)_sampler(0) r3.x___, r0.zw
+					mov r8.___w, r3.000x
+					break	
+			endswitch
+			
+			break
+		case 1
+			
+			switch r4.x
+				case 1					
+					sample_resource(0)_sampler(0) r8._y__, r0.xy
+					sample_resource(0)_sampler(0) r3.xyz_, r0.zw
+					mov r8.x, r8.y
+					mov r8._yzw, r3.0xyz
+					break
+				
+				case 2					
+					sample_resource(0)_sampler(0) r8._yz_, r0.xy
+					sample_resource(0)_sampler(0) r3.xy__, r0.zw
+					mov r8.xy00, r8.yz00
+					mov r8.__zw, r3.00xy
+					break
+					
+				case 3					
+					sample_resource(0)_sampler(0) r8._yzw, r0.xy
+					sample_resource(0)_sampler(0) r3.x___, r0.zw
+					mov r8.xyz0, r8.yzw0
+					mov r8.___w, r3.x
+					break	
+			endswitch
+			
+			break
+		case 2
+			
+			switch r4.x
+				case 1					
+					sample_resource(0)_sampler(0) r8.__z_, r0.xy
+					sample_resource(0)_sampler(0) r3.xyz_, r0.zw
+					mov r8.x, r8.z
+					mov r8._yzw, r3.0xyz
+					break
+				
+				case 2				
+					sample_resource(0)_sampler(0) r8.__zw, r0.xy
+					sample_resource(0)_sampler(0) r3.xy__, r0.zw
+					mov r8.xy00, r8.zw00
+					mov r8.__zw, r3.00xy
+					break
+					
+				case 3
+					iadd r1.x, r1.x, l0.y
+					udiv r4.y, r1.x, cb0[0].z
+					umod r4.x, r1.x, cb0[0].z
+					itof r4.xy, r4.xy
+					sample_resource(0)_sampler(0) r8.__zw, r0.xy
+					sample_resource(0)_sampler(0) r3.x___, r0.zw
+					sample_resource(0)_sampler(0) r8.x___, r4.xy
+					mov r8.xy0w, r8.zw0x
+					mov r8.__z_, r3.00x0
+					break	
+									
+			endswitch
+			
+			break
+		case 3
+			
+			switch r4.x
+				case 1					
+					sample_resource(0)_sampler(0) r8.___w, r0.xy
+					sample_resource(0)_sampler(0) r3.xyz_, r0.zw
+					mov r8.x, r8.w
+					mov r8._yzw, r3.0xyz
+					break
+				
+				case 2
+					iadd r1.x, r1.x, l0.y
+					udiv r4.y, r1.x, cb0[0].z
+					umod r4.x, r1.x, cb0[0].z
+					itof r4.xy, r4.xy
+					sample_resource(0)_sampler(0) r8.___w, r0.xy
+					sample_resource(0)_sampler(0) r3.x___, r0.zw
+					sample_resource(0)_sampler(0) r8.xy__, r4.xy
+					mov r8.x0zw, r8.w0xy
+					mov r8._y__, r3.0x00
+					break
+					
+				case 3
+					iadd r1.x, r1.x, l0.y
+					udiv r4.y, r1.x, cb0[0].z
+					umod r4.x, r1.x, cb0[0].z
+					itof r4.xy, r4.xy
+					sample_resource(0)_sampler(0) r8.___w, r0.xy
+					sample_resource(0)_sampler(0) r3.xy__, r0.zw
+					sample_resource(0)_sampler(0) r8.x___, r4.xy
+					mov r8.x00w, r8.w00x
+					mov r8._yz_, r3.0xy0
+					break
+									
+			endswitch
+			
+			break
+	endswitch
+		
+endif
+
+; ************** part 6 **************
+; output quad is stored in r9
+
+iadd r4.w, r4.w, cb0[1].x ; y*8*xSizeDst + x + i*xSizeDst* -> actual linear index in single elements
+mov r0.x, r4.w
+
+udiv r0.y, r0.x, cb0[0].w ; line number in the input
+umod r4.x, r0.x, cb0[0].w ; single element position within the line
+umul r0.z, cb0[0].x, l0.x ; xPitchSrc*4
+umad r0.x, r0.y, r0.z, r4.x ; single element position with account of input's padding
+umod r4.y, r0.x, l0.x ; 4 components misalignment
+udiv r1.x, r0.x, l0.x ; linear index in quads
+
+; 2D input position in quads
+udiv r0.y, r1.x, cb0[0].z
+umod r0.x, r1.x, cb0[0].z
+
+; increment linear index and compute 2D position of the next quad
+iadd r1.x, r1.x, l0.y
+udiv r0.w, r1.x, cb0[0].z
+umod r0.z, r1.x, cb0[0].z
+itof r0, r0
+
+umod r1.z, cb0[0].w, l0.x ; xSizeSrc MOD 4
+ieq r1.z, r1.z, r1.0 ; no padding in input
+imad r4.x, r4.x, l0.z, cb0[0].w ; xSizeSrc - single element position within the line
+ige r1.w, r4.x, l0.x
+ior r1.z, r1.z, r1.w ; (xSizeSrc MOD 4 = 0) OR (xSizeSrc - indWithinLine >= 4)
+
+if_logicalnz r1.z
+
+	switch r4.y
+		case 0 ; no misalignment			
+			sample_resource(0)_sampler(0) r9, r0.xy
+			break
+		case 1			
+			sample_resource(0)_sampler(0) r9._yzw, r0.xy		
+			sample_resource(0)_sampler(0) r9.x___, r0.zw
+			mov r9.xyzw, r9.yzwx
+			break
+		case 2
+			sample_resource(0)_sampler(0) r9.__zw, r0.xy		
+			sample_resource(0)_sampler(0) r9.xy__, r0.zw
+			mov r9.xyzw, r9.zwxy
+			break
+		case 3
+			sample_resource(0)_sampler(0) r9.___w, r0.xy		
+			sample_resource(0)_sampler(0) r9.xyz_, r0.zw
+			mov r9.xyzw, r9.wxyz
+			break
+	endswitch
+	
+else
+	
+	switch r4.y
+	
+		case 0 ; no misalignment
+			
+			switch r4.x
+				case 1					
+					sample_resource(0)_sampler(0) r9.x___, r0.xy
+					sample_resource(0)_sampler(0) r3.xyz_, r0.zw
+					mov r9._yzw, r3.0xyz
+					break
+				
+				case 2					
+					sample_resource(0)_sampler(0) r9.xy__, r0.xy
+					sample_resource(0)_sampler(0) r3.xy__, r0.zw
+					mov r9.__zw, r3.00xy
+					break
+					
+				case 3
+					sample_resource(0)_sampler(0) r9.xyz_, r0.xy
+					sample_resource(0)_sampler(0) r3.x___, r0.zw
+					mov r9.___w, r3.000x
+					break	
+			endswitch
+			
+			break
+		case 1
+			
+			switch r4.x
+				case 1					
+					sample_resource(0)_sampler(0) r9._y__, r0.xy
+					sample_resource(0)_sampler(0) r3.xyz_, r0.zw
+					mov r9.x, r9.y
+					mov r9._yzw, r3.0xyz
+					break
+				
+				case 2					
+					sample_resource(0)_sampler(0) r9._yz_, r0.xy
+					sample_resource(0)_sampler(0) r3.xy__, r0.zw
+					mov r9.xy00, r9.yz00
+					mov r9.__zw, r3.00xy
+					break
+					
+				case 3					
+					sample_resource(0)_sampler(0) r9._yzw, r0.xy
+					sample_resource(0)_sampler(0) r3.x___, r0.zw
+					mov r9.xyz0, r9.yzw0
+					mov r9.___w, r3.x
+					break	
+			endswitch
+			
+			break
+		case 2
+			
+			switch r4.x
+				case 1					
+					sample_resource(0)_sampler(0) r9.__z_, r0.xy
+					sample_resource(0)_sampler(0) r3.xyz_, r0.zw
+					mov r9.x, r9.z
+					mov r9._yzw, r3.0xyz
+					break
+				
+				case 2				
+					sample_resource(0)_sampler(0) r9.__zw, r0.xy
+					sample_resource(0)_sampler(0) r3.xy__, r0.zw
+					mov r9.xy00, r9.zw00
+					mov r9.__zw, r3.00xy
+					break
+					
+				case 3
+					iadd r1.x, r1.x, l0.y
+					udiv r4.y, r1.x, cb0[0].z
+					umod r4.x, r1.x, cb0[0].z
+					itof r4.xy, r4.xy
+					sample_resource(0)_sampler(0) r9.__zw, r0.xy
+					sample_resource(0)_sampler(0) r3.x___, r0.zw
+					sample_resource(0)_sampler(0) r9.x___, r4.xy
+					mov r9.xy0w, r9.zw0x
+					mov r9.__z_, r3.00x0
+					break	
+									
+			endswitch
+			
+			break
+		case 3
+			
+			switch r4.x
+				case 1					
+					sample_resource(0)_sampler(0) r9.___w, r0.xy
+					sample_resource(0)_sampler(0) r3.xyz_, r0.zw
+					mov r9.x, r9.w
+					mov r9._yzw, r3.0xyz
+					break
+				
+				case 2
+					iadd r1.x, r1.x, l0.y
+					udiv r4.y, r1.x, cb0[0].z
+					umod r4.x, r1.x, cb0[0].z
+					itof r4.xy, r4.xy
+					sample_resource(0)_sampler(0) r9.___w, r0.xy
+					sample_resource(0)_sampler(0) r3.x___, r0.zw
+					sample_resource(0)_sampler(0) r9.xy__, r4.xy
+					mov r9.x0zw, r9.w0xy
+					mov r9._y__, r3.0x00
+					break
+					
+				case 3
+					iadd r1.x, r1.x, l0.y
+					udiv r4.y, r1.x, cb0[0].z
+					umod r4.x, r1.x, cb0[0].z
+					itof r4.xy, r4.xy
+					sample_resource(0)_sampler(0) r9.___w, r0.xy
+					sample_resource(0)_sampler(0) r3.xy__, r0.zw
+					sample_resource(0)_sampler(0) r9.x___, r4.xy
+					mov r9.x00w, r9.w00x
+					mov r9._yz_, r3.0xy0
+					break
+									
+			endswitch
+			
+			break
+	endswitch
+		
+endif
+
+; ************** part 7 **************
+; output quad is stored in r10
+
+iadd r4.w, r4.w, cb0[1].x ; y*8*xSizeDst + x + i*xSizeDst* -> actual linear index in single elements
+mov r0.x, r4.w
+
+udiv r0.y, r0.x, cb0[0].w ; line number in the input
+umod r4.x, r0.x, cb0[0].w ; single element position within the line
+umul r0.z, cb0[0].x, l0.x ; xPitchSrc*4
+umad r0.x, r0.y, r0.z, r4.x ; single element position with account of input's padding
+umod r4.y, r0.x, l0.x ; 4 components misalignment
+udiv r1.x, r0.x, l0.x ; linear index in quads
+
+; 2D input position in quads
+udiv r0.y, r1.x, cb0[0].z
+umod r0.x, r1.x, cb0[0].z
+
+; increment linear index and compute 2D position of the next quad
+iadd r1.x, r1.x, l0.y
+udiv r0.w, r1.x, cb0[0].z
+umod r0.z, r1.x, cb0[0].z
+itof r0, r0
+
+umod r1.z, cb0[0].w, l0.x ; xSizeSrc MOD 4
+ieq r1.z, r1.z, r1.0 ; no padding in input
+imad r4.x, r4.x, l0.z, cb0[0].w ; xSizeSrc - single element position within the line
+ige r1.w, r4.x, l0.x
+ior r1.z, r1.z, r1.w ; (xSizeSrc MOD 4 = 0) OR (xSizeSrc - indWithinLine >= 4)
+
+if_logicalnz r1.z
+
+	switch r4.y
+		case 0 ; no misalignment			
+			sample_resource(0)_sampler(0) r10, r0.xy
+			break
+		case 1			
+			sample_resource(0)_sampler(0) r10._yzw, r0.xy		
+			sample_resource(0)_sampler(0) r10.x___, r0.zw
+			mov r10.xyzw, r10.yzwx
+			break
+		case 2
+			sample_resource(0)_sampler(0) r10.__zw, r0.xy		
+			sample_resource(0)_sampler(0) r10.xy__, r0.zw
+			mov r10.xyzw, r10.zwxy
+			break
+		case 3
+			sample_resource(0)_sampler(0) r10.___w, r0.xy		
+			sample_resource(0)_sampler(0) r10.xyz_, r0.zw
+			mov r10.xyzw, r10.wxyz
+			break
+	endswitch
+	
+else
+	
+	switch r4.y
+	
+		case 0 ; no misalignment
+			
+			switch r4.x
+				case 1					
+					sample_resource(0)_sampler(0) r10.x___, r0.xy
+					sample_resource(0)_sampler(0) r3.xyz_, r0.zw
+					mov r10._yzw, r3.0xyz
+					break
+				
+				case 2					
+					sample_resource(0)_sampler(0) r10.xy__, r0.xy
+					sample_resource(0)_sampler(0) r3.xy__, r0.zw
+					mov r10.__zw, r3.00xy
+					break
+					
+				case 3
+					sample_resource(0)_sampler(0) r10.xyz_, r0.xy
+					sample_resource(0)_sampler(0) r3.x___, r0.zw
+					mov r10.___w, r3.000x
+					break	
+			endswitch
+			
+			break
+		case 1
+			
+			switch r4.x
+				case 1					
+					sample_resource(0)_sampler(0) r10._y__, r0.xy
+					sample_resource(0)_sampler(0) r3.xyz_, r0.zw
+					mov r10.x, r10.y
+					mov r10._yzw, r3.0xyz
+					break
+				
+				case 2					
+					sample_resource(0)_sampler(0) r10._yz_, r0.xy
+					sample_resource(0)_sampler(0) r3.xy__, r0.zw
+					mov r10.xy00, r10.yz00
+					mov r10.__zw, r3.00xy
+					break
+					
+				case 3					
+					sample_resource(0)_sampler(0) r10._yzw, r0.xy
+					sample_resource(0)_sampler(0) r3.x___, r0.zw
+					mov r10.xyz0, r10.yzw0
+					mov r10.___w, r3.x
+					break	
+			endswitch
+			
+			break
+		case 2
+			
+			switch r4.x
+				case 1					
+					sample_resource(0)_sampler(0) r10.__z_, r0.xy
+					sample_resource(0)_sampler(0) r3.xyz_, r0.zw
+					mov r10.x, r10.z
+					mov r10._yzw, r3.0xyz
+					break
+				
+				case 2				
+					sample_resource(0)_sampler(0) r10.__zw, r0.xy
+					sample_resource(0)_sampler(0) r3.xy__, r0.zw
+					mov r10.xy00, r10.zw00
+					mov r10.__zw, r3.00xy
+					break
+					
+				case 3
+					iadd r1.x, r1.x, l0.y
+					udiv r4.y, r1.x, cb0[0].z
+					umod r4.x, r1.x, cb0[0].z
+					itof r4.xy, r4.xy
+					sample_resource(0)_sampler(0) r10.__zw, r0.xy
+					sample_resource(0)_sampler(0) r3.x___, r0.zw
+					sample_resource(0)_sampler(0) r10.x___, r4.xy
+					mov r10.xy0w, r10.zw0x
+					mov r10.__z_, r3.00x0
+					break	
+									
+			endswitch
+			
+			break
+		case 3
+			
+			switch r4.x
+				case 1					
+					sample_resource(0)_sampler(0) r10.___w, r0.xy
+					sample_resource(0)_sampler(0) r3.xyz_, r0.zw
+					mov r10.x, r10.w
+					mov r10._yzw, r3.0xyz
+					break
+				
+				case 2
+					iadd r1.x, r1.x, l0.y
+					udiv r4.y, r1.x, cb0[0].z
+					umod r4.x, r1.x, cb0[0].z
+					itof r4.xy, r4.xy
+					sample_resource(0)_sampler(0) r10.___w, r0.xy
+					sample_resource(0)_sampler(0) r3.x___, r0.zw
+					sample_resource(0)_sampler(0) r10.xy__, r4.xy
+					mov r10.x0zw, r10.w0xy
+					mov r10._y__, r3.0x00
+					break
+					
+				case 3
+					iadd r1.x, r1.x, l0.y
+					udiv r4.y, r1.x, cb0[0].z
+					umod r4.x, r1.x, cb0[0].z
+					itof r4.xy, r4.xy
+					sample_resource(0)_sampler(0) r10.___w, r0.xy
+					sample_resource(0)_sampler(0) r3.xy__, r0.zw
+					sample_resource(0)_sampler(0) r10.x___, r4.xy
+					mov r10.x00w, r10.w00x
+					mov r10._yz_, r3.0xy0
+					break
+									
+			endswitch
+			
+			break
+	endswitch
+		
+endif
+
+; ************** part 8 **************
+; output quad is stored in r11
+
+iadd r4.w, r4.w, cb0[1].x ; y*8*xSizeDst + x + i*xSizeDst* -> actual linear index in single elements
+mov r0.x, r4.w
+
+udiv r0.y, r0.x, cb0[0].w ; line number in the input
+umod r4.x, r0.x, cb0[0].w ; single element position within the line
+umul r0.z, cb0[0].x, l0.x ; xPitchSrc*4
+umad r0.x, r0.y, r0.z, r4.x ; single element position with account of input's padding
+umod r4.y, r0.x, l0.x ; 4 components misalignment
+udiv r1.x, r0.x, l0.x ; linear index in quads
+
+; 2D input position in quads
+udiv r0.y, r1.x, cb0[0].z
+umod r0.x, r1.x, cb0[0].z
+
+; increment linear index and compute 2D position of the next quad
+iadd r1.x, r1.x, l0.y
+udiv r0.w, r1.x, cb0[0].z
+umod r0.z, r1.x, cb0[0].z
+itof r0, r0
+
+umod r1.z, cb0[0].w, l0.x ; xSizeSrc MOD 4
+ieq r1.z, r1.z, r1.0 ; no padding in input
+imad r4.x, r4.x, l0.z, cb0[0].w ; xSizeSrc - single element position within the line
+ige r1.w, r4.x, l0.x
+ior r1.z, r1.z, r1.w ; (xSizeSrc MOD 4 = 0) OR (xSizeSrc - indWithinLine >= 4)
+
+if_logicalnz r1.z
+
+	switch r4.y
+		case 0 ; no misalignment			
+			sample_resource(0)_sampler(0) r11, r0.xy
+			break
+		case 1			
+			sample_resource(0)_sampler(0) r11._yzw, r0.xy		
+			sample_resource(0)_sampler(0) r11.x___, r0.zw
+			mov r11.xyzw, r11.yzwx
+			break
+		case 2
+			sample_resource(0)_sampler(0) r11.__zw, r0.xy		
+			sample_resource(0)_sampler(0) r11.xy__, r0.zw
+			mov r11.xyzw, r11.zwxy
+			break
+		case 3
+			sample_resource(0)_sampler(0) r11.___w, r0.xy		
+			sample_resource(0)_sampler(0) r11.xyz_, r0.zw
+			mov r11.xyzw, r11.wxyz
+			break
+	endswitch
+	
+else
+	
+	switch r4.y
+	
+		case 0 ; no misalignment
+			
+			switch r4.x
+				case 1					
+					sample_resource(0)_sampler(0) r11.x___, r0.xy
+					sample_resource(0)_sampler(0) r3.xyz_, r0.zw
+					mov r11._yzw, r3.0xyz
+					break
+				
+				case 2					
+					sample_resource(0)_sampler(0) r11.xy__, r0.xy
+					sample_resource(0)_sampler(0) r3.xy__, r0.zw
+					mov r11.__zw, r3.00xy
+					break
+					
+				case 3
+					sample_resource(0)_sampler(0) r11.xyz_, r0.xy
+					sample_resource(0)_sampler(0) r3.x___, r0.zw
+					mov r11.___w, r3.000x
+					break	
+			endswitch
+			
+			break
+		case 1
+			
+			switch r4.x
+				case 1					
+					sample_resource(0)_sampler(0) r11._y__, r0.xy
+					sample_resource(0)_sampler(0) r3.xyz_, r0.zw
+					mov r11.x, r11.y
+					mov r11._yzw, r3.0xyz
+					break
+				
+				case 2					
+					sample_resource(0)_sampler(0) r11._yz_, r0.xy
+					sample_resource(0)_sampler(0) r3.xy__, r0.zw
+					mov r11.xy00, r11.yz00
+					mov r11.__zw, r3.00xy
+					break
+					
+				case 3					
+					sample_resource(0)_sampler(0) r11._yzw, r0.xy
+					sample_resource(0)_sampler(0) r3.x___, r0.zw
+					mov r11.xyz0, r11.yzw0
+					mov r11.___w, r3.x
+					break	
+			endswitch
+			
+			break
+		case 2
+			
+			switch r4.x
+				case 1					
+					sample_resource(0)_sampler(0) r11.__z_, r0.xy
+					sample_resource(0)_sampler(0) r3.xyz_, r0.zw
+					mov r11.x, r11.z
+					mov r11._yzw, r3.0xyz
+					break
+				
+				case 2				
+					sample_resource(0)_sampler(0) r11.__zw, r0.xy
+					sample_resource(0)_sampler(0) r3.xy__, r0.zw
+					mov r11.xy00, r11.zw00
+					mov r11.__zw, r3.00xy
+					break
+					
+				case 3
+					iadd r1.x, r1.x, l0.y
+					udiv r4.y, r1.x, cb0[0].z
+					umod r4.x, r1.x, cb0[0].z
+					itof r4.xy, r4.xy
+					sample_resource(0)_sampler(0) r11.__zw, r0.xy
+					sample_resource(0)_sampler(0) r3.x___, r0.zw
+					sample_resource(0)_sampler(0) r11.x___, r4.xy
+					mov r11.xy0w, r11.zw0x
+					mov r11.__z_, r3.00x0
+					break	
+									
+			endswitch
+			
+			break
+		case 3
+			
+			switch r4.x
+				case 1					
+					sample_resource(0)_sampler(0) r11.___w, r0.xy
+					sample_resource(0)_sampler(0) r3.xyz_, r0.zw
+					mov r11.x, r11.w
+					mov r11._yzw, r3.0xyz
+					break
+				
+				case 2
+					iadd r1.x, r1.x, l0.y
+					udiv r4.y, r1.x, cb0[0].z
+					umod r4.x, r1.x, cb0[0].z
+					itof r4.xy, r4.xy
+					sample_resource(0)_sampler(0) r11.___w, r0.xy
+					sample_resource(0)_sampler(0) r3.x___, r0.zw
+					sample_resource(0)_sampler(0) r11.xy__, r4.xy
+					mov r11.x0zw, r11.w0xy
+					mov r11._y__, r3.0x00
+					break
+					
+				case 3
+					iadd r1.x, r1.x, l0.y
+					udiv r4.y, r1.x, cb0[0].z
+					umod r4.x, r1.x, cb0[0].z
+					itof r4.xy, r4.xy
+					sample_resource(0)_sampler(0) r11.___w, r0.xy
+					sample_resource(0)_sampler(0) r3.xy__, r0.zw
+					sample_resource(0)_sampler(0) r11.x___, r4.xy
+					mov r11.x00w, r11.w00x
+					mov r11._yz_, r3.0xy0
+					break
+									
+			endswitch
+			
+			break
+	endswitch
+		
+endif
+
+iadd r1.y, r1.y, l0.y ; increment position of the output quad within the row
+ieq r0.z, r1.y, cb0[0].y ; ind+1 = xPitchDst
+if_logicalnz r0.z
+	
+	umod r0.z, cb0[1].x, l0.x ; misalignment xSizeDst MOD 4
+	switch r0.z
+		case 0 ; no misalignment
+			break
+		case 1
+			mov r2, r2.x000
+			mov r5, r5.x000
+			mov r6, r6.x000
+			mov r7, r7.x000
+			mov r8, r8.x000
+			mov r9, r9.x000
+			mov r10, r10.x000
+			mov r11, r11.x000
+			break
+		case 2
+			mov r2, r2.xy00
+			mov r5, r5.xy00
+			mov r6, r6.xy00
+			mov r7, r7.xy00
+			mov r8, r8.xy00
+			mov r9, r9.xy00
+			mov r10, r10.xy00
+			mov r11, r11.xy00
+			break
+		case 3
+			mov r2, r2.xyz0
+			mov r5, r5.xyz0
+			mov r6, r6.xyz0
+			mov r7, r7.xyz0
+			mov r8, r8.xyz0
+			mov r9, r9.xyz0
+			mov r10, r10.xyz0
+			mov r11, r11.xyz0
+			break
+	endswitch
+	
+endif
+
+mov o0, r2
+mov o1, r5
+mov o2, r6
+mov o3, r7
+mov o4, r8
+mov o5, r9
+mov o6, r10
+mov o7, r11
+	
+end
+]]>
+	</ILKernel>
+	
+<ILKernel name = "ReshapeSplit8ToVirt_LI_R">
+<![CDATA[
+il_ps_2_0
+;
+;	Reshape a matrix splitted into 8 parts to a virtualized array
+; 
+;	inputs: 8
+;	outputs: 1
+;	data type: LONGINT, REAL
+;	nComponents: 4
+;	constants: 2, 2x4 (LONGINT)
+;
+
+
+end
+]]>
+	</ILKernel>
+		
+	
+<ILKernel name = "Transpose3D_LI_R">
+<![CDATA[
+il_ps_2_0
+;
+;	Transpose a virtualized 3D array
+; 
+;	inputs: 1
+;	outputs: 1
+;	data type: LONGINT, REAL
+;	nComponents: 4
+;	constants: 4x4 (LONGINT) [physWidth, newNy*newNx, newNx, 1], [tZ, tY, tX, 0], [oldNy*oldNx, oldNx, 1, 0],
+;										[xPitchSrc,xPitchDst,xSizeSrc,xSizeDst]
+;
+dcl_cb cb0[4]
+dcl_output_generic o0
+dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__
+dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+
+dcl_literal l0, 4, 1, 0, 0
+
+ftoi r0, vWinCoord0.xy ; 2D output position in quads
+umad r0.x, r0.y, cb0[0].x, r0.x ; linear index of current quad in the output
+udiv r0.y, r0.x, cb0[3].y ; line number of current quad
+umod r1.y, r0.x, cb0[3].y ; position of the quad within the line
+umul r0.x, r1.y, l0.x ; single element position within the line
+umad r0.x, r0.y, cb0[3].w, r0.x ; nLines*xSizeDst + ind -> actual linear index in single elements
+
+call 0
+mov r4.x, r1.x
+
+iadd r0.x, r0.x, l0.y
+call 0
+mov r4.y, r1.x
+
+iadd r0.x, r0.x, l0.y
+call 0
+mov r4.z, r1.x
+
+iadd r0.x, r0.x, l0.y
+call 0
+mov r4.w, r1.x
+
+mov o0, r4
+
+endmain
+
+; get input array element in given output index r0.x in single components, returned value is in r1.x
+func 0
+	
+; compute z, y, x coordinates in the output
+udiv r1.x, r0.x, cb0[0].y	; z := ind/(newNy*newNx)
+umod r1.z, r0.x, cb0[0].y	; r1.z := ind - z*newNy*newNx
+udiv r1.y, r1.z, cb0[0].z	; y := (ind - z*newNy*newNx)/newNx
+umod r1.z, r1.z, cb0[0].z	; x := ind - z*newNy*newNx - y*newNx
+
+; shuffle the coordinates
+
+switch cb0[1].x
+
+	default
+		mov r2.x, r1.x
+	break
+
+	case 1
+		mov r2.y, r1.x
+	break
+
+	case 2
+		mov r2.z, r1.x
+	break
+
+endswitch
+
+switch cb0[1].y
+
+	default
+		mov r2.x, r1.y
+	break
+
+	case 1
+		mov r2.y, r1.y
+	break
+
+	case 2
+		mov r2.z, r1.y
+	break
+
+endswitch
+
+switch cb0[1].z
+
+	default
+		mov r2.x, r1.z
+	break
+
+	case 1
+		mov r2.y, r1.z
+	break
+
+	case 2
+		mov r2.z, r1.z
+	break
+
+endswitch
+
+; compute linear index in the input
+imul r2.xyz, r2.xyz, cb0[2].xyz	; [z*oldNy*oldNx, y*oldNx, x*1]
+
+; horizontal add
+iadd r2.x, r2.x, r2.y
+iadd r2.x, r2.x, r2.z
+
+; compute corresponding 2D index in the input
+udiv r1.y, r2.x, cb0[3].z ; ind DIV xSizeSrc -> line number in the input
+umod r1.x, r2.x, cb0[3].z ; single element position within the line
+umul r1.z, cb0[3].x, l0.x ; xPitchSrc*4
+umad r1.x, r1.y, r1.z, r1.x ; single element position with account of input's padding
+
+umod r1.y, r1.x, l0.x ; 4 components misalignment
+udiv r1.x, r1.x, l0.x ; linear index in quads
+
+; compute 2D position in quads
+udiv r3.y, r1.x, cb0[0].x
+umod r3.x, r1.x, cb0[0].x
+itof r3.xy, r3.xy
+
+switch r1.y
+
+	case 0
+		sample_resource(0)_sampler(0) r1.x___, r3.xy
+	break
+	
+	case 1
+		sample_resource(0)_sampler(0) r1._y__, r3.xy
+		mov r1.x, r1.y
+	break
+	
+	case 2
+		sample_resource(0)_sampler(0) r1.__z_, r3.xy
+		mov r1.x, r1.z
+	break
+	
+	case 3
+		sample_resource(0)_sampler(0) r1.___w, r3.xy
+		mov r1.x, r1.w
+	break
+	
+endswitch
+	
+ret
+endfunc
+
+end
+]]>
+	</ILKernel>
+	
+
+<ILKernel name = "Transpose4D_LI_R">
+<![CDATA[
+il_ps_2_0
+;
+;	Transpose a virtualized 4D array
+; 
+;	inputs: 1
+;	outputs: 1
+;	data type: LONGINT, REAL
+;	nComponents: 4
+;	constants: 1, 4x4 (LONGINT) [physWidth, newNz*newNy*newNx, newNy*newNx, newNx], 
+;											[tT, tZ, tY, tX], [oldNz*oldNy*oldNx, oldNy*oldNx, oldNx, 1], [xPitchSrc,xPitchDst,xSizeSrc,xSizeDst]
+dcl_cb cb0[4]
+dcl_output_generic o0
+dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__
+dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+
+dcl_literal l0, 4, 1, 0, 0
+
+ftoi r0, vWinCoord0.xy ; 2D output position in quads
+umad r0.x, r0.y, cb0[0].x, r0.x ; linear index of current quad in the output
+udiv r0.y, r0.x, cb0[3].y ; line number of current quad
+umod r1.y, r0.x, cb0[3].y ; position of the quad within the line
+umul r0.x, r1.y, l0.x ; single element position within the line
+umad r0.x, r0.y, cb0[3].w, r0.x ; nLines*xSizeDst + ind -> actual linear index in single elements
+
+call 0
+mov r4.x, r1.x
+
+iadd r0.x, r0.x, l0.y
+call 0
+mov r4.y, r1.x
+
+iadd r0.x, r0.x, l0.y
+call 0
+mov r4.z, r1.x
+
+iadd r0.x, r0.x, l0.y
+call 0
+mov r4.w, r1.x
+
+mov o0, r4
+
+endmain
+
+; get input array element in given output index r0.x in single components, returned value is in r1.x
+func 0
+	
+; compute t, z, y, x coordinates in the output
+udiv r1.x, r0.x, cb0[0].y	; t := ind/(newNz*newNy*newNx)
+umod r1.w, r0.x, cb0[0].y	; r1.w := ind - t*newNz*newNy*newNx
+udiv r1.y, r1.w, cb0[0].z	; z := (ind - t*newNz*newNy*newNx)/(newNy*newNx)
+umod r1.w, r1.w, cb0[0].z	; r1.w := ind - t*newNz*newNy*newNx - z*(newNy*newNx)
+udiv r1.z, r1.w, cb0[0].w	; y := (ind - t*newNz*newNy*newNx - z*(newNy*newNx))/newNx
+umod r1.w, r1.w, cb0[0].w	; x := (ind - t*newNz*newNy*newNx - z*(newNy*newNx)) MOD newNx
+
+; shuffle the coordinates
+
+switch cb0[1].x
+
+	default
+		mov r2.x, r1.x
+	break
+
+	case 1
+		mov r2.y, r1.x
+	break
+
+	case 2
+		mov r2.z, r1.x
+	break
+	
+	case 3
+		mov r2.w, r1.x
+	break
+
+endswitch
+
+switch cb0[1].y
+
+	default
+		mov r2.x, r1.y
+	break
+
+	case 1
+		mov r2.y, r1.y
+	break
+
+	case 2
+		mov r2.z, r1.y
+	break
+
+	case 3
+		mov r2.w, r1.y
+	break
+
+endswitch
+
+switch cb0[1].z
+
+	default
+		mov r2.x, r1.z
+	break
+
+	case 1
+		mov r2.y, r1.z
+	break
+
+	case 2
+		mov r2.z, r1.z
+	break
+
+	case 3
+		mov r2.w, r1.z
+	break
+
+endswitch
+
+switch cb0[1].w
+
+	default
+		mov r2.x, r1.w
+	break
+
+	case 1
+		mov r2.y, r1.w
+	break
+
+	case 2
+		mov r2.z, r1.w
+	break
+
+	case 3
+		mov r2.w, r1.w
+	break
+
+endswitch
+
+; compute linear index in the input
+imul r2.xyzw, r2.xyzw, cb0[2].xyzw	; [t*oldNz*oldNy*oldNx, z*oldNy*oldNx, y*oldNx, x*1]
+
+; horizontal add
+iadd r2.x, r2.x, r2.y
+iadd r2.x, r2.x, r2.z
+iadd r2.x, r2.x, r2.w
+
+; compute corresponding 2D index in the input
+udiv r1.y, r2.x, cb0[3].z ; ind DIV xSizeSrc -> line number in the input
+umod r1.x, r2.x, cb0[3].z ; single element position within the line
+umul r1.z, cb0[3].x, l0.x ; xPitchSrc*4
+umad r1.x, r1.y, r1.z, r1.x ; single element position with account of input's padding
+
+umod r1.y, r1.x, l0.x ; 4 components misalignment
+udiv r1.x, r1.x, l0.x ; linear index in quads
+
+; compute 2D position in quads
+udiv r3.y, r1.x, cb0[0].x
+umod r3.x, r1.x, cb0[0].x
+itof r3.xy, r3.xy
+
+switch r1.y
+
+	case 0
+		sample_resource(0)_sampler(0) r1.x___, r3.xy
+	break
+	
+	case 1
+		sample_resource(0)_sampler(0) r1._y__, r3.xy
+		mov r1.x, r1.y
+	break
+	
+	case 2
+		sample_resource(0)_sampler(0) r1.__z_, r3.xy
+		mov r1.x, r1.z
+	break
+	
+	case 3
+		sample_resource(0)_sampler(0) r1.___w, r3.xy
+		mov r1.x, r1.w
+	break
+	
+endswitch
+	
+ret
+endfunc
+
+end
+]]>
+	</ILKernel>	
 	
 </Kernels>
