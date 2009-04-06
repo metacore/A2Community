@@ -6078,13 +6078,265 @@ il_ps_2_0
 ;	constants: 2, 2x4 (LONGINT)
 ;
 
+dcl_output_generic o0
+dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__
+
+dcl_cb cb0[2] ; [xPitchSrc,xPitchDst,physWidthDst,xSizeSrc], [xSizeDst,...]
+; in this case xPitchSrc = physWidthSrc
+
+dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(2)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(3)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(4)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(5)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(6)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(7)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+
+dcl_literal l0, 4, 1, -1, 8
+
+ftoi r0, vWinCoord0.xy ; 2D output position in quads
+umad r0.x, r0.y, cb0[0].z, r0.x ; linear index of current quad in the output
+udiv r0.y, r0.x, cb0[0].y ; line number of current quad
+umod r3.x, r0.x, cb0[0].y ; position of the quad within the line
+umul r0.x, r3.x, l0.x ; single element position within the line
+umad r0.x, r0.y, cb0[1].x, r0.x ; nLines*xSizeDst + ind -> actual linear index in single elements
+
+; get part number, 2D quad position and misalignment
+call 0
+mov r4, r1
+
+iadd r0.x, r0.x, l0.y
+call 0
+mov r5, r1
+
+iadd r0.x, r0.x, l0.y
+call 0
+mov r6, r1
+
+iadd r0.x, r0.x, l0.y
+call 0
+mov r7, r1
+
+;itof o0.x, r4.w
+;itof o0.y, r5.w
+;itof o0.z, r6.w
+;itof o0.w, r7.w
+
+ieq r0.xy, r4.xy, r5.xy
+ieq r1.xy, r5.xy, r6.xy
+ieq r2.xy, r6.xy, r7.xy
+iand r0.xy, r0.xy, r1.xy
+iand r0.xy, r0.xy, r2.xy
+iand r0.x, r0.x, r0.y
+
+if_logicalnz r0.x
+	
+	itof r4.xy, r4.xy
+	
+	switch r4.z
+		case 0
+			sample_resource(0)_sampler(0) r3, r4.xy
+			break
+		case 1
+			sample_resource(1)_sampler(1) r3, r4.xy
+			break
+		case 2
+			sample_resource(2)_sampler(2) r3, r4.xy
+			break
+		case 3
+			sample_resource(3)_sampler(3) r3, r4.xy
+			break
+		case 4
+			sample_resource(4)_sampler(4) r3, r4.xy
+			break
+		case 5
+			sample_resource(5)_sampler(5) r3, r4.xy
+			break
+		case 6
+			sample_resource(6)_sampler(6) r3, r4.xy
+			break
+		case 7
+			sample_resource(7)_sampler(7) r3, r4.xy
+			break
+	endswitch
+else	
+		
+	mov r1, r4
+	call 1
+	mov r3.x, r2.x
+	
+	mov r1, r5
+	call 1
+	mov r3.y, r2.x
+	
+	mov r1, r6
+	call 1
+	mov r3.z, r2.x
+	
+	mov r1, r7
+	call 1
+	mov r3.w, r2.x
+endif
+
+mov o0, r3
+
+endmain
+
+; given linear input index in single components r0.x compute part number in r1.z, 
+; 2D quad position within the part in r1.xy, and misalignment in r1.w
+func 0
+
+; these computations are based on the fact that ind = y*8*Nx + x + iPart*Nx = (y*8+iPart)*Nx + x
+; where [x,y] is 2D position within the matrix part
+
+umod r1.x, r0.x, cb0[0].w ; x = ind MOD xSizeSrc
+udiv r1.z, r0.x, cb0[0].w ; y*8+iPart
+udiv r1.y, r1.z, l0.w ; y = (y*8+iPart) DIV 8
+umod r1.z, r1.z, l0.w ; iPart = (y*8+iPart) MOD 8
+umod r1.w, r1.x, l0.x ; x MOD 4
+udiv r1.x, r1.x, l0.x ; x in quads
+
+ret
+endfunc
+
+; get data element in r2.x given part number in r1.z, 
+; 2D quad position within the part in r1.xy, and misalignment in r1.w
+func 1
+	
+	itof r1.xy, r1.xy
+	
+	switch r1.w
+		
+		case 0
+			switch r1.z
+				case 0
+					sample_resource(0)_sampler(0) r2.x___, r1.xy
+					break
+				case 1
+					sample_resource(1)_sampler(1) r2.x___, r1.xy
+					break
+				case 2
+					sample_resource(2)_sampler(2) r2.x___, r1.xy
+					break
+				case 3
+					sample_resource(3)_sampler(3) r2.x___, r1.xy
+					break
+				case 4
+					sample_resource(4)_sampler(4) r2.x___, r1.xy
+					break
+				case 5
+					sample_resource(5)_sampler(5) r2.x___, r1.xy
+					break
+				case 6
+					sample_resource(6)_sampler(6) r2.x___, r1.xy
+					break					
+				case 7
+					sample_resource(7)_sampler(7) r2.x___, r1.xy
+					break	
+			endswitch			
+			break
+		
+		case 1
+			switch r1.z
+				case 0
+					sample_resource(0)_sampler(0) r2._y__, r1.xy
+					break
+				case 1
+					sample_resource(1)_sampler(1) r2._y__, r1.xy
+					break
+				case 2
+					sample_resource(2)_sampler(2) r2._y__, r1.xy
+					break
+				case 3
+					sample_resource(3)_sampler(3) r2._y__, r1.xy
+					break
+				case 4
+					sample_resource(4)_sampler(4) r2._y__, r1.xy
+					break
+				case 5
+					sample_resource(5)_sampler(5) r2._y__, r1.xy
+					break
+				case 6
+					sample_resource(6)_sampler(6) r2._y__, r1.xy
+					break					
+				case 7
+					sample_resource(7)_sampler(7) r2._y__, r1.xy
+					break	
+			endswitch
+			mov r2.x, r2.y
+			break
+		
+		case 2
+			switch r1.z
+				case 0
+					sample_resource(0)_sampler(0) r2.__z_, r1.xy
+					break
+				case 1
+					sample_resource(1)_sampler(1) r2.__z_, r1.xy
+					break
+				case 2
+					sample_resource(2)_sampler(2) r2.__z_, r1.xy
+					break
+				case 3
+					sample_resource(3)_sampler(3) r2.__z_, r1.xy
+					break
+				case 4
+					sample_resource(4)_sampler(4) r2.__z_, r1.xy
+					break
+				case 5
+					sample_resource(5)_sampler(5) r2.__z_, r1.xy
+					break
+				case 6
+					sample_resource(6)_sampler(6) r2.__z_, r1.xy
+					break					
+				case 7
+					sample_resource(7)_sampler(7) r2.__z_, r1.xy
+					break	
+			endswitch
+			mov r2.x, r2.z
+			break
+		
+		case 3
+			switch r1.z
+				case 0
+					sample_resource(0)_sampler(0) r2.___w, r1.xy
+					break
+				case 1
+					sample_resource(1)_sampler(1) r2.___w, r1.xy
+					break
+				case 2
+					sample_resource(2)_sampler(2) r2.___w, r1.xy
+					break
+				case 3
+					sample_resource(3)_sampler(3) r2.___w, r1.xy
+					break
+				case 4
+					sample_resource(4)_sampler(4) r2.___w, r1.xy
+					break
+				case 5
+					sample_resource(5)_sampler(5) r2.___w, r1.xy
+					break
+				case 6
+					sample_resource(6)_sampler(6) r2.___w, r1.xy
+					break					
+				case 7
+					sample_resource(7)_sampler(7) r2.___w, r1.xy
+					break	
+			endswitch
+			mov r2.x, r2.w
+			break
+	endswitch			
+	
+ret
+endfunc
 
 end
 ]]>
 	</ILKernel>
 		
 	
-<ILKernel name = "Transpose3D0_LI_R">
+<ILKernel name = "Transpose3D_LI_R">
 <![CDATA[
 il_ps_2_0
 ;
@@ -6424,215 +6676,6 @@ switch r1.y
 	
 endswitch
 	
-ret
-endfunc
-
-end
-]]>
-	</ILKernel>	
-	
-<ILKernel name = "Transpose3D_LI_R">
-<![CDATA[
-il_ps_2_0
-;
-;	Transpose a virtualized 3D array
-; 
-;	inputs: 1
-;	outputs: 1
-;	data type: LONGINT, REAL
-;	nComponents: 4
-;	constants: 4x4 (LONGINT) [physWidth, newNy*newNx, newNx, 1], [tZ, tY, tX, 0], [oldNy*oldNx, oldNx, 1, 0],
-;										[xPitchSrc,xPitchDst,xSizeSrc,xSizeDst]
-;
-dcl_cb cb0[4]
-dcl_output_generic o0
-dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__
-dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
-
-dcl_literal l0, 4, 1, 0, 0
-
-ftoi r0, vWinCoord0.xy ; 2D output position in quads
-umad r0.x, r0.y, cb0[0].x, r0.x ; linear index of current quad in the output
-udiv r0.y, r0.x, cb0[3].y ; line number of current quad
-umod r1.y, r0.x, cb0[3].y ; position of the quad within the line
-umul r0.x, r1.y, l0.x ; single element position within the line
-umad r0.x, r0.y, cb0[3].w, r0.x ; nLines*xSizeDst + ind -> actual linear index in single elements
-
-call 0
-mov r4.xyz, r1.xyz
-
-iadd r0.x, r0.x, l0.y
-call 0
-mov r5.xyz, r1.xyz
-
-iadd r0.x, r0.x, l0.y
-call 0
-mov r6.xyz, r1.xyz
-
-iadd r0.x, r0.x, l0.y
-call 0
-mov r7.xyz, r1.xyz
-
-ieq r1.xy, r4.xy, r5.xy
-ieq r2.xy, r5.xy, r6.xy
-ieq r3.xy, r6.xy, r7.xy
-
-iand r1.xy, r1.xy, r2.xy
-iand r1.xy, r1.xy, r3.xy
-iand r1.x, r1.x, r1.y
-if_logicalnz r1.x
-	itof r4.xy, r4.xy
-	;sample_resource(0)_sampler(0) o0, r4.xy
-	mov o0, r4.0000
-else
-	mov r0.xyz, r4.xyz
-	call 1
-	mov r4.x, r1.x
-	
-	mov r0.xyz, r5.xyz
-	call 1
-	mov r4.y, r1.x
-	
-	mov r0.xyz, r6.xyz
-	call 1
-	mov r4.z, r1.x
-	
-	mov r0.xyz, r7.xyz
-	call 1
-	mov r4.w, r1.x
-	
-	mov o0, r4
-endif
-
-;call 0
-;mov r4.x, r1.x
-;
-;iadd r0.x, r0.x, l0.y
-;call 0
-;mov r4.y, r1.x
-;
-;iadd r0.x, r0.x, l0.y
-;call 0
-;mov r4.z, r1.x
-;
-;iadd r0.x, r0.x, l0.y
-;call 0
-;mov r4.w, r1.x
-;
-;mov o0, r4
-
-endmain
-
-; given output index r0.x in single components, get corresponding 2D input quad position in r1.xy and misalignment in r1.z
-func 0
-	
-; compute z, y, x coordinates in the output
-udiv r1.x, r0.x, cb0[0].y	; z := ind/(newNy*newNx)
-umod r1.z, r0.x, cb0[0].y	; r1.z := ind - z*newNy*newNx
-udiv r1.y, r1.z, cb0[0].z	; y := (ind - z*newNy*newNx)/newNx
-umod r1.z, r1.z, cb0[0].z	; x := ind - z*newNy*newNx - y*newNx
-
-; shuffle the coordinates
-
-switch cb0[1].x
-
-	default
-		mov r2.x, r1.x
-	break
-
-	case 1
-		mov r2.y, r1.x
-	break
-
-	case 2
-		mov r2.z, r1.x
-	break
-
-endswitch
-
-switch cb0[1].y
-
-	default
-		mov r2.x, r1.y
-	break
-
-	case 1
-		mov r2.y, r1.y
-	break
-
-	case 2
-		mov r2.z, r1.y
-	break
-
-endswitch
-
-switch cb0[1].z
-
-	default
-		mov r2.x, r1.z
-	break
-
-	case 1
-		mov r2.y, r1.z
-	break
-
-	case 2
-		mov r2.z, r1.z
-	break
-
-endswitch
-
-; compute linear index in the input
-imul r2.xyz, r2.xyz, cb0[2].xyz	; [z*oldNy*oldNx, y*oldNx, x*1]
-
-; horizontal add
-iadd r2.x, r2.x, r2.y
-iadd r2.x, r2.x, r2.z
-
-; compute corresponding 2D index in the input
-udiv r1.y, r2.x, cb0[3].z ; ind DIV xSizeSrc -> line number in the input
-umod r1.x, r2.x, cb0[3].z ; single element position within the line
-umul r1.z, cb0[3].x, l0.x ; xPitchSrc*4
-umad r1.x, r1.y, r1.z, r1.x ; single element position with account of input's padding
-
-umod r1.z, r1.x, l0.x ; 4 components misalignment
-udiv r1.x, r1.x, l0.x ; linear index in quads
-
-; compute 2D position in quads
-udiv r1.y, r1.x, cb0[0].x
-umod r1.x, r1.x, cb0[0].x
-	
-ret
-endfunc
-
-; get a single element given its 2D quad position in r0.xy (integer) and misalignment in r0.z (integer)
-func 1
-
-itof r0.xy, r0.xy
-
-switch r0.z
-
-	case 0
-		sample_resource(0)_sampler(0) r1.x___, r0.xy
-	break
-	
-	case 1
-		sample_resource(0)_sampler(0) r1._y__, r0.xy
-		mov r1.x, r1.y
-	break
-	
-	case 2
-		sample_resource(0)_sampler(0) r1.__z_, r0.xy
-		mov r1.x, r1.z
-	break
-	
-	case 3
-		sample_resource(0)_sampler(0) r1.___w, r0.xy
-		mov r1.x, r1.w
-	break
-	
-endswitch
-
 ret
 endfunc
 
