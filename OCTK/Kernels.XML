@@ -830,7 +830,7 @@ end
 ]]>
 	</ILKernel>
 	
-	<ILKernel name = "AddSplitted8_R">
+	<ILKernel name = "AddSplit8_R">
 <![CDATA[
 il_ps_2_0
 ;
@@ -888,20 +888,29 @@ sample_resource(13)_sampler(13) r13, vWinCoord0
 sample_resource(14)_sampler(14) r14, vWinCoord0
 sample_resource(15)_sampler(15) r15, vWinCoord0
 
-add o0, r0, r8
-add o1, r1, r9
-add o2, r2, r10
-add o3, r3, r11
-add o4, r4, r12
-add o5, r5, r13
-add o6, r6, r14
-add o7, r7, r15
+add r0, r0, r8
+add r1, r1, r9
+add r2, r2, r10
+add r3, r3, r11
+add r4, r4, r12
+add r5, r5, r13
+add r6, r6, r14
+add r7, r7, r15
+
+mov o0, r0
+mov o1, r1
+mov o2, r2
+mov o3, r3
+mov o4, r4
+mov o5, r5
+mov o6, r6
+mov o7, r7
 
 end		
 ]]>
 	</ILKernel>		
 	
-	<ILKernel name = "SubSplitted8_R">
+	<ILKernel name = "SubSplit8_R">
 <![CDATA[
 il_ps_2_0
 ;
@@ -959,20 +968,29 @@ sample_resource(13)_sampler(13) r13, vWinCoord0
 sample_resource(14)_sampler(14) r14, vWinCoord0
 sample_resource(15)_sampler(15) r15, vWinCoord0
 
-sub o0, r0, r8
-sub o1, r1, r9
-sub o2, r2, r10
-sub o3, r3, r11
-sub o4, r4, r12
-sub o5, r5, r13
-sub o6, r6, r14
-sub o7, r7, r15
+sub r0, r0, r8
+sub r1, r1, r9
+sub r2, r2, r10
+sub r3, r3, r11
+sub r4, r4, r12
+sub r5, r5, r13
+sub r6, r6, r14
+sub r7, r7, r15
+
+mov o0, r0
+mov o1, r1
+mov o2, r2
+mov o3, r3
+mov o4, r4
+mov o5, r5
+mov o6, r6
+mov o7, r7
 
 end		
 ]]>
 	</ILKernel>	
 	
-	<ILKernel name = "EwMulSplitted8_R">
+	<ILKernel name = "EwMulSplit8_R">
 <![CDATA[
 il_ps_2_0
 ;
@@ -1030,20 +1048,29 @@ sample_resource(13)_sampler(13) r13, vWinCoord0
 sample_resource(14)_sampler(14) r14, vWinCoord0
 sample_resource(15)_sampler(15) r15, vWinCoord0
 
-mul o0, r0, r8
-mul o1, r1, r9
-mul o2, r2, r10
-mul o3, r3, r11
-mul o4, r4, r12
-mul o5, r5, r13
-mul o6, r6, r14
-mul o7, r7, r15
+mul r0, r0, r8
+mul r1, r1, r9
+mul r2, r2, r10
+mul r3, r3, r11
+mul r4, r4, r12
+mul r5, r5, r13
+mul r6, r6, r14
+mul r7, r7, r15
+
+mov o0, r0
+mov o1, r1
+mov o2, r2
+mov o3, r3
+mov o4, r4
+mov o5, r5
+mov o6, r6
+mov o7, r7
 
 end		
 ]]>
 	</ILKernel>	
 	
-	<ILKernel name = "EwDivSplitted8_R">
+	<ILKernel name = "EwDivSplit8_R">
 <![CDATA[
 il_ps_2_0
 ;
@@ -1101,14 +1128,23 @@ sample_resource(13)_sampler(13) r13, vWinCoord0
 sample_resource(14)_sampler(14) r14, vWinCoord0
 sample_resource(15)_sampler(15) r15, vWinCoord0
 
-div_zeroop(inf_else_max) o0, r0, r8
-div_zeroop(inf_else_max) o1, r1, r9
-div_zeroop(inf_else_max) o2, r2, r10
-div_zeroop(inf_else_max) o3, r3, r11
-div_zeroop(inf_else_max) o4, r4, r12
-div_zeroop(inf_else_max) o5, r5, r13
-div_zeroop(inf_else_max) o6, r6, r14
-div_zeroop(inf_else_max) o7, r7, r15
+div_zeroop(inf_else_max) r0, r0, r8
+div_zeroop(inf_else_max) r1, r1, r9
+div_zeroop(inf_else_max) r2, r2, r10
+div_zeroop(inf_else_max) r3, r3, r11
+div_zeroop(inf_else_max) r4, r4, r12
+div_zeroop(inf_else_max) r5, r5, r13
+div_zeroop(inf_else_max) r6, r6, r14
+div_zeroop(inf_else_max) r7, r7, r15
+
+mov o0, r0
+mov o1, r1
+mov o2, r2
+mov o3, r3
+mov o4, r4
+mov o5, r5
+mov o6, r6
+mov o7, r7
 
 end		
 ]]>
@@ -1152,10 +1188,15 @@ sample_resource(5)_sampler(5) r5, vWinCoord0
 sample_resource(6)_sampler(6) r6, vWinCoord0
 sample_resource(7)_sampler(7) r7, vWinCoord0
 
-add o0, r0, r4
-add o1, r1, r5
-add o2, r2, r6
-add o3, r3, r7
+add r0, r0, r4
+add r1, r1, r5
+add r2, r2, r6
+add r3, r3, r7
+
+mov o0, r0
+mov o1, r1
+mov o2, r2
+mov o3, r3
 
 end		
 ]]>
@@ -1200,10 +1241,15 @@ sample_resource(5)_sampler(5) r5, vWinCoord0
 sample_resource(6)_sampler(6) r6, vWinCoord0
 sample_resource(7)_sampler(7) r7, vWinCoord0
 
-sub o0, r0, r4
-sub o1, r1, r5
-sub o2, r2, r6
-sub o3, r3, r7
+sub r0, r0, r4
+sub r1, r1, r5
+sub r2, r2, r6
+sub r3, r3, r7
+
+mov o0, r0
+mov o1, r1
+mov o2, r2
+mov o3, r3
 
 end		
 ]]>
@@ -1247,10 +1293,15 @@ sample_resource(5)_sampler(5) r5, vWinCoord0
 sample_resource(6)_sampler(6) r6, vWinCoord0
 sample_resource(7)_sampler(7) r7, vWinCoord0
 
-mul o0, r0, r4
-mul o1, r1, r5
-mul o2, r2, r6
-mul o3, r3, r7
+mul r0, r0, r4
+mul r1, r1, r5
+mul r2, r2, r6
+mul r3, r3, r7
+
+mov o0, r0
+mov o1, r1
+mov o2, r2
+mov o3, r3
 
 end		
 ]]>
@@ -1294,16 +1345,21 @@ sample_resource(5)_sampler(5) r5, vWinCoord0
 sample_resource(6)_sampler(6) r6, vWinCoord0
 sample_resource(7)_sampler(7) r7, vWinCoord0
 
-div_zeroop(inf_else_max) o0, r0, r4
-div_zeroop(inf_else_max) o1, r1, r5
-div_zeroop(inf_else_max) o2, r2, r6
-div_zeroop(inf_else_max) o3, r3, r7
+div_zeroop(inf_else_max) r0, r0, r4
+div_zeroop(inf_else_max) r1, r1, r5
+div_zeroop(inf_else_max) r2, r2, r6
+div_zeroop(inf_else_max) r3, r3, r7
+
+mov o0, r0
+mov o1, r1
+mov o2, r2
+mov o3, r3
 
 end		
 ]]>
 	</ILKernel>
 	
-	<ILKernel name = "MatMulSplitted8_R">		
+	<ILKernel name = "MatMulSplit8_R">		
 <![CDATA[
 il_ps_2_0
 ;
@@ -1469,7 +1525,7 @@ end
 ]]>
 	</ILKernel>
 	
-	<ILKernel name = "MatMulSplitted8Unroll2_R">		
+	<ILKernel name = "MatMulSplit8Unroll2_R">		
 <![CDATA[
 il_ps_2_0
 ;
@@ -1770,7 +1826,7 @@ end
 ]]>
 	</ILKernel>
 	
-	<ILKernel name = "MatVecMulSplitted8_R">
+	<ILKernel name = "MatVecMulSplit8_R">
 <![CDATA[
 il_ps_2_0
 ;
@@ -2297,130 +2353,7 @@ endfunc
 
 end
 ]]>
-	</ILKernel>
-	
-	<ILKernel name = "TransposeSplitted8_R">
-<![CDATA[
-il_ps_2_0
-;
-;	Transposition of matrices splitted into 8 parts
-; 
-;	inputs: 8
-;	outputs: 8
-;	data type: REAL
-;	nComponents: 4
-;	constants: 0
-;
-dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__
-dcl_output_generic o0
-dcl_output_generic o1
-dcl_output_generic o2
-dcl_output_generic o3
-dcl_output_generic o4
-dcl_output_generic o5
-dcl_output_generic o6
-dcl_output_generic o7
-
-dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
-dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
-dcl_resource_id(2)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
-dcl_resource_id(3)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
-dcl_resource_id(4)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
-dcl_resource_id(5)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
-dcl_resource_id(6)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
-dcl_resource_id(7)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
-
-dcl_literal l0, 2.0f, 0.5f, 0.0f, 0.0f
-
-; compute position in the input
-flr r0.xy, vWinCoord0.yx
-mul r0.xy, r0.xy, l0.xy ; [x*2, y/ 2]
-frc r1.y, r0.y ; r1.y := frac(y/2)
-flr r0.y, r0.y
-
-eq r1.z, r1.y, r1.0
-if_logicalnz r1.z	; if frac(y/2) == 0
-
-	sample_resource(0)_sampler(0)_aoffimmi(0,0,0) r1, r0.xy
-	sample_resource(0)_sampler(0)_aoffimmi(1,0,0) r2, r0.xy
-	
-	sample_resource(1)_sampler(1)_aoffimmi(0,0,0) r3, r0.xy
-	sample_resource(1)_sampler(1)_aoffimmi(1,0,0) r4, r0.xy
-	
-	sample_resource(2)_sampler(2)_aoffimmi(0,0,0) r5, r0.xy
-	sample_resource(2)_sampler(2)_aoffimmi(1,0,0) r6, r0.xy
-	
-	sample_resource(3)_sampler(3)_aoffimmi(0,0,0) r7, r0.xy
-	sample_resource(3)_sampler(3)_aoffimmi(1,0,0) r8, r0.xy
-else			
-		
-	sample_resource(4)_sampler(4)_aoffimmi(0,0,0) r1, r0.xy
-	sample_resource(4)_sampler(4)_aoffimmi(1,0,0) r2, r0.xy
-	
-	sample_resource(5)_sampler(5)_aoffimmi(0,0,0) r3, r0.xy
-	sample_resource(5)_sampler(5)_aoffimmi(1,0,0) r4, r0.xy
-	
-	sample_resource(6)_sampler(6)_aoffimmi(0,0,0) r5, r0.xy
-	sample_resource(6)_sampler(6)_aoffimmi(1,0,0) r6, r0.xy
-	
-	sample_resource(7)_sampler(7)_aoffimmi(0,0,0) r7, r0.xy
-	sample_resource(7)_sampler(7)_aoffimmi(1,0,0) r8, r0.xy
-endif
-
-	mov r10.x, r1.x
-	mov r10.y, r3.x
-	mov r10.z, r5.x
-	mov r10.w, r7.x	
-	
-	mov r11.x, r1.y
-	mov r11.y, r3.y
-	mov r11.z, r5.y
-	mov r11.w, r7.y
-	
-	mov r12.x, r1.z
-	mov r12.y, r3.z
-	mov r12.z, r5.z
-	mov r12.w, r7.z
-	
-	mov r13.x, r1.w
-	mov r13.y, r3.w
-	mov r13.z, r5.w
-	mov r13.w, r7.w
-	
-	;
-	
-	mov r14.x, r2.x
-	mov r14.y, r4.x
-	mov r14.z, r6.x
-	mov r14.w, r8.x 
-	
-	mov r15.x, r2.y
-	mov r15.y, r4.y
-	mov r15.z, r6.y
-	mov r15.w, r8.y
-	
-	mov r16.x, r2.z
-	mov r16.y, r4.z
-	mov r16.z, r6.z
-	mov r16.w, r8.z
-	
-	mov r17.x, r2.w
-	mov r17.y, r4.w
-	mov r17.z, r6.w
-	mov r17.w, r8.w
-	
-	mov o0, r10
-	mov o1, r11
-	mov o2, r12
-	mov o3, r13
-	mov o4, r14
-	mov o5, r15
-	mov o6, r16
-	mov o7, r17		
-	
-end		
-]]>
-	</ILKernel>	
+	</ILKernel>		
 	
 	<ILKernel name = "ConvolveRows5Down2_R">		
 <![CDATA[
@@ -2701,8 +2634,130 @@ endfunc
 
 end
 ]]>
-	</ILKernel>		
+	</ILKernel>
 	
+<ILKernel name = "TransposeSplit8_R">
+<![CDATA[
+il_ps_2_0
+;
+;	Transposition of matrices splitted into 8 parts
+; 
+;	inputs: 8
+;	outputs: 8
+;	data type: REAL
+;	nComponents: 4
+;	constants: 0
+;
+dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__
+dcl_output_generic o0
+dcl_output_generic o1
+dcl_output_generic o2
+dcl_output_generic o3
+dcl_output_generic o4
+dcl_output_generic o5
+dcl_output_generic o6
+dcl_output_generic o7
+
+dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(2)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(3)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(4)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(5)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(6)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(7)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+
+dcl_literal l0, 2.0f, 0.5f, 0.0f, 0.0f
+
+; compute position in the input
+flr r0.xy, vWinCoord0.yx
+mul r0.xy, r0.xy, l0.xy ; [x*2, y/ 2]
+frc r1.y, r0.y ; r1.y := frac(y/2)
+flr r0.y, r0.y
+
+eq r1.z, r1.y, r1.0
+if_logicalnz r1.z	; if frac(y/2) == 0
+
+	sample_resource(0)_sampler(0)_aoffimmi(0,0,0) r1, r0.xy
+	sample_resource(0)_sampler(0)_aoffimmi(1,0,0) r2, r0.xy
+	
+	sample_resource(1)_sampler(1)_aoffimmi(0,0,0) r3, r0.xy
+	sample_resource(1)_sampler(1)_aoffimmi(1,0,0) r4, r0.xy
+	
+	sample_resource(2)_sampler(2)_aoffimmi(0,0,0) r5, r0.xy
+	sample_resource(2)_sampler(2)_aoffimmi(1,0,0) r6, r0.xy
+	
+	sample_resource(3)_sampler(3)_aoffimmi(0,0,0) r7, r0.xy
+	sample_resource(3)_sampler(3)_aoffimmi(1,0,0) r8, r0.xy
+else			
+		
+	sample_resource(4)_sampler(4)_aoffimmi(0,0,0) r1, r0.xy
+	sample_resource(4)_sampler(4)_aoffimmi(1,0,0) r2, r0.xy
+	
+	sample_resource(5)_sampler(5)_aoffimmi(0,0,0) r3, r0.xy
+	sample_resource(5)_sampler(5)_aoffimmi(1,0,0) r4, r0.xy
+	
+	sample_resource(6)_sampler(6)_aoffimmi(0,0,0) r5, r0.xy
+	sample_resource(6)_sampler(6)_aoffimmi(1,0,0) r6, r0.xy
+	
+	sample_resource(7)_sampler(7)_aoffimmi(0,0,0) r7, r0.xy
+	sample_resource(7)_sampler(7)_aoffimmi(1,0,0) r8, r0.xy
+endif
+
+	mov r10.x, r1.x
+	mov r10.y, r3.x
+	mov r10.z, r5.x
+	mov r10.w, r7.x	
+	
+	mov r11.x, r1.y
+	mov r11.y, r3.y
+	mov r11.z, r5.y
+	mov r11.w, r7.y
+	
+	mov r12.x, r1.z
+	mov r12.y, r3.z
+	mov r12.z, r5.z
+	mov r12.w, r7.z
+	
+	mov r13.x, r1.w
+	mov r13.y, r3.w
+	mov r13.z, r5.w
+	mov r13.w, r7.w
+	
+	;
+	
+	mov r14.x, r2.x
+	mov r14.y, r4.x
+	mov r14.z, r6.x
+	mov r14.w, r8.x 
+	
+	mov r15.x, r2.y
+	mov r15.y, r4.y
+	mov r15.z, r6.y
+	mov r15.w, r8.y
+	
+	mov r16.x, r2.z
+	mov r16.y, r4.z
+	mov r16.z, r6.z
+	mov r16.w, r8.z
+	
+	mov r17.x, r2.w
+	mov r17.y, r4.w
+	mov r17.z, r6.w
+	mov r17.w, r8.w
+	
+	mov o0, r10
+	mov o1, r11
+	mov o2, r12
+	mov o3, r13
+	mov o4, r14
+	mov o5, r15
+	mov o6, r16
+	mov o7, r17
+	
+end		
+]]>
+	</ILKernel>	
 	
 	<ILKernel name = "Inv8x8_R">
 <![CDATA[
@@ -3150,262 +3205,7 @@ endfunc
 
 end		
 ]]>
-	</ILKernel>
-	
-	<ILKernel name = "Transpose3D_LI_R_LR">
-<![CDATA[
-il_ps_2_0
-;
-;	3D Array transposition
-; 
-;	inputs: 1
-;	outputs: 1
-;	data type: LONGINT/REAL/LONGREAL
-;	nComponents: 1
-;	constants: 1, 3x4 (LONGINT) [physWidth, newNy*newNx, newNx, 1], [tZ, tY, tX, 0], [oldNy*oldNx, oldNx, 1, 0]
-;
-dcl_cb cb0[3]
-dcl_output_generic o0
-dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__
-dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
-
-; compute linear index in the output
-ftoi r5, vWinCoord0
-umad r0.x, r5.y, cb0[0].x, r5.x
-
-; compute z, y, x coordinates in the output
-udiv r1.x, r0.x, cb0[0].y	; z := ind/(newNy*newNx)
-umod r1.z, r0.x, cb0[0].y	; r1.z := ind - z*newNy*newNx
-udiv r1.y, r1.z, cb0[0].z	; y := (ind - z*newNy*newNx)/newNx
-umod r1.z, r1.z, cb0[0].z	; x := ind - z*newNy*newNx - y*newNx
-
-; shuffle the coordinates
-
-switch cb0[1].x
-
-	default
-		mov r2.x, r1.x
-	break
-
-	case 1
-		mov r2.y, r1.x
-	break
-
-	case 2
-		mov r2.z, r1.x
-	break
-
-endswitch
-
-switch cb0[1].y
-
-	default
-		mov r2.x, r1.y
-	break
-
-	case 1
-		mov r2.y, r1.y
-	break
-
-	case 2
-		mov r2.z, r1.y
-	break
-
-endswitch
-
-switch cb0[1].z
-
-	default
-		mov r2.x, r1.z
-	break
-
-	case 1
-		mov r2.y, r1.z
-	break
-
-	case 2
-		mov r2.z, r1.z
-	break
-
-endswitch
-
-; compute linear index in the input
-imul r2.xyz, r2.xyz, cb0[2].xyz	; [z*oldNy*oldNx, y*oldNx, x*1]
-
-; horizontal add
-iadd r2.x, r2.x, r2.y
-iadd r2.x, r2.x, r2.z
-
-; compute corresponding 2D index in the input
-umod r3.x, r2.x, cb0[0].x	; x := index MOD physWidth
-udiv r3.y, r2.x, cb0[0].x	; y := index DIV physWidth
-itof r3, r3
-
-sample_resource(0)_sampler(0) o0, r3.xy
-
-end
-]]>
-	</ILKernel>
-	
-	<ILKernel name = "Transpose4D_LI_R_LR">
-<![CDATA[
-il_ps_2_0
-;
-;	4D Array transposition
-; 
-;	inputs: 1
-;	outputs: 1
-;	data type: LONGINT/REAL/LONGREAL
-;	nComponents: 1
-;	constants: 1, 3x4 (LONGINT) [physWidth, newNz*newNy*newNx, newNy*newNx, newNx], 
-;											[tT, tZ, tY, tX], [oldNz*oldNy*oldNx, oldNy*oldNx, oldNx, 1]
-;
-dcl_cb cb0[3]
-dcl_output_generic o0
-dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__
-dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
-
-; compute linear index in the output
-ftoi r5, vWinCoord0
-umad r0.x, r5.y, cb0[0].x, r5.x
-
-; compute t, z, y, x coordinates in the output
-udiv r1.x, r0.x, cb0[0].y	; t := ind/(newNz*newNy*newNx)
-umod r1.w, r0.x, cb0[0].y	; r1.w := ind - t*newNz*newNy*newNx
-udiv r1.y, r1.w, cb0[0].z	; z := (ind - t*newNz*newNy*newNx)/(newNy*newNx)
-umod r1.w, r1.w, cb0[0].z	; r1.w := ind - t*newNz*newNy*newNx - z*(newNy*newNx)
-udiv r1.z, r1.w, cb0[0].w	; y := (ind - t*newNz*newNy*newNx - z*(newNy*newNx))/newNx
-umod r1.w, r1.w, cb0[0].w	; x := (ind - t*newNz*newNy*newNx - z*(newNy*newNx)) MOD newNx
-
-; shuffle the coordinates
-
-switch cb0[1].x
-
-	default
-		mov r2.x, r1.x
-	break
-
-	case 1
-		mov r2.y, r1.x
-	break
-
-	case 2
-		mov r2.z, r1.x
-	break
-	
-	case 3
-		mov r2.w, r1.x
-	break
-
-endswitch
-
-switch cb0[1].y
-
-	default
-		mov r2.x, r1.y
-	break
-
-	case 1
-		mov r2.y, r1.y
-	break
-
-	case 2
-		mov r2.z, r1.y
-	break
-
-	case 3
-		mov r2.w, r1.y
-	break
-
-endswitch
-
-switch cb0[1].z
-
-	default
-		mov r2.x, r1.z
-	break
-
-	case 1
-		mov r2.y, r1.z
-	break
-
-	case 2
-		mov r2.z, r1.z
-	break
-
-	case 3
-		mov r2.w, r1.z
-	break
-
-endswitch
-
-switch cb0[1].w
-
-	default
-		mov r2.x, r1.w
-	break
-
-	case 1
-		mov r2.y, r1.w
-	break
-
-	case 2
-		mov r2.z, r1.w
-	break
-
-	case 3
-		mov r2.w, r1.w
-	break
-
-endswitch
-
-; compute linear index in the input
-imul r2.xyzw, r2.xyzw, cb0[2].xyzw	; [t*oldNz*oldNy*oldNx, z*oldNy*oldNx, y*oldNx, x*1]
-
-; horizontal add
-iadd r2.x, r2.x, r2.y
-iadd r2.x, r2.x, r2.z
-iadd r2.x, r2.x, r2.w
-
-; compute corresponding 2D index in the input
-umod r3.x, r2.x, cb0[0].x	; x := index MOD physWidth
-udiv r3.y, r2.x, cb0[0].x	; y := index DIV physWidth
-itof r3, r3
-
-sample_resource(0)_sampler(0) o0, r3.xy
-
-end
-]]>
-	</ILKernel>
-	
-	<ILKernel name = "ReshapeNDToSplitted8_R">
-<![CDATA[
-il_ps_2_0
-;
-;	Reshape a ND array to a splitted matrix
-; 
-;	inputs: 2
-;	outputs: 8
-;	data type: REAL
-;	nComponents: 1 for input, 4 for output
-;	constants: 0
-;
-dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__
-dcl_output_generic o0
-dcl_output_generic o1
-dcl_output_generic o2
-dcl_output_generic o3
-dcl_output_generic o4
-dcl_output_generic o5
-dcl_output_generic o6
-dcl_output_generic o7
-
-dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
-
-
-end		
-]]>
-	</ILKernel>	
+	</ILKernel>				
 	
 	<ILKernel name = "Transpose2DVirtToVirt_LI_R_LR">
 <![CDATA[
@@ -3764,39 +3564,7 @@ endfunc
 
 end
 ]]>
-	</ILKernel>	
-	
-
-<ILKernel name = "TestCS">
-<![CDATA[
-il_cs_2_0
-dcl_num_thread_per_group 64
-dcl_lds_size_per_thread 16
-dcl_lds_sharing_mode _wavefrontRel
-;
-;	testing compute shader
-; 
-;	inputs: 0
-;	outputs: 0
-;	global buffer: Yes
-;	data type: REAL
-;	nComponents: 1
-;	constants: 0
-;
-
-itof r1.x, vaTid.x
-
-fence_lds_memory
-
-lds_write_vec mem.x, r1.x
-
-fence_lds_memory
-
-lds_read_vec g[0].x, r2.00
-
-end
-]]>
-	</ILKernel>
+</ILKernel>		
 	
 <ILKernel name = "Convolve3DX5_R">
 <![CDATA[
@@ -6642,6 +6410,615 @@ iadd r2.x, r2.x, r2.w
 ; compute corresponding 2D index in the input
 udiv r1.y, r2.x, cb0[3].z ; ind DIV xSizeSrc -> line number in the input
 umod r1.x, r2.x, cb0[3].z ; single element position within the line
+umul r1.z, cb0[3].x, l0.x ; xPitchSrc*4
+umad r1.x, r1.y, r1.z, r1.x ; single element position with account of input's padding
+
+umod r1.y, r1.x, l0.x ; 4 components misalignment
+udiv r1.x, r1.x, l0.x ; linear index in quads
+
+; compute 2D position in quads
+udiv r3.y, r1.x, cb0[0].x
+umod r3.x, r1.x, cb0[0].x
+itof r3.xy, r3.xy
+
+switch r1.y
+
+	case 0
+		sample_resource(0)_sampler(0) r1.x___, r3.xy
+	break
+	
+	case 1
+		sample_resource(0)_sampler(0) r1._y__, r3.xy
+		mov r1.x, r1.y
+	break
+	
+	case 2
+		sample_resource(0)_sampler(0) r1.__z_, r3.xy
+		mov r1.x, r1.z
+	break
+	
+	case 3
+		sample_resource(0)_sampler(0) r1.___w, r3.xy
+		mov r1.x, r1.w
+	break
+	
+endswitch
+	
+ret
+endfunc
+
+end
+]]>
+	</ILKernel>
+	
+<ILKernel name = "Matricize3DToSplit8_LI_R">
+<![CDATA[
+il_ps_2_0
+;
+;	Matricize a virtualized 3D array
+; 
+;	inputs: 1
+;	outputs: 1
+;	data type: LONGINT, REAL
+;	nComponents: 4
+;	constants: 4x4 (LONGINT) [physWidth, newNy*newNx, newNx, 1], [tZ, tY, tX, 0], [oldNy*oldNx, oldNx, 1, 0],
+;										[xPitchSrc,xSizeSrc,xSizeDst,...]
+;
+dcl_cb cb0[4]
+dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__
+dcl_output_generic o0
+dcl_output_generic o1
+dcl_output_generic o2
+dcl_output_generic o3
+dcl_output_generic o4
+dcl_output_generic o5
+dcl_output_generic o6
+dcl_output_generic o7
+
+dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+
+dcl_literal l0, 4, 1, 0, 8
+
+ftoi r0, vWinCoord0.xy ; 2D output position in quads
+umul r0.x, r0.x, l0.x ; x in single elements
+umul r0.y, r0.y, l0.w ; y*8
+umad r0.x, r0.y, cb0[3].z, r0.x ; y*8*xSizeDst + x -> actual linear index in single elements
+mov r0.w, r0.x ; remember initial index value
+
+;*** part 1 ***
+call 0
+mov r5.x, r1.x
+iadd r0.x, r0.x, l0.y
+call 0
+mov r5.y, r1.x
+iadd r0.x, r0.x, l0.y
+call 0
+mov r5.z, r1.x
+iadd r0.x, r0.x, l0.y
+call 0
+mov r5.w, r1.x
+
+mov o0, r5
+
+;*** part 2 ***
+iadd r0.w, r0.w, cb0[3].z ; y*8*xSizeDst + x + i*xSizeDst* -> actual linear index in single elements
+mov r0.x, r0.w
+
+call 0
+mov r5.x, r1.x
+iadd r0.x, r0.x, l0.y
+call 0
+mov r5.y, r1.x
+iadd r0.x, r0.x, l0.y
+call 0
+mov r5.z, r1.x
+iadd r0.x, r0.x, l0.y
+call 0
+mov r5.w, r1.x
+
+mov o1, r5
+
+;*** part 3 ***
+iadd r0.w, r0.w, cb0[3].z ; y*8*xSizeDst + x + i*xSizeDst* -> actual linear index in single elements
+mov r0.x, r0.w
+
+call 0
+mov r5.x, r1.x
+iadd r0.x, r0.x, l0.y
+call 0
+mov r5.y, r1.x
+iadd r0.x, r0.x, l0.y
+call 0
+mov r5.z, r1.x
+iadd r0.x, r0.x, l0.y
+call 0
+mov r5.w, r1.x
+
+mov o2, r5
+
+;*** part 4 ***
+iadd r0.w, r0.w, cb0[3].z ; y*8*xSizeDst + x + i*xSizeDst* -> actual linear index in single elements
+mov r0.x, r0.w
+
+call 0
+mov r5.x, r1.x
+iadd r0.x, r0.x, l0.y
+call 0
+mov r5.y, r1.x
+iadd r0.x, r0.x, l0.y
+call 0
+mov r5.z, r1.x
+iadd r0.x, r0.x, l0.y
+call 0
+mov r5.w, r1.x
+
+mov o3, r5
+
+;*** part 5 ***
+iadd r0.w, r0.w, cb0[3].z ; y*8*xSizeDst + x + i*xSizeDst* -> actual linear index in single elements
+mov r0.x, r0.w
+
+call 0
+mov r5.x, r1.x
+iadd r0.x, r0.x, l0.y
+call 0
+mov r5.y, r1.x
+iadd r0.x, r0.x, l0.y
+call 0
+mov r5.z, r1.x
+iadd r0.x, r0.x, l0.y
+call 0
+mov r5.w, r1.x
+
+mov o4, r5
+
+;*** part 6 ***
+iadd r0.w, r0.w, cb0[3].z ; y*8*xSizeDst + x + i*xSizeDst* -> actual linear index in single elements
+mov r0.x, r0.w
+
+call 0
+mov r5.x, r1.x
+iadd r0.x, r0.x, l0.y
+call 0
+mov r5.y, r1.x
+iadd r0.x, r0.x, l0.y
+call 0
+mov r5.z, r1.x
+iadd r0.x, r0.x, l0.y
+call 0
+mov r5.w, r1.x
+
+mov o5, r5
+
+;*** part 7 ***
+iadd r0.w, r0.w, cb0[3].z ; y*8*xSizeDst + x + i*xSizeDst* -> actual linear index in single elements
+mov r0.x, r0.w
+
+call 0
+mov r5.x, r1.x
+iadd r0.x, r0.x, l0.y
+call 0
+mov r5.y, r1.x
+iadd r0.x, r0.x, l0.y
+call 0
+mov r5.z, r1.x
+iadd r0.x, r0.x, l0.y
+call 0
+mov r5.w, r1.x
+
+mov o6, r5
+
+;*** part 8 ***
+iadd r0.w, r0.w, cb0[3].z ; y*8*xSizeDst + x + i*xSizeDst* -> actual linear index in single elements
+mov r0.x, r0.w
+
+call 0
+mov r5.x, r1.x
+iadd r0.x, r0.x, l0.y
+call 0
+mov r5.y, r1.x
+iadd r0.x, r0.x, l0.y
+call 0
+mov r5.z, r1.x
+iadd r0.x, r0.x, l0.y
+call 0
+mov r5.w, r1.x
+
+mov o7, r5
+
+endmain
+
+; get input array element in given output index r0.x in single components, returned value is in r1.x
+func 0
+	
+; compute z, y, x coordinates in the output
+udiv r1.x, r0.x, cb0[0].y	; z := ind/(newNy*newNx)
+umod r1.z, r0.x, cb0[0].y	; r1.z := ind - z*newNy*newNx
+udiv r1.y, r1.z, cb0[0].z	; y := (ind - z*newNy*newNx)/newNx
+umod r1.z, r1.z, cb0[0].z	; x := ind - z*newNy*newNx - y*newNx
+
+; shuffle the coordinates
+
+switch cb0[1].x
+
+	default
+		mov r2.x, r1.x
+	break
+
+	case 1
+		mov r2.y, r1.x
+	break
+
+	case 2
+		mov r2.z, r1.x
+	break
+
+endswitch
+
+switch cb0[1].y
+
+	default
+		mov r2.x, r1.y
+	break
+
+	case 1
+		mov r2.y, r1.y
+	break
+
+	case 2
+		mov r2.z, r1.y
+	break
+
+endswitch
+
+switch cb0[1].z
+
+	default
+		mov r2.x, r1.z
+	break
+
+	case 1
+		mov r2.y, r1.z
+	break
+
+	case 2
+		mov r2.z, r1.z
+	break
+
+endswitch
+
+; compute linear index in the input
+imul r2.xyz, r2.xyz, cb0[2].xyz	; [z*oldNy*oldNx, y*oldNx, x*1]
+
+; horizontal add
+iadd r2.x, r2.x, r2.y
+iadd r2.x, r2.x, r2.z
+
+; compute corresponding 2D index in the input
+udiv r1.y, r2.x, cb0[3].y ; ind DIV xSizeSrc -> line number in the input
+umod r1.x, r2.x, cb0[3].y ; single element position within the line
+umul r1.z, cb0[3].x, l0.x ; xPitchSrc*4
+umad r1.x, r1.y, r1.z, r1.x ; single element position with account of input's padding
+
+umod r1.y, r1.x, l0.x ; 4 components misalignment
+udiv r1.x, r1.x, l0.x ; linear index in quads
+
+; compute 2D position in quads
+udiv r3.y, r1.x, cb0[0].x
+umod r3.x, r1.x, cb0[0].x
+itof r3.xy, r3.xy
+
+switch r1.y
+
+	case 0
+		sample_resource(0)_sampler(0) r1.x___, r3.xy
+	break
+	
+	case 1
+		sample_resource(0)_sampler(0) r1._y__, r3.xy
+		mov r1.x, r1.y
+	break
+	
+	case 2
+		sample_resource(0)_sampler(0) r1.__z_, r3.xy
+		mov r1.x, r1.z
+	break
+	
+	case 3
+		sample_resource(0)_sampler(0) r1.___w, r3.xy
+		mov r1.x, r1.w
+	break
+	
+endswitch
+	
+ret
+endfunc
+
+end
+]]>
+	</ILKernel>
+	
+<ILKernel name = "Matricize4DToSplit8_LI_R">
+<![CDATA[
+il_ps_2_0
+;
+;	Matricize a virtualized 4D array
+; 
+;	inputs: 1
+;	outputs: 1
+;	data type: LONGINT, REAL
+;	nComponents: 4
+;	constants: 1, 4x4 (LONGINT) [physWidth, newNz*newNy*newNx, newNy*newNx, newNx], 
+;										[tT, tZ, tY, tX], [oldNz*oldNy*oldNx, oldNy*oldNx, oldNx, 1], [xPitchSrc,xSizeSrc,xSizeDst,...]
+;
+dcl_cb cb0[4]
+dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__
+dcl_output_generic o0
+dcl_output_generic o1
+dcl_output_generic o2
+dcl_output_generic o3
+dcl_output_generic o4
+dcl_output_generic o5
+dcl_output_generic o6
+dcl_output_generic o7
+
+dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+
+dcl_literal l0, 4, 1, 0, 8
+
+ftoi r0, vWinCoord0.xy ; 2D output position in quads
+umul r0.x, r0.x, l0.x ; x in single elements
+umul r0.y, r0.y, l0.w ; y*8
+umad r0.x, r0.y, cb0[3].z, r0.x ; y*8*xSizeDst + x -> actual linear index in single elements
+mov r0.w, r0.x ; remember initial index value
+
+;*** part 1 ***
+call 0
+mov r5.x, r1.x
+iadd r0.x, r0.x, l0.y
+call 0
+mov r5.y, r1.x
+iadd r0.x, r0.x, l0.y
+call 0
+mov r5.z, r1.x
+iadd r0.x, r0.x, l0.y
+call 0
+mov r5.w, r1.x
+
+mov o0, r5
+
+;*** part 2 ***
+iadd r0.w, r0.w, cb0[3].z ; y*8*xSizeDst + x + i*xSizeDst* -> actual linear index in single elements
+mov r0.x, r0.w
+
+call 0
+mov r5.x, r1.x
+iadd r0.x, r0.x, l0.y
+call 0
+mov r5.y, r1.x
+iadd r0.x, r0.x, l0.y
+call 0
+mov r5.z, r1.x
+iadd r0.x, r0.x, l0.y
+call 0
+mov r5.w, r1.x
+
+mov o1, r5
+
+;*** part 3 ***
+iadd r0.w, r0.w, cb0[3].z ; y*8*xSizeDst + x + i*xSizeDst* -> actual linear index in single elements
+mov r0.x, r0.w
+
+call 0
+mov r5.x, r1.x
+iadd r0.x, r0.x, l0.y
+call 0
+mov r5.y, r1.x
+iadd r0.x, r0.x, l0.y
+call 0
+mov r5.z, r1.x
+iadd r0.x, r0.x, l0.y
+call 0
+mov r5.w, r1.x
+
+mov o2, r5
+
+;*** part 4 ***
+iadd r0.w, r0.w, cb0[3].z ; y*8*xSizeDst + x + i*xSizeDst* -> actual linear index in single elements
+mov r0.x, r0.w
+
+call 0
+mov r5.x, r1.x
+iadd r0.x, r0.x, l0.y
+call 0
+mov r5.y, r1.x
+iadd r0.x, r0.x, l0.y
+call 0
+mov r5.z, r1.x
+iadd r0.x, r0.x, l0.y
+call 0
+mov r5.w, r1.x
+
+mov o3, r5
+
+;*** part 5 ***
+iadd r0.w, r0.w, cb0[3].z ; y*8*xSizeDst + x + i*xSizeDst* -> actual linear index in single elements
+mov r0.x, r0.w
+
+call 0
+mov r5.x, r1.x
+iadd r0.x, r0.x, l0.y
+call 0
+mov r5.y, r1.x
+iadd r0.x, r0.x, l0.y
+call 0
+mov r5.z, r1.x
+iadd r0.x, r0.x, l0.y
+call 0
+mov r5.w, r1.x
+
+mov o4, r5
+
+;*** part 6 ***
+iadd r0.w, r0.w, cb0[3].z ; y*8*xSizeDst + x + i*xSizeDst* -> actual linear index in single elements
+mov r0.x, r0.w
+
+call 0
+mov r5.x, r1.x
+iadd r0.x, r0.x, l0.y
+call 0
+mov r5.y, r1.x
+iadd r0.x, r0.x, l0.y
+call 0
+mov r5.z, r1.x
+iadd r0.x, r0.x, l0.y
+call 0
+mov r5.w, r1.x
+
+mov o5, r5
+
+;*** part 7 ***
+iadd r0.w, r0.w, cb0[3].z ; y*8*xSizeDst + x + i*xSizeDst* -> actual linear index in single elements
+mov r0.x, r0.w
+
+call 0
+mov r5.x, r1.x
+iadd r0.x, r0.x, l0.y
+call 0
+mov r5.y, r1.x
+iadd r0.x, r0.x, l0.y
+call 0
+mov r5.z, r1.x
+iadd r0.x, r0.x, l0.y
+call 0
+mov r5.w, r1.x
+
+mov o6, r5
+
+;*** part 8 ***
+iadd r0.w, r0.w, cb0[3].z ; y*8*xSizeDst + x + i*xSizeDst* -> actual linear index in single elements
+mov r0.x, r0.w
+
+call 0
+mov r5.x, r1.x
+iadd r0.x, r0.x, l0.y
+call 0
+mov r5.y, r1.x
+iadd r0.x, r0.x, l0.y
+call 0
+mov r5.z, r1.x
+iadd r0.x, r0.x, l0.y
+call 0
+mov r5.w, r1.x
+
+mov o7, r5
+
+endmain
+
+; get input array element in given output index r0.x in single components, returned value is in r1.x
+func 0
+	
+; compute t, z, y, x coordinates in the output
+udiv r1.x, r0.x, cb0[0].y	; t := ind/(newNz*newNy*newNx)
+umod r1.w, r0.x, cb0[0].y	; r1.w := ind - t*newNz*newNy*newNx
+udiv r1.y, r1.w, cb0[0].z	; z := (ind - t*newNz*newNy*newNx)/(newNy*newNx)
+umod r1.w, r1.w, cb0[0].z	; r1.w := ind - t*newNz*newNy*newNx - z*(newNy*newNx)
+udiv r1.z, r1.w, cb0[0].w	; y := (ind - t*newNz*newNy*newNx - z*(newNy*newNx))/newNx
+umod r1.w, r1.w, cb0[0].w	; x := (ind - t*newNz*newNy*newNx - z*(newNy*newNx)) MOD newNx
+
+; shuffle the coordinates
+
+switch cb0[1].x
+
+	default
+		mov r2.x, r1.x
+	break
+
+	case 1
+		mov r2.y, r1.x
+	break
+
+	case 2
+		mov r2.z, r1.x
+	break
+	
+	case 3
+		mov r2.w, r1.x
+	break
+
+endswitch
+
+switch cb0[1].y
+
+	default
+		mov r2.x, r1.y
+	break
+
+	case 1
+		mov r2.y, r1.y
+	break
+
+	case 2
+		mov r2.z, r1.y
+	break
+
+	case 3
+		mov r2.w, r1.y
+	break
+
+endswitch
+
+switch cb0[1].z
+
+	default
+		mov r2.x, r1.z
+	break
+
+	case 1
+		mov r2.y, r1.z
+	break
+
+	case 2
+		mov r2.z, r1.z
+	break
+
+	case 3
+		mov r2.w, r1.z
+	break
+
+endswitch
+
+switch cb0[1].w
+
+	default
+		mov r2.x, r1.w
+	break
+
+	case 1
+		mov r2.y, r1.w
+	break
+
+	case 2
+		mov r2.z, r1.w
+	break
+
+	case 3
+		mov r2.w, r1.w
+	break
+
+endswitch
+
+; compute linear index in the input
+imul r2.xyzw, r2.xyzw, cb0[2].xyzw	; [t*oldNz*oldNy*oldNx, z*oldNy*oldNx, y*oldNx, x*1]
+
+; horizontal add
+iadd r2.x, r2.x, r2.y
+iadd r2.x, r2.x, r2.z
+iadd r2.x, r2.x, r2.w
+
+; compute corresponding 2D index in the input
+udiv r1.y, r2.x, cb0[3].y ; ind DIV xSizeSrc -> line number in the input
+umod r1.x, r2.x, cb0[3].y ; single element position within the line
 umul r1.z, cb0[3].x, l0.x ; xPitchSrc*4
 umad r1.x, r1.y, r1.z, r1.x ; single element position with account of input's padding
 
