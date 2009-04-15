@@ -7086,7 +7086,7 @@ dcl_cb cb1[1]	; [hotSpot,width,physWidth,xPitch], [boundary,(width DIV 4)*4,...]
 
 dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
 
-dcl_literal l0, 4, -1, 1, 0
+dcl_literal l0, 4, 0xFFFFFFFF, 1, 0
 
 umul r0.x, vaTid.x, cb1[0].w ; iLine*xPitch -> index of the first line quad
 imul r0.y, cb1[0].x, l0.y ; -hotSpot ; first input index
@@ -7104,13 +7104,14 @@ whileloop
 	ige r1.z, r0.z, r0.w ; ind >= ind0+(width DIV 4)
 	break_logicalnz r1.z
 	
-	mov r3, r2
+	mov r3, r2	
 	
 	call 0 ; load next input quad
 	iadd r0.y, r0.y, l0.x ; increment input index	
 		
 	call 1 ; compute output quad
 	mov g[r0.z], r30 ; store output quad
+	
 	iadd r0.z, r0.z, l0.z ; increment output index
 endloop
 
@@ -7160,10 +7161,40 @@ if_logicalnz r1.w ; (ind >= 0) & (ind < (width DIV 4)*4) -> not on boundaries
 	sample_resource(0)_sampler(0) r2, r2.xy
 else
 	
+	mov r2, r2.0000
+	
 	if_logicalz r1.z ; left boundary
-		mov r2, r2.0000
-	else ; right boundary
-		mov r2, r2.0000
+		; currently only FiniteData boundary
+	else ; right boundary		
+		ige r1.z, r0.y, cb1[0].y
+		if_logicalnz r1.z
+			; currently only FiniteData boundary
+		else
+			
+			; case when width is not multiple of 4 and there are still some data in the line
+			
+			udiv r1.x, r0.y, l0.x ; index in quads
+			iadd r1.x, r0.x, r1.x ; linear position of quad to load
+			; 2D position of the quad
+			udiv r2.y, r1.x, cb1[0].z
+			umod r2.x, r1.x, cb1[0].z
+			itof r2, r2			
+			
+			umod r1.z, cb1[0].y, l0.x ; width MOD 4
+			switch r1.z
+				case 1
+					sample_resource(0)_sampler(0) r2.x000, r2.xy
+				break
+				
+				case 2
+					sample_resource(0)_sampler(0) r2.xy00, r2.xy
+				break
+				
+				case 3
+					sample_resource(0)_sampler(0) r2.xyz0, r2.xy
+				break
+			endswitch						
+		endif
 	endif
 	
 endif
@@ -7482,95 +7513,101 @@ dcl_cb cb0[8]	; [h0,h1,h2,h3],[h4,0,0,0]
 					; [0,0,h0,h1],[h2,h3,h4,0]
 					; [0,0,0,h0],[h1,h2,h3,h4]
 					
-dcl_cb cb1[1]	; [hotSpot,width,physWidth,xPitch], [boundary,(width DIV 4)*4,Ny*xPitch,...]
+dcl_cb cb1[1]	; [hotSpot,width,physWidth,xPitch], [boundary,(width DIV 4)*4,Ny*xPitch,Nz]
 
 ; hotSpot - has to be aligned to be multiple of 4
 ; width - is the line width
 
 dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
 
-dcl_literal l0, 4, -1, 1, 0
+dcl_literal l0, 4, 0xFFFFFFFF, 1, 0
 
-; in this case we have Nz*xPitch threads, thus the thread index is represented by i*xPitch + j
-udiv r0.y, vaTid.x, cb1[0].w ; i
-umod r0.x, vaTid.x, cb1[0].w ; j
-; compute first quad position
-umad r0.x, r0.y, cb1[1].z, r0.x ; i*Ny*xPitch + j (in quads)
+imul r0.x, cb1[1].w, cb1[0].w ; Nz*xpitch
+ilt r0.z, vaTid.x, r0.x ; check thread index!
+if_logicalnz r0.z
 
-imul r0.y, cb1[0].x, l0.y ; -hotSpot ; first input index
-mov r0.z, r0.x ; position of curent output quad
-
-umad r0.w, cb1[0].y, cb1[0].w, r0.z ; ind0 + (width DIV 4)*4*xPitch
-
-; load first 4 input quads
-call 0
-iadd r0.y, r0.y, l0.x ; increment input index
-
-whileloop
+	; in this case we have Nz*xPitch threads, thus the thread index is represented by i*xPitch + j
+	udiv r0.y, vaTid.x, cb1[0].w ; i
+	umod r0.x, vaTid.x, cb1[0].w ; j
 	
-	ige r1.z, r0.z, r0.w ; ind >= ind0 + (width DIV 4)*4*xPitch
-	break_logicalnz r1.z
+	; compute first quad position
+	imad r0.x, r0.y, cb1[1].z, r0.x ; i*Ny*xPitch + j (in quads)
 	
-	mov r6, r2
-	mov r7, r3
-	mov r8, r4
-	mov r9, r5
+	imul r0.y, cb1[0].x, l0.y ; -hotSpot ; first input index
+	mov r0.z, r0.x ; position of curent output quad	
+	imad r0.w, cb1[1].y, cb1[0].w, r0.z ; ind0 + (width DIV 4)*4*xPitch
 	
-	call 0 ; load next input quads
-	iadd r0.y, r0.y, l0.x ; increment input index	
-			
-	call 1 ; compute output quads		
+	; load first 4 input quads
+	call 0
+	iadd r0.y, r0.y, l0.x ; increment input index
 	
-	; transpose quads
-	transpose r30, r30
+	whileloop
+		
+		ige r1.z, r0.z, r0.w ; ind >= ind0 + (width DIV 4)*4*xPitch
+		break_logicalnz r1.z
+		
+		mov r6, r2
+		mov r7, r3
+		mov r8, r4
+		mov r9, r5
+		
+		call 0 ; load next input quads
+		iadd r0.y, r0.y, l0.x ; increment input index	
+				
+		call 1 ; compute output quads		
+		
+		; transpose quads
+		transpose r30, r30
+		
+		iadd r1.x, r0.z, cb1[0].w
+		iadd r1.y, r1.x, cb1[0].w
+		iadd r1.z, r1.y, cb1[0].w
+		
+		; write to the output		
+		mov g[r0.z], r30
+		mov g[r1.x], r31
+		mov g[r1.y], r32
+		mov g[r1.z], r33
 	
-	iadd r1.x, r0.z, cb1[0].w
-	iadd r1.y, r1.x, cb1[0].w
-	iadd r1.z, r1.y, cb1[0].w
+		iadd r0.z, r1.z, cb1[0].w ; increment output index
+	endloop		
 	
-	; write to the output
-	mov g[r0.z], r30
-	mov g[r1.x], r31
-	mov g[r1.y], r32
-	mov g[r1.z], r33
-
-	iadd r0.z, r1.z, cb1[0].w ; increment output index
-endloop
-
-umod r1.z, cb1[0].y, l0.x ; account width MOD 4 # 0
-if_logicalnz r1.z
+	umod r0.w, cb1[0].y, l0.x ; account width MOD 4 # 0
+	if_logicalnz r0.w
+		
+		; process last quads
+		
+		mov r6, r2
+		mov r7, r3
+		mov r8, r4
+		mov r9, r5
+		
+		call 0 ; load next input quads
+		call 1 ; compute output quads				
+		
+		; transpose quads
+		transpose r30, r30
+		
+		iadd r1.x, r0.z, cb1[0].w
+		iadd r1.y, r1.x, cb1[0].w
 	
-	; process last quads
+		switch r0.w		
+			case 1
+				mov g[r0.z], r30
+				break
+			case 2
+				mov g[r0.z], r30
+				mov g[r1.x], r31
+				break
+			case 3
+				mov g[r0.z], r30
+				mov g[r1.x], r31
+				mov g[r1.y], r32
+				break
+		endswitch
+				
+	endif
 	
-	mov r6, r2
-	mov r7, r3
-	mov r8, r4
-	mov r9, r5
-	
-	call 0 ; load next input quads
-	call 1 ; compute output quads
-	
-	; transpose quads
-	transpose r30, r30
-	
-	iadd r1.x, r0.z, cb1[0].w
-	iadd r1.y, r1.x, cb1[0].w
-
-	switch r1.z		
-		case 1
-			mov g[r0.z], r30
-			break
-		case 2
-			mov g[r0.z], r30
-			mov g[r1.x], r31
-			break
-		case 3
-			mov g[r0.z], r30
-			mov g[r1.x], r31
-			mov g[r1.y], r32
-			break
-	endswitch
-			
 endif
 
 endmain
@@ -7583,11 +7620,10 @@ endmain
 func 0
 
 ige r1.z, r0.y, r0.0 ; ind >= 0
-iadd r1.w, r0.y, l0.x
-ilt r1.w, r0.y, cb1[1].y ; ind+4 < (width DIV 4)*4
+ilt r1.w, r0.y, cb1[1].y ; ind < (width DIV 4)*4
 iand r1.w, r1.z, r1.w
 
-if_logicalnz r1.w ; (ind >= 0) & (ind+4 < (width DIV 4)*4) -> not on boundaries
+if_logicalnz r1.w ; (ind >= 0) & (ind < (width DIV 4)*4) -> not on boundaries
 	
 	; 2D position of quads
 	imad r1.x, r0.y, cb1[0].w, r0.x ; linear position of quad to load
@@ -7617,16 +7653,58 @@ if_logicalnz r1.w ; (ind >= 0) & (ind+4 < (width DIV 4)*4) -> not on boundaries
 	sample_resource(0)_sampler(0) r5, r5.xy
 else
 	
+	mov r2, r2.0000
+	mov r3, r3.0000
+	mov r4, r4.0000
+	mov r5, r5.0000
+	
 	if_logicalz r1.z ; left boundary
-		mov r2, r2.0000
-		mov r3, r3.0000
-		mov r4, r4.0000
-		mov r5, r5.0000
-	else ; right boundary
-		mov r2, r2.0000
-		mov r3, r3.0000
-		mov r4, r4.0000
-		mov r5, r5.0000
+		 ; currently only FiniteData boundary		
+	else ; right boundary		
+		ige r1.z, r0.y, cb1[0].y
+		if_logicalnz r1.z
+			 ; currently only FiniteData boundary
+		else
+			
+			; case when width is not multiple of 4 and there are still some data in the line
+			
+			; 2D position of quads
+			imad r1.x, r0.y, cb1[0].w, r0.x ; linear position of quad to load
+			udiv r2.y, r1.x, cb1[0].z
+			umod r2.x, r1.x, cb1[0].z
+			itof r2, r2
+			
+			umod r1.z, cb1[0].y, l0.x ; width MOD 4
+			switch r1.z
+				case 1
+					sample_resource(0)_sampler(0) r2, r2.xy					
+				break
+				
+				case 2
+					iadd r1.x, r1.x, cb1[0].w ; ind + xPitch
+					udiv r3.y, r1.x, cb1[0].z
+					umod r3.x, r1.x, cb1[0].z
+					itof r3, r3
+					sample_resource(0)_sampler(0) r2, r2.xy
+					sample_resource(0)_sampler(0) r3, r3.xy
+				break
+				
+				case 3
+					iadd r1.x, r1.x, cb1[0].w ; ind + xPitch
+					udiv r3.y, r1.x, cb1[0].z
+					umod r3.x, r1.x, cb1[0].z
+		
+					iadd r1.x, r1.x, cb1[0].w
+					udiv r4.y, r1.x, cb1[0].z
+					umod r4.x, r1.x, cb1[0].z
+					itof r3, r3
+					itof r4, r4
+					sample_resource(0)_sampler(0) r2, r2.xy
+					sample_resource(0)_sampler(0) r3, r3.xy
+					sample_resource(0)_sampler(0) r4, r4.xy
+				break
+			endswitch						
+		endif
 	endif
 	
 endif
@@ -7751,22 +7829,23 @@ dcl_cb cb1[1]	; [hotSpot,width,physWidth,xPitch], [boundary,(width DIV 4)*4,Ny*x
 
 dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
 
-dcl_literal l0, 4, -1, 1, 0
+dcl_literal l0, 4, 0xFFFFFFFF, 1, 0
+
+ilt r0.z, vaTid.x, cb1[1].z ; check thread index!
+if_logicalnz r0.z
 
 ; in this case we have Ny*xPitch threads
 mov r0.x, vaTid.x ; position of first input quad (in quads)
-
 imul r0.y, cb1[0].x, l0.y ; -hotSpot ; first input index
 mov r0.z, r0.x ; position of curent output quad
-
-umad r0.w, cb1[0].y, cb1[1].z, r0.z ; ind0 + (width DIV 4)*4*Ny*xPitch
+imad r0.w, cb1[1].y, cb1[1].z, r0.z ; ind0 + (width DIV 4)*4*Ny*xPitch
 
 ; load first 4 input quads
 call 0
 iadd r0.y, r0.y, l0.x ; increment input index
 
 whileloop
-	
+			
 	ige r1.z, r0.z, r0.w ; ind >= ind0 + (width DIV 4)*4*Ny*xPitch
 	break_logicalnz r1.z
 	
@@ -7776,7 +7855,7 @@ whileloop
 	mov r9, r5
 	
 	call 0 ; load next input quads
-	iadd r0.y, r0.y, l0.x ; increment input index	
+	iadd r0.y, r0.y, l0.x ; increment input index
 			
 	call 1 ; compute output quads
 	
@@ -7793,7 +7872,7 @@ whileloop
 	mov g[r1.y], r32
 	mov g[r1.z], r33
 
-	iadd r0.z, r1.z, cb1[1].z ; increment output index
+	iadd r0.__z_, r1.z, cb1[1].z ; increment output index
 endloop
 
 umod r1.z, cb1[0].y, l0.x ; account width MOD 4 # 0
@@ -7832,6 +7911,8 @@ if_logicalnz r1.z
 			
 endif;
 
+endif; 
+
 endmain
 
 ; get input quad with account of boundaries for 4 lines at once
@@ -7842,22 +7923,17 @@ endmain
 func 0
 
 ige r1.z, r0.y, r0.0 ; ind >= 0
-iadd r1.w, r0.y, l0.x
-ilt r1.w, r0.y, cb1[1].y ; ind+4 < (width DIV 4)*4
+ilt r1.w, r0.y, cb1[1].y ; ind < (width DIV 4)*4
 iand r1.w, r1.z, r1.w
 
-if_logicalnz r1.w ; (ind >= 0) & (ind+4 < (width DIV 4)*4) -> not on boundaries
+if_logicalnz r1.w ; (ind >= 0) & (ind < (width DIV 4)*4) -> not on boundaries
 	
 	; 2D position of quads
 	imad r1.x, r0.y, cb1[1].z, r0.x ; linear position of quad to load
-	udiv r2.y, r1.x, cb1[0].z
-	umod r2.x, r1.x, cb1[0].z
-	
-	iadd r1.x, r1.x, cb1[1].z ; ind + Ny*xPitch
 	udiv r3.y, r1.x, cb1[0].z
 	umod r3.x, r1.x, cb1[0].z
 	
-	iadd r1.x, r1.x, cb1[1].z
+	iadd r1.x, r1.x, cb1[1].z ; ind + Ny*xPitch
 	udiv r4.y, r1.x, cb1[0].z
 	umod r4.x, r1.x, cb1[0].z
 	
@@ -7865,27 +7941,75 @@ if_logicalnz r1.w ; (ind >= 0) & (ind+4 < (width DIV 4)*4) -> not on boundaries
 	udiv r5.y, r1.x, cb1[0].z
 	umod r5.x, r1.x, cb1[0].z
 	
-	itof r2, r2
+	iadd r1.x, r1.x, cb1[1].z
+	udiv r1.y, r1.x, cb1[0].z
+	umod r1.x, r1.x, cb1[0].z
+	
 	itof r3, r3
 	itof r4, r4
 	itof r5, r5
+	itof r1, r1
 	
-	sample_resource(0)_sampler(0) r2, r2.xy
-	sample_resource(0)_sampler(0) r3, r3.xy
-	sample_resource(0)_sampler(0) r4, r4.xy
-	sample_resource(0)_sampler(0) r5, r5.xy
+	sample_resource(0)_sampler(0) r2, r3.xy
+	sample_resource(0)_sampler(0) r3, r4.xy
+	sample_resource(0)_sampler(0) r4, r5.xy
+	sample_resource(0)_sampler(0) r5, r1.xy
 else
 	
+	mov r2, r2.0000
+	mov r3, r3.0000
+	mov r4, r4.0000
+	mov r5, r5.0000
+	
 	if_logicalz r1.z ; left boundary
-		mov r2, r2.0000
-		mov r3, r3.0000
-		mov r4, r4.0000
-		mov r5, r5.0000
-	else ; right boundary
-		mov r2, r2.0000
-		mov r3, r3.0000
-		mov r4, r4.0000
-		mov r5, r5.0000
+		 ; currently only FiniteData boundary		
+	else ; right boundary		
+		ige r1.z, r0.y, cb1[0].y
+		if_logicalnz r1.z
+			 ; currently only FiniteData boundary
+		else
+			
+			; case when width is not multiple of 4 and there are still some data in the line
+			
+			; 2D position of quads
+			imad r1.x, r0.y, cb1[1].z, r0.x ; linear position of quad to load
+			udiv r2.y, r1.x, cb1[0].z
+			umod r2.x, r1.x, cb1[0].z			
+			itof r2, r2		
+			
+			umod r1.z, cb1[0].y, l0.x ; width MOD 4
+			switch r1.z
+				case 1					
+					sample_resource(0)_sampler(0) r2, r2.xy					
+				break
+				
+				case 2
+					iadd r1.x, r1.x, cb1[1].z ; ind + Ny*xPitch			
+					udiv r3.y, r1.x, cb1[0].z
+					umod r3.x, r1.x, cb1[0].z
+					
+					itof r3, r3
+					sample_resource(0)_sampler(0) r2, r2.xy
+					sample_resource(0)_sampler(0) r3, r3.xy
+				break
+				
+				case 3
+					iadd r1.x, r1.x, cb1[1].z ; ind + Ny*xPitch			
+					udiv r3.y, r1.x, cb1[0].z
+					umod r3.x, r1.x, cb1[0].z
+		
+					iadd r1.x, r1.x, cb1[1].z
+					udiv r4.y, r1.x, cb1[0].z
+					umod r4.x, r1.x, cb1[0].z
+					
+					itof r3, r3
+					itof r4, r4					
+					sample_resource(0)_sampler(0) r2, r2.xy
+					sample_resource(0)_sampler(0) r3, r3.xy
+					sample_resource(0)_sampler(0) r4, r4.xy
+				break
+			endswitch						
+		endif
 	endif
 	
 endif
