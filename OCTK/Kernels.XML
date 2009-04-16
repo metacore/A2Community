@@ -6556,7 +6556,7 @@ dcl_cb cb0[8]	; [h0,h1,h2,h3],[h4,0,0,0]
 					; [0,0,h0,h1],[h2,h3,h4,0]
 					; [0,0,0,h0],[h1,h2,h3,h4]
 					
-dcl_cb cb1[1]	; [hotSpot,width,physWidth,xPitch], [boundary,(width DIV 4)*4,...]
+dcl_cb cb1[2]	; [hotSpot,width,physWidth,xPitch], [boundary,(width DIV 4)*4,...]
 
 ; hotSpot - has to be aligned to be multiple of 4
 
@@ -6591,15 +6591,15 @@ whileloop
 	iadd r0.z, r0.z, l0.z ; increment output index
 endloop
 
-umod r1.z, cb1[0].y, l0.x ; account padding -> width MOD 4
-if_logicalnz r1.z
+umod r0.w, cb1[0].y, l0.x ; account padding -> width MOD 4
+if_logicalnz r0.w
 	
 	; last line quad
 	mov r3, r2
 	call 0 ; load next input quad
 	call 1 ; compute output quad	
 
-	switch r1.z
+	switch r0.w
 		case 1
 			mov r30, r30.x000
 			break
@@ -6728,7 +6728,7 @@ dcl_cb cb0[8]	; [h0,h1,h2,h3],[h4,0,0,0]
 					; [0,0,h0,h1],[h2,h3,h4,0]
 					; [0,0,0,h0],[h1,h2,h3,h4]
 					
-dcl_cb cb1[1]	; [hotSpot,width,physWidth,xPitch], [boundary,(width DIV 4)*4,...]
+dcl_cb cb1[2]	; [hotSpot,width,physWidth,xPitch], [boundary,(width DIV 4)*4,...]
 
 ; hotSpot - has to be aligned to be multiple of 4
 
@@ -6798,15 +6798,15 @@ whileloop
 	iadd r0.z, r0.z, l0.z ; increment output index
 endloop
 
-umod r1.z, cb1[0].y, l0.x ; account padding -> width MOD 4
-if_logicalnz r1.z
+umod r0.w, cb1[0].y, l0.x ; account padding -> width MOD 4
+if_logicalnz r0.w
 	
 	; last line quad	
 	mov r3, r2
 	call 0 ; load next input quad
 	call 1 ; compute output quads
 
-	switch r1.z
+	switch r0.w
 		case 1
 			mov r30, r30.x000	
 			break
@@ -6989,7 +6989,7 @@ dcl_cb cb0[8]	; [h0,h1,h2,h3],[h4,0,0,0]
 					; [0,0,h0,h1],[h2,h3,h4,0]
 					; [0,0,0,h0],[h1,h2,h3,h4]
 					
-dcl_cb cb1[1]	; [hotSpot,width,physWidth,xPitch], [boundary,(width DIV 4)*4,Ny*xPitch,Nz]
+dcl_cb cb1[2]	; [hotSpot,width,physWidth,xPitch], [boundary,(width DIV 4)*4,Ny*xPitch,Nz]
 
 ; hotSpot - has to be aligned to be multiple of 4
 ; width - is the line width
@@ -7012,7 +7012,7 @@ if_logicalnz r0.z
 	imul r0.y, cb1[0].x, l0.y ; -hotSpot ; first input index
 	mov r0.z, r0.x ; position of curent output quad	
 	imad r0.w, cb1[1].y, cb1[0].w, r0.z ; ind0 + (width DIV 4)*4*xPitch
-	
+			
 	; load first 4 input quads
 	call 0
 	iadd r0.y, r0.y, l0.x ; increment input index
@@ -7031,13 +7031,13 @@ if_logicalnz r0.z
 		iadd r0.y, r0.y, l0.x ; increment input index	
 				
 		call 1 ; compute output quads		
-		
+	
 		; transpose quads
 		transpose r30, r30
 		
 		iadd r1.x, r0.z, cb1[0].w
 		iadd r1.y, r1.x, cb1[0].w
-		iadd r1.z, r1.y, cb1[0].w
+		iadd r1.z, r1.y, cb1[0].w				
 		
 		; write to the output		
 		mov g[r0.z], r30
@@ -7046,7 +7046,7 @@ if_logicalnz r0.z
 		mov g[r1.z], r33
 	
 		iadd r0.z, r1.z, cb1[0].w ; increment output index
-	endloop		
+	endloop
 	
 	umod r0.w, cb1[0].y, l0.x ; account width MOD 4 # 0
 	if_logicalnz r0.w
@@ -7278,12 +7278,12 @@ end
 ]]>
 	</ILKernel>
 	
-<ILKernel name = "Convolve3DZ5_R">
+<ILKernel name = "ConvolveNDZ5_R">
 <![CDATA[
 il_cs_2_0
 dcl_num_thread_per_group 64
 ;
-;	Convolve 3D virtualized array along Z direction with up to 5 taps FIR filter
+;	Convolve ND virtualized array along Z (first) direction with up to 5 taps FIR filter
 ; 
 ;	inputs: 1
 ;	outputs: 0
@@ -7298,7 +7298,7 @@ dcl_cb cb0[8]	; [h0,h1,h2,h3],[h4,0,0,0]
 					; [0,0,h0,h1],[h2,h3,h4,0]
 					; [0,0,0,h0],[h1,h2,h3,h4]
 					
-dcl_cb cb1[1]	; [hotSpot,width,physWidth,xPitch], [boundary,(width DIV 4)*4,Ny*xPitch,...]
+dcl_cb cb1[2]	; [hotSpot,width,physWidth,xPitch], [boundary,(width DIV 4)*4,Ny*xPitch,...]
 
 ; hotSpot - has to be aligned to be multiple of 4
 ; width - is the line width
@@ -7351,8 +7351,8 @@ if_logicalnz r0.z
 		iadd r0.z, r1.z, cb1[1].z ; increment output index
 	endloop
 
-	umod r1.z, cb1[0].y, l0.x ; account width MOD 4 # 0
-	if_logicalnz r1.z
+	umod r0.w, cb1[0].y, l0.x ; account width MOD 4 # 0
+	if_logicalnz r0.w
 		
 		; process last quads
 		
@@ -7370,7 +7370,7 @@ if_logicalnz r0.z
 		iadd r1.x, r0.z, cb1[1].z
 		iadd r1.y, r1.x, cb1[1].z
 	
-		switch r1.z		
+		switch r0.w		
 			case 1
 				mov g[r0.z], r30
 				break
@@ -7603,7 +7603,7 @@ dcl_cb cb0[12]	; [h0,h1,h2,h3],[h4,h5,h6,h7],[h8,0,0,0]
 					; [0,0,h0,h1],[h2,h3,h4,h5],[h6,h7,h8,0]
 					; [0,0,0,h0],[h1,h2,h3,h4],[h5,h6,h7,h8]
 					
-dcl_cb cb1[1]	; [hotSpot,width,physWidth,xPitch], [boundary,(width DIV 4)*4,...]
+dcl_cb cb1[2]	; [hotSpot,width,physWidth,xPitch], [boundary,(width DIV 4)*4,...]
 
 ; hotSpot - has to be aligned to be multiple of 4
 
@@ -7642,8 +7642,8 @@ whileloop
 	iadd r0.z, r0.z, l0.z ; increment output index
 endloop
 
-umod r1.z, cb1[0].y, l0.x ; account padding -> width MOD 4
-if_logicalnz r1.z
+umod r0.w, cb1[0].y, l0.x ; account padding -> width MOD 4
+if_logicalnz r0.w
 	
 	; last line quad
 	mov r4, r3
@@ -7651,7 +7651,7 @@ if_logicalnz r1.z
 	call 0 ; load next input quad
 	call 1 ; compute output quad	
 
-	switch r1.z
+	switch r0.w
 		case 1
 			mov r30, r30.x000
 			break
@@ -7764,12 +7764,12 @@ end
 ]]>
 	</ILKernel>
 	
-<ILKernel name = "Convolve3DZ9_R">
+<ILKernel name = "Convolve3DY9_R">
 <![CDATA[
 il_cs_2_0
 dcl_num_thread_per_group 64
 ;
-;	Convolve 3D virtualized array along Z direction with up to 9 taps FIR filter
+;	Convolve 3D virtualized array along Y direction with up to 9 taps FIR filter
 ; 
 ;	inputs: 1
 ;	outputs: 0
@@ -7784,7 +7784,348 @@ dcl_cb cb0[12]	; [h0,h1,h2,h3],[h4,h5,h6,h7],[h8,0,0,0]
 					; [0,0,h0,h1],[h2,h3,h4,h5],[h6,h7,h8,0]
 					; [0,0,0,h0],[h1,h2,h3,h4],[h5,h6,h7,h8]
 					
-dcl_cb cb1[1]	; [hotSpot,width,physWidth,xPitch], [boundary,(width DIV 4)*4,Ny*xPitch,...]
+dcl_cb cb1[2]	; [hotSpot,width,physWidth,xPitch], [boundary,(width DIV 4)*4,Ny*xPitch,Nz]
+
+; hotSpot - has to be aligned to be multiple of 4
+; width - is the line width
+
+dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+
+dcl_literal l0, 4, 0xFFFFFFFF, 1, 0
+
+imul r0.x, cb1[1].w, cb1[0].w ; Nz*xpitch
+ilt r0.z, vaTid.x, r0.x ; check thread index!
+if_logicalnz r0.z
+
+	; in this case we have Nz*xPitch threads, thus the thread index is represented by i*xPitch + j
+	udiv r0.y, vaTid.x, cb1[0].w ; i
+	umod r0.x, vaTid.x, cb1[0].w ; j
+	
+	; compute first quad position
+	imad r0.x, r0.y, cb1[1].z, r0.x ; i*Ny*xPitch + j (in quads)
+	
+	imul r0.y, cb1[0].x, l0.y ; -hotSpot ; first input index
+	mov r0.z, r0.x ; position of curent output quad	
+	imad r0.w, cb1[1].y, cb1[0].w, r0.z ; ind0 + (width DIV 4)*4*xPitch
+			
+	; load first 2x4 input quads
+	call 0
+	iadd r0.y, r0.y, l0.x ; increment input index
+	mov r6, r2
+	mov r7, r3
+	mov r8, r4
+	mov r9, r5
+	call 0
+	iadd r0.y, r0.y, l0.x ; increment input index
+	
+	whileloop
+		
+		ige r1.z, r0.z, r0.w ; ind >= ind0 + (width DIV 4)*4*xPitch
+		break_logicalnz r1.z
+		
+		mov r10, r6
+		mov r11, r7
+		mov r12, r8
+		mov r13, r9
+		
+		mov r6, r2
+		mov r7, r3
+		mov r8, r4
+		mov r9, r5
+		
+		call 0 ; load next input quads
+		iadd r0.y, r0.y, l0.x ; increment input index	
+				
+		call 1 ; compute output quads		
+	
+		; transpose quads
+		transpose r30, r30
+		
+		iadd r1.x, r0.z, cb1[0].w
+		iadd r1.y, r1.x, cb1[0].w
+		iadd r1.z, r1.y, cb1[0].w				
+		
+		; write to the output		
+		mov g[r0.z], r30
+		mov g[r1.x], r31
+		mov g[r1.y], r32
+		mov g[r1.z], r33
+	
+	iadd r0.z, r1.z, cb1[0].w ; increment output index
+	endloop
+	
+	umod r0.w, cb1[0].y, l0.x ; account width MOD 4 # 0
+	if_logicalnz r0.w
+		
+		; process last quads
+		
+		mov r10, r6
+		mov r11, r7
+		mov r12, r8
+		mov r13, r9
+		
+		mov r6, r2
+		mov r7, r3
+		mov r8, r4
+		mov r9, r5
+		
+		call 0 ; load next input quads
+		call 1 ; compute output quads				
+		
+		; transpose quads
+		transpose r30, r30
+		
+		iadd r1.x, r0.z, cb1[0].w
+		iadd r1.y, r1.x, cb1[0].w
+	
+		switch r0.w		
+			case 1
+				mov g[r0.z], r30
+				break
+			case 2
+				mov g[r0.z], r30
+				mov g[r1.x], r31
+				break
+			case 3
+				mov g[r0.z], r30
+				mov g[r1.x], r31
+				mov g[r1.y], r32
+				break
+		endswitch
+				
+	endif
+	
+endif
+
+endmain
+
+; get input quad with account of boundaries for 4 lines at once
+; r0.x - linear position of the first line element with account of padding, in quads
+; r0.y - index of input quad within the line, in single elements
+; output is returned in r2, r3, r4, r5
+; r1 is used for intermediate results
+func 0
+
+ige r1.z, r0.y, r0.0 ; ind >= 0
+ilt r1.w, r0.y, cb1[1].y ; ind < (width DIV 4)*4
+iand r1.w, r1.z, r1.w
+
+if_logicalnz r1.w ; (ind >= 0) & (ind < (width DIV 4)*4) -> not on boundaries
+	
+	; 2D position of quads
+	imad r1.x, r0.y, cb1[0].w, r0.x ; linear position of quad to load
+	udiv r2.y, r1.x, cb1[0].z
+	umod r2.x, r1.x, cb1[0].z
+	
+	iadd r1.x, r1.x, cb1[0].w ; ind + xPitch
+	udiv r3.y, r1.x, cb1[0].z
+	umod r3.x, r1.x, cb1[0].z
+	
+	iadd r1.x, r1.x, cb1[0].w
+	udiv r4.y, r1.x, cb1[0].z
+	umod r4.x, r1.x, cb1[0].z
+	
+	iadd r1.x, r1.x, cb1[0].w
+	udiv r5.y, r1.x, cb1[0].z
+	umod r5.x, r1.x, cb1[0].z
+	
+	itof r2, r2
+	itof r3, r3
+	itof r4, r4
+	itof r5, r5
+	
+	sample_resource(0)_sampler(0) r2, r2.xy
+	sample_resource(0)_sampler(0) r3, r3.xy
+	sample_resource(0)_sampler(0) r4, r4.xy
+	sample_resource(0)_sampler(0) r5, r5.xy
+else
+	
+	mov r2, r2.0000
+	mov r3, r3.0000
+	mov r4, r4.0000
+	mov r5, r5.0000
+	
+	if_logicalz r1.z ; left boundary
+		 ; currently only FiniteData boundary		
+	else ; right boundary		
+		ige r1.z, r0.y, cb1[0].y
+		if_logicalnz r1.z
+			 ; currently only FiniteData boundary
+		else
+			
+			; case when width is not multiple of 4 and there are still some data in the line
+			
+			; 2D position of quads
+			imad r1.x, r0.y, cb1[0].w, r0.x ; linear position of quad to load
+			udiv r2.y, r1.x, cb1[0].z
+			umod r2.x, r1.x, cb1[0].z
+			itof r2, r2
+			
+			umod r1.z, cb1[0].y, l0.x ; width MOD 4
+			switch r1.z
+				case 1
+					sample_resource(0)_sampler(0) r2, r2.xy					
+				break
+				
+				case 2
+					iadd r1.x, r1.x, cb1[0].w ; ind + xPitch
+					udiv r3.y, r1.x, cb1[0].z
+					umod r3.x, r1.x, cb1[0].z
+					itof r3, r3
+					sample_resource(0)_sampler(0) r2, r2.xy
+					sample_resource(0)_sampler(0) r3, r3.xy
+				break
+				
+				case 3
+					iadd r1.x, r1.x, cb1[0].w ; ind + xPitch
+					udiv r3.y, r1.x, cb1[0].z
+					umod r3.x, r1.x, cb1[0].z
+		
+					iadd r1.x, r1.x, cb1[0].w
+					udiv r4.y, r1.x, cb1[0].z
+					umod r4.x, r1.x, cb1[0].z
+					itof r3, r3
+					itof r4, r4
+					sample_resource(0)_sampler(0) r2, r2.xy
+					sample_resource(0)_sampler(0) r3, r3.xy
+					sample_resource(0)_sampler(0) r4, r4.xy
+				break
+			endswitch						
+		endif
+	endif
+	
+endif
+
+; transpose quads
+transpose r2, r2
+
+ret
+endfunc
+
+; compute 4 output quads
+; {r10,r11,r12,r13}, {r6,r7,r8,r9}, {r2,r3,r4,r5} - input quads
+; output is stored in {r30,r31,r32,r33}
+; uses r34,r35,r36 for intermediate results
+func 1
+
+mul r30, r10, cb0[0]
+mad r30, r6, cb0[1], r30
+mad r30, r2, cb0[2], r30
+
+mul r31, r10, cb0[3]
+mad r31, r6, cb0[4], r31
+mad r31, r2, cb0[5], r31
+
+mul r32, r10, cb0[6]
+mad r32, r6, cb0[7], r32
+mad r32, r2, cb0[8], r32
+
+mul r33, r10, cb0[9]
+mad r33, r6, cb0[10], r33
+mad r33, r2, cb0[11], r33
+	
+dp4 r30.x, r30, r30.1111
+dp4 r30.y, r31, r31.1111
+dp4 r30.z, r32, r32.1111
+dp4 r30.w, r33, r33.1111
+
+; ****
+
+mul r31, r11, cb0[0]
+mad r31, r7, cb0[1], r31
+mad r31, r3, cb0[2], r31
+
+mul r32, r11, cb0[3]
+mad r32, r7, cb0[4], r32
+mad r32, r3, cb0[5], r32
+
+mul r33, r11, cb0[6]
+mad r33, r7, cb0[7], r33
+mad r33, r3, cb0[8], r33
+
+mul r34, r11, cb0[9]
+mad r34, r7, cb0[10], r34
+mad r34, r3, cb0[11], r34
+	
+dp4 r31.x, r31, r31.1111
+dp4 r31.y, r32, r32.1111
+dp4 r31.z, r33, r33.1111
+dp4 r31.w, r34, r34.1111
+
+; ****
+
+mul r32, r12, cb0[0]
+mad r32, r8, cb0[1], r32
+mad r32, r4, cb0[2], r32
+
+mul r33, r12, cb0[3]
+mad r33, r8, cb0[4], r33
+mad r33, r4, cb0[5], r33
+
+mul r34, r12, cb0[6]
+mad r34, r8, cb0[7], r34
+mad r34, r4, cb0[8], r34
+
+mul r35, r12, cb0[9]
+mad r35, r8, cb0[10], r35
+mad r35, r4, cb0[11], r35
+	
+dp4 r32.x, r32, r32.1111
+dp4 r32.y, r33, r33.1111
+dp4 r32.z, r34, r34.1111
+dp4 r32.w, r35, r35.1111
+
+; ****
+
+mul r33, r13, cb0[0]
+mad r33, r9, cb0[1], r33
+mad r33, r5, cb0[2], r33
+
+mul r34, r13, cb0[3]
+mad r34, r9, cb0[4], r34
+mad r34, r5, cb0[5], r34
+
+mul r35, r13, cb0[6]
+mad r35, r9, cb0[7], r35
+mad r35, r5, cb0[8], r35
+
+mul r36, r13, cb0[9]
+mad r36, r9, cb0[10], r36
+mad r36, r5, cb0[11], r36
+	
+dp4 r33.x, r33, r33.1111
+dp4 r33.y, r34, r34.1111
+dp4 r33.z, r35, r35.1111
+dp4 r33.w, r36, r36.1111
+
+ret
+endfunc
+
+end
+]]>
+	</ILKernel>	
+	
+<ILKernel name = "ConvolveNDZ9_R">
+<![CDATA[
+il_cs_2_0
+dcl_num_thread_per_group 64
+;
+;	Convolve 3D virtualized array along Z (first) direction with up to 9 taps FIR filter
+; 
+;	inputs: 1
+;	outputs: 0
+;	global buffer: Yes
+;	data type: REAL
+;	nComponents: 4
+;	constants: 2, 12x4 (REAL) and 2x4 (LONGINT)
+;
+
+dcl_cb cb0[12]	; [h0,h1,h2,h3],[h4,h5,h6,h7],[h8,0,0,0]
+					; [0,h0,h1,h2],[h3,h4,h5,h6],[h7,h8,0,0]
+					; [0,0,h0,h1],[h2,h3,h4,h5],[h6,h7,h8,0]
+					; [0,0,0,h0],[h1,h2,h3,h4],[h5,h6,h7,h8]
+					
+dcl_cb cb1[2]	; [hotSpot,width,physWidth,xPitch], [boundary,(width DIV 4)*4,Ny*xPitch,...]
 
 ; hotSpot - has to be aligned to be multiple of 4
 ; width - is the line width
@@ -7848,8 +8189,8 @@ if_logicalnz r0.z
 		iadd r0.z, r1.z, cb1[1].z ; increment output index
 	endloop
 
-	umod r1.z, cb1[0].y, l0.x ; account width MOD 4 # 0
-	if_logicalnz r1.z
+	umod r0.w, cb1[0].y, l0.x ; account width MOD 4 # 0
+	if_logicalnz r0.w
 		
 		; process last quads
 		
@@ -7872,7 +8213,7 @@ if_logicalnz r0.z
 		iadd r1.x, r0.z, cb1[1].z
 		iadd r1.y, r1.x, cb1[1].z
 	
-		switch r1.z		
+		switch r0.w
 			case 1
 				mov g[r0.z], r30
 				break
@@ -8113,7 +8454,7 @@ dcl_num_thread_per_group 64
 ;	global buffer: Yes
 ;	data type: REAL
 ;	nComponents: 4
-;	constants: 2, 8x4 (REAL) and 2x4 (LONGINT)
+;	constants: 2, 8x4 (REAL) and 3x4 (LONGINT)
 ;
 
 dcl_cb cb0[8]	; [h0,h1,h2,h3],[h4,0,0,0]
@@ -8121,7 +8462,8 @@ dcl_cb cb0[8]	; [h0,h1,h2,h3],[h4,0,0,0]
 					; [0,0,h0,h1],[h2,h3,h4,0]
 					; [0,0,0,h0],[h1,h2,h3,h4]
 					
-dcl_cb cb1[1]	; [hotSpot,width,physWidth,xPitch], [boundary,(width DIV 4)*4,...]
+dcl_cb cb1[3]	; [hotSpot,widthSrc,physWidth,xPitchSrc], [boundary,(widthSrc DIV 4)*4,widthDst,xPitchDst],
+					; [phase,...]
 
 ; hotSpot - has to be aligned to be multiple of 4
 
@@ -8129,64 +8471,64 @@ dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(floa
 
 dcl_literal l0, 4, 0xFFFFFFFF, 1, 0
 
-umul r0.x, vaTid.x, cb1[0].w ; iLine*xPitch -> index of the first line quad
+umul r0.x, vaTid.x, cb1[0].w ; iLine*xPitchSrc -> index of the first line quad in the input
 imul r0.y, cb1[0].x, l0.y ; -hotSpot ; first input index
-mov r0.z, r0.x ; position of curent output quad
 
-udiv r0.w, cb1[0].y, l0.x
-iadd r0.w, r0.w, l0.y
-iadd r0.w, r0.z, r0.w ; ind0+(width DIV 4)-1 -> position of last output quad
+imul r0.z, vaTid.x, cb1[1].w ; iLine*xPitchDst -> position of curent output quad
+
+udiv r0.w, cb1[1].z, l0.x
+iadd r0.w, r0.z, r0.w ; ind0+(widthDst DIV 4) -> position of last output quad
 
 ; load first input quads
-call 0
-iadd r0.y, r0.y, l0.x ; increment input index
-mov r3, r2
 call 0
 iadd r0.y, r0.y, l0.x ; increment input index
 
 whileloop
 	
-	ige r1.z, r0.z, r0.w ; ind >= ind0+(width DIV 4)-1
+	ige r1.z, r0.z, r0.w ; ind >= ind0+(widthDst DIV 4)
 	break_logicalnz r1.z
 	
-	mov r5, r3	
 	mov r4, r2
-	
+		
 	call 0 ; load next input quad
 	iadd r0.y, r0.y, l0.x ; increment input index
 	mov r3, r2
-	call 0
+	call 0 ; load next input quad
 	iadd r0.y, r0.y, l0.x ; increment input index
 
 	call 1 ; compute output quad
-	mov g[r0.z], r30 ; store output quad
+	mov g[r0.z], r30 ; store output quad		
 	
 	iadd r0.z, r0.z, l0.z ; increment output index
 endloop
 
-;umod r1.z, cb1[0].y, l0.x ; account padding -> width MOD 4
-;if_logicalnz r1.z
-;	
-;	; last line quad
-;	mov r5, r3	
-;	mov r4, r2
-;	call 0 ; load next input quad
-;	call 1 ; compute output quad	
-;
-;	switch r1.z
-;		case 1
-;			mov r30, r30.x000
-;			break
-;		case 2
-;			mov r30, r30.xy00
-;			break
-;		case 3
-;			mov r30, r30.xyz0
-;			break
-;	endswitch
-;	
-;	mov g[r0.z], r30 ; store output quad
-;endif;
+umod r0.w, cb1[1].z, l0.x ; account padding -> widthDst MOD 4
+if_logicalnz r0.w
+	
+	; last line quad
+	mov r4, r2
+		
+	call 0 ; load next input quad
+	iadd r0.y, r0.y, l0.x ; increment input index
+	mov r3, r2
+	call 0 ; load next input quad
+	
+	call 1	
+
+	switch r0.w
+		case 1
+			mov r30, r30.x000
+			break
+		case 2
+			mov r30, r30.xy00
+			break
+		case 3
+			mov r30, r30.xyz0
+			break
+	endswitch
+	
+	mov g[r0.z], r30 ; store output quad
+endif;
 
 endmain
 
@@ -8198,10 +8540,10 @@ endmain
 func 0
 
 ige r1.z, r0.y, r0.0 ; ind >= 0
-ilt r1.w, r0.y, cb1[1].y ; ind < (width DIV 4)*4
+ilt r1.w, r0.y, cb1[1].y ; ind < (widthSrc DIV 4)*4
 iand r1.w, r1.z, r1.w
 
-if_logicalnz r1.w ; (ind >= 0) & (ind < (width DIV 4)*4) -> not on boundaries
+if_logicalnz r1.w ; (ind >= 0) & (ind < (widthSrc DIV 4)*4) -> not on boundaries
 	udiv r1.x, r0.y, l0.x ; index in quads
 	iadd r1.x, r0.x, r1.x ; linear position of quad to load
 	; 2D position of the quad
@@ -8216,7 +8558,7 @@ else
 	if_logicalz r1.z ; left boundary
 		; currently only FiniteData boundary
 	else ; right boundary		
-		ige r1.z, r0.y, cb1[0].y
+		ige r1.z, r0.y, cb1[0].y ; ind >= widthSrc
 		if_logicalnz r1.z
 			; currently only FiniteData boundary
 		else
@@ -8230,7 +8572,214 @@ else
 			umod r2.x, r1.x, cb1[0].z
 			itof r2, r2			
 			
-			umod r1.z, cb1[0].y, l0.x ; width MOD 4
+			umod r1.z, cb1[0].y, l0.x ; widthSrc MOD 4
+			switch r1.z
+				case 1
+					sample_resource(0)_sampler(0) r2.x000, r2.xy
+				break
+				
+				case 2
+					sample_resource(0)_sampler(0) r2.xy00, r2.xy
+				break
+				
+				case 3
+					sample_resource(0)_sampler(0) r2.xyz0, r2.xy
+				break
+			endswitch						
+		endif
+	endif
+	
+endif
+
+ret
+endfunc
+
+; compute output quad
+; r4, r3, r2 - input quads
+; output is stored in r30
+; uses r31, r32, r33 for intermediate results
+func 1
+
+switch cb1[2].x
+
+	case 0
+		mul r30, r4, cb0[0]
+		mad r30, r3, cb0[1], r30
+	
+		mul r31, r4, cb0[4]
+		mad r31, r3, cb0[5], r31
+		
+		mul r32, r3, cb0[0]
+		mad r32, r2, cb0[1], r32
+		
+		mul r33, r3, cb0[4]
+		mad r33, r2, cb0[5], r33
+	break
+	
+	case 1
+		mul r30, r4, cb0[2]
+		mad r30, r3, cb0[3], r30
+	
+		mul r31, r4, cb0[6]
+		mad r31, r3, cb0[7], r31
+		
+		mul r32, r3, cb0[2]
+		mad r32, r2, cb0[3], r32
+		
+		mul r33, r3, cb0[6]
+		mad r33, r2, cb0[7], r33
+	break
+endswitch	
+
+dp4 r30.x, r30, r30.1111
+dp4 r30.y, r31, r31.1111
+dp4 r30.z, r32, r32.1111
+dp4 r30.w, r33, r33.1111
+
+ret
+endfunc
+
+end
+]]>
+	</ILKernel>
+	
+<ILKernel name = "ConvolveNDX9Down2_R">
+<![CDATA[
+il_cs_2_0
+dcl_num_thread_per_group 64
+;
+;	Convolve ND virtualized array along X (last) direction with up to 9 taps FIR filter and downsample by 2
+; 
+;	inputs: 1
+;	outputs: 0
+;	global buffer: Yes
+;	data type: REAL
+;	nComponents: 4
+;	constants: 2, 8x4 (REAL) and 3x4 (LONGINT)
+;
+
+dcl_cb cb0[12]	; [h0,h1,h2,h3],[h4,h5,h6,h7],[h8,0,0,0]
+					; [0,h0,h1,h2],[h3,h4,h5,h6],[h7,h8,0,0]
+					; [0,0,h0,h1],[h2,h3,h4,h5],[h6,h7,h8,0]
+					; [0,0,0,h0],[h1,h2,h3,h4],[h5,h6,h7,h8]
+					
+dcl_cb cb1[3]	; [hotSpot,widthSrc,physWidth,xPitchSrc], [boundary,(widthSrc DIV 4)*4,widthDst,xPitchDst]
+					; [phase,...]
+
+; hotSpot - has to be aligned to be multiple of 4
+
+dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+
+dcl_literal l0, 4, 0xFFFFFFFF, 1, 0
+
+umul r0.x, vaTid.x, cb1[0].w ; iLine*xPitchSrc -> index of the first line quad in the input
+imul r0.y, cb1[0].x, l0.y ; -hotSpot ; first input index
+
+imul r0.z, vaTid.x, cb1[1].w ; iLine*xPitchDst -> position of curent output quad
+
+udiv r0.w, cb1[1].z, l0.x
+iadd r0.w, r0.z, r0.w ; ind0+(widthDst DIV 4) -> position of last output quad
+
+; load first input quads
+call 0
+iadd r0.y, r0.y, l0.x ; increment input index
+mov r3, r2
+call 0
+iadd r0.y, r0.y, l0.x ; increment input index
+
+whileloop
+	
+	ige r1.z, r0.z, r0.w ; ind >= ind0+(widthDst DIV 4)
+	break_logicalnz r1.z
+	
+	mov r5, r3
+	mov r4, r2
+		
+	call 0 ; load next input quad
+	iadd r0.y, r0.y, l0.x ; increment input index
+	mov r3, r2
+	call 0 ; load next input quad
+	iadd r0.y, r0.y, l0.x ; increment input index
+
+	call 1 ; compute output quad
+	mov g[r0.z], r30 ; store output quad		
+	
+	iadd r0.z, r0.z, l0.z ; increment output index
+endloop
+
+umod r0.w, cb1[1].z, l0.x ; account padding -> widthDst MOD 4
+if_logicalnz r0.w
+	
+	; last line quad
+	
+	mov r5, r3
+	mov r4, r2
+		
+	call 0 ; load next input quad
+	iadd r0.y, r0.y, l0.x ; increment input index
+	mov r3, r2
+	call 0 ; load next input quad
+	
+	call 1	
+
+	switch r0.w
+		case 1
+			mov r30, r30.x000
+			break
+		case 2
+			mov r30, r30.xy00
+			break
+		case 3
+			mov r30, r30.xyz0
+			break
+	endswitch
+	
+	mov g[r0.z], r30 ; store output quad
+endif;
+
+endmain
+
+; get input quad with account of boundaries
+; r0.x - linear position of the first line element with account of padding, in quads
+; r0.y - index of input quad within the line, in single elements
+; output is returned in r2
+; r1 is used for intermediate results
+func 0
+
+ige r1.z, r0.y, r0.0 ; ind >= 0
+ilt r1.w, r0.y, cb1[1].y ; ind < (widthSrc DIV 4)*4
+iand r1.w, r1.z, r1.w
+
+if_logicalnz r1.w ; (ind >= 0) & (ind < (widthSrc DIV 4)*4) -> not on boundaries
+	udiv r1.x, r0.y, l0.x ; index in quads
+	iadd r1.x, r0.x, r1.x ; linear position of quad to load
+	; 2D position of the quad
+	udiv r2.y, r1.x, cb1[0].z
+	umod r2.x, r1.x, cb1[0].z
+	itof r2, r2
+	sample_resource(0)_sampler(0) r2, r2.xy
+else
+	
+	mov r2, r2.0000
+	
+	if_logicalz r1.z ; left boundary
+		; currently only FiniteData boundary
+	else ; right boundary		
+		ige r1.z, r0.y, cb1[0].y ; ind >= widthSrc
+		if_logicalnz r1.z
+			; currently only FiniteData boundary
+		else
+			
+			; case when width is not multiple of 4 and there are still some data in the line
+			
+			udiv r1.x, r0.y, l0.x ; index in quads
+			iadd r1.x, r0.x, r1.x ; linear position of quad to load
+			; 2D position of the quad
+			udiv r2.y, r1.x, cb1[0].z
+			umod r2.x, r1.x, cb1[0].z
+			itof r2, r2			
+			
+			umod r1.z, cb1[0].y, l0.x ; widthSrc MOD 4
 			switch r1.z
 				case 1
 					sample_resource(0)_sampler(0) r2.x000, r2.xy
@@ -8258,22 +8807,1783 @@ endfunc
 ; uses r31, r32, r33 for intermediate results
 func 1
 
-mul r30, r5, cb0[0]
-mad r30, r4, cb0[1], r30
+switch cb1[2].x
 
-mul r31, r5, cb0[4]
-mad r31, r4, cb0[5], r31
+	case 0
+		mul r30, r5, cb0[0]
+		mad r30, r4, cb0[1], r30
+		mad r30, r3, cb0[2], r30
 
-mul r32, r3, cb0[0]
-mad r32, r2, cb0[1], r32
+		mul r31, r5, cb0[6]
+		mad r31, r4, cb0[7], r31
+		mad r31, r3, cb0[8], r31
 
-mul r33, r3, cb0[4]
-mad r33, r2, cb0[5], r33
+		mul r32, r4, cb0[0]
+		mad r32, r3, cb0[1], r32
+		mad r32, r2, cb0[2], r32
 
+		mul r33, r4, cb0[6]
+		mad r33, r3, cb0[7], r33
+		mad r33, r2, cb0[8], r33
+	break;
+	
+	case 1
+		mul r30, r5, cb0[3]
+		mad r30, r4, cb0[4], r30
+		mad r30, r3, cb0[5], r30
+
+		mul r31, r5, cb0[9]
+		mad r31, r4, cb0[10], r31
+		mad r31, r3, cb0[11], r31
+
+		mul r32, r4, cb0[3]
+		mad r32, r3, cb0[4], r32
+		mad r32, r2, cb0[5], r32
+
+		mul r33, r4, cb0[9]
+		mad r33, r3, cb0[10], r33
+		mad r33, r2, cb0[11], r33
+	break
+endswitch
+	
 dp4 r30.x, r30, r30.1111
 dp4 r30.y, r31, r31.1111
 dp4 r30.z, r32, r32.1111
 dp4 r30.w, r33, r33.1111
+
+ret
+endfunc
+
+end
+]]>
+	</ILKernel>
+	
+<ILKernel name = "Convolve3DY5Down2_R">
+<![CDATA[
+il_cs_2_0
+dcl_num_thread_per_group 64
+;
+;	Convolve 3D virtualized array along Y direction with up to 5 taps FIR filter and downsampling by 2
+; 
+;	inputs: 1
+;	outputs: 0
+;	global buffer: Yes
+;	data type: REAL
+;	nComponents: 4
+;	constants: 2, 8x4 (REAL) and 3x4 (LONGINT)
+;
+
+dcl_cb cb0[8]	; [h0,h1,h2,h3],[h4,0,0,0]
+					; [0,h0,h1,h2],[h3,h4,0,0]
+					; [0,0,h0,h1],[h2,h3,h4,0]
+					; [0,0,0,h0],[h1,h2,h3,h4]
+					
+dcl_cb cb1[3]	; [hotSpot,widthSrc,physWidth,xPitch], [boundary,(widthSrc DIV 4)*4,widthDst,Nz]
+					; [phase,...]
+
+; hotSpot - has to be aligned to be multiple of 4
+; widthSrc/Dst - is the line width
+
+dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+
+dcl_literal l0, 4, 0xFFFFFFFF, 1, 0
+
+imul r0.x, cb1[1].w, cb1[0].w ; Nz*xPitch
+ilt r0.z, vaTid.x, r0.x ; check thread index!
+if_logicalnz r0.z
+
+	; in this case we have Nz*xPitch threads, thus the thread index is represented by i*xPitch + j
+	udiv r0.y, vaTid.x, cb1[0].w ; i
+	umod r0.x, vaTid.x, cb1[0].w ; j
+	
+	; position of first output quad
+	imul r0.z, cb1[1].z, cb1[0].w ; widthDst*xpitch
+	imad r0.z, r0.y, r0.z, r0.x ; i*widthDst*xPitch + j (in quads)
+	; last output quad
+	udiv r0.w, cb1[1].z, l0.x ; widthDst DIV 4
+	imul r0.w, r0.w, l0.x ; (widthDst DIV 4)*4
+	imad r0.w, r0.w, cb1[0].w, r0.z ; ind0 + (widthDst DIV 4)*4*xPitch
+		
+	; compute first quad position in the input
+	imul r1.z, cb1[0].y, cb1[0].w ; widthSrc*xpitch
+	imad r0.x, r0.y, r1.z, r0.x ; i*widthSrc*xPitch + j (in quads)
+	
+	imul r0.y, cb1[0].x, l0.y ; -hotSpot ; first input index
+			
+	; load first 4 input quads
+	call 0
+	iadd r0.y, r0.y, l0.x ; increment input index
+	
+	whileloop
+		
+		ige r1.z, r0.z, r0.w ; ind >= ind0 + (widthDst DIV 4)*4*xPitch
+		break_logicalnz r1.z
+		
+		mov r10, r2
+		mov r11, r3
+		mov r12, r4
+		mov r13, r5
+		
+		call 0 ; load next input quads
+		iadd r0.y, r0.y, l0.x ; increment input index
+		mov r6, r2
+		mov r7, r3
+		mov r8, r4
+		mov r9, r5
+		call 0 ; load next input quads
+		iadd r0.y, r0.y, l0.x ; increment input index
+		
+		call 1 ; compute output quads
+	
+		; transpose quads
+		transpose r30, r30
+		
+		iadd r1.x, r0.z, cb1[0].w
+		iadd r1.y, r1.x, cb1[0].w
+		iadd r1.z, r1.y, cb1[0].w				
+		
+		; write to the output		
+		mov g[r0.z], r30
+		mov g[r1.x], r31
+		mov g[r1.y], r32
+		mov g[r1.z], r33
+	
+		iadd r0.z, r1.z, cb1[0].w ; increment output index
+	endloop
+	
+	umod r0.w, cb1[1].z, l0.x ; account widthDst MOD 4 # 0
+	if_logicalnz r0.w
+		
+		; process last quads
+		
+		mov r10, r2
+		mov r11, r3
+		mov r12, r4
+		mov r13, r5
+		
+		call 0 ; load next input quads
+		iadd r0.y, r0.y, l0.x ; increment input index
+		mov r6, r2
+		mov r7, r3
+		mov r8, r4
+		mov r9, r5
+		call 0 ; load next input quads		
+		
+		call 1 ; compute output quads				
+		
+		; transpose quads
+		transpose r30, r30
+		
+		iadd r1.x, r0.z, cb1[0].w
+		iadd r1.y, r1.x, cb1[0].w
+	
+		switch r0.w		
+			case 1
+				mov g[r0.z], r30
+				break
+			case 2
+				mov g[r0.z], r30
+				mov g[r1.x], r31
+				break
+			case 3
+				mov g[r0.z], r30
+				mov g[r1.x], r31
+				mov g[r1.y], r32
+				break
+		endswitch
+				
+	endif
+	
+endif
+
+endmain
+
+; get input quad with account of boundaries for 4 lines at once
+; r0.x - linear position of the first line element with account of padding, in quads
+; r0.y - index of input quad within the line, in single elements
+; output is returned in r2, r3, r4, r5
+; r1 is used for intermediate results
+func 0
+
+ige r1.z, r0.y, r0.0 ; ind >= 0
+ilt r1.w, r0.y, cb1[1].y ; ind < (widthSrc DIV 4)*4
+iand r1.w, r1.z, r1.w
+
+if_logicalnz r1.w ; (ind >= 0) & (ind < (widthSrc DIV 4)*4) -> not on boundaries
+	
+	; 2D position of quads
+	imad r1.x, r0.y, cb1[0].w, r0.x ; linear position of quad to load
+	udiv r2.y, r1.x, cb1[0].z
+	umod r2.x, r1.x, cb1[0].z
+	
+	iadd r1.x, r1.x, cb1[0].w ; ind + xPitch
+	udiv r3.y, r1.x, cb1[0].z
+	umod r3.x, r1.x, cb1[0].z
+	
+	iadd r1.x, r1.x, cb1[0].w
+	udiv r4.y, r1.x, cb1[0].z
+	umod r4.x, r1.x, cb1[0].z
+	
+	iadd r1.x, r1.x, cb1[0].w
+	udiv r5.y, r1.x, cb1[0].z
+	umod r5.x, r1.x, cb1[0].z
+	
+	itof r2, r2
+	itof r3, r3
+	itof r4, r4
+	itof r5, r5
+	
+	sample_resource(0)_sampler(0) r2, r2.xy
+	sample_resource(0)_sampler(0) r3, r3.xy
+	sample_resource(0)_sampler(0) r4, r4.xy
+	sample_resource(0)_sampler(0) r5, r5.xy
+else
+	
+	mov r2, r2.0000
+	mov r3, r3.0000
+	mov r4, r4.0000
+	mov r5, r5.0000
+	
+	if_logicalz r1.z ; left boundary
+		 ; currently only FiniteData boundary		
+	else ; right boundary		
+		ige r1.z, r0.y, cb1[0].y
+		if_logicalnz r1.z
+			 ; currently only FiniteData boundary
+		else
+			
+			; case when width is not multiple of 4 and there are still some data in the line
+			
+			; 2D position of quads
+			imad r1.x, r0.y, cb1[0].w, r0.x ; linear position of quad to load
+			udiv r2.y, r1.x, cb1[0].z
+			umod r2.x, r1.x, cb1[0].z
+			itof r2, r2
+			
+			umod r1.z, cb1[0].y, l0.x ; width MOD 4
+			switch r1.z
+				case 1
+					sample_resource(0)_sampler(0) r2, r2.xy					
+				break
+				
+				case 2
+					iadd r1.x, r1.x, cb1[0].w ; ind + xPitch
+					udiv r3.y, r1.x, cb1[0].z
+					umod r3.x, r1.x, cb1[0].z
+					itof r3, r3
+					sample_resource(0)_sampler(0) r2, r2.xy
+					sample_resource(0)_sampler(0) r3, r3.xy
+				break
+				
+				case 3
+					iadd r1.x, r1.x, cb1[0].w ; ind + xPitch
+					udiv r3.y, r1.x, cb1[0].z
+					umod r3.x, r1.x, cb1[0].z
+		
+					iadd r1.x, r1.x, cb1[0].w
+					udiv r4.y, r1.x, cb1[0].z
+					umod r4.x, r1.x, cb1[0].z
+					itof r3, r3
+					itof r4, r4
+					sample_resource(0)_sampler(0) r2, r2.xy
+					sample_resource(0)_sampler(0) r3, r3.xy
+					sample_resource(0)_sampler(0) r4, r4.xy
+				break
+			endswitch						
+		endif
+	endif
+	
+endif
+
+; transpose quads
+transpose r2, r2
+
+ret
+endfunc
+
+; compute 4 output quads
+; {r10,r11,r12,r13}, {r6,r7,r8,r9}, {r2,r3,r4,r5} - input quads
+; output is stored in {r30,r31,r32,r33}
+; uses r34,r35,r36 for intermediate results
+func 1
+
+switch cb1[2].x
+
+case 0
+	mul r30, r10, cb0[0]
+	mad r30, r6, cb0[1], r30
+	
+	mul r31, r10, cb0[4]
+	mad r31, r6, cb0[5], r31
+	
+	mul r32, r6, cb0[0]
+	mad r32, r2, cb0[1], r32
+	
+	mul r33, r6, cb0[4]
+	mad r33, r2, cb0[5], r33
+		
+	dp4 r30.x, r30, r30.1111
+	dp4 r30.y, r31, r31.1111
+	dp4 r30.z, r32, r32.1111
+	dp4 r30.w, r33, r33.1111
+	
+	; ****
+	
+	mul r31, r11, cb0[0]
+	mad r31, r7, cb0[1], r31
+	
+	mul r32, r11, cb0[4]
+	mad r32, r7, cb0[5], r32
+	
+	mul r33, r7, cb0[0]
+	mad r33, r3, cb0[1], r33
+	
+	mul r34, r7, cb0[4]
+	mad r34, r3, cb0[5], r34
+		
+	dp4 r31.x, r31, r31.1111
+	dp4 r31.y, r32, r32.1111
+	dp4 r31.z, r33, r33.1111
+	dp4 r31.w, r34, r34.1111
+	
+	; ****
+	
+	mul r32, r12, cb0[0]
+	mad r32, r8, cb0[1], r32
+	
+	mul r33, r12, cb0[4]
+	mad r33, r8, cb0[5], r33
+	
+	mul r34, r8, cb0[0]
+	mad r34, r4, cb0[1], r34
+	
+	mul r35, r8, cb0[4]
+	mad r35, r4, cb0[5], r35
+		
+	dp4 r32.x, r32, r32.1111
+	dp4 r32.y, r33, r33.1111
+	dp4 r32.z, r34, r34.1111
+	dp4 r32.w, r35, r35.1111
+	
+	; ****
+	
+	mul r33, r13, cb0[0]
+	mad r33, r9, cb0[1], r33
+	
+	mul r34, r13, cb0[4]
+	mad r34, r9, cb0[5], r34
+	
+	mul r35, r9, cb0[0]
+	mad r35, r5, cb0[1], r35
+	
+	mul r36, r9, cb0[4]
+	mad r36, r5, cb0[5], r36
+		
+	dp4 r33.x, r33, r33.1111
+	dp4 r33.y, r34, r34.1111
+	dp4 r33.z, r35, r35.1111
+	dp4 r33.w, r36, r36.1111
+break
+
+case 1
+
+	mul r30, r10, cb0[2]
+	mad r30, r6, cb0[3], r30
+	
+	mul r31, r10, cb0[6]
+	mad r31, r6, cb0[7], r31
+	
+	mul r32, r6, cb0[2]
+	mad r32, r2, cb0[3], r32
+	
+	mul r33, r6, cb0[6]
+	mad r33, r2, cb0[7], r33
+		
+	dp4 r30.x, r30, r30.1111
+	dp4 r30.y, r31, r31.1111
+	dp4 r30.z, r32, r32.1111
+	dp4 r30.w, r33, r33.1111
+	
+	; ****
+	
+	mul r31, r11, cb0[2]
+	mad r31, r7, cb0[3], r31
+	
+	mul r32, r11, cb0[6]
+	mad r32, r7, cb0[7], r32
+	
+	mul r33, r7, cb0[2]
+	mad r33, r3, cb0[3], r33
+	
+	mul r34, r7, cb0[6]
+	mad r34, r3, cb0[7], r34
+		
+	dp4 r31.x, r31, r31.1111
+	dp4 r31.y, r32, r32.1111
+	dp4 r31.z, r33, r33.1111
+	dp4 r31.w, r34, r34.1111
+	
+	; ****
+	
+	mul r32, r12, cb0[2]
+	mad r32, r8, cb0[3], r32
+	
+	mul r33, r12, cb0[6]
+	mad r33, r8, cb0[7], r33
+	
+	mul r34, r8, cb0[2]
+	mad r34, r4, cb0[3], r34
+	
+	mul r35, r8, cb0[6]
+	mad r35, r4, cb0[7], r35
+		
+	dp4 r32.x, r32, r32.1111
+	dp4 r32.y, r33, r33.1111
+	dp4 r32.z, r34, r34.1111
+	dp4 r32.w, r35, r35.1111
+	
+	; ****
+	
+	mul r33, r13, cb0[2]
+	mad r33, r9, cb0[3], r33
+	
+	mul r34, r13, cb0[6]
+	mad r34, r9, cb0[7], r34
+	
+	mul r35, r9, cb0[2]
+	mad r35, r5, cb0[3], r35
+	
+	mul r36, r9, cb0[6]
+	mad r36, r5, cb0[7], r36
+		
+	dp4 r33.x, r33, r33.1111
+	dp4 r33.y, r34, r34.1111
+	dp4 r33.z, r35, r35.1111
+	dp4 r33.w, r36, r36.1111
+break
+
+endswitch
+
+ret
+endfunc
+
+end
+]]>
+	</ILKernel>
+	
+<ILKernel name = "Convolve3DY9Down2_R">
+<![CDATA[
+il_cs_2_0
+dcl_num_thread_per_group 64
+;
+;	Convolve 3D virtualized array along Y direction with up to 9 taps FIR filter and downsampling by 2
+; 
+;	inputs: 1
+;	outputs: 0
+;	global buffer: Yes
+;	data type: REAL
+;	nComponents: 4
+;	constants: 2, 12x4 (REAL) and 3x4 (LONGINT)
+;
+
+dcl_cb cb0[12]	; [h0,h1,h2,h3],[h4,h5,h6,h7],[h8,0,0,0]
+					; [0,h0,h1,h2],[h3,h4,h5,h6],[h7,h8,0,0]
+					; [0,0,h0,h1],[h2,h3,h4,h5],[h6,h7,h8,0]
+					; [0,0,0,h0],[h1,h2,h3,h4],[h5,h6,h7,h8]	
+					
+dcl_cb cb1[3]	; [hotSpot,widthSrc,physWidth,xPitch], [boundary,(widthSrc DIV 4)*4,widthDst,Nz]
+					; [phase,...]
+
+; hotSpot - has to be aligned to be multiple of 4
+; widthSrc/Dst - is the line width
+
+dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+
+dcl_literal l0, 4, 0xFFFFFFFF, 1, 0
+
+imul r0.x, cb1[1].w, cb1[0].w ; Nz*xPitch
+ilt r0.z, vaTid.x, r0.x ; check thread index!
+if_logicalnz r0.z
+
+	; in this case we have Nz*xPitch threads, thus the thread index is represented by i*xPitch + j
+	udiv r0.y, vaTid.x, cb1[0].w ; i
+	umod r0.x, vaTid.x, cb1[0].w ; j
+	
+	; position of first output quad
+	imul r0.z, cb1[1].z, cb1[0].w ; widthDst*xpitch
+	imad r0.z, r0.y, r0.z, r0.x ; i*widthDst*xPitch + j (in quads)
+	; last output quad
+	udiv r0.w, cb1[1].z, l0.x ; widthDst DIV 4
+	imul r0.w, r0.w, l0.x ; (widthDst DIV 4)*4
+	imad r0.w, r0.w, cb1[0].w, r0.z ; ind0 + (widthDst DIV 4)*4*xPitch
+		
+	; compute first quad position in the input
+	imul r1.z, cb1[0].y, cb1[0].w ; widthSrc*xpitch
+	imad r0.x, r0.y, r1.z, r0.x ; i*widthSrc*xPitch + j (in quads)
+	
+	imul r0.y, cb1[0].x, l0.y ; -hotSpot ; first input index
+			
+	; load first 4 input quads
+	call 0
+	iadd r0.y, r0.y, l0.x ; increment input index
+	mov r6, r2
+	mov r7, r3
+	mov r8, r4
+	mov r9, r5
+	call 0
+	iadd r0.y, r0.y, l0.x ; increment input index
+	
+	whileloop
+		
+		ige r1.z, r0.z, r0.w ; ind >= ind0 + (widthDst DIV 4)*4*xPitch
+		break_logicalnz r1.z
+		
+		mov r14, r6
+		mov r15, r7
+		mov r16, r8
+		mov r17, r9
+		
+		mov r10, r2
+		mov r11, r3
+		mov r12, r4
+		mov r13, r5
+		
+		call 0 ; load next input quads
+		iadd r0.y, r0.y, l0.x ; increment input index
+		mov r6, r2
+		mov r7, r3
+		mov r8, r4
+		mov r9, r5
+		call 0 ; load next input quads
+		iadd r0.y, r0.y, l0.x ; increment input index
+		
+		call 1 ; compute output quads
+	
+		; transpose quads
+		transpose r30, r30
+		
+		iadd r1.x, r0.z, cb1[0].w
+		iadd r1.y, r1.x, cb1[0].w
+		iadd r1.z, r1.y, cb1[0].w				
+		
+		; write to the output		
+		mov g[r0.z], r30
+		mov g[r1.x], r31
+		mov g[r1.y], r32
+		mov g[r1.z], r33
+	
+		iadd r0.z, r1.z, cb1[0].w ; increment output index
+	endloop
+	
+	umod r0.w, cb1[1].z, l0.x ; account widthDst MOD 4 # 0
+	if_logicalnz r0.w
+		
+		; process last quads
+		
+		mov r14, r6
+		mov r15, r7
+		mov r16, r8
+		mov r17, r9
+		
+		mov r10, r2
+		mov r11, r3
+		mov r12, r4
+		mov r13, r5
+		
+		call 0 ; load next input quads
+		iadd r0.y, r0.y, l0.x ; increment input index
+		mov r6, r2
+		mov r7, r3
+		mov r8, r4
+		mov r9, r5
+		call 0 ; load next input quads		
+		
+		call 1 ; compute output quads				
+		
+		; transpose quads
+		transpose r30, r30
+		
+		iadd r1.x, r0.z, cb1[0].w
+		iadd r1.y, r1.x, cb1[0].w
+	
+		switch r0.w		
+			case 1
+				mov g[r0.z], r30
+				break
+			case 2
+				mov g[r0.z], r30
+				mov g[r1.x], r31
+				break
+			case 3
+				mov g[r0.z], r30
+				mov g[r1.x], r31
+				mov g[r1.y], r32
+				break
+		endswitch
+				
+	endif
+	
+endif
+
+endmain
+
+; get input quad with account of boundaries for 4 lines at once
+; r0.x - linear position of the first line element with account of padding, in quads
+; r0.y - index of input quad within the line, in single elements
+; output is returned in r2, r3, r4, r5
+; r1 is used for intermediate results
+func 0
+
+ige r1.z, r0.y, r0.0 ; ind >= 0
+ilt r1.w, r0.y, cb1[1].y ; ind < (widthSrc DIV 4)*4
+iand r1.w, r1.z, r1.w
+
+if_logicalnz r1.w ; (ind >= 0) & (ind < (widthSrc DIV 4)*4) -> not on boundaries
+	
+	; 2D position of quads
+	imad r1.x, r0.y, cb1[0].w, r0.x ; linear position of quad to load
+	udiv r2.y, r1.x, cb1[0].z
+	umod r2.x, r1.x, cb1[0].z
+	
+	iadd r1.x, r1.x, cb1[0].w ; ind + xPitch
+	udiv r3.y, r1.x, cb1[0].z
+	umod r3.x, r1.x, cb1[0].z
+	
+	iadd r1.x, r1.x, cb1[0].w
+	udiv r4.y, r1.x, cb1[0].z
+	umod r4.x, r1.x, cb1[0].z
+	
+	iadd r1.x, r1.x, cb1[0].w
+	udiv r5.y, r1.x, cb1[0].z
+	umod r5.x, r1.x, cb1[0].z
+	
+	itof r2, r2
+	itof r3, r3
+	itof r4, r4
+	itof r5, r5
+	
+	sample_resource(0)_sampler(0) r2, r2.xy
+	sample_resource(0)_sampler(0) r3, r3.xy
+	sample_resource(0)_sampler(0) r4, r4.xy
+	sample_resource(0)_sampler(0) r5, r5.xy
+else
+	
+	mov r2, r2.0000
+	mov r3, r3.0000
+	mov r4, r4.0000
+	mov r5, r5.0000
+	
+	if_logicalz r1.z ; left boundary
+		 ; currently only FiniteData boundary		
+	else ; right boundary		
+		ige r1.z, r0.y, cb1[0].y
+		if_logicalnz r1.z
+			 ; currently only FiniteData boundary
+		else
+			
+			; case when width is not multiple of 4 and there are still some data in the line
+			
+			; 2D position of quads
+			imad r1.x, r0.y, cb1[0].w, r0.x ; linear position of quad to load
+			udiv r2.y, r1.x, cb1[0].z
+			umod r2.x, r1.x, cb1[0].z
+			itof r2, r2
+			
+			umod r1.z, cb1[0].y, l0.x ; width MOD 4
+			switch r1.z
+				case 1
+					sample_resource(0)_sampler(0) r2, r2.xy					
+				break
+				
+				case 2
+					iadd r1.x, r1.x, cb1[0].w ; ind + xPitch
+					udiv r3.y, r1.x, cb1[0].z
+					umod r3.x, r1.x, cb1[0].z
+					itof r3, r3
+					sample_resource(0)_sampler(0) r2, r2.xy
+					sample_resource(0)_sampler(0) r3, r3.xy
+				break
+				
+				case 3
+					iadd r1.x, r1.x, cb1[0].w ; ind + xPitch
+					udiv r3.y, r1.x, cb1[0].z
+					umod r3.x, r1.x, cb1[0].z
+		
+					iadd r1.x, r1.x, cb1[0].w
+					udiv r4.y, r1.x, cb1[0].z
+					umod r4.x, r1.x, cb1[0].z
+					itof r3, r3
+					itof r4, r4
+					sample_resource(0)_sampler(0) r2, r2.xy
+					sample_resource(0)_sampler(0) r3, r3.xy
+					sample_resource(0)_sampler(0) r4, r4.xy
+				break
+			endswitch						
+		endif
+	endif
+	
+endif
+
+; transpose quads
+transpose r2, r2
+
+ret
+endfunc
+
+; compute 4 output quads
+; {r14,r15,r16,r17}, {r10,r11,r12,r13}, {r6,r7,r8,r9}, {r2,r3,r4,r5} - input quads
+; output is stored in {r30,r31,r32,r33}
+; uses r34,r35,r36 for intermediate results
+func 1
+
+switch cb1[2].x
+
+case 0
+
+	mul r30, r14, cb0[0]
+	mad r30, r10, cb0[1], r30
+	mad r30, r6, cb0[2], r30
+	
+	mul r31, r14, cb0[6]
+	mad r31, r10, cb0[7], r31
+	mad r31, r6, cb0[8], r31
+	
+	mul r32, r10, cb0[0]
+	mad r32, r6, cb0[1], r32
+	mad r32, r2, cb0[2], r32
+	
+	mul r33, r10, cb0[6]
+	mad r33, r6, cb0[7], r33
+	mad r33, r2, cb0[8], r33
+		
+	dp4 r30.x, r30, r30.1111
+	dp4 r30.y, r31, r31.1111
+	dp4 r30.z, r32, r32.1111
+	dp4 r30.w, r33, r33.1111
+	
+	; ****
+	
+	mul r31, r15, cb0[0]
+	mad r31, r11, cb0[1], r31
+	mad r31, r7, cb0[2], r31
+	
+	mul r32, r15, cb0[6]
+	mad r32, r11, cb0[7], r32
+	mad r32, r7, cb0[8], r32
+	
+	mul r33, r11, cb0[0]
+	mad r33, r7, cb0[1], r33
+	mad r33, r3, cb0[2], r33
+	
+	mul r34, r11, cb0[6]
+	mad r34, r7, cb0[7], r34
+	mad r34, r3, cb0[8], r34
+		
+	dp4 r31.x, r31, r31.1111
+	dp4 r31.y, r32, r32.1111
+	dp4 r31.z, r33, r33.1111
+	dp4 r31.w, r34, r34.1111
+	
+	; ****
+	
+	mul r32, r16, cb0[0]
+	mad r32, r12, cb0[1], r32
+	mad r32, r8, cb0[2], r32
+	
+	mul r33, r16, cb0[6]
+	mad r33, r12, cb0[7], r33
+	mad r33, r8, cb0[8], r33
+	
+	mul r34, r12, cb0[0]
+	mad r34, r8, cb0[1], r34
+	mad r34, r4, cb0[2], r34
+	
+	mul r35, r12, cb0[6]
+	mad r35, r8, cb0[7], r35
+	mad r35, r4, cb0[8], r35
+		
+	dp4 r32.x, r32, r32.1111
+	dp4 r32.y, r33, r33.1111
+		dp4 r32.z, r34, r34.1111
+	dp4 r32.w, r35, r35.1111
+	
+	; ****
+	
+	mul r33, r17, cb0[0]
+	mad r33, r13, cb0[1], r33
+	mad r33, r9, cb0[2], r33
+	
+	mul r34, r17, cb0[6]
+	mad r34, r13, cb0[7], r34
+	mad r34, r9, cb0[8], r34
+	
+	mul r35, r13, cb0[0]
+	mad r35, r9, cb0[1], r35
+	mad r35, r5, cb0[2], r35
+	
+	mul r36, r13, cb0[6]
+	mad r36, r9, cb0[7], r36
+	mad r36, r5, cb0[8], r36
+		
+	dp4 r33.x, r33, r33.1111
+	dp4 r33.y, r34, r34.1111
+	dp4 r33.z, r35, r35.1111
+	dp4 r33.w, r36, r36.1111
+	break
+	
+case 1
+	
+	mul r30, r14, cb0[3]
+	mad r30, r10, cb0[4], r30
+	mad r30, r6, cb0[5], r30
+	
+	mul r31, r14, cb0[9]
+	mad r31, r10, cb0[10], r31
+	mad r31, r6, cb0[11], r31
+	
+	mul r32, r10, cb0[3]
+	mad r32, r6, cb0[4], r32
+	mad r32, r2, cb0[5], r32
+	
+	mul r33, r10, cb0[9]
+	mad r33, r6, cb0[10], r33
+	mad r33, r2, cb0[11], r33
+		
+	dp4 r30.x, r30, r30.1111
+	dp4 r30.y, r31, r31.1111
+	dp4 r30.z, r32, r32.1111
+	dp4 r30.w, r33, r33.1111
+	
+	; ****
+	
+	mul r31, r15, cb0[3]
+	mad r31, r11, cb0[4], r31
+	mad r31, r7, cb0[5], r31
+	
+	mul r32, r15, cb0[9]
+	mad r32, r11, cb0[10], r32
+	mad r32, r7, cb0[11], r32
+	
+	mul r33, r11, cb0[3]
+	mad r33, r7, cb0[4], r33
+	mad r33, r3, cb0[5], r33
+	
+	mul r34, r11, cb0[9]
+	mad r34, r7, cb0[10], r34
+	mad r34, r3, cb0[11], r34
+		
+	dp4 r31.x, r31, r31.1111
+	dp4 r31.y, r32, r32.1111
+	dp4 r31.z, r33, r33.1111
+	dp4 r31.w, r34, r34.1111
+	
+	; ****
+	
+	mul r32, r16, cb0[3]
+	mad r32, r12, cb0[4], r32
+	mad r32, r8, cb0[5], r32
+
+	mul r33, r16, cb0[9]
+	mad r33, r12, cb0[10], r33
+	mad r33, r8, cb0[11], r33
+	
+	mul r34, r12, cb0[3]
+	mad r34, r8, cb0[4], r34
+	mad r34, r4, cb0[5], r34
+	
+	mul r35, r12, cb0[9]
+	mad r35, r8, cb0[10], r35
+	mad r35, r4, cb0[11], r35
+		
+	dp4 r32.x, r32, r32.1111
+	dp4 r32.y, r33, r33.1111
+	dp4 r32.z, r34, r34.1111
+	dp4 r32.w, r35, r35.1111
+	
+	; ****
+	
+	mul r33, r17, cb0[3]
+	mad r33, r13, cb0[4], r33
+	mad r33, r9, cb0[5], r33
+	
+	mul r34, r17, cb0[9]
+	mad r34, r13, cb0[10], r34
+	mad r34, r9, cb0[11], r34
+	
+	mul r35, r13, cb0[3]
+	mad r35, r9, cb0[4], r35
+	mad r35, r5, cb0[5], r35
+	
+	mul r36, r13, cb0[9]
+	mad r36, r9, cb0[10], r36
+	mad r36, r5, cb0[11], r36
+		
+	dp4 r33.x, r33, r33.1111
+	dp4 r33.y, r34, r34.1111
+	dp4 r33.z, r35, r35.1111
+	dp4 r33.w, r36, r36.1111
+break
+
+endswitch
+
+ret
+endfunc
+
+end
+]]>
+	</ILKernel>
+	
+<ILKernel name = "ConvolveNDZ5Down2_R">
+<![CDATA[
+il_cs_2_0
+dcl_num_thread_per_group 64
+;
+;	Convolve ND virtualized array along Z (first) direction with up to 5 taps FIR filter and downsampling by 2
+; 
+;	inputs: 1
+;	outputs: 0
+;	global buffer: Yes
+;	data type: REAL
+;	nComponents: 4
+;	constants: 2, 8x4 (REAL) and 2x4 (LONGINT)
+;
+
+dcl_cb cb0[8]	; [h0,h1,h2,h3],[h4,0,0,0]
+					; [0,h0,h1,h2],[h3,h4,0,0]
+					; [0,0,h0,h1],[h2,h3,h4,0]
+					; [0,0,0,h0],[h1,h2,h3,h4]
+					
+dcl_cb cb1[3]	; [hotSpot,widthSrc,physWidth,xPitch], [boundary,(widthSrc DIV 4)*4,Ny*xPitch,widthDst]
+					; [phase,...]
+
+; hotSpot - has to be aligned to be multiple of 4
+; width - is the line width
+
+dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+
+dcl_literal l0, 4, 0xFFFFFFFF, 1, 0
+
+ilt r0.z, vaTid.x, cb1[1].z ; check thread index!
+if_logicalnz r0.z
+
+	; in this case we have Ny*xPitch threads
+	mov r0.x, vaTid.x ; position of first input quad (in quads)
+	imul r0.y, cb1[0].x, l0.y ; -hotSpot ; first input index
+	
+	mov r0.z, r0.x ; position of curent output quad
+	udiv r0.w, cb1[1].w, l0.x ; widthDst DIV 4
+	imul r0.w, r0.w, l0.x ; (widthDst DIV 4)*4
+	imad r0.w, r0.w, cb1[1].z, r0.z ; ind0 + (widthDst DIV 4)*4*Ny*xPitch
+	
+	; load first 4 input quads
+	call 0
+	iadd r0.y, r0.y, l0.x ; increment input index	
+	
+	whileloop
+				
+		ige r1.z, r0.z, r0.w ; ind >= ind0 + (widthDst DIV 4)*4*Ny*xPitch
+		break_logicalnz r1.z
+		
+		mov r10, r2
+		mov r11, r3
+		mov r12, r4
+		mov r13, r5
+		
+		call 0 ; load next input quads
+		iadd r0.y, r0.y, l0.x ; increment input index
+		mov r6, r2
+		mov r7, r3
+		mov r8, r4
+		mov r9, r5
+		call 0 ; load next input quads
+		iadd r0.y, r0.y, l0.x ; increment input index
+				
+		call 1 ; compute output quads
+		
+		; transpose quads
+		transpose r30, r30
+		
+		iadd r1.x, r0.z, cb1[1].z
+		iadd r1.y, r1.x, cb1[1].z
+		iadd r1.z, r1.y, cb1[1].z
+		
+		; write to the output
+		mov g[r0.z], r30
+		mov g[r1.x], r31
+		mov g[r1.y], r32
+		mov g[r1.z], r33
+	
+		iadd r0.z, r1.z, cb1[1].z ; increment output index
+	endloop
+
+	umod r0.w, cb1[1].w, l0.x ; account widthDst MOD 4 # 0
+	if_logicalnz r0.w
+		
+		; process last quads
+		
+		mov r10, r2
+		mov r11, r3
+		mov r12, r4
+		mov r13, r5
+		
+		call 0 ; load next input quads
+		iadd r0.y, r0.y, l0.x ; increment input index
+		mov r6, r2
+		mov r7, r3
+		mov r8, r4
+		mov r9, r5
+		call 0 ; load next input quads		
+		
+		call 1 ; compute output quads
+		
+		; transpose quads
+		transpose r30, r30
+		
+		iadd r1.x, r0.z, cb1[1].z
+		iadd r1.y, r1.x, cb1[1].z
+	
+		switch r0.w		
+			case 1
+				mov g[r0.z], r30
+				break
+			case 2
+				mov g[r0.z], r30
+				mov g[r1.x], r31
+				break
+			case 3
+				mov g[r0.z], r30
+				mov g[r1.x], r31
+				mov g[r1.y], r32
+				break
+		endswitch
+				
+	endif;
+
+endif; 
+
+endmain
+
+; get input quad with account of boundaries for 4 lines at once
+; r0.x - linear position of the first line element with account of padding, in quads
+; r0.y - index of input quad within the line, in single elements
+; output is returned in r2, r3, r4, r5
+; r1 is used for intermediate results
+func 0
+
+ige r1.z, r0.y, r0.0 ; ind >= 0
+ilt r1.w, r0.y, cb1[1].y ; ind < (widthSrc DIV 4)*4
+iand r1.w, r1.z, r1.w
+
+if_logicalnz r1.w ; (ind >= 0) & (ind < (widthSrc DIV 4)*4) -> not on boundaries
+	
+	; 2D position of quads
+	imad r1.x, r0.y, cb1[1].z, r0.x ; linear position of quad to load
+	udiv r3.y, r1.x, cb1[0].z
+	umod r3.x, r1.x, cb1[0].z
+	
+	iadd r1.x, r1.x, cb1[1].z ; ind + Ny*xPitch
+	udiv r4.y, r1.x, cb1[0].z
+	umod r4.x, r1.x, cb1[0].z
+	
+	iadd r1.x, r1.x, cb1[1].z
+	udiv r5.y, r1.x, cb1[0].z
+	umod r5.x, r1.x, cb1[0].z
+	
+	iadd r1.x, r1.x, cb1[1].z
+	udiv r1.y, r1.x, cb1[0].z
+	umod r1.x, r1.x, cb1[0].z
+	
+	itof r3, r3
+	itof r4, r4
+	itof r5, r5
+	itof r1, r1
+	
+	sample_resource(0)_sampler(0) r2, r3.xy
+	sample_resource(0)_sampler(0) r3, r4.xy
+	sample_resource(0)_sampler(0) r4, r5.xy
+	sample_resource(0)_sampler(0) r5, r1.xy
+else
+	
+	mov r2, r2.0000
+	mov r3, r3.0000
+	mov r4, r4.0000
+	mov r5, r5.0000
+	
+	if_logicalz r1.z ; left boundary
+		 ; currently only FiniteData boundary		
+	else ; right boundary		
+		ige r1.z, r0.y, cb1[0].y
+		if_logicalnz r1.z
+			 ; currently only FiniteData boundary
+		else
+			
+			; case when width is not multiple of 4 and there are still some data in the line
+			
+			; 2D position of quads
+			imad r1.x, r0.y, cb1[1].z, r0.x ; linear position of quad to load
+			udiv r2.y, r1.x, cb1[0].z
+			umod r2.x, r1.x, cb1[0].z			
+			itof r2, r2		
+			
+			umod r1.z, cb1[0].y, l0.x ; width MOD 4
+			switch r1.z
+				case 1					
+					sample_resource(0)_sampler(0) r2, r2.xy					
+				break
+				
+				case 2
+					iadd r1.x, r1.x, cb1[1].z ; ind + Ny*xPitch			
+					udiv r3.y, r1.x, cb1[0].z
+					umod r3.x, r1.x, cb1[0].z
+					
+					itof r3, r3
+					sample_resource(0)_sampler(0) r2, r2.xy
+					sample_resource(0)_sampler(0) r3, r3.xy
+				break
+				
+				case 3
+					iadd r1.x, r1.x, cb1[1].z ; ind + Ny*xPitch			
+					udiv r3.y, r1.x, cb1[0].z
+					umod r3.x, r1.x, cb1[0].z
+		
+					iadd r1.x, r1.x, cb1[1].z
+					udiv r4.y, r1.x, cb1[0].z
+					umod r4.x, r1.x, cb1[0].z
+					
+					itof r3, r3
+					itof r4, r4					
+					sample_resource(0)_sampler(0) r2, r2.xy
+					sample_resource(0)_sampler(0) r3, r3.xy
+					sample_resource(0)_sampler(0) r4, r4.xy
+				break
+			endswitch						
+		endif
+	endif
+	
+endif
+
+; transpose quads
+transpose r2, r2
+
+ret
+endfunc
+
+; compute 4 output quads
+; {r10,r11,r12,r13}, {r6,r7,r8,r9}, {r2,r3,r4,r5} - input quads
+; output is stored in {r30,r31,r32,r33}
+; uses r34,r35,r36 for intermediate results
+func 1
+
+switch cb1[2].x
+
+case 0
+	mul r30, r10, cb0[0]
+	mad r30, r6, cb0[1], r30
+	
+	mul r31, r10, cb0[4]
+	mad r31, r6, cb0[5], r31
+	
+	mul r32, r6, cb0[0]
+	mad r32, r2, cb0[1], r32
+	
+	mul r33, r6, cb0[4]
+	mad r33, r2, cb0[5], r33
+		
+	dp4 r30.x, r30, r30.1111
+	dp4 r30.y, r31, r31.1111
+	dp4 r30.z, r32, r32.1111
+	dp4 r30.w, r33, r33.1111
+	
+	; ****
+	
+	mul r31, r11, cb0[0]
+	mad r31, r7, cb0[1], r31
+	
+	mul r32, r11, cb0[4]
+	mad r32, r7, cb0[5], r32
+	
+	mul r33, r7, cb0[0]
+	mad r33, r3, cb0[1], r33
+	
+	mul r34, r7, cb0[4]
+	mad r34, r3, cb0[5], r34
+		
+	dp4 r31.x, r31, r31.1111
+	dp4 r31.y, r32, r32.1111
+	dp4 r31.z, r33, r33.1111
+	dp4 r31.w, r34, r34.1111
+	
+	; ****
+	
+	mul r32, r12, cb0[0]
+	mad r32, r8, cb0[1], r32
+	
+	mul r33, r12, cb0[4]
+	mad r33, r8, cb0[5], r33
+	
+	mul r34, r8, cb0[0]
+	mad r34, r4, cb0[1], r34
+	
+	mul r35, r8, cb0[4]
+	mad r35, r4, cb0[5], r35
+		
+	dp4 r32.x, r32, r32.1111
+	dp4 r32.y, r33, r33.1111
+	dp4 r32.z, r34, r34.1111
+	dp4 r32.w, r35, r35.1111
+	
+	; ****
+	
+	mul r33, r13, cb0[0]
+	mad r33, r9, cb0[1], r33
+	
+	mul r34, r13, cb0[4]
+	mad r34, r9, cb0[5], r34
+	
+	mul r35, r9, cb0[0]
+	mad r35, r5, cb0[1], r35
+	
+	mul r36, r9, cb0[4]
+	mad r36, r5, cb0[5], r36
+		
+	dp4 r33.x, r33, r33.1111
+	dp4 r33.y, r34, r34.1111
+	dp4 r33.z, r35, r35.1111
+	dp4 r33.w, r36, r36.1111
+break
+
+case 1
+
+	mul r30, r10, cb0[2]
+	mad r30, r6, cb0[3], r30
+	
+	mul r31, r10, cb0[6]
+	mad r31, r6, cb0[7], r31
+	
+	mul r32, r6, cb0[2]
+	mad r32, r2, cb0[3], r32
+	
+	mul r33, r6, cb0[6]
+	mad r33, r2, cb0[7], r33
+		
+	dp4 r30.x, r30, r30.1111
+	dp4 r30.y, r31, r31.1111
+	dp4 r30.z, r32, r32.1111
+	dp4 r30.w, r33, r33.1111
+	
+	; ****
+	
+	mul r31, r11, cb0[2]
+	mad r31, r7, cb0[3], r31
+	
+	mul r32, r11, cb0[6]
+	mad r32, r7, cb0[7], r32
+	
+	mul r33, r7, cb0[2]
+	mad r33, r3, cb0[3], r33
+	
+	mul r34, r7, cb0[6]
+	mad r34, r3, cb0[7], r34
+		
+	dp4 r31.x, r31, r31.1111
+	dp4 r31.y, r32, r32.1111
+	dp4 r31.z, r33, r33.1111
+	dp4 r31.w, r34, r34.1111
+	
+	; ****
+	
+	mul r32, r12, cb0[2]
+	mad r32, r8, cb0[3], r32
+	
+	mul r33, r12, cb0[6]
+	mad r33, r8, cb0[7], r33
+	
+	mul r34, r8, cb0[2]
+	mad r34, r4, cb0[3], r34
+	
+	mul r35, r8, cb0[6]
+	mad r35, r4, cb0[7], r35
+		
+	dp4 r32.x, r32, r32.1111
+	dp4 r32.y, r33, r33.1111
+	dp4 r32.z, r34, r34.1111
+	dp4 r32.w, r35, r35.1111
+	
+	; ****
+	
+	mul r33, r13, cb0[2]
+	mad r33, r9, cb0[3], r33
+	
+	mul r34, r13, cb0[6]
+	mad r34, r9, cb0[7], r34
+	
+	mul r35, r9, cb0[2]
+	mad r35, r5, cb0[3], r35
+	
+	mul r36, r9, cb0[6]
+	mad r36, r5, cb0[7], r36
+		
+	dp4 r33.x, r33, r33.1111
+	dp4 r33.y, r34, r34.1111
+	dp4 r33.z, r35, r35.1111
+	dp4 r33.w, r36, r36.1111
+break
+
+endswitch
+
+ret
+endfunc
+
+end
+]]>
+	</ILKernel>
+	
+<ILKernel name = "ConvolveNDZ9Down2_R">
+<![CDATA[
+il_cs_2_0
+dcl_num_thread_per_group 64
+;
+;	Convolve ND virtualized array along Z (first) direction with up to 9 taps FIR filter and downsampling by 2
+; 
+;	inputs: 1
+;	outputs: 0
+;	global buffer: Yes
+;	data type: REAL
+;	nComponents: 4
+;	constants: 2, 8x4 (REAL) and 2x4 (LONGINT)
+;
+
+dcl_cb cb0[12]	; [h0,h1,h2,h3],[h4,h5,h6,h7],[h8,0,0,0]
+					; [0,h0,h1,h2],[h3,h4,h5,h6],[h7,h8,0,0]
+					; [0,0,h0,h1],[h2,h3,h4,h5],[h6,h7,h8,0]
+					; [0,0,0,h0],[h1,h2,h3,h4],[h5,h6,h7,h8]
+					
+dcl_cb cb1[3]	; [hotSpot,widthSrc,physWidth,xPitch], [boundary,(widthSrc DIV 4)*4,Ny*xPitch,widthDst]
+					; [phase,...]
+
+; hotSpot - has to be aligned to be multiple of 4
+; width - is the line width
+
+dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+
+dcl_literal l0, 4, 0xFFFFFFFF, 1, 0
+
+ilt r0.z, vaTid.x, cb1[1].z ; check thread index!
+if_logicalnz r0.z
+
+	; in this case we have Ny*xPitch threads
+	mov r0.x, vaTid.x ; position of first input quad (in quads)
+	imul r0.y, cb1[0].x, l0.y ; -hotSpot ; first input index
+	
+	mov r0.z, r0.x ; position of curent output quad
+	udiv r0.w, cb1[1].w, l0.x ; widthDst DIV 4
+	imul r0.w, r0.w, l0.x ; (widthDst DIV 4)*4
+	imad r0.w, r0.w, cb1[1].z, r0.z ; ind0 + (widthDst DIV 4)*4*Ny*xPitch
+	
+	; load first 4 input quads
+	call 0
+	iadd r0.y, r0.y, l0.x ; increment input index
+	mov r6, r2
+	mov r7, r3
+	mov r8, r4
+	mov r9, r5
+	call 0
+	iadd r0.y, r0.y, l0.x ; increment input index
+	
+	whileloop
+				
+		ige r1.z, r0.z, r0.w ; ind >= ind0 + (widthDst DIV 4)*4*Ny*xPitch
+		break_logicalnz r1.z
+		
+		mov r14, r6
+		mov r15, r7
+		mov r16, r8
+		mov r17, r9
+		
+		mov r10, r2
+		mov r11, r3
+		mov r12, r4
+		mov r13, r5
+		
+		call 0 ; load next input quads
+		iadd r0.y, r0.y, l0.x ; increment input index
+		mov r6, r2
+		mov r7, r3
+		mov r8, r4
+		mov r9, r5
+		call 0 ; load next input quads
+		iadd r0.y, r0.y, l0.x ; increment input index
+				
+		call 1 ; compute output quads
+		
+		; transpose quads
+		transpose r30, r30
+		
+		iadd r1.x, r0.z, cb1[1].z
+		iadd r1.y, r1.x, cb1[1].z
+		iadd r1.z, r1.y, cb1[1].z
+		
+		; write to the output
+		mov g[r0.z], r30
+		mov g[r1.x], r31
+		mov g[r1.y], r32
+		mov g[r1.z], r33
+	
+		iadd r0.z, r1.z, cb1[1].z ; increment output index
+	endloop
+
+	umod r0.w, cb1[1].w, l0.x ; account widthDst MOD 4 # 0
+	if_logicalnz r0.w
+		
+		; process last quads
+		
+		mov r14, r6
+		mov r15, r7
+		mov r16, r8
+		mov r17, r9
+		
+		mov r10, r2
+		mov r11, r3
+		mov r12, r4
+		mov r13, r5
+		
+		call 0 ; load next input quads
+		iadd r0.y, r0.y, l0.x ; increment input index
+		mov r6, r2
+		mov r7, r3
+		mov r8, r4
+		mov r9, r5
+		call 0 ; load next input quads		
+		
+		call 1 ; compute output quads
+		
+		; transpose quads
+		transpose r30, r30
+		
+		iadd r1.x, r0.z, cb1[1].z
+		iadd r1.y, r1.x, cb1[1].z
+	
+		switch r0.w		
+			case 1
+				mov g[r0.z], r30
+				break
+			case 2
+				mov g[r0.z], r30
+				mov g[r1.x], r31
+				break
+			case 3
+				mov g[r0.z], r30
+				mov g[r1.x], r31
+				mov g[r1.y], r32
+				break
+		endswitch
+				
+	endif;
+
+endif; 
+
+endmain
+
+; get input quad with account of boundaries for 4 lines at once
+; r0.x - linear position of the first line element with account of padding, in quads
+; r0.y - index of input quad within the line, in single elements
+; output is returned in r2, r3, r4, r5
+; r1 is used for intermediate results
+func 0
+
+ige r1.z, r0.y, r0.0 ; ind >= 0
+ilt r1.w, r0.y, cb1[1].y ; ind < (widthSrc DIV 4)*4
+iand r1.w, r1.z, r1.w
+
+if_logicalnz r1.w ; (ind >= 0) & (ind < (widthSrc DIV 4)*4) -> not on boundaries
+	
+	; 2D position of quads
+	imad r1.x, r0.y, cb1[1].z, r0.x ; linear position of quad to load
+	udiv r3.y, r1.x, cb1[0].z
+	umod r3.x, r1.x, cb1[0].z
+	
+	iadd r1.x, r1.x, cb1[1].z ; ind + Ny*xPitch
+	udiv r4.y, r1.x, cb1[0].z
+	umod r4.x, r1.x, cb1[0].z
+	
+	iadd r1.x, r1.x, cb1[1].z
+	udiv r5.y, r1.x, cb1[0].z
+	umod r5.x, r1.x, cb1[0].z
+	
+	iadd r1.x, r1.x, cb1[1].z
+	udiv r1.y, r1.x, cb1[0].z
+	umod r1.x, r1.x, cb1[0].z
+	
+	itof r3, r3
+	itof r4, r4
+	itof r5, r5
+	itof r1, r1
+	
+	sample_resource(0)_sampler(0) r2, r3.xy
+	sample_resource(0)_sampler(0) r3, r4.xy
+	sample_resource(0)_sampler(0) r4, r5.xy
+	sample_resource(0)_sampler(0) r5, r1.xy
+else
+	
+	mov r2, r2.0000
+	mov r3, r3.0000
+	mov r4, r4.0000
+	mov r5, r5.0000
+	
+	if_logicalz r1.z ; left boundary
+		 ; currently only FiniteData boundary		
+	else ; right boundary		
+		ige r1.z, r0.y, cb1[0].y
+		if_logicalnz r1.z
+			 ; currently only FiniteData boundary
+		else
+			
+			; case when width is not multiple of 4 and there are still some data in the line
+			
+			; 2D position of quads
+			imad r1.x, r0.y, cb1[1].z, r0.x ; linear position of quad to load
+			udiv r2.y, r1.x, cb1[0].z
+			umod r2.x, r1.x, cb1[0].z			
+			itof r2, r2		
+			
+			umod r1.z, cb1[0].y, l0.x ; width MOD 4
+			switch r1.z
+				case 1					
+					sample_resource(0)_sampler(0) r2, r2.xy					
+				break
+				
+				case 2
+					iadd r1.x, r1.x, cb1[1].z ; ind + Ny*xPitch			
+					udiv r3.y, r1.x, cb1[0].z
+					umod r3.x, r1.x, cb1[0].z
+					
+					itof r3, r3
+					sample_resource(0)_sampler(0) r2, r2.xy
+					sample_resource(0)_sampler(0) r3, r3.xy
+				break
+				
+				case 3
+					iadd r1.x, r1.x, cb1[1].z ; ind + Ny*xPitch			
+					udiv r3.y, r1.x, cb1[0].z
+					umod r3.x, r1.x, cb1[0].z
+		
+					iadd r1.x, r1.x, cb1[1].z
+					udiv r4.y, r1.x, cb1[0].z
+					umod r4.x, r1.x, cb1[0].z
+					
+					itof r3, r3
+					itof r4, r4					
+					sample_resource(0)_sampler(0) r2, r2.xy
+					sample_resource(0)_sampler(0) r3, r3.xy
+					sample_resource(0)_sampler(0) r4, r4.xy
+				break
+			endswitch						
+		endif
+	endif
+	
+endif
+
+; transpose quads
+transpose r2, r2
+
+ret
+endfunc
+
+; compute 4 output quads
+; {r14,r15,r16,r17}, {r10,r11,r12,r13}, {r6,r7,r8,r9}, {r2,r3,r4,r5} - input quads
+; output is stored in {r30,r31,r32,r33}
+; uses r34,r35,r36 for intermediate results
+func 1
+
+switch cb1[2].x
+
+case 0
+
+	mul r30, r14, cb0[0]
+	mad r30, r10, cb0[1], r30
+	mad r30, r6, cb0[2], r30
+	
+	mul r31, r14, cb0[6]
+	mad r31, r10, cb0[7], r31
+	mad r31, r6, cb0[8], r31
+	
+	mul r32, r10, cb0[0]
+	mad r32, r6, cb0[1], r32
+	mad r32, r2, cb0[2], r32
+	
+	mul r33, r10, cb0[6]
+	mad r33, r6, cb0[7], r33
+	mad r33, r2, cb0[8], r33
+		
+	dp4 r30.x, r30, r30.1111
+	dp4 r30.y, r31, r31.1111
+	dp4 r30.z, r32, r32.1111
+	dp4 r30.w, r33, r33.1111
+	
+	; ****
+	
+	mul r31, r15, cb0[0]
+	mad r31, r11, cb0[1], r31
+	mad r31, r7, cb0[2], r31
+	
+	mul r32, r15, cb0[6]
+	mad r32, r11, cb0[7], r32
+	mad r32, r7, cb0[8], r32
+	
+	mul r33, r11, cb0[0]
+	mad r33, r7, cb0[1], r33
+	mad r33, r3, cb0[2], r33
+	
+	mul r34, r11, cb0[6]
+	mad r34, r7, cb0[7], r34
+	mad r34, r3, cb0[8], r34
+		
+	dp4 r31.x, r31, r31.1111
+	dp4 r31.y, r32, r32.1111
+	dp4 r31.z, r33, r33.1111
+	dp4 r31.w, r34, r34.1111
+	
+	; ****
+	
+	mul r32, r16, cb0[0]
+	mad r32, r12, cb0[1], r32
+	mad r32, r8, cb0[2], r32
+	
+	mul r33, r16, cb0[6]
+	mad r33, r12, cb0[7], r33
+	mad r33, r8, cb0[8], r33
+	
+	mul r34, r12, cb0[0]
+	mad r34, r8, cb0[1], r34
+	mad r34, r4, cb0[2], r34
+	
+	mul r35, r12, cb0[6]
+	mad r35, r8, cb0[7], r35
+	mad r35, r4, cb0[8], r35
+		
+	dp4 r32.x, r32, r32.1111
+	dp4 r32.y, r33, r33.1111
+		dp4 r32.z, r34, r34.1111
+	dp4 r32.w, r35, r35.1111
+	
+	; ****
+	
+	mul r33, r17, cb0[0]
+	mad r33, r13, cb0[1], r33
+	mad r33, r9, cb0[2], r33
+	
+	mul r34, r17, cb0[6]
+	mad r34, r13, cb0[7], r34
+	mad r34, r9, cb0[8], r34
+	
+	mul r35, r13, cb0[0]
+	mad r35, r9, cb0[1], r35
+	mad r35, r5, cb0[2], r35
+	
+	mul r36, r13, cb0[6]
+	mad r36, r9, cb0[7], r36
+	mad r36, r5, cb0[8], r36
+		
+	dp4 r33.x, r33, r33.1111
+	dp4 r33.y, r34, r34.1111
+	dp4 r33.z, r35, r35.1111
+	dp4 r33.w, r36, r36.1111
+	break
+	
+case 1
+	
+	mul r30, r14, cb0[3]
+	mad r30, r10, cb0[4], r30
+	mad r30, r6, cb0[5], r30
+	
+	mul r31, r14, cb0[9]
+	mad r31, r10, cb0[10], r31
+	mad r31, r6, cb0[11], r31
+	
+	mul r32, r10, cb0[3]
+	mad r32, r6, cb0[4], r32
+	mad r32, r2, cb0[5], r32
+	
+	mul r33, r10, cb0[9]
+	mad r33, r6, cb0[10], r33
+	mad r33, r2, cb0[11], r33
+		
+	dp4 r30.x, r30, r30.1111
+	dp4 r30.y, r31, r31.1111
+	dp4 r30.z, r32, r32.1111
+	dp4 r30.w, r33, r33.1111
+	
+	; ****
+	
+	mul r31, r15, cb0[3]
+	mad r31, r11, cb0[4], r31
+	mad r31, r7, cb0[5], r31
+	
+	mul r32, r15, cb0[9]
+	mad r32, r11, cb0[10], r32
+	mad r32, r7, cb0[11], r32
+	
+	mul r33, r11, cb0[3]
+	mad r33, r7, cb0[4], r33
+	mad r33, r3, cb0[5], r33
+	
+	mul r34, r11, cb0[9]
+	mad r34, r7, cb0[10], r34
+	mad r34, r3, cb0[11], r34
+		
+	dp4 r31.x, r31, r31.1111
+	dp4 r31.y, r32, r32.1111
+	dp4 r31.z, r33, r33.1111
+	dp4 r31.w, r34, r34.1111
+	
+	; ****
+	
+	mul r32, r16, cb0[3]
+	mad r32, r12, cb0[4], r32
+	mad r32, r8, cb0[5], r32
+
+	mul r33, r16, cb0[9]
+	mad r33, r12, cb0[10], r33
+	mad r33, r8, cb0[11], r33
+	
+	mul r34, r12, cb0[3]
+	mad r34, r8, cb0[4], r34
+	mad r34, r4, cb0[5], r34
+	
+	mul r35, r12, cb0[9]
+	mad r35, r8, cb0[10], r35
+	mad r35, r4, cb0[11], r35
+		
+	dp4 r32.x, r32, r32.1111
+	dp4 r32.y, r33, r33.1111
+	dp4 r32.z, r34, r34.1111
+	dp4 r32.w, r35, r35.1111
+	
+	; ****
+	
+	mul r33, r17, cb0[3]
+	mad r33, r13, cb0[4], r33
+	mad r33, r9, cb0[5], r33
+	
+	mul r34, r17, cb0[9]
+	mad r34, r13, cb0[10], r34
+	mad r34, r9, cb0[11], r34
+	
+	mul r35, r13, cb0[3]
+	mad r35, r9, cb0[4], r35
+	mad r35, r5, cb0[5], r35
+	
+	mul r36, r13, cb0[9]
+	mad r36, r9, cb0[10], r36
+	mad r36, r5, cb0[11], r36
+		
+	dp4 r33.x, r33, r33.1111
+	dp4 r33.y, r34, r34.1111
+	dp4 r33.z, r35, r35.1111
+	dp4 r33.w, r36, r36.1111
+break
+
+endswitch
 
 ret
 endfunc
