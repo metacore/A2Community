@@ -649,7 +649,7 @@ sample_resource(1)_sampler(1) r1, vWinCoord0
 add o0, r0, r1
 end		
 ]]>
-	</ILKernel>
+	</ILKernel>	
 	
 	<ILKernel name = "AddScalar_R">
 <![CDATA[
