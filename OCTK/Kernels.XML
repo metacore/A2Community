@@ -642,7 +642,7 @@ dcl_num_thread_per_group 64
 ;	constants: 1, 1x4 (LONGINT)
 ;
 
-dcl_cb cb0[2]	; [physWidth,dType,opCode,..]
+dcl_cb cb0[1]	; [physWidth,dType,opCode,..]
 
 dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
 dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
@@ -11022,6 +11022,57 @@ endswitch
 
 ret
 endfunc
+
+end
+]]>
+	</ILKernel>
+	
+<ILKernel name = "InnerProd_LI_R_LR">
+<![CDATA[
+il_cs_2_0
+dcl_num_thread_per_group 64
+;
+;	Reduction used for inner product
+; 
+;	inputs: 2
+;	outputs: 0
+;	global buffer: Yes
+;	data type: REAL
+;	nComponents: 4
+;	constants: 1,1x4 (LONGINT)
+;
+dcl_cb cb0[1]	; [physWidth,dType,blockSize,...]
+
+dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+
+dcl_literal l0, 1, 0, 0, 0
+
+; compute linear index of first element
+imul r0.xy0, vaTid.x, cb0[0].z ; account blockSize elements per thread
+
+mov r30, r30.0000
+
+whileloop
+
+	ige r1.z, r0.z, cb0[0].z ; counter >= blockSize
+	break_logicalnz r1.z
+		
+	; compute 2D position of the next quad
+	udiv r1.y, r0.x, cb0[0].x
+	umod r1.x, r0.x, cb0[0].x
+	iadd r0.x, r0.x, l0.x ; increment linear index		
+	
+	; load input elements
+	sample_resource(0)_sampler(0) r3, r1.xy		
+	sample_resource(1)_sampler(1) r4, r1.xy
+	
+	mad r30, r3, r4, r30
+		
+	iadd r0.z, r0.z, l0.x
+endloop
+
+mov g[r0.y], r30
 
 end
 ]]>
