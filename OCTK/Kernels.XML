@@ -12901,7 +12901,7 @@ end
 ]]>
 	</ILKernel>	
 	
-<ILKernel name = "InnerProd_LI_R_LR">
+<ILKernel name = "InnerProdReduce_LI_R_LR">
 <![CDATA[
 il_cs_2_0
 dcl_num_thread_per_group 64
@@ -12915,7 +12915,9 @@ dcl_num_thread_per_group 64
 ;	nComponents: 4
 ;	constants: 1,1x4 (LONGINT)
 ;
-dcl_cb cb0[1]	; [physWidth,dType,blockSize,...]
+dcl_cb cb0[1]	; [physWidth,dType,blockSize,incFlag]
+
+; blockSize is given in quads and has to be multiple of 4!
 
 dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
 dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
@@ -12923,33 +12925,174 @@ dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(floa
 dcl_literal l0, 1, 0, 0, 0
 
 ; compute linear index of first element
-imul r0.xy0, vaTid.x, cb0[0].z ; account blockSize elements per thread
+imul r0.xy, vaTid.x, cb0[0].z ; account blockSize quads per thread
+iadd r0.z, r0.x, cb0[0].z
 
-mov r30, r30.0000
+if_logicalnz cb0[0].w
+	mov r30, g[vaTid.x] ; do increment!
+else
+	mov r30, r30.0000
+endif	
 
 whileloop
 
-	ige r1.z, r0.z, cb0[0].z ; counter >= blockSize
-	break_logicalnz r1.z
+	ige r0.w, r0.x, r0.z ; ind >= ind+blockSize
+	break_logicalnz r0.w
 		
 	; compute 2D position of the next quad
 	udiv r1.y, r0.x, cb0[0].x
 	umod r1.x, r0.x, cb0[0].x
-	iadd r0.x, r0.x, l0.x ; increment linear index		
+	iadd r0.x, r0.x, l0.x ; increment linear index
+
+	udiv r1.w, r0.x, cb0[0].x
+	umod r1.z, r0.x, cb0[0].x
+	iadd r0.x, r0.x, l0.x ; increment linear index
+	
+	udiv r2.y, r0.x, cb0[0].x
+	umod r2.x, r0.x, cb0[0].x
+	iadd r0.x, r0.x, l0.x ; increment linear index
+	
+	udiv r2.w, r0.x, cb0[0].x
+	umod r2.z, r0.x, cb0[0].x
+	iadd r0.x, r0.x, l0.x ; increment linear index
+	
+	itof r1, r1
+	itof r2, r2
 	
 	; load input elements
-	sample_resource(0)_sampler(0) r3, r1.xy		
-	sample_resource(1)_sampler(1) r4, r1.xy
+	sample_resource(0)_sampler(0) r3, r1.xy
+	sample_resource(0)_sampler(0) r4, r1.zw
+	sample_resource(0)_sampler(0) r5, r2.xy
+	sample_resource(0)_sampler(0) r6, r2.zw
 	
-	mad r30, r3, r4, r30
-		
-	iadd r0.z, r0.z, l0.x
+	sample_resource(1)_sampler(1) r7, r1.xy
+	sample_resource(1)_sampler(1) r8, r1.zw
+	sample_resource(1)_sampler(1) r9, r2.xy
+	sample_resource(1)_sampler(1) r10, r2.zw
+	
+	switch cb0[0].y
+	
+		case 3 ; LONGINT
+			imad r30, r3, r7, r30
+			imad r30, r4, r8, r30
+			imad r30, r5, r9, r30
+			imad r30, r6, r10, r30
+			break
+			
+		case 5 ; REAL
+			mad r30, r3, r7, r30
+			mad r30, r4, r8, r30
+			mad r30, r5, r9, r30
+			mad r30, r6, r10, r30
+			break
+			
+		case 6 ; LONGREAL
+			dmad r30, r3, r7, r30
+			dmad r30, r4, r8, r30
+			dmad r30, r5, r9, r30
+			dmad r30, r6, r10, r30
+			break
+	endswitch
+				
 endloop
 
-mov g[r0.y], r30
+mov g[vaTid.x], r30
 
 end
 ]]>
-	</ILKernel>	
+	</ILKernel>
+
+<ILKernel name = "Sum_LI_R_LR">
+<![CDATA[
+il_cs_2_0
+dcl_num_thread_per_group 1
+;
+;	sum of a small array
+; 
+;	inputs: 1
+;	outputs: 0
+;	global buffer: Yes
+;	data type: REAL
+;	nComponents: 4
+;	constants: 1,1x4 (LONGINT)
+;
+dcl_cb cb0[1]	; [physWidth,dType,length,...]
+
+dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+
+dcl_literal l0, 1, 0, 0, 0
+
+if_logicalz vaTid.x ; only one thread!
+
+	mov r0.x, r0.0
+	mov r30, r30.0000
+	
+	whileloop
+	
+		ige r0.w, r0.x, cb0[0].z ; ind >= length
+		break_logicalnz r0.w
+			
+		; compute 2D position of the next quads
+		udiv r1.y, r0.x, cb0[0].x
+		umod r1.x, r0.x, cb0[0].x
+		iadd r0.x, r0.x, l0.x ; increment linear index
+		
+		udiv r1.w, r0.x, cb0[0].x
+		umod r1.z, r0.x, cb0[0].x
+		iadd r0.x, r0.x, l0.x ; increment linear index
+		
+		udiv r2.y, r0.x, cb0[0].x
+		umod r2.x, r0.x, cb0[0].x
+		iadd r0.x, r0.x, l0.x ; increment linear index
+		
+		udiv r2.w, r0.x, cb0[0].x
+		umod r2.z, r0.x, cb0[0].x
+		iadd r0.x, r0.x, l0.x ; increment linear index
+		
+		itof r1, r1
+		itof r2, r2
+		
+		; load input elements
+		sample_resource(0)_sampler(0) r3, r1.xy
+		sample_resource(0)_sampler(0) r4, r1.zw
+		sample_resource(0)_sampler(0) r5, r2.xy
+		sample_resource(0)_sampler(0) r6, r2.zw	
+		
+		switch cb0[0].y
+		
+			case 3 ; LONGINT
+				iadd r30, r30, r3
+				iadd r30, r30, r4
+				iadd r30, r30, r5
+				iadd r30, r30, r6
+				break
+				
+			case 5 ; REAL
+				add r30, r30, r3
+				add r30, r30, r4
+				add r30, r30, r5
+				add r30, r30, r6
+				break
+				
+			case 6 ; LONGREAL
+				dadd r30, r30, r3
+				dadd r30, r30, r4
+				dadd r30, r30, r5
+				dadd r30, r30, r6
+				break
+		endswitch
+					
+	endloop
+	
+	dp4 r30.x000, r30, r30.1111
+	
+endif	
+
+mov g[0], r30
+
+end
+]]>
+	</ILKernel>
+	
 	
 </Kernels>
