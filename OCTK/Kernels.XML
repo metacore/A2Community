@@ -650,7 +650,7 @@ dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(floa
 dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
 
 dcl_literal l0, 4, 1, 0xFFFFFFFF, 3
-dcl_literal l1, 0xBFF00000, 0, 0xBFF00000, 0 ; [-1, -1] in doubles
+dcl_literal l1, 0, 0xBFF00000, 0, 0xBFF00000 ; [-1, -1] in doubles
 
 iadd r20.x, cb0[0].w, l0.w ; nElems+3
 udiv r20.x, r20.x, l0.x ; (nElems+3) DIV 4
@@ -733,10 +733,14 @@ if_logicalnz r0.z
 					break
 				
 				case 6 ; TLONGREAL
-					dadd r3, r3, r7
-					dadd r4, r4, r8
-					dadd r5, r5, r9
-					dadd r6, r6, r10
+					dadd r3.xy, r3.xy, r7.xy
+					dadd r3.zw, r3.zw, r7.zw
+					dadd r4.xy, r4.xy, r8.xy
+					dadd r4.zw, r4.zw, r8.zw
+					dadd r5.xy, r5.xy, r9.xy
+					dadd r5.zw, r5.zw, r9.zw
+					dadd r6.xy, r6.xy, r10.xy
+					dadd r6.zw, r6.zw, r10.zw
 					break							
 				
 			endswitch
@@ -762,10 +766,14 @@ if_logicalnz r0.z
 					break
 				
 				case 6 ; TLONGREAL
-					dmad r3, r7, l1, r3
-					dmad r4, r8, l1, r4
-					dmad r5, r9, l1, r5
-					dmad r6, r10, l1, r6
+					dmad r3.xy, r7.xy, l1.xy, r3.xy
+					dmad r3.zw, r7.zw, l1.zw, r3.zw
+					dmad r4.xy, r8.xy, l1.xy, r4.xy
+					dmad r4.zw, r8.zw, l1.zw, r4.zw
+					dmad r5.xy, r9.xy, l1.xy, r5.xy
+					dmad r5.zw, r9.zw, l1.zw, r5.zw
+					dmad r6.xy, r10.xy, l1.xy, r6.xy
+					dmad r6.zw, r10.zw, l1.zw, r6.zw
 					break
 				
 			endswitch
@@ -791,10 +799,14 @@ if_logicalnz r0.z
 					break
 				
 				case 6 ; TLONGREAL
-					dmul r3, r3, r7
-					dmul r4, r4, r8
-					dmul r5, r5, r9
-					dmul r6, r6, r10
+					dmul r3.xy, r3.xy, r7.xy
+					dmul r3.zw, r3.zw, r7.zw
+					dmul r4.xy, r4.xy, r8.xy
+					dmul r4.zw, r4.zw, r8.zw
+					dmul r5.xy, r5.xy, r9.xy
+					dmul r5.zw, r5.zw, r9.zw
+					dmul r6.xy, r6.xy, r10.xy
+					dmul r6.zw, r6.zw, r10.zw
 					break
 				
 			endswitch
@@ -821,10 +833,14 @@ if_logicalnz r0.z
 					break
 				
 				case 6 ; TLONGREAL
-					ddiv r3, r3, r7
-					ddiv r4, r4, r8
-					ddiv r5, r5, r9
-					ddiv r6, r6, r10
+					ddiv r3.xy, r3.xy, r7.xy
+					ddiv r3.zw, r3.zw, r7.zw
+					ddiv r4.xy, r4.xy, r8.xy
+					ddiv r4.zw, r4.zw, r8.zw
+					ddiv r5.xy, r5.xy, r9.xy
+					ddiv r5.zw, r5.zw, r9.zw
+					ddiv r6.xy, r6.xy, r10.xy
+					ddiv r6.zw, r6.zw, r10.zw
 					break
 				
 			endswitch
@@ -894,7 +910,7 @@ dcl_cb cb1[1]	; [...]
 dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
 
 dcl_literal l0, 4, 1, 0xFFFFFFFF, 0
-dcl_literal l1, 0xBFF00000, 0, 0xBFF00000, 0 ; [-1, -1] in doubles
+dcl_literal l1, 0, 0xBFF00000, 0, 0xBFF00000 ; [-1, -1] in doubles
 
 ; compute linear index of first element
 imul r0.xy, vaTid.xx, l0.xx ; account 4 quads per thread
@@ -945,10 +961,14 @@ switch cb0[0].z ; opCode
 				break
 			
 			case 6 ; TLONGREAL
-				dadd r3, r3, cb1[0].xxxx
-				dadd r4, r4, cb1[0].xxxx
-				dadd r5, r5, cb1[0].xxxx
-				dadd r6, r6, cb1[0].xxxx
+				dadd r3.xy, r3.xy, cb1[0].xy
+				dadd r3.zw, r3.zw, cb1[0].xy
+				dadd r4.xy, r4.xy, cb1[0].xy
+				dadd r4.zw, r4.zw, cb1[0].xy
+				dadd r5.xy, r5.xy, cb1[0].xy
+				dadd r5.zw, r5.zw, cb1[0].xy
+				dadd r6.xy, r6.xy, cb1[0].xy
+				dadd r6.zw, r6.zw, cb1[0].xy
 				break
 			
 		endswitch
@@ -974,10 +994,14 @@ switch cb0[0].z ; opCode
 				break
 			
 			case 6 ; TLONGREAL
-				dmad r3, cb1[0].xxxx, l1, r3
-				dmad r4, cb1[0].xxxx, l1, r4
-				dmad r5, cb1[0].xxxx, l1, r5
-				dmad r6, cb1[0].xxxx, l1, r6
+				dmad r3.xy, cb1[0].xy, l1.xy, r3.xy
+				dmad r3.zw, cb1[0].xy, l1.zw, r3.zw
+				dmad r4.xy, cb1[0].xy, l1.xy, r4.xy
+				dmad r4.zw, cb1[0].xy, l1.zw, r4.zw
+				dmad r5.xy, cb1[0].xy, l1.xy, r5.xy
+				dmad r5.zw, cb1[0].xy, l1.zw, r5.zw
+				dmad r6.xy, cb1[0].xy, l1.xy, r6.xy
+				dmad r6.zw, cb1[0].xy, l1.zw, r6.zw
 				break
 			
 		endswitch
@@ -1003,10 +1027,14 @@ switch cb0[0].z ; opCode
 				break
 			
 			case 6 ; TLONGREAL
-				dmul r3, r3, cb1[0].xxxx
-				dmul r4, r4, cb1[0].xxxx
-				dmul r5, r5, cb1[0].xxxx
-				dmul r6, r6, cb1[0].xxxx
+				dmul r3.xy, r3.xy, cb1[0].xy
+				dmul r3.zw, r3.zw, cb1[0].xy
+				dmul r4.xy, r4.xy, cb1[0].xy
+				dmul r4.zw, r4.zw, cb1[0].xy
+				dmul r5.xy, r5.xy, cb1[0].xy
+				dmul r5.zw, r5.zw, cb1[0].xy
+				dmul r6.xy, r6.xy, cb1[0].xy
+				dmul r6.zw, r6.zw, cb1[0].xy
 				break
 			
 		endswitch
@@ -1033,10 +1061,14 @@ switch cb0[0].z ; opCode
 				break
 			
 			case 6 ; TLONGREAL
-				ddiv r3, r3, cb1[0].xxxx
-				ddiv r4, r4, cb1[0].xxxx
-				ddiv r5, r5, cb1[0].xxxx
-				ddiv r6, r6, cb1[0].xxxx
+				ddiv r3.xy, r3.xy, cb1[0].xy
+				ddiv r3.zw, r3.zw, cb1[0].xy
+				ddiv r4.xy, r4.xy, cb1[0].xy
+				ddiv r4.zw, r4.zw, cb1[0].xy
+				ddiv r5.xy, r5.xy, cb1[0].xy
+				ddiv r5.zw, r5.zw, cb1[0].xy
+				ddiv r6.xy, r6.xy, cb1[0].xy
+				ddiv r6.zw, r6.zw, cb1[0].xy
 				break
 			
 		endswitch
@@ -1075,7 +1107,7 @@ dcl_cb cb1[1]	; [...]
 dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
 
 dcl_literal l0, 4, 1, 0xFFFFFFFF, 0
-dcl_literal l1, 0xBFF00000, 0, 0xBFF00000, 0 ; [-1, -1] in doubles
+dcl_literal l1, 0, 0xBFF00000, 0, 0xBFF00000 ; [-1, -1] in doubles
 
 ; compute linear index of first element
 imul r0.xy, vaTid.xx, l0.xx ; account 4 quads per thread
@@ -1126,10 +1158,14 @@ switch cb0[0].z ; opCode
 				break
 			
 			case 6 ; TLONGREAL
-				dadd r3, cb1[0].xxxx, r7
-				dadd r4, cb1[0].xxxx, r8
-				dadd r5, cb1[0].xxxx, r9
-				dadd r6, cb1[0].xxxx, r10
+				dadd r3.xy, cb1[0].xy, r7.xy
+				dadd r3.zw, cb1[0].xy, r7.zw
+				dadd r4.xy, cb1[0].xy, r8.xy
+				dadd r4.zw, cb1[0].xy, r8.zw
+				dadd r5.xy, cb1[0].xy, r9.xy
+				dadd r5.zw, cb1[0].xy, r9.zw
+				dadd r6.xy, cb1[0].xy, r10.xy
+				dadd r6.zw, cb1[0].xy, r10.zw
 				break
 			
 		endswitch
@@ -1155,10 +1191,14 @@ switch cb0[0].z ; opCode
 				break
 			
 			case 6 ; TLONGREAL
-				dmad r3, r7, l1, cb1[0].xxxx
-				dmad r4, r8, l1, cb1[0].xxxx
-				dmad r5, r9, l1, cb1[0].xxxx
-				dmad r6, r10, l1, cb1[0].xxxx
+				dmad r3.xy, r7.xy, l1.xy, cb1[0].xy
+				dmad r3.zw, r7.zw, l1.zw, cb1[0].xy
+				dmad r4.xy, r8.xy, l1.xy, cb1[0].xy
+				dmad r4.zw, r8.zw, l1.zw, cb1[0].xy
+				dmad r5.xy, r9.xy, l1.xy, cb1[0].xy
+				dmad r5.zw, r9.zw, l1.zw, cb1[0].xy
+				dmad r6.xy, r10.xy, l1.xy, cb1[0].xy
+				dmad r6.zw, r10.zw, l1.zw, cb1[0].xy
 				break
 			
 		endswitch
@@ -1184,10 +1224,14 @@ switch cb0[0].z ; opCode
 				break
 			
 			case 6 ; TLONGREAL
-				dmul r3, cb1[0].xxxx, r7
-				dmul r4, cb1[0].xxxx, r8
-				dmul r5, cb1[0].xxxx, r9
-				dmul r6, cb1[0].xxxx, r10
+				dmul r3.xy, cb1[0].xy, r7.xy
+				dmul r3.zw, cb1[0].xy, r7.zw
+				dmul r4.xy, cb1[0].xy, r8.xy
+				dmul r4.zw, cb1[0].xy, r8.zw
+				dmul r5.xy, cb1[0].xy, r9.xy
+				dmul r5.zw, cb1[0].xy, r9.zw
+				dmul r6.xy, cb1[0].xy, r10.xy
+				dmul r6.zw, cb1[0].xy, r10.zw
 				break
 			
 		endswitch
@@ -1214,10 +1258,14 @@ switch cb0[0].z ; opCode
 				break
 			
 			case 6 ; TLONGREAL
-				ddiv r3, cb1[0].xxxx, r7
-				ddiv r4, cb1[0].xxxx, r8
-				ddiv r5, cb1[0].xxxx, r9
-				ddiv r6, cb1[0].xxxx, r10
+				ddiv r3.xy, cb1[0].xy, r7.xy
+				ddiv r3.zw, cb1[0].xy, r7.zw
+				ddiv r4.xy, cb1[0].xy, r8.xy
+				ddiv r4.zw, cb1[0].xy, r8.zw
+				ddiv r5.xy, cb1[0].xy, r9.xy
+				ddiv r5.zw, cb1[0].xy, r9.zw
+				ddiv r6.xy, cb1[0].xy, r10.xy
+				ddiv r6.zw, cb1[0].xy, r10.zw
 				break
 			
 		endswitch
@@ -1235,6 +1283,246 @@ mov g[r0.y+3], r6
 end		
 ]]>
 	</ILKernel>
+	
+<ILKernel name = "EwMulAddSub_LI_R_LR">
+<![CDATA[
+il_cs_2_0
+dcl_num_thread_per_group 64
+;
+;	implements t := x + y.*z or t := x - y.*z
+; 
+;	inputs: 3
+;	global buffer: yes
+;	data type: LONGINT,REAL,LONGREAL
+;	nComponents: 4/(2 for LONGREAL)
+;	constants: 1, 1x4 (LONGINT)
+;
+
+dcl_cb cb0[2]	; [physWidth,dType,opCode,nElems]
+					; [inpOffset0,inpOffset1,inpOffset2,outOffset]
+					; nElems - total number elements in multiple components
+
+dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(2)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+
+dcl_literal l0, 4, 1, 0xFFFFFFFF, 3
+dcl_literal l1, 0, 0xBFF00000, 0, 0xBFF00000 ; [-1, -1] in doubles
+
+iadd r20.x, cb0[0].w, l0.w ; nElems+3
+udiv r20.x, r20.x, l0.x ; (nElems+3) DIV 4
+
+ilt r0.z, vaTid.x, r20.x ; check thread index < nMaxThreads
+if_logicalnz r0.z
+
+	; compute linear index of first element
+	imul r0.xyzw, vaTid.xxxx, l0.xxxx ; account 4 elems per thread
+	
+	iadd r0.xyzw, r0.xyzw, cb0[1].xyzw ; account offsets
+	
+	; compute 2D positions of 4 adjacent elems
+	udiv r1.y, r0.x, cb0[0].x
+	umod r1.x, r0.x, cb0[0].x
+	iadd r0.x, r0.x, l0.y ; increment linear index
+	
+	udiv r1.w, r0.x, cb0[0].x
+	umod r1.z, r0.x, cb0[0].x
+	iadd r0.x, r0.x, l0.y
+	
+	udiv r2.y, r0.x, cb0[0].x
+	umod r2.x, r0.x, cb0[0].x
+	iadd r0.x, r0.x, l0.y
+	
+	udiv r2.w, r0.x, cb0[0].x
+	umod r2.z, r0.x, cb0[0].x
+	
+	itof r1, r1
+	itof r2, r2
+	
+	; load input elements
+	sample_resource(0)_sampler(0) r3, r1.xy
+	sample_resource(0)_sampler(0) r4, r1.zw
+	sample_resource(0)_sampler(0) r5, r2.xy
+	sample_resource(0)_sampler(0) r6, r2.zw
+	
+	; compute 2D positions of 4 adjacent elems
+	udiv r1.y, r0.y, cb0[0].x
+	umod r1.x, r0.y, cb0[0].x
+	iadd r0.y, r0.y, l0.y ; increment linear index
+	
+	udiv r1.w, r0.y, cb0[0].x
+	umod r1.z, r0.y, cb0[0].x
+	iadd r0.y, r0.y, l0.y
+	
+	udiv r2.y, r0.y, cb0[0].x
+	umod r2.x, r0.y, cb0[0].x
+	iadd r0.y, r0.y, l0.y
+	
+	udiv r2.w, r0.y, cb0[0].x
+	umod r2.z, r0.y, cb0[0].x
+	
+	itof r1, r1
+	itof r2, r2
+	
+	sample_resource(1)_sampler(1) r7, r1.xy
+	sample_resource(1)_sampler(1) r8, r1.zw
+	sample_resource(1)_sampler(1) r9, r2.xy
+	sample_resource(1)_sampler(1) r10, r2.zw
+	
+	; compute 2D positions of 4 adjacent elems
+	udiv r1.y, r0.z, cb0[0].x
+	umod r1.x, r0.z, cb0[0].x
+	iadd r0.z, r0.z, l0.y ; increment linear index
+	
+	udiv r1.w, r0.z, cb0[0].x
+	umod r1.z, r0.z, cb0[0].x
+	iadd r0.z, r0.z, l0.y
+	
+	udiv r2.y, r0.z, cb0[0].x
+	umod r2.x, r0.z, cb0[0].x
+	iadd r0.z, r0.z, l0.y
+	
+	udiv r2.w, r0.z, cb0[0].x
+	umod r2.z, r0.z, cb0[0].x
+	
+	itof r1, r1
+	itof r2, r2
+	
+	sample_resource(2)_sampler(2) r11, r1.xy
+	sample_resource(2)_sampler(2) r12, r1.zw
+	sample_resource(2)_sampler(2) r13, r2.xy
+	sample_resource(2)_sampler(2) r14, r2.zw
+	
+	switch cb0[0].z ; opCode
+		
+		case 10 ; OpEwMulAdd
+			
+			switch cb0[0].y ; dType
+				
+				case 3 ; TLONGINT
+					imad r3, r7, r11, r3
+					imad r4, r8, r12, r4
+					imad r5, r9, r13, r5
+					imad r6, r10, r14, r6										
+					break
+				
+				case 5 ; TREAL
+					; does not work, - some BUG!
+					mad r3, r7, r11, r3
+					mad r4, r8, r12, r4
+					mad r5, r9, r13, r5
+					mad r6, r10, r14, r6									
+					break
+				
+				case 6 ; TLONGREAL
+					dmad r3.xy, r7.xy, r11.xy, r3.xy
+					dmad r3.zw, r7.zw, r11.zw, r3.zw
+					dmad r4.xy, r8.xy, r12.xy, r4.xy
+					dmad r4.zw, r8.zw, r12.zw, r4.zw
+					dmad r5.xy, r9.xy, r13.xy, r5.xy
+					dmad r5.zw, r9.zw, r13.zw, r5.zw
+					dmad r6.xy, r10.xy, r14.xy, r6.xy
+					dmad r6.zw, r10.zw, r14.zw, r6.zw
+					break
+				
+			endswitch
+			
+		break
+		
+		case 11 ; OpEwMulSub
+			
+			switch cb0[0].y ; dType
+				
+				case 3 ; TLONGINT
+					imul r7, r7, r11
+					imul r8, r8, r12
+					imul r9, r9, r13
+					imul r10, r10, r14
+					
+					imad r3, r7, l0.zzzz, r3
+					imad r4, r8, l0.zzzz, r4
+					imad r5, r9, l0.zzzz, r5
+					imad r6, r10, l0.zzzz, r6
+					break
+				
+				case 5 ; TREAL
+					mul r7, r7, r11
+					mul r8, r8, r12
+					mul r9, r9, r13
+					mul r10, r10, r14
+					
+					sub r3, r3, r7
+					sub r4, r4, r8
+					sub r5, r5, r9
+					sub r6, r6, r10
+					break
+				
+				case 6 ; TLONGREAL
+					dmul r7.xy, r7.xy, r11.xy
+					dmul r7.zw, r7.zw, r11.zw
+					dmul r8.xy, r8.xy, r12.xy
+					dmul r8.zw, r8.zw, r12.zw
+					dmul r9.xy, r9.xy, r13.xy
+					dmul r9.zw, r9.zw, r13.zw
+					dmul r10.xy, r10.xy, r14.xy
+					dmul r10.zw, r10.zw, r14.zw										
+					
+					dmad r3.xy, r7.xy, l1.xy, r3.xy
+					dmad r3.zw, r7.zw, l1.zw, r3.zw
+					dmad r4.xy, r8.xy, l1.xy, r4.xy
+					dmad r4.zw, r8.zw, l1.zw, r4.zw
+					dmad r5.xy, r9.xy, l1.xy, r5.xy
+					dmad r5.zw, r9.zw, l1.zw, r5.zw
+					dmad r6.xy, r10.xy, l1.xy, r6.xy
+					dmad r6.zw, r10.zw, l1.zw, r6.zw
+					break
+				
+			endswitch
+			
+			break
+		
+	endswitch	
+	
+	iadd r20.x, r20.x, l0.z ; nMaxThreads - 1
+	ilt r0.z, vaTid.x, r20.x
+	if_logicalnz r0.z
+		; store to the output
+		mov g[r0.w], r3
+		mov g[r0.w+1], r4
+		mov g[r0.w+2], r5
+		mov g[r0.w+3], r6
+	else
+		umod r0.z, cb0[0].w, l0.x ; nelems MOD 4
+			
+		switch r0.z
+			case 0
+				mov g[r0.w], r3
+				mov g[r0.w+1], r4
+				mov g[r0.w+2], r5
+				mov g[r0.w+3], r6
+			break
+			
+			case 1
+				mov g[r0.w], r3				
+			break
+			
+			case 2
+				mov g[r0.w], r3
+				mov g[r0.w+1], r4
+			break
+			
+			case 3
+				mov g[r0.w], r3
+				mov g[r0.w+1], r4
+				mov g[r0.w+2], r5
+			break
+		endswitch
+	endif	
+endif
+
+end		
+]]>
+	</ILKernel>	
 	
 <ILKernel name = "Inject_LI_R">
 <![CDATA[
@@ -13614,3 +13902,4 @@ end
 	</ILKernel>
 	
 </Kernels>
+
