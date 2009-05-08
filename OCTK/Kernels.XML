@@ -2132,6 +2132,133 @@ end
 ]]>
 	</ILKernel>
 	
+<ILKernel name = "MatMulTSplit8Unroll2_R">		
+<![CDATA[
+il_ps_2_0
+;
+;	Multiplication of matrices splitted into 8 parts: C := A*B'
+; 	use loop unrolling by 2
+;
+;	inputs: 16
+;	outputs: 8
+;	data type: REAL
+;	nComponents: 4
+;	constants: 1, 1x4 (REAL) : [A.physWidth,...,...,...]
+;
+dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__
+dcl_cb cb0[1]	; [A.physWidth,...]
+
+dcl_output_generic o0
+dcl_output_generic o1
+dcl_output_generic o2
+dcl_output_generic o3
+dcl_output_generic o4
+dcl_output_generic o5
+dcl_output_generic o6
+dcl_output_generic o7
+
+dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(2)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(3)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(4)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(5)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(6)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(7)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+
+dcl_resource_id(8)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(9)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(10)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(11)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+
+dcl_resource_id(12)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(13)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(14)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+dcl_resource_id(15)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
+
+dcl_literal l0, 2.0f, 0.5f, 0.0f, 0.0f
+dcl_literal l1, 8, 0, 0, 0
+
+; initialize sample counters of A
+mov r0.01z0, vWinCoord0.00y0		; r0 := [0,1,y,0]
+sub r0.xy, r0.xy, l0.xx					; account first increment
+
+; initialize sample counter of B
+ftoi r1.y, vWinCoord0.x			; [0,x,...]
+umod r1.z, r1.y, l1.x
+udiv r1.y, r1.y, l1.x
+itof r1.xy, r1.0y
+sub r1.x, r1.x, r1.1						; account first increment
+
+; clear float4 accumulators for 8x4 * 4x4 matrix multiply result
+mov r34, r34.0000	
+mov r35, r35.0000
+mov r36, r36.0000
+mov r37, r37.0000
+mov r38, r38.0000	
+mov r39, r39.0000
+mov r40, r40.0000
+mov r41, r41.0000
+
+mul r2.0y, l0.y, cb0[0].x	; r2.x is the loop counter, r2.y := floor(A.physWidth/2)
+flr r2.y, r2.y
+sub r2.x, r2.x, r2.1		; account first increment
+
+;%%%
+add r1.x, r1.x, r1.1
+if_logicalz r1.z						
+		; load 2 next 4x4 blocks of B
+		sample_resource(8)_sampler(8) r10, r1.xy00
+		sample_resource(9)_sampler(9) r11, r1.xy00
+		sample_resource(10)_sampler(10) r12, r1.xy00
+		sample_resource(11)_sampler(11) r13, r1.xy00
+		
+		add r1.x, r1.x, r1.1				
+		
+		sample_resource(8)_sampler(8) r14, r1.xy00
+		sample_resource(9)_sampler(9) r15, r1.xy00
+		sample_resource(10)_sampler(10) r16, r1.xy00
+		sample_resource(11)_sampler(11) r17, r1.xy00
+	else
+		sample_resource(12)_sampler(12) r10, r1.xy00
+		sample_resource(13)_sampler(13) r11, r1.xy00
+		sample_resource(14)_sampler(14) r12, r1.xy00
+		sample_resource(15)_sampler(15) r13, r1.xy00
+		
+		add r1.x, r1.x, r1.1
+		
+		sample_resource(12)_sampler(12) r14, r1.xy00
+		sample_resource(13)_sampler(13) r15, r1.xy00
+		sample_resource(14)_sampler(14) r16, r1.xy00
+		sample_resource(15)_sampler(15) r17, r1.xy00
+	endif
+	
+	; load next 8x4 block of A
+	sample_resource(0)_sampler(0) r26, r0.xz00
+	sample_resource(1)_sampler(1) r27, r0.xz00
+	sample_resource(2)_sampler(2) r28, r0.xz00
+	sample_resource(3)_sampler(3) r29, r0.xz00
+	sample_resource(4)_sampler(4) r30, r0.xz00
+	sample_resource(5)_sampler(5) r31, r0.xz00
+	sample_resource(6)_sampler(6) r32, r0.xz00
+	sample_resource(7)_sampler(7) r33, r0.xz00
+
+	
+;%%%
+
+; store the result
+mov o0, r34
+mov o1, r35
+mov o2, r36
+mov o3, r37
+mov o4, r38
+mov o5, r39
+mov o6, r40
+mov o7, r41
+end
+]]>
+	</ILKernel>	
+	
 	<ILKernel name = "MatVecMulSplit8_R">
 <![CDATA[
 il_ps_2_0
