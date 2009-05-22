@@ -48,7 +48,7 @@ dcl_cb cb0[2]
 dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float) ; src array
 dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float) ; dst array
 
-dcl_literal l0, 4, -1, -1, 0
+dcl_literal l0, 4, 0xFFFFFFFF, 0xFFFFFFFF, 0
 
 ftoi r0.xy, vWinCoord0.xy ; convert output position in multi-component elements  to integers
 mov r0.z, r0.x ; r0.z := Int(vWinCoord0.x)
@@ -348,7 +348,7 @@ dcl_cb cb0[1]
 dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float) ; src array
 dcl_resource_id(1)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float) ; dst array
 
-dcl_literal l0, 4, -1, 0, 0
+dcl_literal l0, 4, 0xFFFFFFFF, 0, 0
 
 ; compute non-virtual position in the input
 ftoi r0.xy, vWinCoord0.xy
@@ -3902,7 +3902,7 @@ dcl_cb cb0[8]	; [h0,h1,h2,h3],[h4,0,0,0]
 dcl_cb cb1[1]	; [hotSpot,width,physWidth,boundary]
 dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
 
-dcl_literal l0, 4, -4, -1, 1
+dcl_literal l0, 4, 0xFFFFFFFC, 0xFFFFFFFF, 1
 
 ; compute linear index of first element of line to process
 umul r20.x, vaTid.x, cb1[0].y ; iLine*width
@@ -4056,7 +4056,7 @@ dcl_cb cb0[12]	; [h0,h1,h2,h3],[h4,h5,h6,h7],[h8,0,0,0]
 dcl_cb cb1[1]	; [hotSpot,width,physWidth,boundary]
 dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
 
-dcl_literal l0, 4, -8, -1, 1
+dcl_literal l0, 4, 0xFFFFFFF8, 0xFFFFFFFF, 1
 
 ; compute linear index of first element of line to process
 umul r20.x, vaTid.x, cb1[0].y ; iLine*width
@@ -4194,235 +4194,7 @@ endfunc
 end
 ]]>
 </ILKernel>	
-	
-<ILKernel name = "ReshapeVirtToVirt_LI_R0">
-<![CDATA[
-il_ps_2_0
-;
-;	Reshape a virtualized array to a virtualized array
-; 
-;	inputs: 1
-;	outputs: 1
-;	data type: LONGINT, REAL
-;	nComponents: 4
-;	constants: 2, 2x4 (LONGINT)
-;
-
-dcl_input_position_interp(linear_noperspective) vWinCoord0.xy__
-dcl_output_generic o0
-
-dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
-
-dcl_cb cb0[2] ; [xPitchSrc,xPitchDst,physWidth,xSizeSrc], [xSizeDst,...]
-
-dcl_literal l0, 4, 1, -1, 0
-
-ftoi r0, vWinCoord0.xy ; 2D output position in quads
-umad r0.x, r0.y, cb0[0].z, r0.x ; linear index of current quad in the output
-udiv r0.y, r0.x, cb0[0].y ; line number of current quad
-umod r1.y, r0.x, cb0[0].y ; position of the quad within the line
-umul r0.x, r1.y, l0.x ; single element position within the line
-umad r0.x, r0.y, cb0[1].x, r0.x ; nLines*xSizeDst + ind -> actual linear index in single elements
-
-udiv r0.y, r0.x, cb0[0].w ; line number in the input
-umod r4.x, r0.x, cb0[0].w ; single element position within the line
-umul r0.z, cb0[0].x, l0.x ; xPitchSrc*4
-umad r0.x, r0.y, r0.z, r4.x ; single element position with account of input's padding
-umod r4.y, r0.x, l0.x ; 4 components misalignment
-udiv r1.x, r0.x, l0.x ; linear index in quads
-
-; 2D input position in quads
-udiv r0.y, r1.x, cb0[0].z
-umod r0.x, r1.x, cb0[0].z
-
-; increment linear index and compute 2D position of the next quad
-iadd r1.x, r1.x, l0.y
-udiv r0.w, r1.x, cb0[0].z
-umod r0.z, r1.x, cb0[0].z
-itof r0, r0
-
-umod r1.z, cb0[0].w, l0.x ; xSizeSrc MOD 4
-ieq r1.z, r1.z, r1.0 ; no padding in input
-imad r4.x, r4.x, l0.z, cb0[0].w ; xSizeSrc - single element position within the line
-ige r1.w, r4.x, l0.x
-ior r1.z, r1.z, r1.w ; (xSizeSrc MOD 4 = 0) OR (xSizeSrc - indWithinLine >= 4)
-
-if_logicalnz r1.z
-
-	switch r4.y
-		case 0 ; no misalignment			
-			sample_resource(0)_sampler(0) r2, r0.xy
-			break
-		case 1			
-			sample_resource(0)_sampler(0) r2._yzw, r0.xy		
-			sample_resource(0)_sampler(0) r2.x___, r0.zw
-			mov r2.xyzw, r2.yzwx
-			break
-		case 2
-			sample_resource(0)_sampler(0) r2.__zw, r0.xy		
-			sample_resource(0)_sampler(0) r2.xy__, r0.zw
-			mov r2.xyzw, r2.zwxy
-			break
-		case 3
-			sample_resource(0)_sampler(0) r2.___w, r0.xy		
-			sample_resource(0)_sampler(0) r2.xyz_, r0.zw
-			mov r2.xyzw, r2.wxyz
-			break
-	endswitch
-	
-else
-	
-	switch r4.y
-	
-		case 0 ; no misalignment
-			
-			switch r4.x
-				case 1					
-					sample_resource(0)_sampler(0) r2.x___, r0.xy
-					sample_resource(0)_sampler(0) r3.xyz_, r0.zw
-					mov r2._yzw, r3.0xyz
-					break
-				
-				case 2					
-					sample_resource(0)_sampler(0) r2.xy__, r0.xy
-					sample_resource(0)_sampler(0) r3.xy__, r0.zw
-					mov r2.__zw, r3.00xy
-					break
-					
-				case 3
-					sample_resource(0)_sampler(0) r2.xyz_, r0.xy
-					sample_resource(0)_sampler(0) r3.x___, r0.zw
-					mov r2.___w, r3.000x
-					break	
-			endswitch
-			
-			break
-		case 1
-			
-			switch r4.x
-				case 1					
-					sample_resource(0)_sampler(0) r2._y__, r0.xy
-					sample_resource(0)_sampler(0) r3.xyz_, r0.zw
-					mov r2.x, r2.y
-					mov r2._yzw, r3.0xyz
-					break
-				
-				case 2					
-					sample_resource(0)_sampler(0) r2._yz_, r0.xy
-					sample_resource(0)_sampler(0) r3.xy__, r0.zw
-					mov r2.xy00, r2.yz00
-					mov r2.__zw, r3.00xy
-					break
-					
-				case 3					
-					sample_resource(0)_sampler(0) r2._yzw, r0.xy
-					sample_resource(0)_sampler(0) r3.x___, r0.zw
-					mov r2.xyz0, r2.yzw0
-					mov r2.___w, r3.x
-					break	
-			endswitch
-			
-			break
-		case 2
-			
-			switch r4.x
-				case 1					
-					sample_resource(0)_sampler(0) r2.__z_, r0.xy
-					sample_resource(0)_sampler(0) r3.xyz_, r0.zw
-					mov r2.x, r2.z
-					mov r2._yzw, r3.0xyz
-					break
-				
-				case 2				
-					sample_resource(0)_sampler(0) r2.__zw, r0.xy
-					sample_resource(0)_sampler(0) r3.xy__, r0.zw
-					mov r2.xy00, r2.zw00
-					mov r2.__zw, r3.00xy
-					break
-					
-				case 3
-					iadd r1.x, r1.x, l0.y
-					udiv r4.y, r1.x, cb0[0].z
-					umod r4.x, r1.x, cb0[0].z
-					itof r4.xy, r4.xy
-					sample_resource(0)_sampler(0) r2.__zw, r0.xy
-					sample_resource(0)_sampler(0) r3.x___, r0.zw
-					sample_resource(0)_sampler(0) r2.x___, r4.xy
-					mov r2.xy0w, r2.zw0x
-					mov r2.__z_, r3.00x0
-					break	
-									
-			endswitch
-			
-			break
-		case 3
-			
-			switch r4.x
-				case 1					
-					sample_resource(0)_sampler(0) r2.___w, r0.xy
-					sample_resource(0)_sampler(0) r3.xyz_, r0.zw
-					mov r2.x, r2.w
-					mov r2._yzw, r3.0xyz
-					break
-				
-				case 2
-					iadd r1.x, r1.x, l0.y
-					udiv r4.y, r1.x, cb0[0].z
-					umod r4.x, r1.x, cb0[0].z
-					itof r4.xy, r4.xy
-					sample_resource(0)_sampler(0) r2.___w, r0.xy
-					sample_resource(0)_sampler(0) r3.x___, r0.zw
-					sample_resource(0)_sampler(0) r2.xy__, r4.xy
-					mov r2.x0zw, r2.w0xy
-					mov r2._y__, r3.0x00
-					break
-					
-				case 3
-					iadd r1.x, r1.x, l0.y
-					udiv r4.y, r1.x, cb0[0].z
-					umod r4.x, r1.x, cb0[0].z
-					itof r4.xy, r4.xy
-					sample_resource(0)_sampler(0) r2.___w, r0.xy
-					sample_resource(0)_sampler(0) r3.xy__, r0.zw
-					sample_resource(0)_sampler(0) r2.x___, r4.xy
-					mov r2.x00w, r2.w00x
-					mov r2._yz_, r3.0xy0
-					break
-									
-			endswitch
-			
-			break
-	endswitch
 		
-endif
-
-iadd r1.y, r1.y, l0.y ; increment position of the output quad within the line
-ieq r0.z, r1.y, cb0[0].y ; ind+1 = xPitchDst
-if_logicalnz r0.z
-	
-	umod r0.z, cb0[1].x, l0.x ; misalignment xSizeDst MOD 4
-	switch r0.z
-		case 0 ; no misalignment
-			break
-		case 1
-			mov r2, r2.x000
-			break
-		case 2
-			mov r2, r2.xy00
-			break
-		case 3
-			mov r2, r2.xyz0
-			break
-	endswitch
-	
-endif
-
-mov o0, r2
-
-end
-]]>
-	</ILKernel>
-	
 	<ILKernel name = "ReshapeVirtToVirt_LI_R">
 <![CDATA[
 il_cs_2_0
@@ -4442,7 +4214,7 @@ dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(floa
 
 dcl_cb cb0[2] ; [xPitchSrc,xPitchDst,physWidth,xSizeSrc], [xSizeDst,...]
 
-dcl_literal l0, 4, 1, -1, 0
+dcl_literal l0, 4, 1, 0xFFFFFFFF, 0
 
 mov r0.x, vaTid.x
 udiv r0.y, r0.x, cb0[0].y ; line number of current quad
@@ -4494,7 +4266,7 @@ if_logicalnz r1.z
 			sample_resource(0)_sampler(0) r2.xyz_, r0.zw
 			mov r2.xyzw, r2.wxyz
 			break
-	endswitch
+	endswitch	
 	
 else
 	
@@ -4615,7 +4387,7 @@ else
 					mov r2._yz_, r3.0xy0
 					break
 									
-			endswitch
+			endswitch						
 			
 			break
 	endswitch
@@ -4677,7 +4449,7 @@ dcl_resource_id(0)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(floa
 dcl_cb cb0[2] ; [xPitchSrc,xPitchDst,physWidthSrc,xSizeSrc], [xSizeDst,...]
 ; in this case xPitchDst = physWidthDst
 
-dcl_literal l0, 4, 1, -1, 8
+dcl_literal l0, 4, 1, 0xFFFFFFFF, 8
 
 ; ************** part 1 **************
 ; output quad is stored in r2
@@ -4718,7 +4490,7 @@ if_logicalnz r1.z
 		case 0 ; no misalignment			
 			sample_resource(0)_sampler(0) r2, r0.xy
 			break
-		case 1			
+		case 1
 			sample_resource(0)_sampler(0) r2._yzw, r0.xy		
 			sample_resource(0)_sampler(0) r2.x___, r0.zw
 			mov r2.xyzw, r2.yzwx
@@ -6192,7 +5964,7 @@ dcl_resource_id(5)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(floa
 dcl_resource_id(6)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
 dcl_resource_id(7)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
 
-dcl_literal l0, 4, 1, -1, 8
+dcl_literal l0, 4, 1, 0xFFFFFFFF, 8
 
 ftoi r0, vWinCoord0.xy ; 2D output position in quads
 umad r0.x, r0.y, cb0[0].z, r0.x ; linear index of current quad in the output
@@ -6461,7 +6233,7 @@ dcl_resource_id(5)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(floa
 dcl_resource_id(6)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
 dcl_resource_id(7)_type(2d,unnorm)_fmtx(float)_fmty(float)_fmtz(float)_fmtw(float)
 
-dcl_literal l0, 4, 1, -1, 8
+dcl_literal l0, 4, 1, 0xFFFFFFFF, 8
 
 mov r0.x, vaTid.x
 
