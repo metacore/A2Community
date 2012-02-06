@@ -87,7 +87,7 @@ TYPE
 				menuPanel.openDirection.Set(WMMenus.OpenDownRight);
 				menuPanel.SetMenu(menu, root);
 
-				menuPanel.menuSelectEvent.Add(SelectKBD);
+				menuPanel.onSelect.Add(SelectKBD);
 				spanel.AddContent(menuPanel);
 				SetDocument;
 			END CreateMenu;
