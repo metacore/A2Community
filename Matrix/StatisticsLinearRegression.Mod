@@ -1,4 +1,12 @@
-MODULE StatisticsLinearRegression; (** AUTHOR ""; PURPOSE ""; *)
+MODULE StatisticsLinearRegression; (** AUTHOR "Patrick Hunziker 2012"; PURPOSE "Linear Regression Models"; *)
+
+(*mathematical limitations for linear regression are summarized in 
+http://en.wikipedia.org/wiki/Linear_regression_model 
+and can lead to failure of the algorithm/solvers.
+If the used QR solver (current standard in MatrixLeastSquares) fails in an underdetermined system, 
+a SVD based least squares solver for least squares computation (in all types off systems) will help,
+or a Krylov based solver may help. 
+*)
 
 IMPORT MatrixBase, MatrixLeastSquares, Util:=MatrixUtilities, Streams, KernelLog, (* *) ExtraSort (* *);
 
@@ -30,18 +38,20 @@ TYPE Matrix*=MatrixBase.Matrix;
 VAR w: Streams.Writer;
 
 (**
+y = Xb + e
+
 y: Response variables
-x: regressors = input variables, making up the design matrix X
+x: regressors = input variables, making up the design matrix X; 
 b: regression coefficients
 e: error term
 usually, a constant is included in the regressors X, (e.g. all xi1 := 1), and the resulting b is called intercept.
 See example in Test() below.
 *)
 PROCEDURE LinearRegression*(CONST X: Matrix; CONST y: Vector; VAR b, e: Vector);
-VAR qr: MatrixLeastSquares.LeastSquaresQR;
+VAR ls: MatrixLeastSquares.LeastSquares;
 BEGIN
-	NEW(qr, X); 
-	b:=qr.Solve(y);
+	NEW(ls, X); 
+	b:=ls.Solve(y);
 	e:= y- X*b;
 END LinearRegression;
 
@@ -85,15 +95,15 @@ see http://en.wikipedia.org/wiki/General_linear_model
 *)
 
 PROCEDURE GeneralLinearModel*(CONST X: Matrix; CONST Y: Matrix; VAR B, U: Matrix); (** not exhaustively tested *)
-	VAR qr: MatrixLeastSquares.LeastSquaresQR;
+	VAR ls: MatrixLeastSquares.LeastSquares;
 		y, b,e: Vector; i:LONGINT;
 BEGIN
-	NEW(qr, X); 
+	NEW(ls, X); 
 	NEW(B, LEN(X,1), LEN(Y,1));
 	NEW(U, LEN(Y,0), LEN(Y,1));
 	FOR i:=0 TO LEN(Y,1)-1 DO
 		y:=Y[..,i];
-		b:=qr.Solve(y);
+		b:=ls.Solve(y);
 		e:= y- X*b;
 		B[..,i]:=b;
 		U[..,i]:=e;
@@ -172,6 +182,7 @@ BEGIN
 	w.FloatFix(e+*e, 4, 10, 0); w.Ln; w.Ln; w.Update;
 	
 	w.String("Linear Regression with intercept"); w.Ln; w.Update;
+	(* X:=[[1.0,1.1,1.0],[1.0,1.9,2.1],[1,2.8, 2.9],[1,4.1,3.9],[1,5.3, 5.1],[1,5.8, 6]]; *)
 	X:=[[1.0,1.1],[1.0,1.9],[1,2.8],[1,4.1],[1,5.3],[1,5.8]];
 	LinearRegression(X,y,B,e);
 	Util.OutVector(B);
@@ -190,7 +201,7 @@ PROCEDURE TestGLM*;
 VAR X,Y, B,U: Matrix;
 BEGIN
 	Y:=[[1.0,10],[2.1,21],[2.9,29],[ 4.1,41], [5.0,50], [5.9,59]]; (* dependent variables/measurements *)
-	X:=[[1.0,1.1],[2,1.9],[3,2.8],[4,4.1],[5,5.3],[6,5.8]]; (* *)
+	X:=[[1,1.0,1.1],[1,2,1.9],[1,3,2.8],[1,4,4.1],[1,5,5.3],[1,6,5.8]]; (* design matrix; first row is constant => intercept*)
 	GeneralLinearModel(X,Y,B,U);
 	w.String("General Linear Model: B, U, sum of squared error"); w.Ln; w.Update;
 	Util.OutMatrix(B); w.Ln; w.Update; (* regression coefficients*)
