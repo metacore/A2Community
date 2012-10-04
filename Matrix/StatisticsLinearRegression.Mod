@@ -40,13 +40,98 @@ VAR w: Streams.Writer;
 (**
 y = Xb + e
 
-y: Response variables
-x: regressors = input variables, making up the design matrix X; 
-b: regression coefficients
+y: Observed response variables, vector
+x: regressors = input variables, one row for each response element, making up the design matrix X; 
+b: regression coefficient vector, to be determined
 e: error term
 usually, a constant is included in the regressors X, (e.g. all xi1 := 1), and the resulting b is called intercept.
 See example in Test() below.
 *)
+
+TYPE Regression*= OBJECT
+		VAR 
+			X: Matrix;
+			b-, e-: Vector; (* regression coefficients and residual  for regression and simple regression*)
+			B-,U-: Matrix; (* regression coefficients and residuals for GLM *)
+			R2-,	(* see http://en.wikipedia.org/wiki/Coefficient_of_determination *)
+			R2adj-, (* adjusted R2 [korrigiertes Bestimmtheitsmass, adjusts for number o regressors, http://en.wikipedia.org/wiki/Coefficient_of_determination#Adjusted_R2 
+						suited to explore if a model with a restricted or a nonrestricted number of regressors is prefereable: the best model has the highest R2corr *)
+			RSS-, (* residual sum of squares = sum of squared residuals *)
+			F-, p-: Scalar;
+			ls: MatrixLeastSquares.LeastSquares;
+			yestimate: Vector;
+			ymean: Scalar;
+			isGLM:BOOLEAN;
+			nvar, nsamp: LONGINT;
+			
+		PROCEDURE &Init*(CONST X: Matrix; intercept: BOOLEAN);
+		BEGIN
+			IF LEN(X,0)>0 THEN 
+				nvar:=LEN(X,1);
+				nsamp:=LEN(X,1);
+				IF intercept THEN	NEW(SELF.X, LEN(X,0), LEN(X,1)+1); SELF.X[..,0]:=1; SELF.X[..,1..]:=X;
+				ELSE SELF.X:=X
+				END;
+				NEW(ls, SELF.X); 
+			ELSE (* needs later call of Init() or InitSimple() *)
+			END;
+		END Init;
+		
+		PROCEDURE InitSimple*(CONST x:Vector; intercept:BOOLEAN);
+		BEGIN
+			ASSERT(LEN(x,0)>0);
+			nvar:=1; 
+			nsamp:=LEN(x,0);
+			IF intercept THEN NEW (X, LEN(x,0),2); X[..,0]:=1; X[..,1]:=x;
+			ELSE NEW(X,1,LEN(x,0)); X[..,0]:=x; 
+			END;
+			NEW(ls, X); 
+		END InitSimple;
+		
+		PROCEDURE Solve*(CONST y: Vector):Vector; (* yields b *)
+		BEGIN
+			isGLM:=FALSE;
+			b:=ls.Solve(y);
+			yestimate:=X*b;
+			e:= y- yestimate;
+			ymean:=SUM(y)/LEN(y,0);
+				(* coefficient of determination *)
+			RSS:=e+*e;
+			R2:= 1-(RSS / inner(y-ymean));
+			IF nsamp#(nvar+1) THEN (*no division by zero*)
+				R2adj:=1-(1-R2)*((nsamp-1)/(nsamp-nvar-1));
+				F:= (R2/(nvar+1)) / ((1-R2)/(nsamp-nvar-1));
+				(*p:= see http://stat.ethz.ch/R-manual/R-patched/library/stats/html/Fdist.html *)
+			END;	
+			RETURN b
+		END Solve;
+		
+		PROCEDURE SolveGLM*(CONST Y:Matrix): Matrix; (* yields B *)
+		VAR i:LONGINT; y, b,e: Vector;
+		BEGIN
+			isGLM:=TRUE;
+			NEW(B, LEN(X,1), LEN(Y,1));
+			NEW(U, LEN(Y,0), LEN(Y,1));
+			FOR i:=0 TO LEN(Y,1)-1 DO
+				y:=Y[..,i];
+				b:=ls.Solve(y);
+				e:= y- X*b;
+				B[..,i]:=b;
+				U[..,i]:=e;
+			END;
+			RETURN B
+			(*! to do: compute regression coefficient R2, F-statistics, and p value*)
+		END SolveGLM;
+	END Regression;
+
+
+
+PROCEDURE inner(CONST v:Vector): Scalar;
+BEGIN
+	RETURN v+*v
+END inner;
+
+
 PROCEDURE LinearRegression*(CONST X: Matrix; CONST y: Vector; VAR b, e: Vector);
 VAR ls: MatrixLeastSquares.LeastSquares;
 BEGIN
@@ -56,7 +141,7 @@ BEGIN
 END LinearRegression;
 
 (* no intercept, assumption is that regression line goes through origin *)
-PROCEDURE SimpleRegression*(CONST x: Vector; CONST y: Vector; VAR b: Scalar; VAR e: Vector);
+PROCEDURE SimpleRegressionNoIntercept*(CONST x: Vector; CONST y: Vector; VAR b: Scalar; VAR e: Vector);
 VAR X: Matrix; B: Vector;
 BEGIN
 	(*can be simplified*)
@@ -64,9 +149,9 @@ BEGIN
 	X[..,0]:=x;
 	LinearRegression(X,y,B,e);
 	b:=B[0];
-END SimpleRegression;
+END SimpleRegressionNoIntercept;
 
-PROCEDURE SimpleRegressionIntercept*(CONST x: Vector; CONST y: Vector; VAR b, intercept: Scalar; VAR e: Vector);
+PROCEDURE SimpleRegression*(CONST x: Vector; CONST y: Vector; VAR b, intercept: Scalar; VAR e: Vector);
 VAR X: Matrix; B: Vector;
 BEGIN
 	(*can be simplified*)
@@ -76,7 +161,7 @@ BEGIN
 	LinearRegression(X,y,B,e);
 	intercept:=B[0];
 	b:=B[1];
-END SimpleRegressionIntercept;
+END SimpleRegression;
 
 (**
 The general linear model (GLM) is a statistical linear model. It may be written as
@@ -162,14 +247,14 @@ BEGIN
 
 	w.String("Simple Regression: regression coefficient, error vector, sum of square errors"); w.Ln; w.Update;
 	x:=[1.0,2,3,4,5,6];
-	SimpleRegression(x,y,b,e);
+	SimpleRegressionNoIntercept(x,y,b,e);
 	w.FloatFix(b, 4, 10, 0); w.Ln; w.Update;
 	Util.OutVector(e);
 	w.FloatFix(e+*e, 4, 10, 0); w.Ln; w.Ln; w.Update;	
 
 	w.String("Simple Regression with intercept: regression coefficient, intercept, error vector, sum of square errors"); w.Ln; w.Update;
 	x:=[1.0,2,3,4,5,6];
-	SimpleRegressionIntercept(x,y,b,intercept, e);
+	SimpleRegression(x,y,b,intercept, e);
 	w.FloatFix(b, 4, 10, 0); w.FloatFix(intercept, 4, 10, 0); w.Ln; w.Update;
 	Util.OutVector(e);
 	w.FloatFix(e+*e, 4, 10, 0); w.Ln; w.Ln; w.Update;	
@@ -183,7 +268,12 @@ BEGIN
 	
 	w.String("Linear Regression with intercept"); w.Ln; w.Update;
 	(* X:=[[1.0,1.1,1.0],[1.0,1.9,2.1],[1,2.8, 2.9],[1,4.1,3.9],[1,5.3, 5.1],[1,5.8, 6]]; *)
-	X:=[[1.0,1.1],[1.0,1.9],[1,2.8],[1,4.1],[1,5.3],[1,5.8]];
+	X:=[[1.0,1.1],
+		[1.0,1.9],
+		[1,2.8],
+		[1,4.1],
+		[1,5.3],
+		[1,5.8]];
 	LinearRegression(X,y,B,e);
 	Util.OutVector(B);
 	Util.OutVector(e);
@@ -209,10 +299,57 @@ BEGIN
 	w.FloatFix(U+*U, 4, 10, 0); w.Ln; w.Ln; w.Update;
 END TestGLM;
 
+PROCEDURE TestEngine*;
+VAR 
+	regression:Regression;
+	X: Matrix; x, y, B,e: Vector; b, intercept: Vector; bb,iintercept: Scalar;
+BEGIN
+	
+	NEW(regression,X,TRUE);
+	x:=[1.0,2,3,4,5,6];
+	y:=[1.0,2.1,2.9, 4.1, 5.0, 5.9]+2;
+	regression.InitSimple(x, TRUE);
+	b:=regression.Solve(y);
+	w.String("regression "); w.Ln; w.Update;
+	Util.OutVector(b); w.Ln; w.Update; (* regression coefficients*)
+	Util.OutVector(regression.e); w.Ln; w.Update; (* regression coefficients*)
+	w.String("R2, R2adj, F: "); w.Ln; w.Update;
+		Util.OutVector([regression.R2]);
+		Util.OutVector([regression.R2adj]);
+		Util.OutVector([regression.F]);w.Ln; w.Update;
+
+	X:=[[1.0,8],[2,1],[3,2],[4,5],[5,4],[6,3]];
+	NEW(regression,X,TRUE);
+	y:=[1.0,2.1,2.9, 4.1, 5.0, 5.9]+2;
+	b:=regression.Solve(y);
+	w.String("regression "); w.Ln; w.Update;
+	Util.OutVector(b); w.Ln; w.Update; (* regression coefficients*)
+	Util.OutVector(regression.e); w.Ln; w.Update; (* regression coefficients*)
+	w.String("R2, R2adj, F: "); w.Ln; w.Update;
+		Util.OutVector([regression.R2]);
+		Util.OutVector([regression.R2adj]);
+		Util.OutVector([regression.F]);w.Ln; w.Update;
+		
+	X:=[[1.0,1.1],[2,1.9],[3,2.8],[4,4.1],[5,5.3],[6,5.8]];
+	NEW(regression,X,TRUE);
+	y:=[1.0,2.1,2.9, 4.1, 5.0, 5.9]+2;
+	b:=regression.Solve(y);
+	
+	w.String("regression; colinear data "); w.Ln; w.Update;
+	Util.OutVector(b); w.Ln; w.Update; (* regression coefficients*)
+	Util.OutVector(regression.e); w.Ln; w.Update; (* regression coefficients*)
+	w.String("R2, R2adj, F: "); w.Ln; w.Update;
+		Util.OutVector([regression.R2]);
+		Util.OutVector([regression.R2adj]);
+		Util.OutVector([regression.F]);w.Ln; w.Update;
+END TestEngine;
+
+
 BEGIN
 	Streams.OpenWriter(w, KernelLog.Send)
 END StatisticsLinearRegression.
 
 StatisticsLinearRegression.Test~
 StatisticsLinearRegression.TestGLM~
+StatisticsLinearRegression.TestEngine~
 SystemTools.FreeDownTo StatisticsLinearRegression ~ 
