@@ -51,16 +51,16 @@ See example in Test() below.
 TYPE Regression*= OBJECT
 		VAR 
 			X: Matrix;
-			b-, e-: Vector; (* regression coefficients and residual  for regression and simple regression*)
+			b-, e-, yestimate-: Vector; (* regression coefficients and residual  for regression and simple regression*)
 			B-,U-: Matrix; (* regression coefficients and residuals for GLM *)
 			R2-,	(* see http://en.wikipedia.org/wiki/Coefficient_of_determination *)
 			R2adj-, (* adjusted R2 [korrigiertes Bestimmtheitsmass, adjusts for number o regressors, http://en.wikipedia.org/wiki/Coefficient_of_determination#Adjusted_R2 
 						suited to explore if a model with a restricted or a nonrestricted number of regressors is prefereable: the best model has the highest R2corr *)
 			RSS-, (* residual sum of squares = sum of squared residuals *)
-			F-, p-: Scalar;
+			F-, p-, ymean-: Scalar;
+			
 			ls: MatrixLeastSquares.LeastSquares;
-			yestimate: Vector;
-			ymean: Scalar;
+
 			isGLM:BOOLEAN;
 			nvar, nsamp: LONGINT;
 			
@@ -68,8 +68,8 @@ TYPE Regression*= OBJECT
 		BEGIN
 			IF LEN(X,0)>0 THEN 
 				nvar:=LEN(X,1);
-				nsamp:=LEN(X,1);
-				IF intercept THEN	NEW(SELF.X, LEN(X,0), LEN(X,1)+1); SELF.X[..,0]:=1; SELF.X[..,1..]:=X;
+				nsamp:=LEN(X,0);
+				IF intercept THEN	NEW(SELF.X, nsamp, nvar+1); SELF.X[..,0]:=1; SELF.X[..,1..]:=X;
 				ELSE SELF.X:=X
 				END;
 				NEW(ls, SELF.X); 
@@ -82,8 +82,8 @@ TYPE Regression*= OBJECT
 			ASSERT(LEN(x,0)>0);
 			nvar:=1; 
 			nsamp:=LEN(x,0);
-			IF intercept THEN NEW (X, LEN(x,0),2); X[..,0]:=1; X[..,1]:=x;
-			ELSE NEW(X,1,LEN(x,0)); X[..,0]:=x; 
+			IF intercept THEN NEW (X, nsamp, 2); X[..,0]:=1; X[..,1]:=x;
+			ELSE NEW(X,nsamp, 1); X[..,0]:=x; 
 			END;
 			NEW(ls, X); 
 		END InitSimple;
@@ -93,16 +93,22 @@ TYPE Regression*= OBJECT
 			isGLM:=FALSE;
 			b:=ls.Solve(y);
 			yestimate:=X*b;
-			e:= y- yestimate;
 			ymean:=SUM(y)/LEN(y,0);
 				(* coefficient of determination *)
+			Util.OutVector(yestimate);
+			Util.OutVector(y);
+			e:= y- yestimate;
+			Util.OutVector(e);
 			RSS:=e+*e;
-			R2:= 1-(RSS / inner(y-ymean));
+			Util.OutVector(e);
+			R2:= 1-(RSS / ((y-ymean)+*(y-ymean))); (* <= HIER WECHSELT vektor e ihren Wert !*)
+			Util.OutVector(e);
 			IF nsamp#(nvar+1) THEN (*no division by zero*)
 				R2adj:=1-(1-R2)*((nsamp-1)/(nsamp-nvar-1));
 				F:= (R2/(nvar+1)) / ((1-R2)/(nsamp-nvar-1));
 				(*p:= see http://stat.ethz.ch/R-manual/R-patched/library/stats/html/Fdist.html *)
 			END;	
+			Util.OutVector(e);
 			RETURN b
 		END Solve;
 		
@@ -302,21 +308,24 @@ END TestGLM;
 PROCEDURE TestEngine*;
 VAR 
 	regression:Regression;
-	X: Matrix; x, y, B,e: Vector; b, intercept: Vector; bb,iintercept: Scalar;
+	X: Matrix; x, y: Vector; b,e: Vector; 
 BEGIN
-	
+	x:=[1.0,2,3,4,5,6];	(*NEW(X, LEN(x,0),1); X[..,0]:=x;*)
 	NEW(regression,X,TRUE);
-	x:=[1.0,2,3,4,5,6];
 	y:=[1.0,2.1,2.9, 4.1, 5.0, 5.9]+2;
 	regression.InitSimple(x, TRUE);
 	b:=regression.Solve(y);
 	w.String("regression "); w.Ln; w.Update;
 	Util.OutVector(b); w.Ln; w.Update; (* regression coefficients*)
-	Util.OutVector(regression.e); w.Ln; w.Update; (* regression coefficients*)
+	e:=regression.e;
+	Util.OutVector(regression.yestimate); w.Ln; w.Update;
+	Util.OutVector(y-regression.yestimate); w.Ln; w.Update;
+	Util.OutVector(e); w.Ln; w.Update; (* regression coefficients*)
 	w.String("R2, R2adj, F: "); w.Ln; w.Update;
 		Util.OutVector([regression.R2]);
 		Util.OutVector([regression.R2adj]);
-		Util.OutVector([regression.F]);w.Ln; w.Update;
+		Util.OutVector([regression.F]);
+		w.Ln; w.Update;
 
 	X:=[[1.0,8],[2,1],[3,2],[4,5],[5,4],[6,3]];
 	NEW(regression,X,TRUE);
@@ -328,7 +337,8 @@ BEGIN
 	w.String("R2, R2adj, F: "); w.Ln; w.Update;
 		Util.OutVector([regression.R2]);
 		Util.OutVector([regression.R2adj]);
-		Util.OutVector([regression.F]);w.Ln; w.Update;
+		Util.OutVector([regression.F]);
+		w.Ln; w.Update;
 		
 	X:=[[1.0,1.1],[2,1.9],[3,2.8],[4,4.1],[5,5.3],[6,5.8]];
 	NEW(regression,X,TRUE);
@@ -341,7 +351,8 @@ BEGIN
 	w.String("R2, R2adj, F: "); w.Ln; w.Update;
 		Util.OutVector([regression.R2]);
 		Util.OutVector([regression.R2adj]);
-		Util.OutVector([regression.F]);w.Ln; w.Update;
+		Util.OutVector([regression.F]);
+		w.Ln; w.Update;
 END TestEngine;
 
 
