@@ -95,20 +95,14 @@ TYPE Regression*= OBJECT
 			yestimate:=X*b;
 			ymean:=SUM(y)/LEN(y,0);
 				(* coefficient of determination *)
-			Util.OutVector(yestimate);
-			Util.OutVector(y);
 			e:= y- yestimate;
-			Util.OutVector(e);
 			RSS:=e+*e;
-			Util.OutVector(e);
-			R2:= 1-(RSS / ((y-ymean)+*(y-ymean))); (* <= HIER WECHSELT vektor e ihren Wert !*)
-			Util.OutVector(e);
+			R2:= 1-(RSS / ((y-ymean)+*(y-ymean))); 
 			IF nsamp#(nvar+1) THEN (*no division by zero*)
 				R2adj:=1-(1-R2)*((nsamp-1)/(nsamp-nvar-1));
 				F:= (R2/(nvar+1)) / ((1-R2)/(nsamp-nvar-1));
 				(*p:= see http://stat.ethz.ch/R-manual/R-patched/library/stats/html/Fdist.html *)
 			END;	
-			Util.OutVector(e);
 			RETURN b
 		END Solve;
 		
@@ -129,14 +123,6 @@ TYPE Regression*= OBJECT
 			(*! to do: compute regression coefficient R2, F-statistics, and p value*)
 		END SolveGLM;
 	END Regression;
-
-
-
-PROCEDURE inner(CONST v:Vector): Scalar;
-BEGIN
-	RETURN v+*v
-END inner;
-
 
 PROCEDURE LinearRegression*(CONST X: Matrix; CONST y: Vector; VAR b, e: Vector);
 VAR ls: MatrixLeastSquares.LeastSquares;
@@ -223,14 +209,14 @@ END Sort;
 The Theil-Sen estimator is a simple robust estimation technique that determine the slope of a dataset 
 as the median of the slopes of the lines through pairs of sample points. 
 It has similar statistical efficiency properties to simple regression but is much less sensitive to outliers.
-Note that at current, this implementation limits the search to MIN(50, N/2) pairs for efficiency reasons, while a full algorithm may consider all pairs and is therefore O(N*N) with added sorting.
+Note that at current, this implementation limits the search to MIN(200, N/2) pairs for efficiency reasons, while a full algorithm may consider all pairs and is therefore O(N*N) with added sorting.
 see http://en.wikipedia.org/wiki/Theil%E2%80%93Sen_estimator for  details
 **)
 PROCEDURE TheilSenEstimator*(CONST x: Vector; CONST y: Vector; VAR b, intercept: Scalar; VAR e: Vector); 
 VAR slopes: Vector; i,len:LONGINT; dx, dy: Scalar;
 BEGIN
 	(*choose sample pairs; here the extremal point pairs are used. Random pairs could also be used *)	
-	len:=MIN (50, LEN(x,0) DIV 2);
+	len:=MIN (200, LEN(x,0) DIV 2);
 	NEW(slopes, len);
 	FOR i:=0 TO len-1 DO
 		dx:=x[LEN(x,0)-1-i]-x[i];
@@ -310,7 +296,7 @@ VAR
 	regression:Regression;
 	X: Matrix; x, y: Vector; b,e: Vector; 
 BEGIN
-	x:=[1.0,2,3,4,5,6];	(*NEW(X, LEN(x,0),1); X[..,0]:=x;*)
+	x:=[1.0,2,3,4,5,6];	
 	NEW(regression,X,TRUE);
 	y:=[1.0,2.1,2.9, 4.1, 5.0, 5.9]+2;
 	regression.InitSimple(x, TRUE);
@@ -319,11 +305,10 @@ BEGIN
 	Util.OutVector(b); w.Ln; w.Update; (* regression coefficients*)
 	e:=regression.e;
 	Util.OutVector(regression.yestimate); w.Ln; w.Update;
-	Util.OutVector(y-regression.yestimate); w.Ln; w.Update;
-	Util.OutVector(e); w.Ln; w.Update; (* regression coefficients*)
-	w.String("R2, R2adj, F: "); w.Ln; w.Update;
+	w.String("R2, R2adj, SSE, F: "); w.Ln; w.Update;
 		Util.OutVector([regression.R2]);
 		Util.OutVector([regression.R2adj]);
+		Util.OutVector([regression.e+*e]);
 		Util.OutVector([regression.F]);
 		w.Ln; w.Update;
 
@@ -331,13 +316,14 @@ BEGIN
 	NEW(regression,X,TRUE);
 	y:=[1.0,2.1,2.9, 4.1, 5.0, 5.9]+2;
 	b:=regression.Solve(y);
-	w.String("regression "); w.Ln; w.Update;
+	w.String("regression with 2 regressors "); w.Ln; w.Update;
 	Util.OutVector(b); w.Ln; w.Update; (* regression coefficients*)
 	Util.OutVector(regression.e); w.Ln; w.Update; (* regression coefficients*)
-	w.String("R2, R2adj, F: "); w.Ln; w.Update;
+	w.String("R2, R2adj, SSE, F: "); w.Ln; w.Update;
 		Util.OutVector([regression.R2]);
 		Util.OutVector([regression.R2adj]);
-		Util.OutVector([regression.F]);
+		Util.OutVector([regression.e+*e]);
+				Util.OutVector([regression.F]);
 		w.Ln; w.Update;
 		
 	X:=[[1.0,1.1],[2,1.9],[3,2.8],[4,4.1],[5,5.3],[6,5.8]];
@@ -345,12 +331,13 @@ BEGIN
 	y:=[1.0,2.1,2.9, 4.1, 5.0, 5.9]+2;
 	b:=regression.Solve(y);
 	
-	w.String("regression; colinear data "); w.Ln; w.Update;
+	w.String("regression with 2 regressors; colinear data "); w.Ln; w.Update;
 	Util.OutVector(b); w.Ln; w.Update; (* regression coefficients*)
 	Util.OutVector(regression.e); w.Ln; w.Update; (* regression coefficients*)
-	w.String("R2, R2adj, F: "); w.Ln; w.Update;
+	w.String("R2, R2adj, SSE, F: "); w.Ln; w.Update;
 		Util.OutVector([regression.R2]);
 		Util.OutVector([regression.R2adj]);
+		Util.OutVector([regression.e+*e]);
 		Util.OutVector([regression.F]);
 		w.Ln; w.Update;
 END TestEngine;
