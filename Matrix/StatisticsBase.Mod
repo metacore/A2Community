@@ -15,7 +15,7 @@ BEGIN
 	meanVector:= (onesR * A)/LEN(A,0); 
 	meanMatrix:= onesR ** meanVector;
 	A:=A-meanMatrix;
-	sdVector := (onesR * MatrixUtilities.ApplyUnary(A.*A, MathL.sqrt)) / MathL.sqrt(LEN(A,0));
+	sdVector :=MatrixUtilities.ApplyUnaryVec(onesR * (A.*A), MathL.sqrt) / MathL.sqrt(LEN(A,0));
 	sdMatrix:= onesR ** sdVector;	
 	A:= A ./ sdMatrix;
 END NormalizeColumns;
@@ -31,3 +31,5 @@ END TestNormalizeColumns;
 *)
 
 END StatisticsBase.
+
+SystemTools.FreeDownTo StatisticsBase ~
