@@ -8,7 +8,8 @@ a SVD based least squares solver for least squares computation (in all types off
 or a Krylov based solver may help. 
 *)
 
-IMPORT MatrixBase, MatrixLeastSquares, Util:=MatrixUtilities, Streams, KernelLog, (* *) ExtraSort (* *);
+IMPORT MatrixBase, MatrixLeastSquares, StatisticsFunctions,
+	Util:=MatrixUtilities, Streams, KernelLog, (* *) ExtraSort (* *);
 
 (* http://en.wikipedia.org/wiki/Linear_regression *)	 
 (**
@@ -101,7 +102,7 @@ TYPE Regression*= OBJECT
 			IF nsamp#(nvar+1) THEN (*no division by zero*)
 				R2adj:=1-(1-R2)*((nsamp-1)/(nsamp-nvar-1));
 				F:= (R2/(nvar+1)) / ((1-R2)/(nsamp-nvar-1));
-				(*p:= see http://stat.ethz.ch/R-manual/R-patched/library/stats/html/Fdist.html *)
+				p := StatisticsFunctions.PSnedecor(nsamp,nvar,F); (* due to a problem in StatisticsFunctions.Mod, p works only for even degrees of freedom *)
 			END;	
 			RETURN b
 		END Solve;
@@ -276,7 +277,8 @@ BEGIN
 	TheilSenEstimator(x,y,b,intercept, e);
 	w.FloatFix(b, 4, 10, 0); w.FloatFix(intercept, 4, 10, 0); w.Ln;w.Update;
 	Util.OutVector(e);
-	w.FloatFix(e+*e, 4, 10, 0); w.Ln; w.Update;	
+	w.FloatFix(e+*e, 4, 10, 0); w.Ln; 
+	w.Update;	
 END Test;
 
 PROCEDURE TestGLM*;
@@ -305,11 +307,12 @@ BEGIN
 	Util.OutVector(b); w.Ln; w.Update; (* regression coefficients*)
 	e:=regression.e;
 	Util.OutVector(regression.yestimate); w.Ln; w.Update;
-	w.String("R2, R2adj, SSE, F: "); w.Ln; w.Update;
+	w.String("R2, R2adj, SSE, F, p: "); w.Ln; w.Update;
 		Util.OutVector([regression.R2]);
 		Util.OutVector([regression.R2adj]);
 		Util.OutVector([regression.e+*e]);
 		Util.OutVector([regression.F]);
+		Util.OutVector([regression.p]);
 		w.Ln; w.Update;
 
 	X:=[[1.0,8],[2,1],[3,2],[4,5],[5,4],[6,3]];
@@ -319,11 +322,12 @@ BEGIN
 	w.String("regression with 2 regressors "); w.Ln; w.Update;
 	Util.OutVector(b); w.Ln; w.Update; (* regression coefficients*)
 	Util.OutVector(regression.e); w.Ln; w.Update; (* regression coefficients*)
-	w.String("R2, R2adj, SSE, F: "); w.Ln; w.Update;
+	w.String("R2, R2adj, SSE, F, p: "); w.Ln; w.Update;
 		Util.OutVector([regression.R2]);
 		Util.OutVector([regression.R2adj]);
 		Util.OutVector([regression.e+*e]);
-				Util.OutVector([regression.F]);
+		Util.OutVector([regression.F]);
+		Util.OutVector([regression.p]);
 		w.Ln; w.Update;
 		
 	X:=[[1.0,1.1],[2,1.9],[3,2.8],[4,4.1],[5,5.3],[6,5.8]];
@@ -334,13 +338,25 @@ BEGIN
 	w.String("regression with 2 regressors; colinear data "); w.Ln; w.Update;
 	Util.OutVector(b); w.Ln; w.Update; (* regression coefficients*)
 	Util.OutVector(regression.e); w.Ln; w.Update; (* regression coefficients*)
-	w.String("R2, R2adj, SSE, F: "); w.Ln; w.Update;
+	w.String("R2, R2adj, SSE, F, p: "); w.Ln; w.Update;
 		Util.OutVector([regression.R2]);
 		Util.OutVector([regression.R2adj]);
 		Util.OutVector([regression.e+*e]);
 		Util.OutVector([regression.F]);
+		Util.OutVector([regression.p]);
 		w.Ln; w.Update;
 END TestEngine;
+
+PROCEDURE TestFprobability*; (* compute probability from F-value *)
+VAR df1,df2:LONGINT; F:LONGINT;
+BEGIN
+	FOR F:=1 TO 5 DO
+		Util.OutVector([F*F]);
+		FOR df2:=1 TO 5 DO (*! observation: for even degrees of freedom, results are OK, but seems not to work for odd degrees of freedom (p=NaN)*)
+			Util.OutVector([StatisticsFunctions.PSnedecor(1,df2,F*F),StatisticsFunctions.PSnedecor(4,df2,F*F),StatisticsFunctions.PSnedecor(8,df2,F*F),StatisticsFunctions.PSnedecor(12,df2,F*F),StatisticsFunctions.PSnedecor(20,df2,F*F)]);
+		END;
+	END;
+END TestFprobability;
 
 
 BEGIN
@@ -350,4 +366,5 @@ END StatisticsLinearRegression.
 StatisticsLinearRegression.Test~
 StatisticsLinearRegression.TestGLM~
 StatisticsLinearRegression.TestEngine~
+StatisticsLinearRegression.TestFprobability~
 SystemTools.FreeDownTo StatisticsLinearRegression ~ 
