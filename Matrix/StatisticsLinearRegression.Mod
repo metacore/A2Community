@@ -8,8 +8,7 @@ a SVD based least squares solver for least squares computation (in all types off
 or a Krylov based solver may help. 
 *)
 
-IMPORT MatrixBase, MatrixLeastSquares, StatisticsFunctions,
-	Util:=MatrixUtilities, Streams, KernelLog, (* *) ExtraSort (* *);
+IMPORT MatrixBase, MatrixLeastSquares, StatisticsFunctions, Util:=MatrixUtilities, Streams, KernelLog, (* *) ExtraSort (* *);
 
 (* http://en.wikipedia.org/wiki/Linear_regression *)	 
 (**
