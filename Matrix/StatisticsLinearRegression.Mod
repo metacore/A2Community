@@ -112,7 +112,7 @@ TYPE Regression*= OBJECT
 			isGLM:=TRUE;
 			NEW(B, LEN(X,1), LEN(Y,1));
 			NEW(U, LEN(Y,0), LEN(Y,1));
-			FOR i:=0 TO LEN(Y,1)-1 DO
+			FOR i:=0 TO LEN(Y,1)-1 DO (* can be optimized *)
 				y:=Y[..,i];
 				b:=ls.Solve(y);
 				e:= y- X*b;
