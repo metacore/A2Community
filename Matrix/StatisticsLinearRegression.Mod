@@ -8,7 +8,7 @@ a SVD based least squares solver for least squares computation (in all types off
 or a Krylov based solver may help. 
 *)
 
-IMPORT MatrixBase, MatrixLeastSquares, StatisticsFunctions, Util:=MatrixUtilities, Streams, KernelLog, (* *) ExtraSort (* *);
+IMPORT MatrixBase, MatrixLeastSquares, StatisticsFunctions, Util:=MatrixUtilities, Streams, Random, KernelLog, (* *) ExtraSort (* *);
 
 (* http://en.wikipedia.org/wiki/Linear_regression *)	 
 (**
@@ -213,23 +213,28 @@ Note that at current, this implementation limits the search to MIN(200, N/2) pai
 see http://en.wikipedia.org/wiki/Theil%E2%80%93Sen_estimator for  details
 **)
 PROCEDURE TheilSenEstimator*(CONST x: Vector; CONST y: Vector; VAR b, intercept: Scalar; VAR e: Vector); 
-VAR slopes: Vector; i,len:LONGINT; dx, dy: Scalar;
+VAR slopes: Vector; i,j,len:LONGINT; dx, dy: Scalar;
 BEGIN
 	(*choose sample pairs; here the extremal point pairs are used. Random pairs could also be used *)	
 	len:=MIN (200, LEN(x,0) DIV 2);
 	NEW(slopes, len);
 	FOR i:=0 TO len-1 DO
-		dx:=x[LEN(x,0)-1-i]-x[i];
-		dy:=y[LEN(x,0)-1-i]-y[i];
-		IF dx#0 THEN 
-			slopes[i]:=dy/dx 
-		END; (* dx=0 not yet handled properly, but has usually only  a minor impact *)
+		j:=i;
+		(*? possible improvement: randomize i, or choose i with large dx 
+		VAR random:Random.Generator;
+		NEW(random);
+		j:=ENTIER(random.Uniform() * len );
+		*)
+		dx:=x[LEN(x,0)-1-j]-x[j];
+		dy:=y[LEN(x,0)-1-j]-y[j];
+		IF dx#0 THEN	slopes[i]:=dy/dx END; (* dx=0 not yet handled properly, but has usually only  a minor impact *)
 	END;
 	Sort(slopes);
 	b:=slopes[len DIV 2]; (*choose median slope *)
 	e:=y-b*x;
 	intercept:=SUM(e)/LEN(x,0);
 	e:=e-intercept;
+	(*optional: estimation of 95% confidence interval, based on observation of 600 pairs is sufficient according to literature*)
 END TheilSenEstimator;
 
 PROCEDURE Test*;
@@ -351,7 +356,7 @@ VAR df1,df2:LONGINT; F:LONGINT;
 BEGIN
 	FOR F:=1 TO 5 DO
 		Util.OutVector([F*F]);
-		FOR df2:=1 TO 5 DO (*! observation: for even degrees of freedom, results are OK, but seems not to work for odd degrees of freedom (p=NaN)*)
+		FOR df2:=1 TO 5 DO 
 			Util.OutVector([StatisticsFunctions.PSnedecor(1,df2,F*F),StatisticsFunctions.PSnedecor(4,df2,F*F),StatisticsFunctions.PSnedecor(8,df2,F*F),StatisticsFunctions.PSnedecor(12,df2,F*F),StatisticsFunctions.PSnedecor(20,df2,F*F)]);
 		END;
 	END;
@@ -366,4 +371,4 @@ StatisticsLinearRegression.Test~
 StatisticsLinearRegression.TestGLM~
 StatisticsLinearRegression.TestEngine~
 StatisticsLinearRegression.TestFprobability~
-SystemTools.FreeDownTo StatisticsLinearRegression ~ 
+SystemTools.FreeDownTo StatisticsFunctions StatisticsLinearRegression ~ 
