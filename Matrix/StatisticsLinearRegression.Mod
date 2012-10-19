@@ -8,7 +8,7 @@ a SVD based least squares solver for least squares computation (in all types off
 or a Krylov based solver may help. 
 *)
 
-IMPORT MatrixBase, MatrixLeastSquares, StatisticsFunctions, Util:=MatrixUtilities, Streams, Random, KernelLog, (* *) ExtraSort (* *);
+IMPORT MatrixBase, MatrixLeastSquares, StatisticsFunctions, Util:=MatrixUtilities, Streams, Random, KernelLog, StatisticsBase;
 
 (* http://en.wikipedia.org/wiki/Linear_regression *)	 
 (**
@@ -123,6 +123,14 @@ TYPE Regression*= OBJECT
 			(*! to do: compute regression coefficient R2, F-statistics, and p value*)
 		END SolveGLM;
 	END Regression;
+	
+(* Theil-Sen Estimator for data streams: http://dx.doi.org/10.1145/1240233.1240239 *)
+TYPE Stream_TheilSenEstimator*=OBJECT
+	END Stream_TheilSenEstimator;
+
+(* Multivariate Theil-Sen Estimator: http://home.olemiss.edu/~xdang/papers/MTSE.pdf *)
+TYPE Multivariate_TheilSenEstimator*=OBJECT
+END Multivariate_TheilSenEstimator;
 
 PROCEDURE LinearRegression*(CONST X: Matrix; CONST y: Vector; VAR b, e: Vector);
 VAR ls: MatrixLeastSquares.LeastSquares;
@@ -197,13 +205,6 @@ BEGIN
 END Significance;
 *)
 
-(**The Theil-Sen estimator is a simple robust estimation technique that choose the slope of the fit line 
-to be the median of the slopes of the lines through pairs of sample points. 
-It has similar statistical efficiency properties to simple linear regression but is much less sensitive to outliers.*)
-PROCEDURE Sort(VAR v:Vector);
-BEGIN
-	ExtraSort.QuickSortLR(v);
-END Sort;
 
 (* 
 The Theil-Sen estimator is a simple robust estimation technique that determine the slope of a dataset 
@@ -229,13 +230,16 @@ BEGIN
 		dy:=y[LEN(x,0)-1-j]-y[j];
 		IF dx#0 THEN	slopes[i]:=dy/dx END; (* dx=0 not yet handled properly, but has usually only  a minor impact *)
 	END;
-	Sort(slopes);
+	(*Sort(slopes);*)
+	StatisticsBase.QSort(slopes);
 	b:=slopes[len DIV 2]; (*choose median slope *)
 	e:=y-b*x;
 	intercept:=SUM(e)/LEN(x,0);
 	e:=e-intercept;
 	(*optional: estimation of 95% confidence interval, based on observation of 600 pairs is sufficient according to literature*)
 END TheilSenEstimator;
+
+
 
 PROCEDURE Test*;
 VAR X: Matrix; x, y, B,e: Vector; b, intercept: Scalar;
