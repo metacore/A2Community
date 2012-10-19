@@ -24,7 +24,7 @@ PROCEDURE QSort*(VAR X : Vector);
 			WHILE X[i] < u DO INC(i) END;
 			WHILE u < X[j] DO DEC(j) END;
 			IF i <= j THEN
-				v := X[i]; X[i] := X[j]; X[j] := v; 
+				v := X[i]; X[i] := X[j]; X[j] := v;
 				INC(i); DEC(j);
 			 END;
 		UNTIL i > j;
@@ -34,7 +34,7 @@ PROCEDURE QSort*(VAR X : Vector);
  BEGIN
 	Sort(0, LEN(X,0)-1);
  END QSort;
- 
+
  PROCEDURE Median*(CONST v:Vector):Datatype;
  VAR v1:Vector; len:LONGINT;
  BEGIN
@@ -45,7 +45,7 @@ PROCEDURE QSort*(VAR X : Vector);
  	ELSE RETURN (v1[len DIV 2] + v1[len DIV 2 +1])/2
  	END;
  END Median;
- 
+
  (* variance of dataset *)
  PROCEDURE Variance(CONST v:Vector):Datatype;
  VAR diff:Vector;
@@ -53,19 +53,19 @@ PROCEDURE QSort*(VAR X : Vector);
  	 diff:=v-Mean(v);
  	 RETURN (diff+*diff) / LEN(v,0)
  END Variance;
- 
+
  (* full data *)
- PROCEDURE StandardDeviation(CONST v:Vector);
+ PROCEDURE StandardDeviation(CONST v:Vector): Datatype;
  BEGIN
  	RETURN MathL.sqrt(Variance(v))
  END StandardDeviation;
- 
+
  (* subset of data *)
- PROCEDURE EstimatedStandardDeviation(CONST v:Vector);
+ PROCEDURE EstimatedStandardDeviation(CONST v:Vector): Datatype;
  BEGIN
  	RETURN MathL.sqrt(EstimatedVariance(v))
  END EstimatedStandardDeviation;
- 
+
 	(* variance estimated from subset of data *)
  PROCEDURE EstimatedVariance(CONST v:Vector):Datatype;
  VAR diff:Vector;
@@ -73,7 +73,7 @@ PROCEDURE QSort*(VAR X : Vector);
  	 diff:=v-Mean(v);
  	 RETURN (diff+*diff) / (LEN(v,0)-1)
  END EstimatedVariance;
- 
+
  PROCEDURE Skewness*(CONST X : Vector) : Datatype;
 	VAR
 		sigma : Datatype;
@@ -96,20 +96,20 @@ PROCEDURE Kurtosis*(CONST X : Vector) : Datatype;
 		variance:=Variance(X);
 		x1:=X-Mean(X);
 		x2:=x1.*x1;
-		RETURN (x2 +* x2) / (variance*variance) / LEN(X,0) - 3; 
+		RETURN (x2 +* x2) / (variance*variance) / LEN(X,0) - 3;
 	END Kurtosis;
- 
+
 PROCEDURE NormalizeColumns*(VAR A:Matrix); (*normalizing to mean=0 and SD=1*)
 VAR onesR, onesC, meanVector,sdVector: Vector; meanMatrix, sdMatrix:Matrix;
 BEGIN
 	NEW(onesR, LEN(A,0));
 	NEW(onesC, LEN(A,1));
 	onesR:=1; onesC:=1;
-	meanVector := (onesR * A)/LEN(A,0); 
+	meanVector := (onesR * A)/LEN(A,0);
 	meanMatrix := onesR ** meanVector;
 	A:=A-meanMatrix;
 	sdVector := MatrixUtilities.ApplyUnaryVec(onesR * (A.*A), MathL.sqrt) / MathL.sqrt(LEN(A,0));
-	sdMatrix:= onesR ** sdVector;	
+	sdMatrix:= onesR ** sdVector;
 	A:= A ./ sdMatrix;
 END NormalizeColumns;
 
