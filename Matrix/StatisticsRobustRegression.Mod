@@ -1,6 +1,8 @@
 MODULE StatisticsRobustRegression; (** AUTHOR "Patrick Hunziker 2012"; PURPOSE "Robust Regression Models"; *)
 (*! work needed: implement univariate and multivariate Theil-Sen here, including Theil-Sen for streams. (references given below)
 	linear methods to be removed *)
+	
+	(*! important source of inspiration for robust statistics:  http://stat.ethz.ch/people/maechler/robustness *)
 
 
 (*mathematical limitations for linear regression are summarized in 
@@ -137,10 +139,16 @@ TYPE Regression*= OBJECT (*! work needed: implement univariate and multivariate 
 TYPE Stream_TheilSenEstimator*=OBJECT
 	END Stream_TheilSenEstimator;
 
-(* Multivariate Theil-Sen Estimator: http://home.olemiss.edu/~xdang/papers/MTSE.pdf *)
+(* Multivariate Theil-Sen Estimator: 
+multivariate median:
+http://papers.ssrn.com/sol3/Delivery.cfm/SSRN_ID1690502_code847251.pdf?abstractid=1690502&mirid=3 
+
+multivariate theil-sen implementations:
+http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.78.7797
+http://home.olemiss.edu/~xdang/papers/MTSE.pdf 
+*)
 TYPE Multivariate_TheilSenEstimator*=OBJECT
 END Multivariate_TheilSenEstimator;
-
 
 PROCEDURE LinearRegression*(CONST X: Matrix; CONST y: Vector; VAR b, e: Vector); 
 VAR ls: MatrixLeastSquares.LeastSquares;
