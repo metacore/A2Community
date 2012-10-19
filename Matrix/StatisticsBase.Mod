@@ -8,7 +8,7 @@ TYPE Matrix=MatrixBase.Matrix;
 
 PROCEDURE Mean*(CONST X: Vector): Datatype;
 BEGIN
-	IF LEN(X,0)>0 THEN RETURN SUM(X)/LEN(X,0) ELSE RETURN 0 END;
+	RETURN SUM(X)/LEN(X,0)
 END Mean;
 
 PROCEDURE QSort*(VAR X : Vector);
@@ -45,7 +45,60 @@ PROCEDURE QSort*(VAR X : Vector);
  	ELSE RETURN (v1[len DIV 2] + v1[len DIV 2 +1])/2
  	END;
  END Median;
+ 
+ (* variance of dataset *)
+ PROCEDURE Variance(CONST v:Vector):Datatype;
+ VAR diff:Vector;
+ BEGIN
+ 	 diff:=v-Mean(v);
+ 	 RETURN (diff+*diff) / LEN(v,0)
+ END Variance;
+ 
+ (* full data *)
+ PROCEDURE StandardDeviation(CONST v:Vector);
+ BEGIN
+ 	RETURN MathL.sqrt(Variance(v))
+ END StandardDeviation;
+ 
+ (* subset of data *)
+ PROCEDURE EstimatedStandardDeviation(CONST v:Vector);
+ BEGIN
+ 	RETURN MathL.sqrt(EstimatedVariance(v))
+ END EstimatedStandardDeviation;
+ 
+	(* variance estimated from subset of data *)
+ PROCEDURE EstimatedVariance(CONST v:Vector):Datatype;
+ VAR diff:Vector;
+ BEGIN
+ 	 diff:=v-Mean(v);
+ 	 RETURN (diff+*diff) / (LEN(v,0)-1)
+ END EstimatedVariance;
+ 
+ PROCEDURE Skewness*(CONST X : Vector) : Datatype;
+	VAR
+		sigma : Datatype;
+		x1: Vector;
+	BEGIN
+		sigma:=MathL.sqrt(Variance(X));
+		MatrixUtilities.OutVector([sigma]);
+		x1:=X-Mean(X);
+		MatrixUtilities.OutVector(x1);
+		MatrixUtilities.OutVector(x1.*x1);
+		MatrixUtilities.OutVector([(x1.*x1)+* x1]);
+		RETURN  ((x1 .* x1) +* x1) / (sigma*sigma*sigma)/ LEN(X,0)
+	END Skewness;
 
+PROCEDURE Kurtosis*(CONST X : Vector) : Datatype;
+	VAR
+		variance: Datatype;
+		x1,x2:Vector;
+	BEGIN
+		variance:=Variance(X);
+		x1:=X-Mean(X);
+		x2:=x1.*x1;
+		RETURN (x2 +* x2) / (variance*variance) / LEN(X,0) - 3; 
+	END Kurtosis;
+ 
 PROCEDURE NormalizeColumns*(VAR A:Matrix); (*normalizing to mean=0 and SD=1*)
 VAR onesR, onesC, meanVector,sdVector: Vector; meanMatrix, sdMatrix:Matrix;
 BEGIN
@@ -61,6 +114,21 @@ BEGIN
 END NormalizeColumns;
 
 (*
+PROCEDURE Test*;
+CONST a=[1,2,3,4]; b=[1,2,2,1]; c=[1,2,3,2]; d=[1,1,2,3,1]
+BEGIN
+	MatrixUtilities.OutVector([Skewness(a)]);
+	MatrixUtilities.OutVector([Skewness(b)]);
+	MatrixUtilities.OutVector([Skewness(c)]);
+	MatrixUtilities.OutVector([Skewness(d)]);
+	MatrixUtilities.OutVector([Kurtosis(a)]);
+	MatrixUtilities.OutVector([Kurtosis(b)]);
+	MatrixUtilities.OutVector([Kurtosis(c)]);
+	MatrixUtilities.OutVector([Kurtosis(d)]);
+END Test;
+*)
+
+(*
 PROCEDURE TestNormalizeColumns*;
 VAR A:Matrix;
 BEGIN
@@ -71,5 +139,7 @@ END TestNormalizeColumns;
 *)
 
 END StatisticsBase.
+
+StatisticsBase.Test ~
 
 SystemTools.FreeDownTo StatisticsBase ~
