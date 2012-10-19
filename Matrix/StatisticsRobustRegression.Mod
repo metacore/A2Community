@@ -1,4 +1,7 @@
-MODULE StatisticsRobustRegression; (** AUTHOR "Patrick Hunziker 2012"; PURPOSE "Linear Regression Models"; *)
+MODULE StatisticsRobustRegression; (** AUTHOR "Patrick Hunziker 2012"; PURPOSE "Robust Regression Models"; *)
+(*! work needed: implement univariate and multivariate Theil-Sen here, including Theil-Sen for streams. (references given below)
+	linear methods to be removed *)
+
 
 (*mathematical limitations for linear regression are summarized in 
 http://en.wikipedia.org/wiki/Linear_regression_model 
@@ -48,7 +51,7 @@ usually, a constant is included in the regressors X, (e.g. all xi1 := 1), and th
 See example in Test() below.
 *)
 
-TYPE Regression*= OBJECT
+TYPE Regression*= OBJECT (*! work needed: implement univariate and multivariate Theil-Sen here*)
 		VAR 
 			X: Matrix;
 			b-, e-, yestimate-: Vector; (* regression coefficients and residual  for regression and simple regression*)
@@ -138,13 +141,14 @@ TYPE Stream_TheilSenEstimator*=OBJECT
 TYPE Multivariate_TheilSenEstimator*=OBJECT
 END Multivariate_TheilSenEstimator;
 
-PROCEDURE Regression*(CONST X: Matrix; CONST y: Vector; VAR b, e: Vector);
+
+PROCEDURE LinearRegression*(CONST X: Matrix; CONST y: Vector; VAR b, e: Vector); 
 VAR ls: MatrixLeastSquares.LeastSquares;
 BEGIN
 	NEW(ls, X); 
 	b:=ls.Solve(y);
 	e:= y- X*b;
-END Regression;
+END LinearRegression;
 
 (* no intercept, assumption is that regression line goes through origin *)
 PROCEDURE SimpleRegressionNoIntercept*(CONST x: Vector; CONST y: Vector; VAR b: Scalar; VAR e: Vector);
@@ -201,14 +205,6 @@ BEGIN
 	END;
 END GeneralLinearModel;
 
-(**The Theil-Sen estimator is a simple robust estimation technique that choose the slope of the fit line 
-to be the median of the slopes of the lines through pairs of sample points. 
-It has similar statistical efficiency properties to simple linear regression but is much less sensitive to outliers.*)
-PROCEDURE Sort(VAR v:Vector);
-BEGIN
-	StatisticsBase.QSort(v);
-END Sort;
-
 (* 
 The Theil-Sen estimator is a simple robust estimation technique that determine the slope of a dataset 
 as the median of the slopes of the lines through pairs of sample points. 
@@ -233,7 +229,7 @@ BEGIN
 		dy:=y[LEN(x,0)-1-j]-y[j];
 		IF dx#0 THEN	slopes[i]:=dy/dx END; (* dx=0 not yet handled properly, but has usually only  a minor impact *)
 	END;
-	Sort(slopes);
+	StatisticsBase.QSort(slopes);
 	b:=slopes[len DIV 2]; (*choose median slope *)
 	e:=y-b*x;
 	intercept:=SUM(e)/LEN(x,0);
