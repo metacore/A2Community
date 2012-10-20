@@ -11,6 +11,31 @@ BEGIN
 	RETURN SUM(X)/LEN(X,0)
 END Mean;
 
+PROCEDURE KSmallest( VAR a: Vector;  n, k: LONGINT ): Datatype;
+(** caution: modifies X , Algorithm by N.Wirth / Hoare, cf. N. Wirth: Algorithms & Datastructures. *)
+VAR i, j, l, m: LONGINT;  x: Datatype;
+
+	PROCEDURE swap( VAR x, y: Datatype );
+	VAR z: LONGREAL;
+	BEGIN
+		z := x;  x := y;  y := z
+	END swap;
+
+BEGIN
+	l := 0;  m := n - 1;
+	WHILE (l < m) DO
+		x := a[k];  i := l;  j := m;
+		REPEAT
+			WHILE (a[i] < x) DO INC( i ) END;
+			WHILE (x < a[j]) DO DEC( j ) END;
+			IF i <= j THEN swap( a[i], a[j] );  INC( i );  DEC( j ) END
+		UNTIL i > j;
+		IF j < k THEN l := i END;
+		IF k < i THEN m := j END
+	END;
+	RETURN a[k]
+END KSmallest;
+
 PROCEDURE QSort*(VAR X : Vector);
 	PROCEDURE Sort(l, r : LONGINT);
 	VAR
@@ -40,10 +65,9 @@ PROCEDURE QSort*(VAR X : Vector);
  BEGIN
  	v1:=v;(* leave original data intact*)
  	len:=LEN(v1,0);
- 	QSort(v1);
- 	IF ODD(len) THEN RETURN v1[len DIV 2]
- 	ELSE RETURN (v1[len DIV 2] + v1[len DIV 2 +1])/2
- 	END;
+	IF ODD( len ) THEN RETURN KSmallest( v1, len, len DIV 2 )
+	ELSE RETURN (KSmallest( v1, len, len DIV 2 - 1 ) + KSmallest( v1, len, len DIV 2 )) / 2
+	END
  END Median;
 
  (* variance of dataset *)
