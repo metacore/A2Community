@@ -13,7 +13,8 @@ a SVD based least squares solver for least squares computation (in all types off
 or a Krylov based solver may help. 
 *)
 
-IMPORT MatrixBase, MatrixLeastSquares, StatisticsFunctions, Util:=MatrixUtilities, Streams, Random, KernelLog, StatisticsBase;
+IMPORT MatrixBase, MatrixLeastSquares, StatisticsFunctions, Util:=MatrixUtilities, Streams, Random, KernelLog, StatisticsBase, 
+	StatisticsLinearRegression, MathL, MatrixPrincipalComponents;
 
 (* http://en.wikipedia.org/wiki/Linear_regression *)	 
 (**
@@ -41,6 +42,7 @@ TYPE Matrix*=MatrixBase.Matrix;
 	Scalar*=MatrixBase.Datatype;
 	
 VAR w: Streams.Writer;
+	eps0, eps: Scalar;
 
 (**
 y = Xb + e
@@ -240,13 +242,148 @@ BEGIN
 	StatisticsBase.QSort(slopes);
 	b:=slopes[len DIV 2]; (*choose median slope *)
 	e:=y-b*x;
-	intercept:=SUM(e)/LEN(x,0);
+	intercept:=SUM(e)/LEN(e,0);
 	e:=e-intercept;
 	(*optional: estimation of 95% confidence interval, based on observation of 600 pairs is sufficient according to literature*)
 END TheilSenEstimator;
 
+(* experiment: for each predictor dimension, a TheilSen Estimate is done. 
+	Multidimensional regression is assumed to be a composite of those partial regressions .
+	b[0] is intercept *)
+PROCEDURE MultivariateTheilSen*(CONST X: Matrix; CONST y: Vector; VAR b: Vector;  VAR e: Vector);
+VAR X0, slopes: Matrix; i,j,k,len:LONGINT; dx: Vector; intercept, d, dy, sumx, slope, threshold, zero, inf, mininf: Scalar; random: Random.Generator;
+	pca:MatrixPrincipalComponents.PCA;
+	max,min:Scalar;
 BEGIN
-	Streams.OpenWriter(w, KernelLog.Send)
+	NEW(pca, X);
+	X0:=pca.PrincipalComponents(); (* remove colinearity *)  (*? would PCA require zero mean input data ??*)
+	(*choose sample pairs; here the extremal point pairs are used. Random pairs could also be used *)	
+	len:=MIN (200, LEN(X,0)*LEN(X,0));
+	(*Util.OutMatrix(X0);	Util.OutMatrix(pca.Axes());*)
+	NEW(slopes, len, LEN(X0,1));
+	NEW(random);
+	NEW(b, LEN(X0,1)+1); (*include intercept*)
+	inf:=1/zero; mininf:=-inf;
+	min:=mininf; max:=inf;
+	FOR i:=0 TO len-1 DO
+		j:=ENTIER(random.Uniform() * LEN(X0,0));
+		k:=ENTIER(random.Uniform() * LEN(X0,0));
+		dx:=X0[k]-X0[j];
+		sumx:=SUM(ABS(dx));
+		dy:=y[k]-y[j];
+		FOR j:=0 TO LEN(dx,0)-1 DO 
+			IF ABS(dx[j]) > 1.0E-10 THEN 
+				slopes[i,j]:=dy  * (dx[j]/sumx) /dx[j];
+				max:=MAX(max, slopes[i,j]);
+				min:=MIN(min, slopes[i,j]);
+			ELSE (*!  handling here must be improved  *)
+				(*IF dy*dx[j]>=0 THEN slopes[i,j]:= inf
+				ELSE slopes[i,j]:= mininf
+				END;*)
+				slopes[i,j]:=0
+			END; (*? eps handing could be improved ?*)
+		END; 
+	END;
+	(*Util.OutMatrix(slopes);*)
+	FOR i:=0 TO LEN(X0,1)-1 DO
+		StatisticsBase.QSort(slopes[..,i]);
+		b[i+1]:=slopes[len DIV 2,i]; (*choose median slope; b[0] is intercept *)
+	END;
+	Util.OutMatrix(slopes);
+	e := (* y- *) X0*b[1..]; (*PCA yields zero mean data *)
+	intercept:=SUM(y)/LEN(y,0);
+	b[0]:=intercept;
+	Util.OutVector(b);
+	Util.OutVector(y+e);
+END MultivariateTheilSen;
+
+
+	PROCEDURE Test*;
+VAR X: Matrix; x, y, B,e: Vector; b, intercept: Scalar;
+BEGIN
+	y:=[1.0,2.1,2.9, 4.1, 5.0, 5.9,7.1, 8, 9, 10, 11]+2; (*note the intercept*)
+
+	w.String("Linear Regression with intercept"); w.Ln; w.Update;
+	(* X:=[[1.0,1.1,1.0],[1.0,1.9,2.1],[1,2.8, 2.9],[1,4.1,3.9],[1,5.3, 5.1],[1,5.8, 6]]; *)
+	X:=[[1.0,1.1,1.1],
+		[1.0,1.9,2],
+		[1,2.8,3.1],
+		[1,4.1, 3.9],
+		[1,5.3,5],
+		[1,5.8,6],
+		[1,7,7.1],
+		[1,7.9,8],
+		[1,9,8.9],
+		[1,10.1,10],
+		[1,11,11.1]
+		];
+	StatisticsLinearRegression.LinearRegression(X,y,B,e);
+	Util.OutVector(B);
+	Util.OutVector(e);
+	w.FloatFix(e+*e, 4, 10, 0); w.Ln; w.Ln; w.Update;
+	
+	w.String("Multivariate Robust Regression with intercept"); w.Ln; w.Update;
+	X:=[[1.1,1.11],
+		[1.9,2.05],
+		[2.82,3.1],
+		[4.1, 3.91],
+		[5.3,5.103],
+		[5.8,6.03],
+		[7.12,7.1],
+		[7.9,8.12],
+		[9.03,8.9],
+		[10.1,10.05],
+		[11.05,11.1]
+		];
+	MultivariateTheilSen(X,y,B,e);
+	w.String("b, e, error:"); w.Ln; w.Update; (*however, this b and e refer to the PCA transformed data ...*)
+	Util.OutVector(B);
+	Util.OutVector(e);
+	w.FloatFix(e+*e, 4, 10, 0); w.Ln; w.Ln; w.Update;
+	(*
+	w.String("Univariate Robust Regression with intercept"); w.Ln; w.Update;
+	X:=[[1.1,1.1],
+		[1.9,2],
+		[2.8,3.1],
+		[4.1, 3.9],
+		[5.3,5],
+		[5.8,6],
+		[7,7.1],
+		[7.9,8],
+		[9,8.9],
+		[10.1,10],
+		[11,11.1]
+		];
+	TheilSenEstimator(X[0],y,b,intercept,e);
+	Util.OutVector(B);
+	Util.OutVector(e);
+	w.FloatFix(e+*e, 4, 10, 0); w.Ln; w.Ln; w.Update;
+	*)
+END Test;
+
+PROCEDURE TestSort*;
+VAR x: ARRAY [*] OF Scalar; i:LONGINT;
+	random:Random.Generator;
+BEGIN
+	 NEW(x,10); 
+	 NEW(random);
+	 FOR i:=0 TO LEN(x,0)-1 DO
+	 	x[i]:=random.Uniform();
+	 END;
+	 Util.OutVector(x);
+	 StatisticsBase.QSort(x);
+	 Util.OutVector(x);
+END TestSort;
+
+BEGIN
+	Streams.OpenWriter(w, KernelLog.Send);
+	eps0:=1; WHILE eps0 > 0 DO eps:=eps0; eps0:=eps/2 END;
+	w.Float(eps, 30); w.Ln; w.Update;
 END StatisticsRobustRegression.
 
 
+StatisticsRobustRegression.Test ~
+StatisticsRobustRegression.TestSort ~
+
+
+SystemTools.FreeDownTo StatisticsRobustRegression ~
