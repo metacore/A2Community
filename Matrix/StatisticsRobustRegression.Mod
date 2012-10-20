@@ -239,7 +239,7 @@ BEGIN
 		dy:=y[LEN(x,0)-1-j]-y[j];
 		IF dx#0 THEN	slopes[i]:=dy/dx END; (* dx=0 not yet handled properly, but has usually only  a minor impact *)
 	END;
-	b := StatisticsBase.Median(slopes);
+	b := StatisticsBase.DestructiveMedian(slopes);
 	(*
 	StatisticsBase.QSort(slopes);
 	b:=slopes[len DIV 2]; (*choose median slope *)

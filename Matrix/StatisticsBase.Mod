@@ -60,14 +60,20 @@ PROCEDURE QSort*(VAR X : Vector);
 	Sort(0, LEN(X,0)-1);
  END QSort;
 
- PROCEDURE Median*(CONST v:Vector):Datatype;
- VAR v1:Vector; len:LONGINT;
+ PROCEDURE DestructiveMedian*(VAR v1:Vector):Datatype;
+ VAR len:LONGINT;
  BEGIN
- 	v1:=v;(* leave original data intact*)
  	len:=LEN(v1,0);
 	IF ODD( len ) THEN RETURN KSmallest( v1, len, len DIV 2 )
 	ELSE RETURN (KSmallest( v1, len, len DIV 2 - 1 ) + KSmallest( v1, len, len DIV 2 )) / 2
 	END
+ END DestructiveMedian;
+
+ PROCEDURE Median*(CONST v:Vector):Datatype;
+ VAR v1:Vector;
+ BEGIN
+ 	v1:=v;(* leave original data intact*)
+ 	RETURN DestructiveMedian(v1)
  END Median;
 
  (* variance of dataset *)
