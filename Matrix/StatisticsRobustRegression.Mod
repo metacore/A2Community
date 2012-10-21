@@ -260,9 +260,8 @@ VAR X0, slopes: Matrix; i,j,k,len:LONGINT; dx: Vector; intercept, d, dy, sumx, s
 BEGIN
 	NEW(pca, X);
 	X0:=pca.PrincipalComponents(); (* remove colinearity *)  (*? would PCA require zero mean input data ??*)
-	(*choose sample pairs; here the extremal point pairs are used. Random pairs could also be used *)
+	(*choose sample pairs; here the extremal point pairs are used. Random pairs could also be used *)	
 	len:=MIN (200, LEN(X,0)*LEN(X,0));
-	(*Util.OutMatrix(X0);	Util.OutMatrix(pca.Axes());*)
 	NEW(slopes, len, LEN(X0,1));
 	NEW(random);
 	NEW(b, LEN(X0,1)+1); (*include intercept*)
@@ -274,16 +273,20 @@ BEGIN
 		dx:=X0[k]-X0[j];
 		sumx:=SUM(ABS(dx));
 		dy:=y[k]-y[j];
-		FOR j:=0 TO LEN(dx,0)-1 DO
-			IF ABS(dx[j]) > 1.0E-10 THEN
+		FOR j:=0 TO LEN(dx,0)-1 DO 
+			IF ABS(dx[j]) > 1.0E-20 THEN 
 				slopes[i,j]:=dy  * (dx[j]/sumx) /dx[j];
 				max:=MAX(max, slopes[i,j]);
 				min:=MIN(min, slopes[i,j]);
+			ELSIF dx[j]=0 THEN slopes[i,j]:=0
 			ELSE (*!  handling here must be improved  *)
 				(*IF dy*dx[j]>=0 THEN slopes[i,j]:= inf
 				ELSE slopes[i,j]:= mininf
 				END;*)
-				slopes[i,j]:=0
+				(*slopes[i,j]:=0*)
+				IF ODD(i) THEN slopes[i,j]:=inf (*?=0?*)
+				ELSE slopes[i,j]:=mininf (*?=0?*)
+				END;
 			END; (*? eps handing could be improved ?*)
 		END;
 	END;
@@ -296,7 +299,7 @@ BEGIN
 	e := (* y- *) X0*b[1..]; (*PCA yields zero mean data *)
 	intercept:=SUM(y)/LEN(y,0);
 	b[0]:=intercept;
-	Util.OutVector(b);
+	Util.OutVector(b); (*! to do: convert coordinates back to domain of X, not of X0*)
 	Util.OutVector(y+e);
 END MultivariateTheilSen;
 
