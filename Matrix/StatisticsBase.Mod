@@ -130,11 +130,10 @@ PROCEDURE Kurtosis*(CONST X : Vector) : Datatype;
 	END Kurtosis;
 
 PROCEDURE NormalizeColumns*(VAR A:Matrix); (*normalizing to mean=0 and SD=1*)
-VAR onesR, onesC, meanVector,sdVector: Vector; meanMatrix, sdMatrix:Matrix;
+VAR onesR, meanVector,sdVector: Vector; meanMatrix, sdMatrix:Matrix;
 BEGIN
 	NEW(onesR, LEN(A,0));
-	NEW(onesC, LEN(A,1));
-	onesR:=1; onesC:=1;
+	onesR:=1; 
 	meanVector := (onesR * A)/LEN(A,0);
 	meanMatrix := onesR ** meanVector;
 	A:=A-meanMatrix;
@@ -142,6 +141,16 @@ BEGIN
 	sdMatrix:= onesR ** sdVector;
 	A:= A ./ sdMatrix;
 END NormalizeColumns;
+
+(* subtract column mean from each column *)
+PROCEDURE ZeroMeanColumns*(VAR A:Matrix);
+	VAR onesR, meanVector: Vector; 
+BEGIN
+	NEW(onesR, LEN(A,0));
+	onesR:=1;
+	meanVector := (onesR * A)/LEN(A,0);
+	A:=A - onesR ** meanVector;
+END ZeroMeanColumns;
 
 (*
 PROCEDURE Test*;

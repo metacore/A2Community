@@ -257,9 +257,16 @@ PROCEDURE MultivariateTheilSen*(CONST X: Matrix; CONST y: Vector; VAR b: Vector;
 VAR X0, slopes: Matrix; i,j,k,len:LONGINT; dx: Vector; intercept, d, dy, sumx, slope, threshold, zero, inf, mininf: Scalar; random: Random.Generator;
 	pca:MatrixPrincipalComponents.PCA;
 	max,min:Scalar;
+	columnMean, onesR: Vector;
 BEGIN
-	NEW(pca, X);
-	X0:=pca.PrincipalComponents(); (* remove colinearity *)  (*? would PCA require zero mean input data ??*)
+	NEW(onesR, LEN(X,0)); onesR:=1;
+	columnMean := (onesR * X)/LEN(X,0);
+	X0 := X - onesR ** columnMean; (* PCA requires zero column mean input data *)
+	
+	NEW(pca, X0);
+	X0:=pca.PrincipalComponents(); (* remove colinearity *)  
+	Util.OutMatrix(X0);
+	
 	(*choose sample pairs; here the extremal point pairs are used. Random pairs could also be used *)	
 	len:=MIN (200, LEN(X,0)*LEN(X,0));
 	NEW(slopes, len, LEN(X0,1));
@@ -275,7 +282,7 @@ BEGIN
 		dy:=y[k]-y[j];
 		FOR j:=0 TO LEN(dx,0)-1 DO 
 			IF ABS(dx[j]) > 1.0E-20 THEN 
-				slopes[i,j]:=dy  * (dx[j]/sumx) /dx[j];
+				slopes[i,j]:=dy  * (dx[j]/sumx) /dx[j]; (* each dx contributes a part to dy *)
 				max:=MAX(max, slopes[i,j]);
 				min:=MIN(min, slopes[i,j]);
 			ELSIF dx[j]=0 THEN slopes[i,j]:=0
@@ -307,7 +314,7 @@ END MultivariateTheilSen;
 	PROCEDURE Test*;
 VAR X: Matrix; x, y, B,e: Vector; b, intercept: Scalar;
 BEGIN
-	y:=[1.0,2.1,2.9, 4.1, 5.0, 5.9,7.1, 8, 9, 10, 11]+2; (*note the intercept*)
+	y:=[1.02,2.1,2.91, 4.105, 5.0, 5.93,7.11, 8.03, 9.02, 10.01, 11.003]+2; (*note the intercept*)
 
 	w.String("Linear Regression with intercept"); w.Ln; w.Update;
 	(* X:=[[1.0,1.1,1.0],[1.0,1.9,2.1],[1,2.8, 2.9],[1,4.1,3.9],[1,5.3, 5.1],[1,5.8, 6]]; *)
