@@ -1,6 +1,6 @@
 MODULE StatisticsBase; (** AUTHOR "Patrick Hunziker"; PURPOSE "tools for statistics"; *)
 
-IMPORT MatrixBase, MathL, MatrixUtilities;
+IMPORT MatrixBase, MathL, MatrixUtilities, Reals;
 
 TYPE Matrix=MatrixBase.Matrix;
 	Vector=MatrixBase.Vector;
@@ -46,8 +46,8 @@ PROCEDURE QSort*(VAR X : Vector);
 		j := r;
 		u := X[(l+r) DIV 2];
 		REPEAT
-			WHILE X[i] < u DO INC(i) END;
-			WHILE u < X[j] DO DEC(j) END;
+			WHILE  (X[i] < u) DO INC(i) END;
+			WHILE (u < X[j]) DO DEC(j) END;
 			IF i <= j THEN
 				v := X[i]; X[i] := X[j]; X[j] := v;
 				INC(i); DEC(j);
@@ -77,7 +77,7 @@ PROCEDURE QSort*(VAR X : Vector);
  END Median;
 
  (* variance of dataset *)
- PROCEDURE Variance(CONST v:Vector):Datatype;
+ PROCEDURE Variance*(CONST v:Vector):Datatype;
  VAR diff:Vector;
  BEGIN
  	 diff:=v-Mean(v);
@@ -85,19 +85,19 @@ PROCEDURE QSort*(VAR X : Vector);
  END Variance;
 
  (* full data *)
- PROCEDURE StandardDeviation(CONST v:Vector): Datatype;
+ PROCEDURE StandardDeviation*(CONST v:Vector): Datatype;
  BEGIN
  	RETURN MathL.sqrt(Variance(v))
  END StandardDeviation;
 
  (* subset of data *)
- PROCEDURE EstimatedStandardDeviation(CONST v:Vector): Datatype;
+ PROCEDURE EstimatedStandardDeviation*(CONST v:Vector): Datatype;
  BEGIN
  	RETURN MathL.sqrt(EstimatedVariance(v))
  END EstimatedStandardDeviation;
 
 	(* variance estimated from subset of data *)
- PROCEDURE EstimatedVariance(CONST v:Vector):Datatype;
+ PROCEDURE EstimatedVariance*(CONST v:Vector):Datatype;
  VAR diff:Vector;
  BEGIN
  	 diff:=v-Mean(v);
@@ -168,8 +168,16 @@ BEGIN
 END TestNormalizeColumns;
 *)
 
+PROCEDURE TestSort*;
+VAR v:Vector; zero: Datatype;
+BEGIN
+	v:=[0, 1, -1/zero, 1/zero, 4,3,2,3,4,5];
+	QSort(v);
+	MatrixUtilities.OutVector(v);
+END TestSort;
+
 END StatisticsBase.
 
-StatisticsBase.Test ~
+StatisticsBase.TestSort ~
 
 SystemTools.FreeDownTo StatisticsBase ~
