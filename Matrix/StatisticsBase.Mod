@@ -185,8 +185,18 @@ BEGIN
 	MatrixUtilities.OutVector(v);
 END TestSort;
 
+PROCEDURE TestMedian*;
+VAR v:Vector; zero: Datatype;
+BEGIN
+	v:=[0, 1, -1/zero, 1/zero, 4,3,2,3,4,5];
+	MatrixUtilities.OutVector(v);
+	MatrixUtilities.OutVector([Median(v)])
+END TestMedian;
+
+
 END StatisticsBase.
 
 StatisticsBase.TestSort ~
+StatisticsBase.TestMedian ~
 
 SystemTools.FreeDownTo StatisticsBase ~
