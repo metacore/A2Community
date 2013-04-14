@@ -5,13 +5,13 @@ Uses fftw3 series libraries.
 Compile for:
 
 # UnixAos: 
-	Compiler.Compile  fftwdarek/Unix.FFTW.Mod fftwdarek/Unix.FFTWf.Mod ~ 
+	Compiler.Compile  Unix.FFTW.Mod Unix.FFTWf.Mod ~ 
 
 # WinAos: 
 	Compiler.Compile  Win32.FFTW.Mod Win32.FFTWf.Mod  ~
 
 # compile test modules
-Compiler.Compile fftwdarek/FFTWTest.Mod fftwdarek/FFTWTestf.Mod~ 
+Compiler.Compile FFTWTest.Mod FFTWTestf.Mod~ 
 
 # free from memory
 SystemTools.Free FFTWTest FFTWTestf.Mod FFTW FFTWf ~
