@@ -1,4 +1,11 @@
-MODULE PHRegistries; (** AUTHOR "Patrick Hunziker"; PURPOSE ""; *)
+MODULE PHRegistries; (** AUTHOR "Patrick Hunziker"; PURPOSE "Generic registry database"; *)
+(**
+Registry
+	- is a list of items(unique UID), and ranges (e.g. for logical rollback without deleting the data).
+	- items can have links to other items.
+	- allows addition of items, with duplicates allowed or forbidden
+	- serialization to file (* to do: change to reader/writer paradigm *)
+	*)
 
 IMPORT Files, Streams, Strings, TFClasses, KernelLog;
 

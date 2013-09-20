@@ -21,7 +21,8 @@ TYPE UserRegistry*= OBJECT(PHRegistries.Registry)
 	PROCEDURE NewUser*(CONST name, realm, password: ARRAY OF CHAR):User;
 	VAR new: User; 
 	BEGIN
-		NEW(new); COPY(name,new.name); COPY(realm,new.realm); MakeHash(name,realm,password, new.hash); new.uid:=GetUID();
+		NEW(new); COPY(name,new.name); COPY(realm,new.realm);  new.uid:=GetUID();
+		MakeHash(name,realm,password, new.hash); (*! to do: hash might be protected by an additional hash:=MD5(hash,nonce) value*)
 		IF addUnique(new) THEN RETURN new 
 		ELSE RETURN NIL  
 		END;
@@ -132,18 +133,18 @@ PROCEDURE CompareNameHash(left, right: ANY): LONGINT;
 PROCEDURE Test*;
 	VAR r: UserRegistry; i:User;
 	BEGIN
-		NEW(r,"UserRegTest1.txt", CompareRealmName, "MD5");
+		NEW(r,"UserRegTest.txt", CompareRealmName, "MD5");
 		i:=r.NewUser("hunzikeran","realm" ,"anpwd");
 		i:=r.NewUser("hunzikeran","realm" ,"anpwd2");(* duplicate with another password not allowed *)
 		i:=r.NewUser("hunzikerra","realm" ,"rawd");
 		i:=r.NewUser("hunzikerp","realm" ,"ppwd");
 		i:=r.NewUser("hunzikerp","realm" ,"ppwd"); (* same name in same realm will be rejected *)
 		i:=r.NewUser("hunzikerp","realm1" ,"ppwd"); (*in another realm, a user with same name and same pwd may coexist*)
-		KernelLog.Int(r.CheckUser("hunzikerx","realm" ,"anpwd"),0); KernelLog.Ln;
-		KernelLog.Int(r.CheckUser("hunzikeran","realm" ,"wongpwd"),0); KernelLog.Ln;
-		KernelLog.Int(r.CheckUser("hunzikeran","realm" ,"anpwd"),0); KernelLog.Ln;
-		KernelLog.Int(r.CheckUserByHash("hunzikeran","realm","a71dfee052a970a6d591020236da7918"),0); KernelLog.Ln;
-		KernelLog.Int(r.CheckUserByHash("hunzikeran","realm","a71dfee052a970a6d591020236da7919"),0); KernelLog.Ln;
+		KernelLog.Int(r.CheckUser("hunzikerx","realm" ,"anpwd"),0); KernelLog.Ln; (* user not OK *)
+		KernelLog.Int(r.CheckUser("hunzikeran","realm" ,"wongpwd"),0); KernelLog.Ln; (* password not OK *)
+		KernelLog.Int(r.CheckUser("hunzikeran","realm" ,"anpwd"),0); KernelLog.Ln; (* OK *)
+		KernelLog.Int(r.CheckUserByHash("hunzikeran","realm","a71dfee052a970a6d591020236da7918"),0); KernelLog.Ln; (* OK *)
+		KernelLog.Int(r.CheckUserByHash("hunzikeran","realm","a71dfee052a970a6d591020236da7919"),0); KernelLog.Ln; (* wrong hash *)
 		r.Write;
 	END Test;
 
