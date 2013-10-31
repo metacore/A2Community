@@ -32,7 +32,7 @@ BEGIN
 	END
 END arctan2;
 
-PROCEDURE DifferentialEdgeAngle*(CONST p:ScalarField; sampling:LONGINT):ScalarField; (*! needs speedup*)
+PROCEDURE DifferentialEdgeAngle*(CONST p:ScalarField; sampling:LONGINT):ScalarField; (*! needs speedup - parallelize how ?*)
 VAR vec:VectorField; x,y:LONGINT;
 BEGIN
 	vec:=DifferentialEdgeDirection(p, sampling);
@@ -50,8 +50,7 @@ PROCEDURE Canny* (CONST in: ScalarField; NonMaxSuppression:BOOLEAN): ScalarField
 VAR line: Line;
 	lines:ARRAY [*] OF Line;
 	i,j,j2,i1,i2,iM1,iM2,h,hM2,hM1,h1,h2,dir, width, height: LONGINT;
-	d1,deriv, pix: Datatype;
-	InvSqrt2: Datatype;
+	d1,deriv, pix, InvSqrt2: Datatype;
 	nil: ScalarField;
 BEGIN
 	InvSqrt2:=1/Mathe.sqrt(2);
@@ -74,6 +73,7 @@ BEGIN
 			i1:=(i+1) MOD width;
 			iM2:=(i-2) MOD width; 
 			i2:=(i+2) MOD width;
+			
 			deriv:=ABS(lines[h,i1]-lines[h,iM1]); dir:=0;
 			d1:=ABS(lines[h1,i1]-lines[hM1,iM1]); 
 			IF InvSqrt2*d1>deriv THEN deriv:=SHORT(ENTIER(InvSqrt2*d1)); dir:=1 END;
@@ -123,18 +123,18 @@ BEGIN
 	rect[..50, 48..52]:=4.5;
 	rect[..50, 49..51]:=5;
 	rect[..50, 50]:=5.4;
+	
 	NEW(window, rect, "original"); window.AddWindow;
 	
 	NEW(window, Canny(rect, FALSE), "Canny, plain"); window.AddWindow;
-	NEW(window, Canny(rect, TRUE), "Canny suppresing non-maxima"); window.AddWindow;
+	NEW(window, Canny(rect, TRUE), "Canny suppressing non-maxima"); window.AddWindow;
+	
 	NEW(window, DifferentialEdgeMagnitude(rect, PlanarNabla.centered), "differential edge magnitude"); window.AddWindow;
 	NEW(window, DifferentialEdgeAngle(rect, PlanarNabla.centered), "differential edge angle"); window.AddWindow;
-
 	vec:= DifferentialEdgeDirection(rect, PlanarNabla.centered);
 	NEW(window, vec.x, "edge direction x"); window.AddWindow;
 	NEW(window, vec.y, "edge direction y"); window.AddWindow;
 END Test;
-
 
 END PlanarEdgeDetectors.
 
