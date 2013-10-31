@@ -1,5 +1,7 @@
 MODULE PlanarEdgeDetectors; (** AUTHOR "Patrick Hunziker"; PURPOSE " various edge detectors"; **)
 
+(* see also http://en.wikipedia.org/wiki/Scale_space and http://en.wikipedia.org/wiki/Edge_detection*)
+
 IMPORT PlanarBase, PlanarNabla, PlanarMath, Mathe:=MathL, WMMatrix;
 
 TYPE 
@@ -18,6 +20,30 @@ PROCEDURE DifferentialEdgeDirection*(CONST p:ScalarField; sampling:LONGINT):Vect
 BEGIN
 	RETURN PlanarNabla.Grad(p, sampling);
 END DifferentialEdgeDirection;
+
+PROCEDURE arctan2(x,y:LONGREAL):LONGREAL; (*arctan in range 0..2pi*)
+BEGIN
+	IF (x>0) & (y>=0) THEN RETURN Mathe.arctan(y/x)
+	ELSIF (x>0) & (y<0) THEN RETURN Mathe.arctan(y/x)+2*Mathe.pi
+	ELSIF x<0 THEN RETURN Mathe.arctan(y/x)+Mathe.pi
+	ELSIF (x=0) & (y>0) THEN RETURN Mathe.pi/2
+	ELSIF (x=0) & (y<0) THEN RETURN 3*Mathe.pi/2
+	ELSE (*( x=0) & (y=0) *) RETURN 0 (*or RETURN NaN ?*) 
+	END
+END arctan2;
+
+PROCEDURE DifferentialEdgeAngle*(CONST p:ScalarField; sampling:LONGINT):ScalarField; (*! needs speedup*)
+VAR vec:VectorField; x,y:LONGINT;
+BEGIN
+	vec:=DifferentialEdgeDirection(p, sampling);
+	IF LEN(RESULT,0)=0 THEN NEW(RESULT, LEN(p,0), LEN(p,1)) END;
+	FOR y:=0 TO LEN(p,0)-1 DO
+		FOR x:=0 TO LEN(p,1)-1 DO
+			RESULT[y,x]:=arctan2(vec.x[y,x], vec.y[y,x]);
+		END;
+	END;
+	RETURN RESULT
+END DifferentialEdgeAngle;
 
 (*Canny Edge Detector, with or without non-maximum suppression. Based on Code from TrueColorSnakes. In noisy data, needs pre-smoothing for best result *)
 PROCEDURE Canny* (CONST in: ScalarField; NonMaxSuppression:BOOLEAN): ScalarField;
