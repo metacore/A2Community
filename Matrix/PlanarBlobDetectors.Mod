@@ -17,6 +17,12 @@ BEGIN
 	RETURN PlanarNabla.Laplacian(p, sampling);
 END LaplacianOfGaussian;
 
+(*to do: PROCEDURE DeterminantOfHessian() *)
+
+(*to do: PROCEDURE HessianLaplace()b*)
+
+(*to do: Lindeberg's watershed *)
+
 (*to do PROCEDURE SplineBased..*)
 
 (*to do: Scale-Space approach*)
