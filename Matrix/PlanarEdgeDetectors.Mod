@@ -128,7 +128,8 @@ BEGIN
 	NEW(window, Canny(rect, FALSE), "Canny, plain"); window.AddWindow;
 	NEW(window, Canny(rect, TRUE), "Canny suppresing non-maxima"); window.AddWindow;
 	NEW(window, DifferentialEdgeMagnitude(rect, PlanarNabla.centered), "differential edge magnitude"); window.AddWindow;
-	
+	NEW(window, DifferentialEdgeAngle(rect, PlanarNabla.centered), "differential edge angle"); window.AddWindow;
+
 	vec:= DifferentialEdgeDirection(rect, PlanarNabla.centered);
 	NEW(window, vec.x, "edge direction x"); window.AddWindow;
 	NEW(window, vec.y, "edge direction y"); window.AddWindow;
