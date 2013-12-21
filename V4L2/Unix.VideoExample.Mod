@@ -8,20 +8,17 @@ IMPORT
 	lib := libv4l2, V := V4L2, BIT;
 	
 CONST
-
 		 devname = "/dev/video0";
-		 
-		 CamWidth* = 640;
-		 CamHeight*= 480;
 
 TYPE
 	FrameHandler* = PROCEDURE {DELEGATE} (buffer : Raster.Image);
 	PreviewWindow* = OBJECT (WMWindowManager.BufferWindow);
 		PROCEDURE &New*(width, height : LONGINT);
 		BEGIN
-			Init(width, height, TRUE);
+			Init(width, height, FALSE);
 			WMWindowManager.AddWindow(SELF, 200, 200);
-			SetTitle(Strings.NewString("Preview Window"));
+			SetTitle(Strings.NewString("Preview Window: "));
+			
 			canvas.Fill(WMRectangles.MakeRect(0, 0, GetWidth(), GetHeight()), WMGraphics.White, WMGraphics.ModeCopy);
 			Invalidate(WMRectangles.MakeRect(0, 0, GetWidth(), GetHeight()));
 		END New;
@@ -35,6 +32,7 @@ TYPE
 		BEGIN
 			CASE CHR(ucs) OF
 				| "s": SaveImage;
+				| "q": Close;
 			ELSE
 			END;
 		END KeyEvent;
@@ -48,22 +46,17 @@ TYPE
 				WMGraphics.StoreImage(img, fname,res);
 			END;
 		END SaveImage;
-			
+					
 	END PreviewWindow;
 
 	Starter* = OBJECT
 	VAR opened, stopped : BOOLEAN;
 
-		PROCEDURE Open;
-		BEGIN
+		PROCEDURE &Open;
+		BEGIN {EXCLUSIVE}
 			stopped := FALSE;
-
 			IF s # NIL THEN s.Close END; 
-			NEW(s, CamWidth, CamHeight);
-			OpenDevice(devname);
-			InitDevice();
-			NEW(buffer);
-			Raster.Create(buffer, CamWidth, CamHeight, Raster.BGR888);			
+			NEW(s, camWidth, camHeight);
 			opened := TRUE;
 		END Open;
 
@@ -77,13 +70,15 @@ TYPE
 
 	BEGIN {ACTIVE}
 		stopped := FALSE;
-		Open;
+
 		WHILE opened DO
-			FrameReceived();
-			Objects.Sleep( 10);
+			IF ~ stopped THEN 
+				FrameReceived();
+				Objects.Sleep( 1);
+			END;	
 		END;	
 		
-		CloseDevice();
+		(*CloseDevice();*)
 
 	END Starter;
 
@@ -93,6 +88,7 @@ VAR
 	fd: LONGINT; (* device file handle *)
 	buffer : Raster.Image;  (* captured image buffer *)
 	starter : Starter;
+	camWidth, camHeight: LONGINT;
 	
 	frameHandler : FrameHandler;
 
@@ -154,9 +150,7 @@ VAR
 	END FDSET;
 	
 BEGIN
-	 IF -1 = lib.v4l2_read(fd, ADDRESSOF(buffer.mem[0]), buffer.width*buffer.height*3) THEN	 	
-	 	RETURN;
-	END;
+
 		
 	FDZERO(fds);
 	FDSET(fd, fds);
@@ -166,7 +160,11 @@ BEGIN
 	IF r = -1 THEN 
 		RETURN;
 	END;
-			 
+
+	 IF -1 = lib.v4l2_read(fd, ADDRESSOF(buffer.mem[0]), buffer.width*buffer.height*3) THEN	 	
+	 	RETURN;
+	END;
+				 
 END ReadFrame;
 
 PROCEDURE CloseDevice();
@@ -181,15 +179,15 @@ BEGIN
 	END; 		
 END CloseDevice;
 
-PROCEDURE OpenDevice(CONST devicename: ARRAY OF CHAR);
+PROCEDURE OpenDevice(CONST devicename: ARRAY OF CHAR): BOOLEAN;
 BEGIN
  	fd := lib.v4l2_open(ADDRESSOF(devicename), Unix.rdwr, {});
  	IF fd = -1 THEN
- 		KernelLog.String("open error: "); KernelLog.String(devname); KernelLog.Ln; 
- 		ASSERT(fd > 0, 100);
- 		RETURN;
- 	END;
-	KernelLog.String("device opened: "); KernelLog.String(devname); KernelLog.Ln; 	
+ 		KernelLog.String("Error: Could not open video device : "); KernelLog.String(devname); KernelLog.Ln;
+ 		RETURN FALSE;
+ 	END;	
+	KernelLog.String("video device opened: "); KernelLog.String(devname); KernelLog.Ln; 	 	
+	RETURN (fd > 0);
 END OpenDevice;
 
 PROCEDURE InitDevice();
@@ -241,8 +239,8 @@ BEGIN
                 
  	      fmt.ztype := V.V4L2_BUF_TYPE_VIDEO_CAPTURE;
  	    
- 	 	pix.width := CamWidth;
- 	 	pix.height := CamHeight;
+ 	 	pix.width := camWidth;
+ 	 	pix.height := camHeight;
  	 	pix.pixelformat := V.V4L2_PIX_FMT_BGR24; (*V.V4L2_PIX_FMT_YUV420;*)
  	 	pix.field := V.V4L2_FIELD_INTERLACED; 
  	(* 	pix.field := V.V4L2_FIELD_NONE;*)
@@ -263,7 +261,7 @@ BEGIN
 		KernelLog.String("libv4l didn't accept BGR24 format."); KernelLog.Ln; 
 	END;
 
-	     IF (pix.width # CamWidth) OR (pix.height # CamHeight) THEN
+	     IF (pix.width # camWidth) OR (pix.height # camHeight) THEN
                 KernelLog.String("Warning: driver is sending image at ");
                 KernelLog.Int(pix.width, 0);  KernelLog.Int(pix.height, 0); KernelLog.Ln; 
             END;
@@ -280,8 +278,13 @@ BEGIN
 	KernelLog.String("pix.width= "); KernelLog.Int(pix.width, 0); KernelLog.Ln; 
 	KernelLog.String("pix.height= "); KernelLog.Int(pix.height, 0); KernelLog.Ln; 
 	
+	camWidth := pix.width;
+	camHeight := pix.height;
+
   	fmt.fmt := SYSTEM.VAL(V.D200, pix);
 
+	NEW(buffer);
+	Raster.Create(buffer, camWidth, camHeight, Raster.BGR888);
 	
 END InitDevice;
 
@@ -294,21 +297,23 @@ END xioctl;
 PROCEDURE FrameReceived ();
 VAR
 	trap : BOOLEAN;
+	t0, t1: LONGINT;
+	ts: ARRAY 8  OF CHAR;
 BEGIN
 	trap := TRUE;
-
-	IF s # NIL THEN
+		t0 := Kernel.GetTicks();
+	
 		ReadFrame();
 	
 		IF (frameHandler # NIL) & (buffer # NIL) THEN frameHandler(buffer) END;
-		IF buffer # NIL THEN s.canvas.DrawImage(0, 0, buffer, WMGraphics.ModeCopy) END;
-		s.Invalidate(WMRectangles.MakeRect(0, 0, s.GetWidth(), s.GetHeight()))
-	END;
-(*	t1 := GetTimer();
-	t := t1 - t0;
-	f := GetFreq();
-	f := f / 1000; *)
-	(*KernelLog.String("total = "); KernelLog.Int(ENTIER(t / f), 0); KernelLog.Ln; *)
+		IF s # NIL THEN
+				s.canvas.DrawImage(0, 0, buffer, WMGraphics.ModeCopy);
+				t1 :=  Kernel.GetTicks();
+				t0 := t1 - t0;
+				Strings.IntToStr(t0, ts);
+				s.canvas.DrawString(100,100, ts);
+				s.Invalidate(WMRectangles.MakeRect(0, 0, s.GetWidth(), s.GetHeight()))
+		END;		
 	trap := FALSE;
 FINALLY
 	IF trap THEN
@@ -324,7 +329,7 @@ VAR
 
 BEGIN
 	IF s # NIL THEN s.Close END; 
-	NEW(s, CamWidth, CamHeight);
+	NEW(s, camWidth, camHeight);
 	KernelLog.String("Started"); KernelLog.Ln;
 	NEW(timer);
 	timer.Sleep(10000);
@@ -333,12 +338,21 @@ END SnapshotFirstPossible;
 
 PROCEDURE Start*;
 BEGIN
-	NEW(starter);
+	IF starter # NIL THEN starter.Stop(); END;
+	IF fd > 0 THEN CloseDevice(); END;
+	
+	IF OpenDevice(devname) THEN
+		
+		InitDevice();
+		NEW(starter);
+	END;	
 END Start;
 
 PROCEDURE Stop*;
 BEGIN
-	starter.Stop;
+	IF starter # NIL THEN
+		starter.Stop;
+	END;	
 END Stop;
 
 PROCEDURE EnumControls*;
@@ -542,11 +556,14 @@ END InstallFrameHandler;
 
 PROCEDURE Cleanup;
 BEGIN
+	IF starter # NIL THEN starter.Stop END;
 	CloseDevice();
 	IF s # NIL THEN s.Close END
 END Cleanup;
 
 BEGIN
+	 camWidth := 640; (* default *)
+	 camHeight := 480;
 	Modules.InstallTermHandler(Cleanup)
 END VideoExample.
 
@@ -557,11 +574,11 @@ VideoExample.Start ~
 
 VideoExample.EnumControls ~
 
-VideoExample.SetBrightness 200 ~ 
+VideoExample.SetBrightness 30 ~ 
 
 VideoExample.AutoBrightness  ~ 
 
-VideoExample.SetContrast 10 ~ 
+VideoExample.SetContrast 50 ~ 
 
 VideoExample.IncContrast~ 
 VideoExample.DecContrast~ 
