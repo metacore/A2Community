@@ -2,6 +2,14 @@ MODULE PlanarEdgeDetectors; (** AUTHOR "Patrick Hunziker"; PURPOSE " various edg
 
 (* see also http://en.wikipedia.org/wiki/Scale_space and http://en.wikipedia.org/wiki/Edge_detection*)
 
+(*
+Usually, Smoothing and derivative operators are combined.
+Due to the commutative property between the derivative operator and the Gaussian smoothing operator, 
+such scale-space derivatives can equivalently be computed by convolving the original image with Gaussian derivative operators. 
+For this reason they are often also referred to as Gaussian derivatives.
+*)
+
+
 IMPORT PlanarBase, PlanarNabla, PlanarMath, Mathe:=MathL, WMMatrix;
 
 TYPE 
@@ -134,6 +142,9 @@ BEGIN
 	vec:= DifferentialEdgeDirection(rect, PlanarNabla.centered);
 	NEW(window, vec.x, "edge direction x"); window.AddWindow;
 	NEW(window, vec.y, "edge direction y"); window.AddWindow;
+	
+	NEW(window, PlanarNabla.Laplacian(rect, PlanarNabla.centered), "Laplacian"); window.AddWindow;
+
 END Test;
 
 END PlanarEdgeDetectors.
