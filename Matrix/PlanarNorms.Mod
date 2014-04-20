@@ -2,10 +2,10 @@ MODULE PlanarNorms; (** AUTHOR "Patrick Hunziker"; PURPOSE "Norms in planar data
 (* see also MatrixNorms.Mod *)
 
 IMPORT PlanarBase, PlanarMath, PlanarNabla, PMath, MathL, Commands; 
+
 TYPE 
 	Datatype=PlanarBase.Datatype;
 	Plane=PlanarBase.TwoD;
-
 
 PROCEDURE TotalVariation*(CONST p:Plane; sampling:LONGINT): Datatype; (* to do: optimize *)
 BEGIN
@@ -13,9 +13,7 @@ BEGIN
 									+ PlanarMath.Sqr(PlanarNabla.dy(p,sampling))))
 END TotalVariation;
 
-(**
-SNR, PSNR, RMSE, MAE for images, see http://bigwww.epfl.ch/sage/soft/snr/
-*)
+(** SNR, PSNR, RMSE, MAE for images, see http://bigwww.epfl.ch/sage/soft/snr/	*)
 
 (** sinus to noise ratio for images = 10 log (...) *)
 PROCEDURE SNR*(CONST test, reference:Plane):Datatype;
@@ -56,6 +54,7 @@ BEGIN
 	context.out.Float(PSNR(a,b),14);
 	context.out.Float(RMSE(a,b),14);
 	context.out.Float(MAE(a,b),14);
+	context.out.Float(TotalVariation(a, PlanarNabla.centered),14); 
 	context.out.Ln; context.out.Update;
 END Test;
 
