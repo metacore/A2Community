@@ -10,7 +10,7 @@ For this reason they are often also referred to as Gaussian derivatives.
 *)
 
 
-IMPORT PlanarBase, PlanarNabla, PlanarMath, Mathe:=MathL, WMMatrix;
+IMPORT PlanarBase, PlanarNabla, PlanarMath, Mathe:=MathL, WMMatrix, Commands;
 
 TYPE 
 	Datatype=PlanarBase.Datatype;
@@ -33,8 +33,7 @@ PROCEDURE arctan2(x,y:LONGREAL):LONGREAL; (*arctan in range 0..2pi*)
 BEGIN
 	IF (x>0) & (y>=0) THEN RETURN Mathe.arctan(y/x)
 	ELSIF (x>0) & (y<0) THEN RETURN Mathe.arctan(y/x)+2*Mathe.pi
-	ELSIF x<0 THEN RETURN Mathe.arctan(y/x)+Mathe.pi
-	ELSIF (x=0) & (y>0) THEN RETURN Mathe.pi/2
+	ELSIF x<0 THEN RETURN Mathe.arctan(y/x)+Mathe.pi	ELSIF (x=0) & (y>0) THEN RETURN Mathe.pi/2
 	ELSIF (x=0) & (y<0) THEN RETURN 3*Mathe.pi/2
 	ELSE (*( x=0) & (y=0) *) RETURN 0 (*or RETURN NaN ?*) 
 	END
@@ -115,6 +114,26 @@ BEGIN
 	RETURN RESULT
 END Canny;
 
+PROCEDURE NonMaximaSuppression*(CONST in:ScalarField):ScalarField; (* only partly working at the moment*)
+VAR l, l0,l1,l2,l00: Line; out:ScalarField; i,j,len:LONGINT;
+BEGIN
+	NEW(out,LEN(in,0),LEN(in,1));
+	len:=LEN(in,0);
+	l00:=in[(i-1) MOD len]; 
+	i:=1;
+	WHILE i<LEN(in,0)-1 DO
+		l0:=in[(i-1) MOD len]; l1:=in[i]; l2:=in[(i+1)MOD len]; 
+		l:=in[i]; 
+		FOR j:=1 TO LEN(in,1)-2 DO
+			IF (l[j]<l00[j]) OR (l[j]<l2[j]) OR (l[j]<l1[j-1]) OR (l[j]<l1[j+1]) THEN l[j]:=0 END;
+		END;
+		out[i]:=l;
+		l00:=l;
+		INC(i);
+	END;
+	RETURN out
+END NonMaximaSuppression;
+
 PROCEDURE Test*;
 VAR rect: ScalarField; vec: VectorField; window: WMMatrix.Window;
 BEGIN
@@ -147,7 +166,24 @@ BEGIN
 
 END Test;
 
+(*
+PROCEDURE TestFile*(context:Commands.Context);
+VAR img: MatrixTIFFCodec.Image; filename: ARRAY 1024 OF CHAR;
+	window: WMMatrix.Window;
+BEGIN
+	IF context.arg.GetString(filename) THEN
+		img:=MatrixTIFFCodex(filename);
+		IF img#NIL THEN img.ShowFrame(0); END;
+	END;
+END TestFile;
+*)
+
 END PlanarEdgeDetectors.
 
 
 PlanarEdgeDetectors.Test
+
+"C:/C/Documents and Settings/Pat/My Documents/Malaria/Discognosis FP7/Size Standards QLC/PS Beads/B_237_AA_1_Time 4.tif"
+PlanarEdgeDetectors.Test
+"C:/C/Documents and Settings/Pat/My Documents/Malaria/Discognosis FP7/Size Standards QLC/PS Beads/image_140703_002.tif"
+
