@@ -4,9 +4,9 @@ IMPORT
 	KernelLog, Strings, Math, Texts, UTF8Strings,
 	(* visual part *)
 
-	WMRectangles, WMWindowManager, WMProperties, WMComponents, WMStandardComponents, WMEditors, 
+	WMRectangles, WMWindowManager, WMProperties,  WMComponents, WMStandardComponents, WMEditors, 
 	WMGraphics, WMGraphicUtilities, WMEvents, 
-	WM := WMWindowManager, WMDialogs;
+	WM := WMWindowManager, WMDialogs, WMColorComponents;
 
 CONST
 	stRed* = 0; stGreen*= 1; stBlue* = 2; stHue* = 3; stSat* = 4; stLum* = 5; 
@@ -41,13 +41,15 @@ TYPE
 			END;
 			owner.spec.UpdateCur;
 			owner.grad.UpdateCur;
+			owner.spec.Invalidate;			
+			owner.grad.Invalidate;			
 			FocusReceived^;
 		END FocusReceived;
 	END TextField;
 	
-	ColorInd* = OBJECT(WMStandardComponents.Panel)
+	ColorInd* = OBJECT(WMColorComponents.ColorPot)
 	VAR
-		color-: WMProperties.ColorProperty;
+(*		color-: WMProperties.ColorProperty;*)
 		updatePanels, updateEditors:BOOLEAN;(*!Stupid*)
 		owner:PickColorDlg;
 
@@ -57,8 +59,8 @@ TYPE
 			updateEditors:=TRUE;
 			updatePanels:=TRUE;
 			SetNameAsString(Strings.NewString("ColorInd"));
-			NEW(color, WMStandardComponents.PrototypeBclDefault, NIL, NIL); properties.Add(color);
-			color.Set(0008080FFH);
+			fillColor.Set(LONGINT(0008080FFH));
+(*			SetExternalColorChangeHandler(ColorChanged);*)
 		END Init;
 
 		PROCEDURE PropertyChanged*(sender, data : ANY);
@@ -67,21 +69,20 @@ TYPE
 			c, R, G, B : LONGINT;
 			H, S, L : REAL;
 			LL, a, b : REAL;
-			s:WMEvents.EventSource;
 		BEGIN
 			Invalidate;
 			PropertyChanged^(sender, data);
-			
+
 			IF (owner.coledit#NIL) THEN 
-				c:=color.Get();
+				c:=fillColor.Get();
 				Strings.IntToHexStr(c, 8, tempString);
 
-(*				winstance.coledit.onChanged.Remove(winstance.OnEditColorChange);*)
 				owner.coledit.SetAsString(tempString);
-(*				winstance.coledit.onChanged.Add(winstance.OnEditColorChange);*)
 				IF (updatePanels) THEN
-					owner.spec.UpdateCur;
 					owner.grad.UpdateCur;
+					owner.spec.UpdateCur;
+					owner.spec.Invalidate;			
+					owner.grad.Invalidate;			
 				END;
 				IF updateEditors THEN
 					ColorToRGB(c,R,G,B);
@@ -101,20 +102,17 @@ TYPE
 		END PropertyChanged;
 
 		PROCEDURE DrawBackground(canvas : WMGraphics.Canvas);
-		VAR mode, mid  : LONGINT;
+		VAR mode : LONGINT;
 			 rect : WMGraphics.Rectangle; 
 		BEGIN
-			mid := color.Get();
-
 			rect := GetClientRect();
-			mode := WMGraphics.ModeSrcOverDst;
-			IF mid # 0 THEN canvas.Fill(WMRectangles.ResizeRect(rect,-3), mid, mode) END;
+			DrawBackground^(canvas);
 			DrawBevel(canvas, rect, TRUE,  mode);			
 		END DrawBackground;
 	END ColorInd;
 
 
-	ColorBut = OBJECT(WMStandardComponents.Button)
+	ColorBut = OBJECT(WMColorComponents.ColorPot)
 	VAR
 		onSelect- : WMEvents.EventSource;
 		
@@ -122,7 +120,7 @@ TYPE
 		BEGIN
 			Init^;
 			SetNameAsString(Strings.NewString("ColorBut"));
-			NEW(onSelect, SELF, Strings.NewString("onSelect"), NIL, NIL); events.Add(onClick);
+			NEW(onSelect, SELF, Strings.NewString("onSelect"), NIL, NIL); events.Add(onSelect);
 		END Init;
 		PROCEDURE DrawBackground(canvas : WMGraphics.Canvas);
 		VAR mode, mid, borderWidth : LONGINT;
@@ -130,16 +128,14 @@ TYPE
 		BEGIN
 			IF ~visible.Get() THEN RETURN END;
 			Acquire;
-			mid := clDefault.Get();
+			mid := fillColor.Get();
 
 			rect := GetClientRect();
 			mode := WMGraphics.ModeSrcOverDst;
 			borderWidth := 1;
 			IF mid # 0 THEN canvas.Fill(WMRectangles.ResizeRect(rect,-3), mid, mode) END;
-(*			WMGraphicUtilities.RectGlassShade(canvas, WMRectangles.ResizeRect(rect,-1), 2, TRUE);*)
 			DrawBevel(canvas, rect, TRUE,  mode);			
 			
-(*			WMGraphicUtilities.DrawRect(canvas, rect, LONGINT(0FF000080H), mode);*)
 			IF SELF=selected THEN
 				WMGraphicUtilities.DrawRect(canvas, rect, LONGINT(0FF000080H), mode);
 			END;
@@ -158,7 +154,14 @@ TYPE
 			onSelect.Call(NIL);
 
 			Invalidate();
+			PointerDown^(x, y, keys);
 		END PointerDown;
+
+		PROCEDURE DragDropped(x, y : LONGINT; dragInfo : WMWindowManager.DragInfo);
+		BEGIN
+			ConfirmDrag(FALSE, NIL);
+		END DragDropped;
+
 
 
 	END ColorBut;
@@ -185,17 +188,17 @@ TYPE
 				owner.colorInd.updatePanels:=FALSE;
 				
 				 CASE ActiveGrad OF
-					 |0:owner.colorInd.color.Set( RGBToColor( position, spec.CurY, spec.CurX));
-					 |1:owner.colorInd.color.Set( RGBToColor( spec.CurY, position, spec.CurX));
-					 |2:owner.colorInd.color.Set( RGBToColor( spec.CurY, spec.CurX, position));
+					 |0:owner.colorInd.fillColor.Set( RGBToColor( position, spec.CurY, spec.CurX));
+					 |1:owner.colorInd.fillColor.Set( RGBToColor( spec.CurY, position, spec.CurX));
+					 |2:owner.colorInd.fillColor.Set( RGBToColor( spec.CurY, spec.CurX, position));
 
-					 |3:owner.colorInd.color.Set( HSLToColor( position/255, spec.CurX/255, spec.CurY/255));
-					 |4:owner.colorInd.color.Set( HSLToColor( spec.CurX/255, position/255, spec.CurY/255));
-					 |5:owner.colorInd.color.Set( HSLToColor( spec.CurX/255, spec.CurY/255, position/255));
+					 |3:owner.colorInd.fillColor.Set( HSLToColor( position/255, spec.CurX/255, spec.CurY/255));
+					 |4:owner.colorInd.fillColor.Set( HSLToColor( spec.CurX/255, position/255, spec.CurY/255));
+					 |5:owner.colorInd.fillColor.Set( HSLToColor( spec.CurX/255, spec.CurY/255, position/255));
 					 
-					 |6:owner.colorInd.color.Set( LabToColor( position * 100/255,   spec.CurX - 127, spec.CurY - 127));
-		 			 |7:owner.colorInd.color.Set( LabToColor( spec.CurY * 100/255, position - 127, spec.CurX - 127));
-					 |8:owner.colorInd.color.Set( LabToColor( spec.CurY * 100/255, spec.CurX - 127, position - 127));
+					 |6:owner.colorInd.fillColor.Set( LabToColor( position * 100/255,   spec.CurX - 127, spec.CurY - 127));
+		 			 |7:owner.colorInd.fillColor.Set( LabToColor( spec.CurY * 100/255, position - 127, spec.CurX - 127));
+					 |8:owner.colorInd.fillColor.Set( LabToColor( spec.CurY * 100/255, spec.CurX - 127, position - 127));
 				 ELSE
 				 END;
 				owner.colorInd.updatePanels:=TRUE;
@@ -206,13 +209,16 @@ TYPE
 
 		PROCEDURE UpdateCur;
 		VAR
+			c:LONGINT;
 			R, G, B : LONGINT;
 			H, S, L : REAL;
 			LL, a, b :REAL;
 		BEGIN
-			ColorToRGB(owner.colorInd.color.Get(), R, G, B);
-			ColorToHSL(owner.colorInd.color.Get(), H, S, L);
-			ColorToLab(owner.colorInd.color.Get(), LL, a, b);
+			c:=owner.colorInd.fillColor.Get();
+
+			ColorToRGB(c, R, G, B);
+			ColorToHSL(c, H, S, L);
+			ColorToLab(c, LL, a, b);
 			
 				 CASE ActiveGrad OF
 					 |0:position:=R;
@@ -226,7 +232,6 @@ TYPE
 					 |8:position:=ENTIER(b+127);
 				ELSE
 				END;
-			Invalidate;
 		END UpdateCur;
 
 
@@ -419,17 +424,17 @@ TYPE
 				CurY:= 255-(MIN(MAX(y,gRect.t),gRect.b)-gRect.t)*255 DIV gh;
 				owner.colorInd.updatePanels:=FALSE;
 				 CASE ActiveGrad OF
-					 |0:owner.colorInd.color.Set(RGBToColor( grad.position, CurY, CurX));
-					 |1:owner.colorInd.color.Set(RGBToColor( CurY, grad.position, CurX));
-					 |2:owner.colorInd.color.Set(RGBToColor( CurY, CurX, grad.position));
+					 |0:owner.colorInd.fillColor.Set(RGBToColor( grad.position, CurY, CurX));
+					 |1:owner.colorInd.fillColor.Set(RGBToColor( CurY, grad.position, CurX));
+					 |2:owner.colorInd.fillColor.Set(RGBToColor( CurY, CurX, grad.position));
 					 
-					 |3:owner.colorInd.color.Set(HSLToColor( grad.position/255, CurX/255, CurY/255));
-					 |4:owner.colorInd.color.Set(HSLToColor( CurX/255, grad.position/255, CurY/255));
-					 |5:owner.colorInd.color.Set(HSLToColor( CurX/255,CurY/255,  grad.position/255));
+					 |3:owner.colorInd.fillColor.Set(HSLToColor( grad.position/255, CurX/255, CurY/255));
+					 |4:owner.colorInd.fillColor.Set(HSLToColor( CurX/255, grad.position/255, CurY/255));
+					 |5:owner.colorInd.fillColor.Set(HSLToColor( CurX/255,CurY/255,  grad.position/255));
 					 
-					 |6:owner.colorInd.color.Set(LabToColor(grad.position*100/255, CurX-127,CurY-127));
-		 			 |7:owner.colorInd.color.Set(LabToColor(CurY*100/255, grad.position-127,CurX-127));
-					 |8:owner.colorInd.color.Set(LabToColor(CurY*100/255,CurX-127, grad.position-127));
+					 |6:owner.colorInd.fillColor.Set(LabToColor(grad.position*100/255, CurX-127,CurY-127));
+		 			 |7:owner.colorInd.fillColor.Set(LabToColor(CurY*100/255, grad.position-127,CurX-127));
+					 |8:owner.colorInd.fillColor.Set(LabToColor(CurY*100/255,CurX-127, grad.position-127));
 				 ELSE
 				 END;
 				owner.colorInd.updatePanels:=TRUE;
@@ -457,13 +462,15 @@ TYPE
 
 		PROCEDURE UpdateCur;
 		VAR
+			c:LONGINT;
 			R, G, B : LONGINT;
 			H, S, L : REAL;
 			LL, a, b :REAL;
 		BEGIN
-			ColorToRGB(owner.colorInd.color.Get(), R, G, B);
-			ColorToHSL(owner.colorInd.color.Get(), H, S, L);
-			ColorToLab(owner.colorInd.color.Get(), LL, a, b);
+			c:=owner.colorInd.fillColor.Get();
+			ColorToRGB(c, R, G, B);
+			ColorToHSL(c, H, S, L);
+			ColorToLab(c, LL, a, b);
 			
 				 CASE ActiveGrad OF
 					 |0:CurY:=G;CurX:=B;
@@ -477,7 +484,6 @@ TYPE
 					 |8:CurY:=ENTIER(LL*255/100);CurX:=ENTIER(a+127);
 				ELSE
 				END;
-			Invalidate;
 		END UpdateCur;
 
 		PROCEDURE PointerUp(x, y : LONGINT; keys : SET); (** PROTECTED *)
@@ -707,9 +713,7 @@ TYPE
 				FOR j:=0 TO 7 DO
 					NEW(but);
 					but.bounds.SetExtents(22, 19); but.bounds.SetLeft(j*25+12);but.bounds.SetTop(22*i+35);
-					but.indicateToggle.Set(FALSE);
-					but.SetInvert3d(TRUE);but.isToggle.Set(TRUE);
-					but.clDefault.Set(StdPalette[i,j]);
+					but.fillColor.Set(StdPalette[i,j]);
 					but.onSelect.Add(SetColor);
 					panel.AddContent(but);
 				
@@ -724,9 +728,7 @@ TYPE
 				FOR j:=0 TO 7 DO
 					NEW(but);
 					but.bounds.SetExtents(22, 19); but.bounds.SetLeft(j*25+12);but.bounds.SetTop(22*i+200);
-					but.indicateToggle.Set(FALSE);
-					but.SetInvert3d(TRUE);but.isToggle.Set(TRUE);
-					but.clDefault.Set(userPalette[i*8+j]);
+					but.fillColor.Set(userPalette[i*8+j]);
 					but.onSelect.Add(SetColor);
 					panel.AddContent(but);
 					palette[i*8+j]:=but;
@@ -815,7 +817,7 @@ TYPE
 		PROCEDURE SetColor(sender, data : ANY);
 		BEGIN
 			WITH sender:ColorBut DO
-				colorInd.color.Set(sender.clDefault.Get());
+				colorInd.fillColor.Set(sender.fillColor.Get());
 			ELSE
 				KernelLog.String("putin := bastard"); KernelLog.Ln; 
 			END
@@ -823,7 +825,7 @@ TYPE
 
 		PROCEDURE AddToColors(sender, data : ANY);
 		BEGIN
-			palette[palettei].clDefault.Set(colorInd.color.Get());
+			palette[palettei].fillColor.Set(colorInd.fillColor.Get());
 			INC(palettei);IF palettei=16 THEN palettei:=0 END;
 		END AddToColors;
 		
@@ -842,9 +844,9 @@ TYPE
 				editorial[j*3+1].GetAsString(string); Strings.StrToInt(string, a2);
 				editorial[j*3+2].GetAsString(string); Strings.StrToInt(string, a3);
 			CASE j OF
-			 |0:colorInd.color.Set(RGBToColor(a1,a2,a3));
-			 |1:colorInd.color.Set(HSLToColor(a1,a2,a3));
-			 |2:colorInd.color.Set(LabToColor(a1,a2,a3));
+			 |0:colorInd.fillColor.Set(RGBToColor(a1,a2,a3));
+			 |1:colorInd.fillColor.Set(HSLToColor(a1,a2,a3));
+			 |2:colorInd.fillColor.Set(LabToColor(a1,a2,a3));
 			END;
 			colorInd.updateEditors:=TRUE;
 			
@@ -911,7 +913,7 @@ TYPE
 			string : ARRAY 32 OF CHAR;
 			col,res:LONGINT;
 		BEGIN
-			coledit.GetAsString(string); Strings.HexStrToInt(string, col, res);  colorInd.color.Set(col);
+			coledit.GetAsString(string); Strings.HexStrToInt(string, col, res);  colorInd.fillColor.Set(col);
 		END OnEditColorChange;
 
 	END PickColorDlg;
@@ -1056,12 +1058,12 @@ BEGIN
 	IF (G > 0.04045) THEN G := Math.exp(2.4*Math.ln((G + 0.055) / 1.055)) ELSE G := G / 12.92 END;
 	IF (B > 0.04045) THEN B := Math.exp(2.4*Math.ln((B + 0.055) / 1.055)) ELSE B := B / 12.92 END;
 
-	(* Observer. = 2°, Illuminant = D65 *)
+	(* Observer. = 2Â°, Illuminant = D65 *)
     X := R * 0.4124 + G * 0.3576 + B * 0.1805;
     y := R * 0.2126 + G * 0.7152 + B * 0.0722;
     Z := R * 0.0193 + G * 0.1192 + B * 0.9505;
 
-	X := X / 0.95047;       (*Observer= 2°, Illuminant= D65*)
+	X := X / 0.95047;       (*Observer= 2Â°, Illuminant= D65*)
 (*	Y = Y / 1 nothing to do! *)
 	Z := Z / 1.08883;
 
@@ -1096,7 +1098,7 @@ BEGIN
 	IF (Y3 > 0.008856) THEN y := Y3 ELSE y := (y - K16d116) / 7.787 END;
 	IF (Z3 > 0.008856) THEN Z := Z3 ELSE Z := (Z - K16d116) / 7.787 END;
 
-	X := X * 0.95047;	(*Observer= 2°, Illuminant= D65*)
+	X := X * 0.95047;	(*Observer= 2Â°, Illuminant= D65*)
 	(*Y = Y * 1*)
 	Z := Z * 1.08883;
 
@@ -1138,9 +1140,9 @@ VAR qsd : PickColorDlg;
 BEGIN
 	NEW(qsd);
 	IF ~qsd.errors THEN
-		qsd.colorInd.color.Set(color);
+		qsd.colorInd.fillColor.Set(color);
 		qsd.x := x; qsd.y := y; qsd.Show; 
-		IF qsd.result = WMDialogs.ResOk THEN color:=qsd.colorInd.color.Get() END;
+		IF qsd.result = WMDialogs.ResOk THEN color:=qsd.colorInd.fillColor.Get() END;
 		RETURN qsd.result
 	ELSE RETURN WMDialogs.ResDialogFailure
 	END
@@ -1175,7 +1177,8 @@ BEGIN
 END WMColorPicker.
 
 
-SystemTools.Free WMColorPicker ~coledit
+SystemTools.Free WMColorPicker ~
+SystemTools.FreeDownTo WMColorPicker ~
+
 WMColorPicker.Open ~
 WMDebugger.Open WMColorPicker.Mod~
-
