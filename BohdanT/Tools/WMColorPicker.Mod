@@ -134,8 +134,7 @@ TYPE
 			mode := WMGraphics.ModeSrcOverDst;
 			borderWidth := 1;
 			IF mid # 0 THEN canvas.Fill(WMRectangles.ResizeRect(rect,-3), mid, mode) END;
-			DrawBevel(canvas, rect, TRUE,  mode);			
-			
+			DrawBevel(canvas, rect, TRUE,  mode);
 			IF SELF=selected THEN
 				WMGraphicUtilities.DrawRect(canvas, rect, LONGINT(0FF000080H), mode);
 			END;
@@ -720,7 +719,7 @@ TYPE
 				END;
 			END;
 
-			NEW(lab);lab.bounds.SetExtents(122, 19); lab.bounds.SetLeft(12);lab.bounds.SetTop(175);lab.caption.SetAOC("Castom colors:");
+			NEW(lab);lab.bounds.SetExtents(122, 19); lab.bounds.SetLeft(12);lab.bounds.SetTop(175);lab.caption.SetAOC("Custom colors:");
 			panel.AddContent(lab);
 
 
