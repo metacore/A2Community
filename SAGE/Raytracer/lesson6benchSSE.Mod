@@ -1,0 +1,705 @@
+(*
+// Copyright (c) www.scratchapixel.com August, 2007
+// All rights reserved.
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+// * Redistributions of source code must retain the above copyright notice,
+//   this list of conditions and the following disclaimer.
+// * Redistributions in binary form must reproduce the above copyright notice,
+//   this list of conditions and the following disclaimer in the documentation
+//   and/or other materials provided with the distribution.
+//
+//  c++ -o render lesson6a.cpp -O3 -Wall
+
+Translated to Active Oberon by Yaroslav Romanchenko (SAGE) August, 2008
+*)
+
+MODULE lesson6benchSSE;
+
+IMPORT
+	SYSTEM, Math, Strings, Files, Commands, Kernel, KernelLog;
+
+CONST
+
+	MAXBUFFER = 256;
+	EPSILON = 0.000001;
+	TEST_CULL = TRUE;
+
+TYPE
+
+	(*vector_t* = RECORD
+		x*{ALIGNED(16)}: REAL;
+		y*{ALIGNED(16)}: REAL;
+		z*{ALIGNED(16)}: REAL;
+		dummy*{ALIGNED(16)}: REAL;
+	END;*)
+	
+	vector_t* = RECORD
+		x*{ALIGNED(2)}: REAL;
+		y*: REAL;
+		z*: REAL;
+		dummy*: REAL;
+	END;
+	
+	vec = RECORD
+		i{ALIGNED(1)}: LONGINT;
+		j, k, l: LONGINT;
+	END;
+	
+	color_t* = RECORD
+		r*, g*, b*, dummy*: REAL;
+	END;
+
+	ray_t* = RECORD
+		orig: vector_t;
+		dir: vector_t;
+	END;
+
+	cropWindow_t = RECORD
+		xmin, ymin, xmax, ymax: REAL;
+	END;
+
+	screenWindow_t = RECORD
+		left, right, top, bottom: REAL;
+	END;
+
+	options_t = RECORD
+		(* // camera options_t *)
+		imageWidth: LONGINT;
+		imageHeight: LONGINT;
+		bucketSize: LONGINT;
+		cropWindow: cropWindow_t;
+		fieldOfView: REAL;
+		(* // display options_t *)
+		displayName: ARRAY MAXBUFFER OF CHAR;
+		gamma: REAL;
+		backgroundColor: color_t;
+	END;
+
+	frameBuffer_t = POINTER TO ARRAY OF color_t;
+
+	renderContext_t = RECORD
+		options: options_t;
+		(* // multi-threading related *)
+		numBucketsX, numBucketsY, totalNumBuckets: LONGINT;
+		numComputedBuckets: LONGINT;
+		numThreads: LONGINT;
+		(* pthread_mutex_t threadMutex; *)
+		(* // frameBuffer *)
+		frameBuffer: frameBuffer_t;
+		screenWindow: screenWindow_t;
+		(* // to compute prim ray_t direction *)
+		dx, dy: REAL;
+		angle: REAL;
+	END;
+
+	threadData_t = RECORD
+		id: LONGINT;
+		rc: renderContext_t;
+		numBuckets: LONGINT;
+	END;
+
+	bucket_t = RECORD
+		x0, y0, x1, y1: LONGINT;
+	END;
+
+	calcThread = OBJECT
+	VAR
+		alive, terminated: BOOLEAN;
+		td: threadData_t;
+		bi, by, bx: LONGINT;
+		b: bucket_t;
+
+	PROCEDURE &New(CONST td: threadData_t);
+	BEGIN
+		SELF.td := td;
+		alive := TRUE;
+		terminated := FALSE
+	END New;
+
+	PROCEDURE AwaitTerminated;
+	BEGIN {EXCLUSIVE}
+		AWAIT(terminated)
+	END AwaitTerminated;
+
+	BEGIN {ACTIVE}
+		WHILE alive DO
+			alive := getNextBucket(td.rc, bi);
+			IF alive THEN
+				INC(td.numBuckets);
+				(* // compute bucket_t coordinates *)
+				bx := bi MOD td.rc.numBucketsX; (* // column index *)
+				by := bi DIV td.rc.numBucketsX; (* // row index *)
+				b.x0 := bx * td.rc.options.bucketSize;
+				b.y0 := by * td.rc.options.bucketSize;
+				b.x1 := b.x0 + td.rc.options.bucketSize - 1;
+				b.y1 := b.y1 + td.rc.options.bucketSize - 1;
+				(* // clip *)
+				IF b.x1 > td.rc.options.imageWidth - 1 THEN
+					b.x1 := td.rc.options.imageWidth - 1
+				END;
+				IF b.y1 > td.rc.options.imageHeight - 1 THEN
+					b.y1 := td.rc.options.imageHeight - 1
+				END;
+				renderBucket(td.rc, b)
+			END
+		END;
+		BEGIN {EXCLUSIVE}
+			terminated := TRUE
+		END
+	END calcThread;
+
+VAR
+	context: Commands.Context;
+	options: options_t;
+	rc: renderContext_t;
+	tri: ARRAY 3 OF vector_t;
+	col: ARRAY 3 OF color_t;
+	threads: POINTER TO ARRAY OF calcThread;
+
+PROCEDURE ceil(x: REAL): LONGINT;
+BEGIN
+	RETURN -ENTIER(-x)
+END ceil;
+
+PROCEDURE floor(x: REAL): LONGINT;
+BEGIN
+	RETURN ENTIER(x)
+END floor;
+
+PROCEDURE clamp(x, l, h: REAL): REAL;
+BEGIN
+	IF x > h THEN
+		RETURN h
+	ELSIF x < l THEN
+		RETURN l
+	ELSE
+		RETURN x
+	END
+END clamp;
+
+PROCEDURE pow(x, y: REAL): REAL;
+BEGIN
+	IF x = 0.0 THEN
+		RETURN 0.0
+	ELSE
+		RETURN Math.exp(y * Math.ln(x))
+	END
+END pow;
+
+PROCEDURE tan(x: REAL): REAL;
+BEGIN
+	RETURN Math.sin(x) / Math.cos(x)
+END tan;
+
+(* // math functions *)
+
+PROCEDURE vecNormalize(VAR v: vector_t);
+VAR
+	len, lenInv: REAL;
+BEGIN
+	len := v.x * v.x + v.y * v.y + v.z * v.z;
+	IF len > 0.0 THEN
+		lenInv := 1.0 / Math.sqrt(len);
+		v.x := v.x * lenInv;
+		v.y := v.y * lenInv;
+		v.z := v.z * lenInv
+	END
+END vecNormalize;
+
+PROCEDURE vecSub(VAR c: vector_t; CONST a, b: vector_t);
+BEGIN
+	c.x := a.x - b.x;
+	c.y := a.y - b.y;
+	c.z := a.z - b.z
+END vecSub;
+
+(*
+PROCEDURE vecCross(VAR c: vector_t; CONST a: vector_t; CONST b: vector_t);
+BEGIN
+	c.x := a.y * b.z - a.z * b.y;
+	c.y := a.z * b.x - a.x * b.z;
+	c.z := a.x * b.y - a.y * b.x
+END vecCross;
+*)
+PROCEDURE vecCross(VAR c: vector_t; CONST a, b: vector_t);
+CODE {SYSTEM.i386, SYSTEM.SSE}
+
+	MOV	EBX, [EBP+c]
+	MOV	ECX, [EBP+a]
+	MOV	EDX, [EBP+b]
+	
+	MOVUPS	XMM0, [ECX]
+	MOVUPS	XMM1, [EDX]
+	MOVAPS	XMM2, XMM0
+	MOVAPS	XMM3, XMM1
+	SHUFPS	XMM0, XMM0, 201
+	SHUFPS	XMM1, XMM1, 210
+	SHUFPS	XMM2, XMM2, 210
+	SHUFPS	XMM3, XMM3, 201
+	MULPS		XMM0, XMM1
+	MULPS		XMM2, XMM3
+	SUBPS		XMM0, XMM2
+	
+	MOVUPS	[EBX], XMM0
+END vecCross;
+
+(*
+PROCEDURE vecDot(VAR c: REAL; CONST a: vector_t; CONST b: vector_t);
+BEGIN
+	c := a.x*b.x + a.y*b.y + a.z*b.z
+END vecDot;
+*)
+
+PROCEDURE vecDot(VAR c: REAL; CONST a, b: vector_t);
+CODE {SYSTEM.i386, SYSTEM.SSE}
+
+	MOV	EBX, [EBP+c]
+	MOV	ECX, [EBP+a]
+	MOV	EDX, [EBP+b]
+	
+	MOVUPS	XMM0, [ECX]
+	MOVUPS	XMM1, [EDX]
+	
+	MULPS	XMM0, XMM1
+
+	;MOVHLPS	XMM1, XMM0
+	MOVAPS	XMM1, XMM0
+	SHUFPS	XMM1, XMM1, 14
+
+	ADDPS	XMM0, XMM1
+	MOVAPS	XMM1, XMM0
+	SHUFPS	XMM0, XMM0, 1
+	ADDPS	XMM0, XMM1
+
+	MOVSS	[EBX], XMM0
+
+END vecDot;
+
+(* d := Dot(c, Cross(a, b)) *)
+(*PROCEDURE vecCrossDot(VAR d: REAL; CONST c, a, b: vector_t);
+CODE {SYSTEM.i386, SYSTEM.SSE}
+	MOV	EAX, [EBP+d]
+	MOV	EBX, [EBP+c]
+	MOV	ECX, [EBP+a]
+	MOV	EDX, [EBP+b]
+	
+	MOVUPS	XMM0, [ECX]
+	MOVUPS	XMM1, [EDX]
+	
+	MOVAPS	XMM2, XMM0
+	MOVAPS	XMM3, XMM1
+	SHUFPS	XMM0, XMM0, 201
+	SHUFPS	XMM1, XMM1, 210
+	SHUFPS	XMM2, XMM2, 210
+	SHUFPS	XMM3, XMM3, 201
+	MULPS		XMM0, XMM1
+	MULPS		XMM2, XMM3
+	SUBPS		XMM0, XMM2
+	; cross product in XMM0
+
+	MOVUPS	XMM1, [EBX]
+	
+	MULPS	XMM0, XMM1
+
+	;MOVHLPS	XMM1, XMM0
+	MOVAPS	XMM1, XMM0
+	SHUFPS	XMM1, XMM1, 14
+
+	ADDPS	XMM0, XMM1
+	MOVAPS	XMM1, XMM0
+	SHUFPS	XMM0, XMM0, 1
+	ADDPS	XMM0, XMM1
+
+	MOVSS	[EAX], XMM0
+	
+END vecCrossDot;*)
+
+PROCEDURE intersectTriangle(CONST va: vector_t; CONST vb: vector_t; CONST vc: vector_t; CONST rayOrig: vector_t; CONST rayDir: vector_t; VAR t, u, v: REAL): BOOLEAN;
+VAR
+	e1, e2, pvec, tvec, qvec: vector_t;
+	det, inv_det: REAL;
+BEGIN
+	(* // implementation of the Moller-Trumbore algorithm *)
+	vecSub(e1, vb, va);
+	vecSub(e2, vc, va);
+	vecCross(pvec, rayDir, e2);
+	vecDot(det, e1, pvec);
+	
+	IF TEST_CULL THEN
+		IF det < EPSILON THEN
+			RETURN FALSE
+		END
+	ELSE
+		IF (det > -EPSILON) & (det < EPSILON) THEN
+			RETURN FALSE
+		END
+	END;
+	
+	(* // prepare to compute u *)
+	vecSub(tvec, rayOrig, va);
+	(* // do not mult by inv_det *)
+	vecDot(u, tvec, pvec);
+	
+	IF (u < 0.0) OR (u > det) THEN (* // test bounds using det *)
+		RETURN FALSE
+	END;
+	
+	(* // prepare to compute v *)
+	vecCross(qvec, tvec, e1);
+	(* // do not mult by inv_det *)
+	vecDot(v, rayDir, qvec);
+	(*vecDot(ADDRESSOF(v), ADDRESSOF(rayDir), ADDRESSOF(qvec));*)
+
+	IF (v < 0) OR (v > det) OR (u + v > det) THEN (* // test bounds using det *)
+		RETURN FALSE
+	END;
+	
+	(* // ray intersects triangle, compute t and *normalize* u and v *)
+	inv_det := 1.0 / det;
+	
+	vecDot(t, e1, qvec);
+	
+	t := t * inv_det;
+	u := u * inv_det;
+	v := v * inv_det;
+	
+	RETURN TRUE
+
+END intersectTriangle;
+
+PROCEDURE renderBucket(VAR rc: renderContext_t; CONST b: bucket_t);
+VAR
+	i, j, nPix: LONGINT;
+	t, u, v, w: REAL;
+	ray: ray_t; (* // prim ray *)
+BEGIN
+	FOR j := b.y0 TO b.y1 DO
+		FOR i := b.x0 TO b.x1 DO
+			nPix := j * rc.options.imageWidth + i;
+			ray.orig.x := 0.0;
+			ray.orig.y := 0.0;
+			ray.orig.z := 0.0;
+			rc.frameBuffer[nPix] := rc.options.backgroundColor;
+			ray.dir.x := ((i + 0.5) * rc.dx + rc.screenWindow.left) * rc.angle;
+			ray.dir.y := (-(j + 0.5) * rc.dy + rc.screenWindow.top) * rc.angle;
+			ray.dir.z := 1;
+			vecNormalize(ray.dir); 
+			IF intersectTriangle(tri[0], tri[1], tri[2], ray.orig, ray.dir, t, u, v) THEN
+				(* // uncomment the following line to vizualize the barycentric coord. *)
+				rc.frameBuffer[nPix].r := u;
+				rc.frameBuffer[nPix].g := v;
+				rc.frameBuffer[nPix].b := 0.0;
+				(* // interpolate vertex color using barycentric coordinates *)
+				w := 1 - u - v;
+				rc.frameBuffer[nPix].r := w * col[0].r + u * col[1].r + v * col[2].r;
+				rc.frameBuffer[nPix].g := w * col[0].g + u * col[1].g + v * col[2].g;
+				rc.frameBuffer[nPix].b := w * col[0].b + u * col[1].b + v * col[2].b
+			END
+		END
+	END
+END renderBucket;
+
+PROCEDURE getNextBucket(VAR rc: renderContext_t; VAR bi: LONGINT): BOOLEAN;
+BEGIN
+(*  pthread_mutex_lock(&rc->threadMutex); *)
+	BEGIN {EXCLUSIVE}
+		bi := rc.numComputedBuckets;
+		INC(rc.numComputedBuckets)
+	END;
+(*  pthread_mutex_unlock(&rc->threadMutex); *)
+	RETURN bi < rc.totalNumBuckets;
+END getNextBucket;
+
+PROCEDURE render(VAR rc: renderContext_t);
+VAR
+	w, h, xmin, ymin, xmax, ymax, i, elapsed, n, nTests: LONGINT;
+	frameAspectRatio: REAL;
+	td: threadData_t;
+	t: Kernel.MilliTimer;
+BEGIN
+	(* // compute screen window coordinates *)
+	w := rc.options.imageWidth;
+	h := rc.options.imageHeight;
+	frameAspectRatio := w / h;
+	IF frameAspectRatio > 1 THEN
+		rc.screenWindow.left := -frameAspectRatio;
+		rc.screenWindow.right := frameAspectRatio;
+		rc.screenWindow.top := 1;
+		rc.screenWindow.bottom := -1
+	ELSE
+		rc.screenWindow.left := -1;
+		rc.screenWindow.right := 1;
+		rc.screenWindow.top := 1/frameAspectRatio;
+		rc.screenWindow.bottom := -1/frameAspectRatio
+	END;
+
+	(* // transform ray_t to pixel space to world space *)
+	rc.dx := (rc.screenWindow.right - rc.screenWindow.left)/w;
+	rc.dy := (rc.screenWindow.top - rc.screenWindow.bottom)/h;
+
+	(* // compute prim ray_t scaling factor based on field of view *)
+	rc.angle := tan(rc.options.fieldOfView * 0.5 * Math.pi / 180.0);
+
+	(* // compute crop window coordinates in raster space *)
+	xmin := ceil(rc.options.cropWindow.xmin * w);
+	ymin := ceil(rc.options.cropWindow.ymin * h);
+	xmax := ceil(rc.options.cropWindow.xmax * w);
+	ymax := ceil(rc.options.cropWindow.ymax * h);
+
+	rc.numThreads := 2;
+	
+	NEW(threads, rc.numThreads);
+	
+	nTests := 1;
+	
+	WHILE rc.options.bucketSize <= 1024 DO
+	
+		rc.numBucketsX := ceil((xmax-xmin)/rc.options.bucketSize);
+		rc.numBucketsY := ceil((ymax-ymin)/rc.options.bucketSize);
+		rc.totalNumBuckets := rc.numBucketsX * rc.numBucketsY;
+		
+		context.out.String("Bucket size: "); context.out.Int(rc.options.bucketSize, 5);
+		
+		elapsed := 0;
+		
+		FOR n := 0 TO nTests - 1 DO
+		
+			rc.numComputedBuckets := 0;
+			
+			Kernel.SetTimer(t, 0);
+			
+			FOR i := 0 TO rc.numThreads - 1 DO
+				td.id := i;
+				td.rc := rc;
+				td.numBuckets := 0;
+				NEW(threads[i], td)
+			END;
+			
+			FOR i := 0 TO rc.numThreads - 1 DO
+				threads[i].AwaitTerminated
+			END;
+			
+			INC(elapsed, Kernel.Elapsed(t))
+		
+		END;
+		
+		elapsed := ENTIER(elapsed / nTests);
+		
+		context.out.String(" Time elapsed: "); context.out.Int(elapsed, 5); context.out.Ln;
+		
+		rc.options.bucketSize := rc.options.bucketSize * 2
+		
+	END;
+	
+	(* context.out.String("Threads terminated"); context.out.Ln; *)
+
+	(* //gamma correction *)
+	IF rc.options.gamma # 1 THEN
+		FOR i := 0 TO w * h - 1 DO
+			rc.frameBuffer[i].r := pow(rc.frameBuffer[i].r, rc.options.gamma);
+			rc.frameBuffer[i].g := pow(rc.frameBuffer[i].g, rc.options.gamma);
+			rc.frameBuffer[i].b := pow(rc.frameBuffer[i].b, rc.options.gamma)
+		END
+	END;
+	
+	(* //output statistics in XML *)
+
+	(* // free memory
+	free(td);
+	free(threads); *)
+END render;
+
+PROCEDURE saveToFile(pix: frameBuffer_t; w: LONGINT; h: LONGINT; CONST dspyName: ARRAY OF CHAR);
+VAR
+	fileName: ARRAY MAXBUFFER OF CHAR;
+	file: Files.File;
+	stream: Files.Writer;
+	r, g, b: CHAR;
+	p: color_t;
+	i, j: LONGINT;
+BEGIN
+	Strings.Concat(dspyName, ".ppm", fileName);
+	file := Files.New(fileName);
+	IF file # NIL THEN
+		Files.OpenWriter(stream, file, 0);
+		stream.String("P6"); stream.Char(0DX);
+		stream.Int(w, 0); stream.String(" "); stream.Int(h, 0); stream.Char(0DX);
+		stream.Int(255, 0); stream.Char(0DX);
+		FOR j := 0 TO h - 1 DO
+			FOR i := 0 TO w - 1 DO
+				p := pix[j * w + i];
+				(* // clamp and quantize *)
+				r := CHR(floor(clamp(p.r, 0, 1) * 255 + 0.5));
+				g := CHR(floor(clamp(p.g, 0, 1) * 255 + 0.5));
+				b := CHR(floor(clamp(p.b, 0, 1) * 255 + 0.5));
+				stream.Char(r);
+				stream.Char(g);
+				stream.Char(b)
+			END
+		END;
+		stream.Update;
+		Files.Register(file)
+	ELSE
+		context.out.String("can't open ");
+		context.out.String(fileName);
+		context.out.Ln
+	END
+END saveToFile;
+
+(*
+//------------------------------------------------------------------------------
+// RI API
+// Check the RenderMan Interface specification PDF file for more information
+//------------------------------------------------------------------------------
+*)
+
+PROCEDURE RiBegin;
+BEGIN
+	(* rc = (renderContext_t* )malloc(sizeof(renderContext_t)); *)
+	options.imageWidth := 640;
+	options.imageHeight := 480;
+	options.bucketSize := 32;
+	options.cropWindow.xmin := 0;
+	options.cropWindow.ymin := 0;
+	options.cropWindow.xmax := 1;
+	options.cropWindow.ymax := 1;
+	options.fieldOfView := 90;
+	options.gamma := 1;
+	(* char defaultDspyName[MAXBUFFER] = "untitled";
+	strcpy((char* )options.displayName, defaultDspyName); *)
+	COPY("untitled", options.displayName);
+	(* memset(&options.backgroundColor, 0x0, sizeof(color_t)); *)
+	options.backgroundColor.r := 0.0;
+	options.backgroundColor.g := 0.0;
+	options.backgroundColor.b := 0.0
+END RiBegin;
+
+PROCEDURE RiEnd;
+BEGIN
+	(* free((options_t* )rc->options);
+	free(rc); *)
+END RiEnd;
+
+PROCEDURE RiWorldBegin;
+VAR
+	tmp: REAL;
+BEGIN
+	(* // check if crop window coordinates are valid *)
+	IF options.cropWindow.xmin > options.cropWindow.xmax THEN
+		tmp := options.cropWindow.xmin;
+		options.cropWindow.xmin := options.cropWindow.xmax;
+		options.cropWindow.xmax := tmp
+	END;
+	IF options.cropWindow.ymin > options.cropWindow.ymax THEN
+		tmp := options.cropWindow.ymin;
+		options.cropWindow.ymin := options.cropWindow.ymax;
+		options.cropWindow.ymax := tmp
+	END;
+	options.cropWindow.xmin := MIN(1, MAX(0, options.cropWindow.xmin));
+	options.cropWindow.ymin := MIN(1, MAX(0, options.cropWindow.ymin));
+	options.cropWindow.xmax := MIN(1, MAX(0, options.cropWindow.xmax));
+	options.cropWindow.ymax := MIN(1, MAX(0, options.cropWindow.ymax));
+	rc.options := options
+END RiWorldBegin;
+
+PROCEDURE RiWorldEnd;
+BEGIN
+	(* // allocate memory for the frameBuffer *)
+	NEW(rc.frameBuffer, rc.options.imageWidth * rc.options.imageHeight);
+	init;
+	render(rc);
+	saveToFile(rc.frameBuffer, rc.options.imageWidth, rc.options.imageHeight,
+		rc.options.displayName);
+	(* free(rc.frameBuffer); <-- not needed*)
+END RiWorldEnd;
+
+PROCEDURE main*(c: Commands.Context);
+BEGIN
+	IF context # NIL THEN RETURN END;
+	context := c;
+	RiBegin;
+	RiWorldBegin;
+	RiWorldEnd;
+	RiEnd
+END main;
+
+PROCEDURE Mem(adr, size: LONGINT);
+       VAR b: CHAR; byte, val, i: LONGINT;
+       BEGIN
+               WHILE size # 0 DO
+                       KernelLog.Hex(adr,4); KernelLog.Char (9X);
+                       IF size > 8 THEN i := 8 ELSE i := size END;
+                       REPEAT
+                               SYSTEM.GET (adr, b);
+                               KernelLog.Hex(ORD(b) DIV 10H,1);
+                               KernelLog.Hex (ORD(b) MOD 10H,1);
+                               KernelLog.Char (9X); INC (adr); DEC (i); DEC (size);
+                       UNTIL i = 0;
+                       KernelLog.Ln;
+               END;
+       END Mem;
+
+PROCEDURE vecDotTest*(con: Commands.Context);
+VAR
+	c: REAL;
+	str: ARRAY 16 OF CHAR;
+	v1: vector_t;
+	tri: ARRAY 3 OF vector_t;
+BEGIN
+	IF context # NIL THEN RETURN END;
+	context := con;
+	
+	v1.x := 13;
+	v1.y := 14;
+	v1.z := 15;
+	v1.dummy := 0;
+	
+	tri[0].x := -3.0; tri[0].y := -3.0; tri[0].z := 5.0;
+	tri[1].x := 0.0; tri[1].y := 3.0; tri[1].z := 5.0;
+	tri[2].x := 3.0; tri[2].y := -3.0; tri[2].z := 5.0;
+	
+	KernelLog.Ln;
+	(*KernelLog.Memory(ADDRESSOF(v1), SIZEOF(vector_t));*)
+	Mem(ADDRESSOF(v1), SIZEOF(vector_t));
+	KernelLog.Ln;
+	Mem(ADDRESSOF(tri[0]), SIZEOF(vector_t));
+	KernelLog.Ln;
+	Mem(ADDRESSOF(tri[1]), SIZEOF(vector_t));
+	KernelLog.Ln;
+	Mem(ADDRESSOF(tri[2]), SIZEOF(vector_t));
+	KernelLog.Ln;
+
+	c := 0.0;
+	vecDot(c, tri[0], tri[2]);
+	(*vecDot(ADDRESSOF(c), ADDRESSOF(tri[0]), ADDRESSOF(tri[2]));*)
+	
+	context.out.Ln;
+	Strings.FloatToStr(c, 0, 7, 0, str);
+	context.out.String("vecDot: ");
+	context.out.String(str);
+	context.out.Ln;
+	
+
+
+END vecDotTest;
+
+PROCEDURE init;
+BEGIN
+	tri[0].x := -3.0; tri[0].y := -3.0; tri[0].z := 5.0;
+	tri[1].x := 0.0; tri[1].y := 3.0; tri[1].z := 5.0;
+	tri[2].x := 3.0; tri[2].y := -3.0; tri[2].z := 5.0;
+	col[0].r := 1.0; col[0].g := 0.0; col[0].b := 0.0;
+	col[1].r := 0.0; col[1].g := 1.0; col[1].b := 0.0;
+	col[2].r := 0.0; col[2].g := 0.0; col[2].b := 1.0;
+END init;
+
+BEGIN
+	context := NIL;
+	init;
+END lesson6benchSSE.
+
+lesson6benchSSE.main ~
+lesson6benchSSE.vecDotTest ~
+
+SystemTools.Free lesson6benchSSE~
