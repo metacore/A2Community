@@ -1,13 +1,19 @@
 MODULE WMRaycaster; (** AUTHOR "Yaroslav Romanchenko (SAGE)"; PURPOSE "Lode's Computer Graphics Raycasting Tutorial ported to Active Oberon. Raycasting III: Sprites"; *)
 
 IMPORT
-	SYSTEM, PreciseTimer, Modules, Inputs, Strings, Commands, Raster, Files,
+	SYSTEM, Events, PreciseTimer, Modules, Inputs, Strings, Commands, Raster, Files,
 	WM := WMWindowManager, Rectangles := WMRectangles,
 	Math := Math, Graphics := WMGraphics;
 	
 CONST
 
-	THREADS_COUNT = 3;
+	DEBUGLOG = FALSE;
+	EventClass = 3;
+	EventSubclass = 3;
+	moduleName = "Test";
+
+	BENCHMARK = FALSE;
+	TESTS = 50;
 	
 	DATA_FILE = "WMRaycasterData.zip";
 	DATA_PATH = "pics/";
@@ -141,10 +147,27 @@ TYPE
 	
 	END FPSCounter;
 	
+	ThreadData = POINTER TO RECORD
+		id: LONGINT;
+		nThreadComputedBuckets: LONGINT;
+	END;
+	
 	RenderThread = OBJECT
 	VAR
 		w: RaycasterWindow;
-		iXStart, iXEnd: LONGINT;
+		td: ThreadData;
+		bi, iXStart, iXEnd: LONGINT;
+		str1, str2: ARRAY 64 OF CHAR;
+	
+	PROCEDURE &New(w: RaycasterWindow; td: ThreadData);
+	BEGIN
+		SELF.w := w;
+		SELF.td := td;
+		w.IncActiveThreads
+	END New;
+	
+	PROCEDURE Render;
+	VAR
 		cameraX, (** x-coordinate in camera space *)
 		rayDirX, rayDirY,
 		sideDistX, sideDistY, (** length of ray from current position to next x or y-side *)
@@ -162,16 +185,6 @@ TYPE
 		texWidth, texHeight,
 		pixelOffset, floorPixelOffset, ceilingPixelOffset,
 		x, y: LONGINT;
-	
-	PROCEDURE &New(w: RaycasterWindow; iXStart, iXEnd: LONGINT);
-	BEGIN
-		SELF.iXStart := iXStart;
-		SELF.iXEnd := iXEnd;
-		SELF.w := w;
-		w.IncActiveThreads
-	END New;
-	
-	PROCEDURE Render;
 	BEGIN
 		FOR x := iXStart TO iXEnd DO
 		
@@ -311,7 +324,22 @@ TYPE
 	END Render;
 	
 	BEGIN {ACTIVE}
-		Render;
+		WHILE w.GetNextBucket(bi) DO
+			INC(td.nThreadComputedBuckets);
+			iXStart := bi * w.nBucketSizeX;
+			iXEnd := iXStart + w.nBucketSizeX - 1;
+			IF DEBUGLOG THEN
+				COPY("CalcThread # ", str1);
+				Strings.IntToStr(td.id, str2);
+				Strings.Append(str1, str2);
+				Strings.Append(str1, ", computing bucket # ");
+				Strings.IntToStr(bi, str2);
+				Strings.Append(str1, str2);
+				Strings.Append(str1, "...");
+				Log(Events.Information, 0, str1, TRUE);
+			END;
+			Render;
+		END;
 		w.DecActiveThreads
 	END RenderThread;
 
@@ -335,8 +363,8 @@ TYPE
 		(** 1D Zbuffer *)
 		ZBuffer: ARRAY SCREEN_WIDTH OF REAL;
 		
-		threads: ARRAY THREADS_COUNT OF RenderThread;
-		nActiveThreads: LONGINT;
+		
+		nActiveThreads, nBucketsX, nBucketSizeX, nBucketsComputed: LONGINT;
 		
 	PROCEDURE IncActiveThreads;
 	BEGIN {EXCLUSIVE}
@@ -347,6 +375,17 @@ TYPE
 	BEGIN {EXCLUSIVE}
 		DEC(nActiveThreads)
 	END DecActiveThreads;
+	
+	PROCEDURE GetNextBucket(VAR bi: LONGINT): BOOLEAN;
+	BEGIN 
+	(*  pthread_mutex_lock(&rc->threadMutex); *)
+		BEGIN {EXCLUSIVE}
+			bi := nBucketsComputed;
+			INC(nBucketsComputed);
+		END;
+	(*  pthread_mutex_unlock(&rc->threadMutex); *)
+		RETURN bi < nBucketsX;
+	END GetNextBucket;
 	
 	PROCEDURE Terminate;
 	BEGIN
@@ -400,7 +439,7 @@ TYPE
 	
 	PROCEDURE Frame;
 	VAR
-		t: HUGEINT;
+		t, tTest: HUGEINT;
 		mode: Raster.Mode;
 		
 		(** arrays used to sort the sprites *)
@@ -414,12 +453,78 @@ TYPE
 		spritePixelOffset,
 		spriteHeight, drawStartY, drawEndY,
 		spriteWidth, drawStartX, drawEndX,
-		stripe, x, y, i, iTexture: LONGINT;
+		stripe, y, i, iTexture: LONGINT;
 		
 		spriteX, spriteY, invDet,
 		transformX, transformY: REAL;
 		
-		nWidthPerThread, nWidthPerThreadAdd: LONGINT;
+		nThreadsTotal: LONGINT;
+		threads: POINTER TO ARRAY OF RenderThread;
+		iTest, iThread: LONGINT;
+		td: ThreadData;
+		
+		str: ARRAY 16 OF CHAR;
+		
+		PROCEDURE ThreadsRun;
+		BEGIN
+			nBucketsComputed := 0;
+			nActiveThreads := 0;
+			FOR iThread := 0 TO nThreadsTotal - 1 DO
+				NEW(td);
+				td.id := iThread;
+				td.nThreadComputedBuckets := 0;
+				NEW(threads^[iThread], SELF, td)
+			END;
+			BEGIN {EXCLUSIVE}
+				AWAIT(nActiveThreads = 0)
+			END;
+		END ThreadsRun;
+		
+		PROCEDURE RenderFrame(bBenchmark: BOOLEAN);
+		BEGIN
+			NEW(threads, nThreadsTotal);
+		
+			nBucketsX := nThreadsTotal * 4;
+			nBucketSizeX := SCREEN_WIDTH DIV nBucketsX;
+			
+			IF bBenchmark THEN
+				context.out.String("nThreadsTotal: ");
+				context.out.Int(nThreadsTotal, 1);
+				context.out.String(", nBucketsX: ");
+				context.out.Int(nBucketsX, 1);
+				context.out.String(", bucketSizeX: ");
+				context.out.Int(nBucketSizeX, 1);
+			END;
+
+			IF bBenchmark THEN
+				tTest := PreciseTimer.GetTicks();
+			END;
+			
+			IF bBenchmark THEN
+				FOR iTest := 0 TO TESTS - 1 DO
+					ThreadsRun;
+				END;
+			ELSE
+				ThreadsRun;
+			END;
+			
+			IF bBenchmark THEN
+				Strings.FloatToStr(PreciseTimer.GetTime(PreciseTimer.GetTicks() - tTest) / TESTS, 0, 4, 0, str);
+				context.out.String(", time elapsed: ");
+				context.out.String(str);
+				context.out.Ln;
+				context.out.String("nThreadComputedBuckets: [");
+				FOR iThread := 0 TO nThreadsTotal - 1 DO
+					IF iThread # 0 THEN
+						context.out.String(", ");
+					END;
+					context.out.Int(threads^[iThread].td.nThreadComputedBuckets, 1);
+				END;
+				context.out.String("]");
+				context.out.Ln;
+			END;
+		
+		END RenderFrame;
 		
 	BEGIN
 	
@@ -434,18 +539,15 @@ TYPE
 		ceilingTexWidth := textures[ceilingTexture].width;
 		ceilingTexHeight := textures[ceilingTexture].height;
 		
-		nWidthPerThread := SCREEN_WIDTH DIV LEN(threads);
-		nWidthPerThreadAdd := SCREEN_WIDTH - nWidthPerThread * LEN(threads);
-		FOR i := 0 TO LEN(threads) - 1 DO
-			x := i * nWidthPerThread;
-			IF i = LEN(threads) - 1 THEN
-				INC(nWidthPerThread, nWidthPerThreadAdd);
+		IF BENCHMARK THEN
+			nThreadsTotal := 1;
+			WHILE nThreadsTotal < 9 DO
+				RenderFrame(BENCHMARK);
+				nThreadsTotal := nThreadsTotal * 2; 
 			END;
-			NEW(threads[i], SELF, x, x + nWidthPerThread - 1);
-		END;
-		
-		BEGIN {EXCLUSIVE}
-			AWAIT(nActiveThreads = 0)
+		ELSE
+			nThreadsTotal := 8;
+			RenderFrame(BENCHMARK);
 		END;
 		
 		(** SPRITE CASTING *)
@@ -603,7 +705,15 @@ TYPE
 	
 
 VAR
+	context: Commands.Context;
 	instance: RaycasterWindow;
+	
+PROCEDURE Log(type, code : SHORTINT; msg: ARRAY OF CHAR; showOnKernelLog : BOOLEAN);
+VAR message : Events.Message;
+BEGIN
+	COPY(msg, message);
+	Events.AddEvent(moduleName, type, EventClass, EventSubclass, code, message, showOnKernelLog);
+END Log;
 	
 (** sort algorithm *)
 PROCEDURE CombSort(VAR order: ARRAY OF LONGINT; VAR dist: ARRAY OF REAL; amount: LONGINT);
@@ -679,7 +789,7 @@ BEGIN
 	RETURN bResult
 END LoadTexture;
 	
-PROCEDURE Open*(context: Commands.Context);
+PROCEDURE Open*(c: Commands.Context);
 VAR
 	texArchive: Files.File;
 	bError: BOOLEAN;
@@ -687,6 +797,7 @@ VAR
 	textures: TextureArray;
 BEGIN
 	IF instance # NIL THEN RETURN END;
+	context := c;
 	context.out.Ln;
 	texArchive := Files.Old(DATA_FILE);
 	bError := ~(texArchive # NIL);
@@ -731,3 +842,14 @@ END WMRaycaster.
 
 WMRaycaster.Open ~
 SystemTools.Free WMRaycaster ~
+
+Pentium(R) Dual-Core CPU T4200 @ 2.00 GHz:
+
+nThreadsTotal: 1, nBucketsX: 4, bucketSizeX: 160, time elapsed:   0.0112
+nThreadComputedBuckets: [4]
+nThreadsTotal: 2, nBucketsX: 8, bucketSizeX: 80, time elapsed:   0.0057
+nThreadComputedBuckets: [4, 4]
+nThreadsTotal: 4, nBucketsX: 16, bucketSizeX: 40, time elapsed:   0.0059
+nThreadComputedBuckets: [8, 1, 7, 0]
+nThreadsTotal: 8, nBucketsX: 32, bucketSizeX: 20, time elapsed:   0.0063
+nThreadComputedBuckets: [1, 16, 15, 0, 0, 0, 0, 0]
