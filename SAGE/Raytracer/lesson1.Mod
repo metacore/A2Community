@@ -18,7 +18,7 @@ MODULE lesson1;
 
 IMPORT
 
-	Math, Files, Commands;
+	SYSTEM, Math, Files, Commands;
 	
 CONST
 
@@ -37,7 +37,7 @@ CONST
 TYPE
 
 	Vector* = RECORD
-		x*, y*, z*: REAL
+		x*, y*, z*, dummy-: REAL
 	END;
 
 	Color* = RECORD
@@ -97,8 +97,16 @@ BEGIN
 END vector;
 
 PROCEDURE length(v: Vector): REAL;
+VAR
+	f: REAL;
 BEGIN
-	RETURN Math.sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
+
+	VecToXMM0(v);
+	CopyXMM1XMM0;
+	VecDotXMM0XMM1;
+	XMM00ToReal(f);
+
+	RETURN Math.sqrt(f(*v.x * v.x + v.y * v.y + v.z * v.z*));
 END length;
 
 PROCEDURE dot(v1, v2: Vector): REAL;
@@ -130,7 +138,13 @@ PROCEDURE normalize(VAR v: Vector);
 VAR
 	len2, lenInv: REAL;
 BEGIN
-	len2 := v.x * v.x + v.y * v.y + v.z * v.z;
+	
+	(*len2 := v.x * v.x + v.y * v.y + v.z * v.z;*)
+	VecToXMM0(v);
+	CopyXMM1XMM0;
+	VecDotXMM0XMM1;
+	XMM00ToReal(len2);
+	
 	IF len2 > 0.0 THEN
 		lenInv := 1.0 / Math.sqrt(len2);
 		v.x := v.x * lenInv;
@@ -198,21 +212,145 @@ BEGIN
 	normalize(ray.direction)
 END computePrimRay;
 
+
+PROCEDURE VecToXMM0(CONST a: Vector);
+CODE {SYSTEM.i386, SYSTEM.SSE}
+	MOV	ECX, [EBP+a]
+	MOVUPS	XMM0, [ECX]
+END VecToXMM0;
+
+PROCEDURE XMM0ToVec(VAR a: Vector);
+CODE {SYSTEM.i386, SYSTEM.SSE}
+	MOV	ECX, [EBP+a]
+	MOVUPS	[ECX], XMM0
+END XMM0ToVec;
+
+PROCEDURE VecToXMM1(CONST a: Vector);
+CODE {SYSTEM.i386, SYSTEM.SSE}
+	MOV	ECX, [EBP+a]
+	MOVUPS	XMM1, [ECX]
+END VecToXMM1;
+
+PROCEDURE XMM1ToVec(VAR a: Vector);
+CODE {SYSTEM.i386, SYSTEM.SSE}
+	MOV	ECX, [EBP+a]
+	MOVUPS	[ECX], XMM1
+END XMM1ToVec;
+
+PROCEDURE VecToXMM2(CONST a: Vector);
+CODE {SYSTEM.i386, SYSTEM.SSE}
+	MOV	ECX, [EBP+a]
+	MOVUPS	XMM2, [ECX]
+END VecToXMM2;
+
+PROCEDURE XMM2ToVec(VAR a: Vector);
+CODE {SYSTEM.i386, SYSTEM.SSE}
+	MOV	ECX, [EBP+a]
+	MOVUPS	[ECX], XMM2
+END XMM2ToVec;
+
+PROCEDURE VecToXMM3(CONST a: Vector);
+CODE {SYSTEM.i386, SYSTEM.SSE}
+	MOV	ECX, [EBP+a]
+	MOVUPS	XMM3, [ECX]
+END VecToXMM3;
+
+PROCEDURE XMM3ToVec(VAR a: Vector);
+CODE {SYSTEM.i386, SYSTEM.SSE}
+	MOV	ECX, [EBP+a]
+	MOVUPS	[ECX], XMM3
+END XMM3ToVec;
+
+PROCEDURE XMM00ToReal(VAR a: REAL);
+CODE {SYSTEM.i386, SYSTEM.SSE}
+	MOV	ECX, [EBP+a]
+	MOVSS	[ECX], XMM0
+END XMM00ToReal;
+
+PROCEDURE XMM10ToReal(VAR a: REAL);
+CODE {SYSTEM.i386, SYSTEM.SSE}
+	MOV	ECX, [EBP+a]
+	MOVSS	[ECX], XMM1
+END XMM10ToReal;
+
+PROCEDURE SubXMM0XMM1;
+CODE {SYSTEM.i386, SYSTEM.SSE}
+	; XMM0 := XMM0 - XMM1
+	SUBPS		XMM0, XMM1
+END SubXMM0XMM1;
+
+PROCEDURE CopyXMM0XMM1;
+CODE {SYSTEM.i386, SYSTEM.SSE}
+	; XMM0 := XMM1
+	MOVAPS		XMM0, XMM1
+END CopyXMM0XMM1;
+
+PROCEDURE CopyXMM1XMM0;
+CODE {SYSTEM.i386, SYSTEM.SSE}
+	; XMM1 := XMM0
+	MOVAPS		XMM1, XMM0
+END CopyXMM1XMM0;
+
+PROCEDURE CopyXMM2XMM0;
+CODE {SYSTEM.i386, SYSTEM.SSE}
+	; XMM2 := XMM0
+	MOVAPS		XMM2, XMM0
+END CopyXMM2XMM0;
+
+PROCEDURE VecDotXMM0XMM1;
+CODE {SYSTEM.i386, SYSTEM.SSE}
+	
+	MULPS	XMM0, XMM1
+
+	;MOVHLPS	XMM1, XMM0
+	MOVAPS	XMM1, XMM0
+	SHUFPS	XMM1, XMM1, 14
+
+	ADDPS	XMM0, XMM1
+	MOVAPS	XMM1, XMM0
+	SHUFPS	XMM0, XMM0, 1
+	ADDPS	XMM0, XMM1
+
+END VecDotXMM0XMM1;
+
+PROCEDURE VecDotXMM1XMM2;
+CODE {SYSTEM.i386, SYSTEM.SSE}
+	
+	MULPS	XMM1, XMM2
+
+	;MOVHLPS	XMM2, XMM1
+	MOVAPS	XMM2, XMM1
+	SHUFPS	XMM2, XMM2, 14
+
+	ADDPS	XMM1, XMM2
+	MOVAPS	XMM2, XMM1
+	SHUFPS	XMM1, XMM1, 1
+	ADDPS	XMM1, XMM2
+
+END VecDotXMM1XMM2;
+
 PROCEDURE intersect(object: Object; ray: Ray; VAR t: REAL): BOOLEAN;
 VAR
-	oc: Vector;
-	oc2: REAL;
-	tca: REAL;
+	oc2, tca, d2, thc: REAL;
 	outside: BOOLEAN;
-	d2: REAL;
-	thc: REAL;
 BEGIN
+
 	(* // use geometric method *)
-	oc := object.center - ray.origin;
+	(*oc := object.center - ray.origin;*)
+	VecToXMM1(ray.origin);
+	VecToXMM0(object.center);
+	SubXMM0XMM1;
 	(* // square distance to center of sphere *)
-	oc2 := dot(oc, oc);
+	(*oc2 := dot(oc, oc);*)
+	CopyXMM1XMM0;
+	CopyXMM2XMM0;
+	VecDotXMM0XMM1;
+	XMM00ToReal(oc2);
 	(* // distance to point on ray closest to sphere center *)
-	tca := dot(oc, ray.direction);
+	(*tca := dot(oc, ray.direction);*)
+	VecToXMM1(ray.direction);
+	VecDotXMM1XMM2;
+	XMM10ToReal(tca);
 	
 	outside := (oc2 > object.radius2);
 	IF (tca < 0) & outside THEN  
@@ -247,7 +385,13 @@ VAR
 	cost2: REAL;
 BEGIN
 	n1n2 := n1 / n2;
-	cost1 := dot(incidentRay, surfaceNormal);
+	
+	(*cost1 := dot(incidentRay, surfaceNormal);*)
+	VecToXMM1(surfaceNormal);
+	VecToXMM0(incidentRay);
+	VecDotXMM0XMM1;
+	XMM00ToReal(cost1);
+	
 	cost2 := Math.sqrt(1.0 - (n1n2 * n1n2) * (1.0 - cost1 * cost1));
 	reflectionDir := incidentRay - surfaceNormal * (2 * cost1);
 	refractionDir := incidentRay * n1n2 + surfaceNormal * (cost2 - n1n2 * cost1)
@@ -318,9 +462,21 @@ BEGIN
 		refractionRay.origin := pHit - nHit * bias;
 		snell(ray.direction, -nHit, 1.0, object.indexOfRefraction, reflectionRay.direction, refractionRay.direction); 
 		normalize(reflectionRay.direction);
-		normalize(refractionRay.direction); 
-		cosi := dot(ray.direction, -nHit); 
-		cost := dot(refractionRay.direction, -nHit); 
+		normalize(refractionRay.direction);
+		
+		(*cosi := dot(ray.direction, -nHit); 
+		cost := dot(refractionRay.direction, -nHit);*)
+		
+		VecToXMM0(-nHit);
+		CopyXMM2XMM0;
+		VecToXMM1(ray.direction);
+		VecDotXMM0XMM1;
+		XMM00ToReal(cosi);
+		
+		VecToXMM1(refractionRay.direction);
+		VecDotXMM1XMM2;
+		XMM10ToReal(cost);
+		
 		fresnel(1.0, object.indexOfRefraction, cosi, cost, Kr); 
 		IF Kr < 0.0 THEN
 			Kr := 0.0
@@ -342,7 +498,12 @@ BEGIN
 	len := length(shadowRay.direction); 
 	normalize(shadowRay.direction);
  
-	LdotN := dot(shadowRay.direction, nHit); 
+	(*LdotN := dot(shadowRay.direction, nHit);*)
+	VecToXMM0(nHit);
+	VecToXMM1(shadowRay.direction);
+	VecDotXMM0XMM1;
+	XMM00ToReal(LdotN);
+	
 	IF LdotN < 0 THEN 
 		RETURN color(0, 0, 0)
 	END;

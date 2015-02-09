@@ -446,6 +446,7 @@ SystemTools.Free lesson1bench lesson1 ~
 
 Pentium(R) Dual-Core CPU T4200 @ 2.00 GHz:
 
+Pure ActiveOberon code:
 nThreadsTotal: 1, bucket size: 320 x 240, nBucketsTotal: 4, time elapsed:   1.4434
 nThreadComputedBuckets: [4]
 nThreadsTotal: 2, bucket size: 160 x 120, nBucketsTotal: 16, time elapsed:   0.7334
@@ -456,3 +457,16 @@ nThreadsTotal: 8, bucket size: 40 x 30, nBucketsTotal: 256, time elapsed:   0.72
 nThreadComputedBuckets: [86, 44, 19, 20, 20, 41, 13, 13]
 nThreadsTotal: 16, bucket size: 20 x 15, nBucketsTotal: 1024, time elapsed:   0.7252
 nThreadComputedBuckets: [68, 75, 75, 61, 71, 76, 66, 72, 69, 61, 43, 61, 64, 61, 51, 50]
+
+SSE optimized code:
+nThreadsTotal: 1, bucket size: 320 x 240, nBucketsTotal: 4, time elapsed:   1.0134
+nThreadComputedBuckets: [4]
+nThreadsTotal: 2, bucket size: 160 x 120, nBucketsTotal: 16, time elapsed:   0.5225
+nThreadComputedBuckets: [9, 7]
+nThreadsTotal: 4, bucket size: 80 x 60, nBucketsTotal: 64, time elapsed:   0.5267
+nThreadComputedBuckets: [17, 17, 19, 11]
+nThreadsTotal: 8, bucket size: 40 x 30, nBucketsTotal: 256, time elapsed:   0.5203
+nThreadComputedBuckets: [71, 48, 50, 40, 8, 11, 13, 15]
+nThreadsTotal: 16, bucket size: 20 x 15, nBucketsTotal: 1024, time elapsed:   0.5216
+nThreadComputedBuckets: [71, 72, 73, 58, 58, 75, 75, 66, 72, 55, 73, 58, 53, 57, 51, 57]
+
