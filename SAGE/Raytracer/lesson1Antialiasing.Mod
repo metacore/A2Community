@@ -214,13 +214,13 @@ BEGIN
 	RETURN c1.r * c2.r + c1.g * c2.g + c1.b * c2.b
 END "+*";
 
-PROCEDURE distance(c1, c2: Color): REAL;
+PROCEDURE Distance*(c1, c2: Color): REAL;
 VAR
 	c: Color;
 BEGIN
 	c := c1 - c2;
 	RETURN Math.sqrt(c +* c)
-END distance;
+END Distance;
 
 PROCEDURE clamp(VAR c: Color);
 BEGIN
@@ -490,10 +490,10 @@ BEGIN
 	
 	avgColor := (px00 + px10 + px01 + px11) * 0.25;
 	
-	d00 := distance(avgColor, px00);
-	d10 := distance(avgColor, px10);
-	d01 := distance(avgColor, px01);
-	d11 := distance(avgColor, px11);
+	d00 := Distance(avgColor, px00);
+	d10 := Distance(avgColor, px10);
+	d01 := Distance(avgColor, px01);
+	d11 := Distance(avgColor, px11);
 	
 	IF (d00 > DIST) OR (d10 > DIST) OR (d01 > DIST) OR (d11 > DIST) THEN
 	
@@ -605,14 +605,14 @@ BEGIN
 			nPos := j * imageWidth + i;
 			framebuffer2[nPos] := framebuffer[nPos];
 			IF (i # 0) & (j # 0) & (i # imageWidth - 1) & (j # imageHeight - 1) THEN
-				IF (distance(framebuffer[nPos], framebuffer[(j - 1) * imageWidth + (i - 1)]) > DIST) OR
-					(distance(framebuffer[nPos], framebuffer[(j - 1) * imageWidth + i]) > DIST) OR
-					(distance(framebuffer[nPos], framebuffer[(j - 1) * imageWidth + (i + 1)]) > DIST) OR
-					(distance(framebuffer[nPos], framebuffer[nPos - 1]) > DIST) OR
-					(distance(framebuffer[nPos], framebuffer[nPos + 1]) > DIST) OR
-					(distance(framebuffer[nPos], framebuffer[(j + 1) * imageWidth + (i - 1)]) > DIST) OR
-					(distance(framebuffer[nPos], framebuffer[(j + 1) * imageWidth + i]) > DIST) OR
-					(distance(framebuffer[nPos], framebuffer[(j + 1) * imageWidth + (i + 1)]) > DIST)
+				IF (Distance(framebuffer[nPos], framebuffer[(j - 1) * imageWidth + (i - 1)]) > DIST) OR
+					(Distance(framebuffer[nPos], framebuffer[(j - 1) * imageWidth + i]) > DIST) OR
+					(Distance(framebuffer[nPos], framebuffer[(j - 1) * imageWidth + (i + 1)]) > DIST) OR
+					(Distance(framebuffer[nPos], framebuffer[nPos - 1]) > DIST) OR
+					(Distance(framebuffer[nPos], framebuffer[nPos + 1]) > DIST) OR
+					(Distance(framebuffer[nPos], framebuffer[(j + 1) * imageWidth + (i - 1)]) > DIST) OR
+					(Distance(framebuffer[nPos], framebuffer[(j + 1) * imageWidth + i]) > DIST) OR
+					(Distance(framebuffer[nPos], framebuffer[(j + 1) * imageWidth + (i + 1)]) > DIST)
 				THEN
 					INC(nSecRays, 4);
 					IF ANTIALIAS THEN

@@ -155,7 +155,7 @@ END normalize;
 	
 (** Color **)
 
-PROCEDURE color(r, g, b: REAL): Color;
+PROCEDURE color*(r, g, b: REAL): Color;
 VAR
 	c: Color;
 BEGIN
@@ -175,10 +175,28 @@ BEGIN
 	RETURN color(c1.r + c2.r, c1.g + c2.g, c1.b + c2.b)
 END "+";
 
+PROCEDURE "-"(c1, c2: Color): Color;
+BEGIN
+	RETURN color(c1.r - c2.r, c1.g - c2.g, c1.b - c2.b)
+END "-";
+
 PROCEDURE "*"(c1, c2: Color): Color;
 BEGIN
 	RETURN color(c1.r * c2.r, c1.g * c2.g, c1.b * c2.b)
 END "*";
+
+PROCEDURE "+*"(CONST c1, c2: Color): REAL;
+BEGIN
+	RETURN c1.r * c2.r + c1.g * c2.g + c1.b * c2.b
+END "+*";
+
+PROCEDURE Distance*(c1, c2: Color): REAL;
+VAR
+	c: Color;
+BEGIN
+	c := c1 - c2;
+	RETURN Math.sqrt(c +* c)
+END Distance;
 
 PROCEDURE clamp*(VAR c: Color);
 BEGIN
@@ -194,7 +212,7 @@ BEGIN
 END clamp;
 
 
-PROCEDURE computePrimRay*(i, j, imageWidth, imageHeight: LONGINT; frameAspectRatio: REAL; VAR ray: Ray);
+PROCEDURE ComputePrimaryRay*(i, j, imageWidth, imageHeight: LONGINT; frameAspectRatio: REAL; VAR ray: Ray);
 VAR
 	fov: REAL;
 	f: REAL;
@@ -210,7 +228,7 @@ BEGIN
 	dy := 2 / imageHeight;
 	ray.direction := vector(angle * ((i + 0.5) * dx - frameAspectRatio), angle * (-(j + 0.5) * dy + 1), 1);
 	normalize(ray.direction)
-END computePrimRay;
+END ComputePrimaryRay;
 
 
 PROCEDURE VecToXMM0(CONST a: Vector);
@@ -581,7 +599,7 @@ BEGIN
 	FOR j := 0 TO imageHeight - 1 DO
 		FOR i := 0 TO imageWidth - 1 DO
 			(* // compute primary ray direction *)
-			computePrimRay(i, j, imageWidth, imageHeight, frameAspectRatio, primRay); 
+			ComputePrimaryRay(i, j, imageWidth, imageHeight, frameAspectRatio, primRay); 
 			pixel := Trace(primRay, 0, objects, numObjects, light, bgColor);
 			clamp(pixel);
 			

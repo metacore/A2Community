@@ -24,13 +24,15 @@ CONST
 
 	DEBUGLOG = FALSE;
 	
-	TESTS = 50;
+	TESTS = 1;
 
 	EventClass = 3;
 	EventSubclass = 3;
 	
 	moduleName = "Test";
 
+	DIST = 0.05;
+	
 	MAXBUFFER = 256;
 
 TYPE
@@ -67,7 +69,7 @@ TYPE
 		nActiveThreads, nThreadsTotal: LONGINT;
 		(* pthread_mutex_t threadMutex; *)
 		(* // frameBuffer *)
-		frameBuffer: frameBuffer_t;
+		FrmBuf: frameBuffer_t;
 		screenWindow: screenWindow_t;
 		(* // to compute prim ray_t direction *)
 		dx, dy: REAL;
@@ -78,10 +80,12 @@ TYPE
 		id: LONGINT;
 		rc: RenderContext;
 		nThreadComputedBuckets: LONGINT;
+		nSecondaryRays: LONGINT;
 	END;
 
 	Bucket = RECORD
 		x0, y0, x1, y1: LONGINT;
+		nSecondaryRays: LONGINT;
 	END;
 
 	CalcThread = OBJECT
@@ -98,6 +102,7 @@ TYPE
 	END New;
 
 	BEGIN {ACTIVE}
+		td.nSecondaryRays := 0;
 		WHILE GetNextBucket(td.rc, bi) DO
 			INC(td.nThreadComputedBuckets);
 			(* // compute Bucket coordinates *)
@@ -119,7 +124,8 @@ TYPE
 				Log(Events.Information, 0, str1, TRUE);
 			END;
 			
-			renderBucket(td.rc, b)
+			RenderBucket(td.rc, b);
+			INC(td.nSecondaryRays, b.nSecondaryRays);
 		END;
 		DecActiveThreads(td.rc);
 	END CalcThread;
@@ -172,22 +178,66 @@ END tan;
 
 (* // math functions *)
 
-PROCEDURE renderBucket(rc: RenderContext; CONST b: Bucket);
+PROCEDURE RenderBucket(rc: RenderContext; VAR b: Bucket);
 VAR
-	i, j, nPix: LONGINT;
-	ray: lesson1.Ray; (* // prim ray *)
+	i, j, nPix, w: LONGINT;
+	ray: lesson1.Ray;
+	pix: lesson1.Color;
+	bBucketEdge: BOOLEAN;
+	FrmLineCur, FrmLinePrev, FrmTmp: frameBuffer_t;
 BEGIN
+
+	(* First pass of rendering *)
 	FOR j := b.y0 TO b.y1 DO
 		FOR i := b.x0 TO b.x1 DO
-			lesson1.computePrimRay(i, j, rc.options.imageWidth, rc.options.imageHeight,
-				rc.frameAspectRatio, ray);
+			(* Index of pixel in Frame Buffer *)
 			nPix := j * rc.options.imageWidth + i;
-			rc.frameBuffer[nPix] := lesson1.Trace(ray, 0, lesson1.objects, lesson1.numObjects,
+			(* Compute primary ray *)
+			lesson1.ComputePrimaryRay(i, j, rc.options.imageWidth, rc.options.imageHeight,
+				rc.frameAspectRatio, ray);
+			(* Trace ray *)
+			rc.FrmBuf[nPix] := lesson1.Trace(ray, 0, lesson1.objects, lesson1.numObjects,
 				lesson1.light, lesson1.bgColor);
-			lesson1.clamp(rc.frameBuffer[nPix]);
+			(* Limit values *)
+			lesson1.clamp(rc.FrmBuf[nPix]);
 		END
-	END
-END renderBucket;
+	END;
+	
+	(* Antialiasing *)
+	w := rc.options.imageWidth;
+	NEW(FrmLineCur, w);
+	NEW(FrmLinePrev, w);
+	b.nSecondaryRays := 0;
+	FOR j := b.y0 TO b.y1 DO
+		FOR i := b.x0 TO b.x1 DO
+			FrmLineCur[i] := rc.FrmBuf[j * w + i]
+		END;	
+		FOR i := b.x0 TO b.x1 DO
+			(* Index of pixel in Frame Buffer *)
+			nPix := j * w + i;
+			pix := rc.FrmBuf[nPix];
+			(* Pixel is on edge of bucket frame *)
+			bBucketEdge := (i = b.x0) OR (j = b.y0) OR (i = b.x1) OR (j = b.y1);
+			IF bBucketEdge OR
+				(~bBucketEdge &
+					((lesson1.Distance(pix, FrmLinePrev[i - 1]) > DIST) OR
+					(lesson1.Distance(pix, FrmLinePrev[i]) > DIST) OR
+					(lesson1.Distance(pix, FrmLinePrev[i + 1]) > DIST) OR
+					(lesson1.Distance(pix, FrmLineCur[i - 1]) > DIST) OR
+					(lesson1.Distance(pix, FrmLineCur[i + 1]) > DIST) OR
+					(lesson1.Distance(pix, rc.FrmBuf[(j + 1) * w + (i - 1)]) > DIST) OR
+					(lesson1.Distance(pix, rc.FrmBuf[(j + 1) * w + i]) > DIST) OR
+					(lesson1.Distance(pix, rc.FrmBuf[(j + 1) * w + (i + 1)]) > DIST)))
+			THEN
+				INC(b.nSecondaryRays, 4);
+				rc.FrmBuf[nPix] := lesson1.color(0.0, 0.0, 1.0)
+			END
+		END;
+		FrmTmp := FrmLinePrev;
+		FrmLinePrev := FrmLineCur;
+		FrmLineCur := FrmTmp;
+	END;
+END RenderBucket;
 
 PROCEDURE GetNextBucket(rc: RenderContext; VAR bi: LONGINT): BOOLEAN;
 BEGIN 
@@ -250,7 +300,7 @@ BEGIN
 	
 	rc.nThreadsTotal := 1;
 	
-	WHILE rc.nThreadsTotal < 17 DO
+	WHILE rc.nThreadsTotal < 9 DO
 	
 		NEW(threads, rc.nThreadsTotal);
 	
@@ -299,6 +349,15 @@ BEGIN
 		END;
 		context.out.String("]");
 		context.out.Ln;
+		context.out.String("nSecondaryRays: [");
+		FOR iThread := 0 TO rc.nThreadsTotal - 1 DO
+			IF iThread # 0 THEN
+				context.out.String(", ");
+			END;
+			context.out.Int(threads^[iThread].td.nSecondaryRays, 1);
+		END;
+		context.out.String("]");
+		context.out.Ln;
 		
 		rc.nThreadsTotal := rc.nThreadsTotal * 2; 
 		
@@ -309,9 +368,9 @@ BEGIN
 	(* //gamma correction *)
 	IF rc.options.gamma # 1 THEN
 		FOR iPix := 0 TO w * h - 1 DO
-			rc.frameBuffer[iPix].r := pow(rc.frameBuffer[iPix].r, rc.options.gamma);
-			rc.frameBuffer[iPix].g := pow(rc.frameBuffer[iPix].g, rc.options.gamma);
-			rc.frameBuffer[iPix].b := pow(rc.frameBuffer[iPix].b, rc.options.gamma)
+			rc.FrmBuf[iPix].r := pow(rc.FrmBuf[iPix].r, rc.options.gamma);
+			rc.FrmBuf[iPix].g := pow(rc.FrmBuf[iPix].g, rc.options.gamma);
+			rc.FrmBuf[iPix].b := pow(rc.FrmBuf[iPix].b, rc.options.gamma)
 		END
 	END;
 	
@@ -418,9 +477,9 @@ END RiWorldBegin;
 PROCEDURE RiWorldEnd(rc: RenderContext);
 BEGIN
 	(* // allocate memory for the frameBuffer *)
-	NEW(rc.frameBuffer, rc.options.imageWidth * rc.options.imageHeight);
+	NEW(rc.FrmBuf, rc.options.imageWidth * rc.options.imageHeight);
 	Render(rc);
-	saveToFile(rc.frameBuffer, rc.options.imageWidth, rc.options.imageHeight,
+	saveToFile(rc.FrmBuf, rc.options.imageWidth, rc.options.imageHeight,
 		rc.options.displayName);
 	(* free(rc.frameBuffer); <-- not needed*)
 END RiWorldEnd;
