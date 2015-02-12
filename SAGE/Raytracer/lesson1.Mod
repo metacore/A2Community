@@ -230,6 +230,42 @@ BEGIN
 	normalize(ray.direction)
 END ComputePrimaryRay;
 
+PROCEDURE ComputeSecondaryRays*(
+	i, j, fDelta: REAL;
+  imageWidth, imageHeight: LONGINT;
+  frameAspectRatio: REAL;
+  VAR ray00, ray10, ray01, ray11: Ray);
+VAR
+	fov: REAL;
+	f: REAL;
+	angle: REAL;
+	dx: REAL;
+	dy: REAL;
+BEGIN
+	fov := 45;
+	f := fov * 0.5 * Math.pi / 180.0;
+	angle := Math.sin(f) / Math.cos(f);
+	ray00.origin := vector(0, 0, 0);
+	ray10.origin := vector(0, 0, 0);
+	ray01.origin := vector(0, 0, 0);
+	ray11.origin := vector(0, 0, 0);
+	dx := 2 * frameAspectRatio / imageWidth;
+	dy := 2 / imageHeight;
+	
+	ray00.direction := vector(angle * ((i - fDelta) * dx - frameAspectRatio),
+		angle * (-(j - fDelta) * dy + 1), 1);
+	ray10.direction := vector(angle * ((i + fDelta) * dx - frameAspectRatio),
+	  angle * (-(j - fDelta) * dy + 1), 1);
+	ray01.direction := vector(angle * ((i - fDelta) * dx - frameAspectRatio),
+	  angle * (-(j + fDelta) * dy + 1), 1);
+	ray11.direction := vector(angle * ((i + fDelta) * dx - frameAspectRatio),
+	  angle * (-(j + fDelta) * dy + 1), 1);
+
+	normalize(ray00.direction);
+	normalize(ray10.direction);
+	normalize(ray01.direction);
+	normalize(ray11.direction)
+END ComputeSecondaryRays;
 
 PROCEDURE VecToXMM0(CONST a: Vector);
 CODE {SYSTEM.i386, SYSTEM.SSE}

@@ -55,9 +55,9 @@ TYPE
 	
 	Framebuffer = POINTER TO ARRAY OF Color;
 	
-	Ray = RECORD
-		direction: Vector;
-		origin: Point
+	Ray* = RECORD
+		direction*: Vector;
+		origin*: Point
 	END;
 	
 	Object = OBJECT
@@ -250,11 +250,15 @@ BEGIN
 	ray.origin := point(0, 0, 0);
 	dx := 2 * frameAspectRatio / imageWidth;
 	dy := 2 / imageHeight;
+	(* To obtain the center of pixel we add (0.5, 0.5) *)
 	ray.direction := vector(angle * ((i + 0.5) * dx - frameAspectRatio), angle * (-(j + 0.5) * dy + 1), 1);
 	normalize(ray.direction)
 END computePrimRay;
 
-PROCEDURE computeSecondaryRays(i, j: REAL; imageWidth, imageHeight: LONGINT; frameAspectRatio: REAL; VAR ray00, ray10, ray01, ray11: Ray);
+PROCEDURE computeSecondaryRays(i, j: REAL;
+  imageWidth, imageHeight: LONGINT;
+  frameAspectRatio: REAL;
+  VAR ray00, ray10, ray01, ray11: Ray);
 VAR
 	fov: REAL;
 	f: REAL;

@@ -32,6 +32,7 @@ CONST
 	moduleName = "Test";
 
 	DIST = 0.05;
+	AA_LEVELS = 3;
 	
 	MAXBUFFER = 256;
 
@@ -178,6 +179,92 @@ END tan;
 
 (* // math functions *)
 
+PROCEDURE Pow2(nPow: LONGINT): LONGINT;
+VAR
+	i, nRes: LONGINT;
+BEGIN
+	nRes := 1;
+	FOR i := 0 TO nPow - 1 DO
+		nRes := nRes * 2
+	END;
+	RETURN nRes
+END Pow2;
+
+PROCEDURE Refine(rc: RenderContext; fX, fY: REAL; nLevel: LONGINT; CONST cFrmBuf: lesson1.Color): lesson1.Color;
+VAR
+	fDelta: REAL;
+	ray00, ray10, ray01, ray11: lesson1.Ray;
+	c00, c10, c01, c11, cAvg: lesson1.Color;
+	fDist00, fDist10, fDist01, fDist11, fSum: REAL;
+BEGIN
+
+	fDelta := 1 / Pow2(AA_LEVELS - nLevel + 2);
+
+	(* Trace additional 4 rays *)
+	lesson1.ComputeSecondaryRays(
+		fX, fY, fDelta,
+	  rc.options.imageWidth, rc.options.imageHeight,
+	  rc.frameAspectRatio,
+	  ray00, ray10, ray01, ray11);
+	  
+	c00 := lesson1.Trace(ray00, 0, lesson1.objects, lesson1.numObjects,
+		lesson1.light, lesson1.bgColor);
+	c10 := lesson1.Trace(ray10, 0, lesson1.objects, lesson1.numObjects,
+		lesson1.light, lesson1.bgColor);
+	c01 := lesson1.Trace(ray01, 0, lesson1.objects, lesson1.numObjects,
+		lesson1.light, lesson1.bgColor);
+	c11 := lesson1.Trace(ray11, 0, lesson1.objects, lesson1.numObjects,
+		lesson1.light, lesson1.bgColor);
+		
+	lesson1.clamp(c00);
+	lesson1.clamp(c10);
+	lesson1.clamp(c01);
+	lesson1.clamp(c11);
+
+	IF nLevel > 1 THEN
+		IF lesson1.Distance(cFrmBuf, c00) > DIST THEN
+			c00 := Refine(rc, fX - fDelta, fY - fDelta, nLevel - 1, c00);
+		END;
+		
+		IF lesson1.Distance(cFrmBuf, c10) > DIST THEN
+			c10 := Refine(rc, fX + fDelta, fY - fDelta, nLevel - 1, c10);
+		END;
+		
+		IF lesson1.Distance(cFrmBuf, c01) > DIST THEN
+			c01 := Refine(rc, fX - fDelta, fY + fDelta, nLevel - 1, c01);
+		END;
+		
+		IF lesson1.Distance(cFrmBuf, c11) > DIST THEN
+			c11 := Refine(rc, fX + fDelta, fY + fDelta, nLevel - 1, c11)
+		END
+	END;
+	
+	fDist00 := lesson1.Distance(cFrmBuf, c00);
+	fDist10 := lesson1.Distance(cFrmBuf, c10);
+	fDist01 := lesson1.Distance(cFrmBuf, c01);
+	fDist11 := lesson1.Distance(cFrmBuf, c11);
+	
+	IF (fDist00 > DIST) OR (fDist10 > DIST) OR (fDist01 > DIST) OR (fDist11 > DIST) THEN
+		
+		fSum := fDist00 + fDist10 + fDist01 + fDist11;
+		
+		fDist00 := fDist00 / fSum;
+		fDist10 := fDist10 / fSum;
+		fDist01 := fDist01 / fSum;
+		fDist11 := fDist11 / fSum;
+
+		cAvg.r := (c00.r * fDist00 + c10.r * fDist10 + c01.r * fDist01 + c11.r * fDist11 + cFrmBuf.r) * 0.5;
+		cAvg.g := (c00.g * fDist00 + c10.g * fDist10 + c01.g * fDist01 + c11.g * fDist11 + cFrmBuf.g) * 0.5;
+		cAvg.b := (c00.b * fDist00 + c10.b * fDist10 + c01.b * fDist01 + c11.b * fDist11 + cFrmBuf.b) * 0.5;
+
+		RETURN cAvg
+
+	END;
+
+	RETURN cFrmBuf
+
+END Refine;
+
 PROCEDURE RenderBucket(rc: RenderContext; VAR b: Bucket);
 VAR
 	i, j, nPix, w: LONGINT;
@@ -230,7 +317,8 @@ BEGIN
 					(lesson1.Distance(pix, rc.FrmBuf[(j + 1) * w + (i + 1)]) > DIST)))
 			THEN
 				INC(b.nSecondaryRays, 4);
-				rc.FrmBuf[nPix] := lesson1.color(0.0, 0.0, 1.0)
+				(*rc.FrmBuf[nPix] := lesson1.color(0.0, 0.0, 1.0)*)
+				rc.FrmBuf[nPix] := Refine(rc, i + 0.5, j + 0.5, AA_LEVELS, rc.FrmBuf[nPix]);
 			END
 		END;
 		FrmTmp := FrmLinePrev;
@@ -381,7 +469,7 @@ BEGIN
 	free(threads); *)
 END Render;
 
-PROCEDURE saveToFile(pix: frameBuffer_t; w: LONGINT; h: LONGINT; CONST dspyName: ARRAY OF CHAR);
+PROCEDURE SaveToFile(pix: frameBuffer_t; w: LONGINT; h: LONGINT; CONST dspyName: ARRAY OF CHAR);
 VAR
 	fileName: ARRAY MAXBUFFER OF CHAR;
 	file: Files.File;
@@ -416,7 +504,7 @@ BEGIN
 		context.out.String(fileName);
 		context.out.Ln
 	END
-END saveToFile;
+END SaveToFile;
 
 (*
 //------------------------------------------------------------------------------
@@ -436,7 +524,7 @@ BEGIN
 	rc.options.cropWindow.xmax := 1;
 	rc.options.cropWindow.ymax := 1;
 	rc.options.fieldOfView := 90;
-	rc.options.gamma := 1;
+	rc.options.gamma := 1.0;
 	(* char defaultDspyName[MAXBUFFER] = "untitled";
 	strcpy((char* )options.displayName, defaultDspyName); *)
 	COPY("untitled", rc.options.displayName);
@@ -479,7 +567,7 @@ BEGIN
 	(* // allocate memory for the frameBuffer *)
 	NEW(rc.FrmBuf, rc.options.imageWidth * rc.options.imageHeight);
 	Render(rc);
-	saveToFile(rc.FrmBuf, rc.options.imageWidth, rc.options.imageHeight,
+	SaveToFile(rc.FrmBuf, rc.options.imageWidth, rc.options.imageHeight,
 		rc.options.displayName);
 	(* free(rc.frameBuffer); <-- not needed*)
 END RiWorldEnd;
