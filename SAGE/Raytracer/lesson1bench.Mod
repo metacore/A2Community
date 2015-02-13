@@ -24,14 +24,15 @@ CONST
 
 	DEBUGLOG = FALSE;
 	
-	TESTS = 1;
+	TESTS = 10;
 
 	EventClass = 3;
 	EventSubclass = 3;
-	
 	moduleName = "Test";
 
+	(* Color distance threshold for antialiasing *)
 	DIST = 0.05;
+	(* Antialiasing levels *)
 	AA_LEVELS = 3;
 	
 	MAXBUFFER = 256;
@@ -87,6 +88,9 @@ TYPE
 	Bucket = RECORD
 		x0, y0, x1, y1: LONGINT;
 		nSecondaryRays: LONGINT;
+		(* Line pixel buffers for antialising purposes
+		  They will be initated once per computing thread *)
+		FrmLineCur, FrmLinePrev: frameBuffer_t;
 	END;
 
 	CalcThread = OBJECT
@@ -95,6 +99,7 @@ TYPE
 		bi, by, bx: LONGINT;
 		b: Bucket;
 		str1, str2: ARRAY 64 OF CHAR;
+		FrmLineCur, FrmLinePrev: frameBuffer_t;
 
 	PROCEDURE &New(td: ThreadData);
 	BEGIN
@@ -104,6 +109,8 @@ TYPE
 
 	BEGIN {ACTIVE}
 		td.nSecondaryRays := 0;
+		NEW(FrmLineCur, rc.options.imageWidth);
+		NEW(FrmLinePrev, rc.options.imageWidth);
 		WHILE GetNextBucket(td.rc, bi) DO
 			INC(td.nThreadComputedBuckets);
 			(* // compute Bucket coordinates *)
@@ -125,6 +132,8 @@ TYPE
 				Log(Events.Information, 0, str1, TRUE);
 			END;
 			
+			b.FrmLineCur := FrmLineCur;
+			b.FrmLinePrev := FrmLinePrev;
 			RenderBucket(td.rc, b);
 			INC(td.nSecondaryRays, b.nSecondaryRays);
 		END;
@@ -271,7 +280,7 @@ VAR
 	ray: lesson1.Ray;
 	pix: lesson1.Color;
 	bBucketEdge: BOOLEAN;
-	FrmLineCur, FrmLinePrev, FrmTmp: frameBuffer_t;
+	FrmTmp: frameBuffer_t;
 BEGIN
 
 	(* First pass of rendering *)
@@ -292,12 +301,10 @@ BEGIN
 	
 	(* Antialiasing *)
 	w := rc.options.imageWidth;
-	NEW(FrmLineCur, w);
-	NEW(FrmLinePrev, w);
 	b.nSecondaryRays := 0;
 	FOR j := b.y0 TO b.y1 DO
 		FOR i := b.x0 TO b.x1 DO
-			FrmLineCur[i] := rc.FrmBuf[j * w + i]
+			b.FrmLineCur[i] := rc.FrmBuf[j * w + i]
 		END;	
 		FOR i := b.x0 TO b.x1 DO
 			(* Index of pixel in Frame Buffer *)
@@ -307,11 +314,11 @@ BEGIN
 			bBucketEdge := (i = b.x0) OR (j = b.y0) OR (i = b.x1) OR (j = b.y1);
 			IF bBucketEdge OR
 				(~bBucketEdge &
-					((lesson1.Distance(pix, FrmLinePrev[i - 1]) > DIST) OR
-					(lesson1.Distance(pix, FrmLinePrev[i]) > DIST) OR
-					(lesson1.Distance(pix, FrmLinePrev[i + 1]) > DIST) OR
-					(lesson1.Distance(pix, FrmLineCur[i - 1]) > DIST) OR
-					(lesson1.Distance(pix, FrmLineCur[i + 1]) > DIST) OR
+					((lesson1.Distance(pix, b.FrmLinePrev[i - 1]) > DIST) OR
+					(lesson1.Distance(pix, b.FrmLinePrev[i]) > DIST) OR
+					(lesson1.Distance(pix, b.FrmLinePrev[i + 1]) > DIST) OR
+					(lesson1.Distance(pix, b.FrmLineCur[i - 1]) > DIST) OR
+					(lesson1.Distance(pix, b.FrmLineCur[i + 1]) > DIST) OR
 					(lesson1.Distance(pix, rc.FrmBuf[(j + 1) * w + (i - 1)]) > DIST) OR
 					(lesson1.Distance(pix, rc.FrmBuf[(j + 1) * w + i]) > DIST) OR
 					(lesson1.Distance(pix, rc.FrmBuf[(j + 1) * w + (i + 1)]) > DIST)))
@@ -321,9 +328,9 @@ BEGIN
 				rc.FrmBuf[nPix] := Refine(rc, i + 0.5, j + 0.5, AA_LEVELS, rc.FrmBuf[nPix]);
 			END
 		END;
-		FrmTmp := FrmLinePrev;
-		FrmLinePrev := FrmLineCur;
-		FrmLineCur := FrmTmp;
+		FrmTmp := b.FrmLinePrev;
+		b.FrmLinePrev := b.FrmLineCur;
+		b.FrmLineCur := FrmTmp;
 	END;
 END RenderBucket;
 
@@ -388,7 +395,7 @@ BEGIN
 	
 	rc.nThreadsTotal := 1;
 	
-	WHILE rc.nThreadsTotal < 9 DO
+	WHILE rc.nThreadsTotal < 17 DO
 	
 		NEW(threads, rc.nThreadsTotal);
 	
@@ -593,27 +600,22 @@ SystemTools.Free lesson1bench lesson1 ~
 
 Pentium(R) Dual-Core CPU T4200 @ 2.00 GHz:
 
-Pure ActiveOberon code:
-nThreadsTotal: 1, bucket size: 320 x 240, nBucketsTotal: 4, time elapsed:   1.4434
-nThreadComputedBuckets: [4]
-nThreadsTotal: 2, bucket size: 160 x 120, nBucketsTotal: 16, time elapsed:   0.7334
-nThreadComputedBuckets: [7, 9]
-nThreadsTotal: 4, bucket size: 80 x 60, nBucketsTotal: 64, time elapsed:   0.7282
-nThreadComputedBuckets: [20, 22, 9, 13]
-nThreadsTotal: 8, bucket size: 40 x 30, nBucketsTotal: 256, time elapsed:   0.7278
-nThreadComputedBuckets: [86, 44, 19, 20, 20, 41, 13, 13]
-nThreadsTotal: 16, bucket size: 20 x 15, nBucketsTotal: 1024, time elapsed:   0.7252
-nThreadComputedBuckets: [68, 75, 75, 61, 71, 76, 66, 72, 69, 61, 43, 61, 64, 61, 51, 50]
 
-SSE optimized code:
-nThreadsTotal: 1, bucket size: 320 x 240, nBucketsTotal: 4, time elapsed:   1.0134
-nThreadComputedBuckets: [4]
-nThreadsTotal: 2, bucket size: 160 x 120, nBucketsTotal: 16, time elapsed:   0.5225
-nThreadComputedBuckets: [9, 7]
-nThreadsTotal: 4, bucket size: 80 x 60, nBucketsTotal: 64, time elapsed:   0.5267
-nThreadComputedBuckets: [17, 17, 19, 11]
-nThreadsTotal: 8, bucket size: 40 x 30, nBucketsTotal: 256, time elapsed:   0.5203
-nThreadComputedBuckets: [71, 48, 50, 40, 8, 11, 13, 15]
-nThreadsTotal: 16, bucket size: 20 x 15, nBucketsTotal: 1024, time elapsed:   0.5216
-nThreadComputedBuckets: [71, 72, 73, 58, 58, 75, 75, 66, 72, 55, 73, 58, 53, 57, 51, 57]
 
+Intel Core i5 650 @ 3.20 GHz (2 cores, 4 threads):
+
+nThreadsTotal: 1, bucket size: 320 x 240, nBucketsTotal: 4, time elapsed:   0.9028
+nThreadComputedBuckets: [4]
+nSecondaryRays: [45108]
+nThreadsTotal: 2, bucket size: 160 x 120, nBucketsTotal: 16, time elapsed:   0.4900
+nThreadComputedBuckets: [8, 8]
+nSecondaryRays: [32980, 29548]
+nThreadsTotal: 4, bucket size: 80 x 60, nBucketsTotal: 64, time elapsed:   0.3715
+nThreadComputedBuckets: [17, 20, 15, 12]
+nSecondaryRays: [23652, 29636, 24656, 18920]
+nThreadsTotal: 8, bucket size: 40 x 30, nBucketsTotal: 256, time elapsed:   0.4103
+nThreadComputedBuckets: [55, 45, 48, 63, 8, 7, 14, 16]
+nSecondaryRays: [35632, 29884, 30524, 39144, 4956, 4720, 9544, 9520]
+nThreadsTotal: 16, bucket size: 20 x 15, nBucketsTotal: 1024, time elapsed:   0.4822
+nThreadComputedBuckets: [95, 203, 155, 11, 46, 139, 39, 37, 99, 31, 33, 32, 0, 32, 40, 32]
+nSecondaryRays: [29996, 57096, 43752, 3604, 12264, 39892, 11228, 10992, 27296, 8408, 8964, 8672, 0, 9408, 11044, 9516]

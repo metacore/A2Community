@@ -41,7 +41,7 @@ TYPE
 	END;
 
 	Color* = RECORD
-		r*, g*, b*: REAL
+		r*, g*, b*, dummy-: REAL
 	END;
 	
 	Ray* = RECORD
@@ -165,9 +165,14 @@ BEGIN
 	RETURN c
 END color;
 
-PROCEDURE "*"(c: Color; f: REAL): Color;
+PROCEDURE "*"(c1: Color; f: REAL): Color;
 BEGIN
-	RETURN color(c.r * f, c.g * f, c.b * f)
+	(*RealToXMM00(f);
+	XMM00ToXMM0;
+	ColorToXMM1(c1);
+	MulXMM0XMM1;
+	XMM0ToColor(c2);*)
+	RETURN color(c1.r * f, c1.g * f, c1.b * f)
 END "*";
 
 PROCEDURE "+"(c1, c2: Color): Color;
@@ -192,10 +197,18 @@ END "+*";
 
 PROCEDURE Distance*(c1, c2: Color): REAL;
 VAR
-	c: Color;
+	fDot: REAL;
 BEGIN
-	c := c1 - c2;
-	RETURN Math.sqrt(c +* c)
+	(* c := c1 - c2; *)
+	ColorToXMM1(c2);
+	ColorToXMM0(c1);
+	SubXMM0XMM1;
+	(* dot(c, c) *)
+	CopyXMM1XMM0;
+	CopyXMM2XMM0;
+	VecDotXMM0XMM1;
+	XMM00ToReal(fDot);	
+	RETURN Math.sqrt(fDot(*c +* c*))
 END Distance;
 
 PROCEDURE clamp*(VAR c: Color);
@@ -273,17 +286,35 @@ CODE {SYSTEM.i386, SYSTEM.SSE}
 	MOVUPS	XMM0, [ECX]
 END VecToXMM0;
 
+PROCEDURE ColorToXMM0(CONST a: Color);
+CODE {SYSTEM.i386, SYSTEM.SSE}
+	MOV	ECX, [EBP+a]
+	MOVUPS	XMM0, [ECX]
+END ColorToXMM0;
+
 PROCEDURE XMM0ToVec(VAR a: Vector);
 CODE {SYSTEM.i386, SYSTEM.SSE}
 	MOV	ECX, [EBP+a]
 	MOVUPS	[ECX], XMM0
 END XMM0ToVec;
 
+PROCEDURE XMM0ToColor(VAR a: Color);
+CODE {SYSTEM.i386, SYSTEM.SSE}
+	MOV	ECX, [EBP+a]
+	MOVUPS	[ECX], XMM0
+END XMM0ToColor;
+
 PROCEDURE VecToXMM1(CONST a: Vector);
 CODE {SYSTEM.i386, SYSTEM.SSE}
 	MOV	ECX, [EBP+a]
 	MOVUPS	XMM1, [ECX]
 END VecToXMM1;
+
+PROCEDURE ColorToXMM1(CONST a: Color);
+CODE {SYSTEM.i386, SYSTEM.SSE}
+	MOV	ECX, [EBP+a]
+	MOVUPS	XMM1, [ECX]
+END ColorToXMM1;
 
 PROCEDURE XMM1ToVec(VAR a: Vector);
 CODE {SYSTEM.i386, SYSTEM.SSE}
@@ -321,6 +352,18 @@ CODE {SYSTEM.i386, SYSTEM.SSE}
 	MOVSS	[ECX], XMM0
 END XMM00ToReal;
 
+PROCEDURE RealToXMM00(CONST a: REAL);
+CODE {SYSTEM.i386, SYSTEM.SSE}
+	MOV	ECX, [EBP+a]
+	MOVSS	XMM0, [ECX]
+END RealToXMM00;
+
+(* Distribute XMM00 to whole XMM0 *)
+PROCEDURE XMM00ToXMM0;
+CODE {SYSTEM.i386, SYSTEM.SSE}
+		SHUFPS	XMM0, XMM0, 0
+END XMM00ToXMM0;
+
 PROCEDURE XMM10ToReal(VAR a: REAL);
 CODE {SYSTEM.i386, SYSTEM.SSE}
 	MOV	ECX, [EBP+a]
@@ -332,6 +375,12 @@ CODE {SYSTEM.i386, SYSTEM.SSE}
 	; XMM0 := XMM0 - XMM1
 	SUBPS		XMM0, XMM1
 END SubXMM0XMM1;
+
+PROCEDURE MulXMM0XMM1;
+CODE {SYSTEM.i386, SYSTEM.SSE}
+	; XMM0 := XMM0 * XMM1
+	MULPS	XMM0, XMM1
+END MulXMM0XMM1;
 
 PROCEDURE CopyXMM0XMM1;
 CODE {SYSTEM.i386, SYSTEM.SSE}
