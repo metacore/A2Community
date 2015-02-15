@@ -25,7 +25,7 @@ MODULE lesson7b;
 *)
 
 IMPORT
-	Math, Utilities, Files, Commands;
+	Math, Strings, Files, Commands;
 
 (*
 #define MAXBUFFER 256
@@ -389,8 +389,8 @@ VAR
 	o: vector_t;
 BEGIN
 	vecSub(o, rayOrig, ctr);
-	(* // substitute ray parametric equation into eq 1 and compute *)
-	(* // coefficients A, B, C *)
+	(* substitute ray parametric equation into eq 1 and compute *)
+	(* coefficients A, B, C *)
 	a := vecDot(rayDir, rayDir);
 	b := 2 * vecDot(o, rayDir);
 	c := vecDot(o, o) - rad * rad;
@@ -519,7 +519,7 @@ VAR
 	p: color_t;
 	i, j: LONGINT;
 BEGIN
-	Utilities.Concat(dspyName, ".ppm", fileName);
+	Strings.Concat(dspyName, ".ppm", fileName);
 	file := Files.New(fileName);
 	IF file # NIL THEN
 		Files.OpenWriter(stream, file, 0);

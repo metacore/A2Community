@@ -25,7 +25,7 @@ MODULE lesson7c;
 *)
 
 IMPORT
-	Math, Utilities, Files, Commands;
+	Math, Strings, Files, Commands;
 
 (*
 #define MAXBUFFER 256
@@ -301,137 +301,125 @@ BEGIN
 	RETURN Math.sqrt(v.x*v.x + v.y*v.y + v.z*v.z)
 END vecLength; *)
 
-(*
-/*
-// Find roots of a quadratic equation. For floating point computation, this
-// algorithm is more robust than the usual quadratic formula.
-// Inputs:
-//   float a, b, c: quadratic equation coefficients
-// Outputs:
-//   float r0, r1: solutions (roots) to the quadratic equation
-// Return:
-//  1 if tthe discriminant is positive, 0 otherwise
-*/
+(**
+	Find roots of a quadratic equation. For floating point computation, this
+	algorithm is more robust than the usual quadratic formula.
+	Inputs:
+		float a, b, c: quadratic equation coefficients
+	Outputs:
+		float r0, r1: solutions (roots) to the quadratic equation
+	Return:
+		TRUE if the discriminant is positive, FALSE otherwise
 *)
-
-PROCEDURE solveQuadratic(a: REAL; b: REAL; c: REAL; VAR r0: REAL; VAR r1: REAL): BOOLEAN;
+PROCEDURE SolveQuadratic(a, b, c: REAL; VAR r0, r1: REAL): BOOLEAN;
 VAR
-	discrim, q, tmp: REAL;
+	fDiscrim, q, f: REAL;
 BEGIN
-	(* // compute discriminant *)
-	discrim := b * b - 4.0 * a * c;
-	IF discrim < 0.0 THEN (* // no real roots, return *)
+	(* compute discriminant *)
+	fDiscrim := b * b - 4.0 * a * c;
+	IF fDiscrim < 0 THEN (* no real roots, return *)
 		RETURN FALSE
 	END;
-	(* // use the quadratic formula to find t0 and t1 *)
-	IF b < 0.0 THEN
-		q := -0.5 * (b - Math.sqrt(discrim))
+	(* use the quadratic formula to find t0 and t1 *)
+	IF b < 0 THEN
+		q := -0.5 * (b - Math.sqrt(fDiscrim))
 	ELSE
-		q := -0.5 * (b + Math.sqrt(discrim))
+		q := -0.5 * (b + Math.sqrt(fDiscrim))
 	END;
-	r0 := q/a;
-	r1 := c/q;
-	IF r0 > r1 THEN (* // swap *)
-		tmp := r0;
+	r0 := q / a;
+	r1 := c / q;
+	IF r0 > r1 THEN (* swap *)
+		f := r0;
 		r0 := r1;
-		r1 := tmp
+		r1 := f
 	END;
 	RETURN TRUE
-END solveQuadratic;
+END SolveQuadratic;
 
-
-(*
-/*
-// Compute the intersection of ray and a cylinder (algebraic method)
-*/
+(**
+	Compute the intersection of ray and a cylinder (algebraic method)
 *)
-
-PROCEDURE intersectCylinder(rayOrig: vector_t; rayDir: vector_t; ctr: vector_t; rad: REAL; zmin: REAL; zmax: REAL; VAR t0, t1: REAL): BOOLEAN;
+PROCEDURE IntersectCylinder(CONST ptRay, vnRay, ptCenter: vector_t; radius, zmin, zmax: REAL; VAR t0, t1: REAL): BOOLEAN;
 VAR
 	a, b, c, thit, pz: REAL;
 	o: vector_t;
 BEGIN
-	vecSub(o, rayOrig, ctr);
-	(* // substitute ray parametric equation into eq 1 and compute *)
-	a := rayDir.x * rayDir.x + rayDir.y * rayDir.y;
-	b := 2 * (rayDir.x * o.x + rayDir.y * o.y);
-	c := o.x * o.x + o.y * o.y - rad * rad;
-	IF ~solveQuadratic(a, b, c, t0, t1) THEN
+	vecSub(o, ptRay, ptCenter);
+	(* substitute ray parametric equation into eq 1 and compute *)
+	a := vnRay.x * vnRay.x + vnRay.y * vnRay.y;
+	b := 2 * (vnRay.x * o.x + vnRay.y * o.y);
+	c := o.x * o.x + o.y * o.y - radius * radius;
+	IF ~SolveQuadratic(a, b, c, t0, t1) THEN
 		RETURN FALSE
 	END;
 	thit := t0;
-	IF t0 < 0.0 THEN
+	IF t0 < 0 THEN
 		thit := t1
 	END;
 	(* // compute p.z *)
-	pz := o.z + thit * rayDir.z;
+	pz := o.z + thit * vnRay.z;
 	RETURN (pz >= zmin) & (pz <= zmax)
-END intersectCylinder;
+END IntersectCylinder;
 
-(*
-/*
-// ray-cone intersection (algebraic method)
-*/
+(**
+	Compute ray-cone intersection (algebraic method)
 *)
-PROCEDURE intersectCone(rayOrig: vector_t; rayDir: vector_t; ctr: vector_t; radius: REAL; height: REAL; VAR t0, t1: REAL): BOOLEAN;
+PROCEDURE IntersectCone(CONST ptRay, vnRay, ptCenter: vector_t; radius, height: REAL; VAR t0, t1: REAL): BOOLEAN;
 VAR
 	a, b, c, k, h, thit, pz: REAL;
 	o: vector_t;
 BEGIN
-	vecSub(o, rayOrig, ctr);
+	vecSub(o, ptRay, ptCenter);
 	k := radius / height;
 	k := k * k;
 	h := o.z - height;
-	(* // substitute ray parametric equation into eq 1 and compute *)
-	a := rayDir.x * rayDir.x + rayDir.y * rayDir.y - k * rayDir.z * rayDir.z;
-	b := 2 * (rayDir.x * o.x + rayDir.y * o.y - k * rayDir.z * h);
+	(* substitute ray parametric equation into eq 1 and compute *)
+	a := vnRay.x * vnRay.x + vnRay.y * vnRay.y - k * vnRay.z * vnRay.z;
+	b := 2 * (vnRay.x * o.x + vnRay.y * o.y - k * vnRay.z * h);
 	c := o.x * o.x + o.y * o.y - k * h * h;
-	IF ~solveQuadratic(a, b, c, t0, t1) THEN
+	IF ~SolveQuadratic(a, b, c, t0, t1) THEN
 		RETURN FALSE
 	END;
 	thit := t0;
-	IF t0 < 0.0 THEN
+	IF t0 < 0 THEN
 		thit := t1
 	END;
-	(* // compute p.z *)
-	pz := o.z + thit * rayDir.z;
+	(* compute p.z *)
+	pz := o.z + thit * vnRay.z;
 	RETURN (pz >= 0) & (pz <= height)
-END intersectCone;
+END IntersectCone;
 
-(*
-/*
-// ray-plane intersection
-*/
+(**
+	Compute ray-plane intersection
 *)
-
-PROCEDURE intersectPlane(rayOrig: vector_t; rayDir: vector_t; pos: vector_t; nor: vector_t; VAR t: REAL): BOOLEAN;
+PROCEDURE IntersectPlane(CONST ptRay, vnRay: vector_t; pt, vn: vector_t; VAR t: REAL): BOOLEAN;
 VAR
 	denom, d: REAL;
 BEGIN
-	(* // if the ray and the plane are parallel, reject intersection *)
-	denom := vecDot(rayDir, nor);
+	(* if the ray and the plane are parallel, reject intersection *)
+	denom := vecDot(vnRay, nor);
 	IF ABS(denom) < EPSILON THEN
 		RETURN FALSE
 	END;
-	(* // compute d (we assume the plane normal is a unit vector) *)
+	(* compute d (we assume the plane normal is a unit vector) *)
 	d := vecDot(nor, pos);
-	(* // compute t *)
-	t := (d - vecDot(rayOrig, nor)) / denom;
+	(* compute t *)
+	t := (d - vecDot(ptRay, nor)) / denom;
 	RETURN t > 0.0
-END intersectPlane;
+END IntersectPlane;
 
 (*
 /*
 // ray-disk intersection
 */
-static int intersectDisk(const point_t *rayOrig, const vector_t *rayDir,
+static int intersectDisk(const point_t *ptRay, const vector_t *vnRay,
   const point_t *pos, const vector_t *nor, float radius, float *t)
 {
- if (intersectPlane(rayOrig, rayDir, pos, nor, t)) {
+ if (intersectPlane(ptRay, vnRay, pos, nor, t)) {
     point_t phit;
-    phit.x = (rayOrig->x + *t*rayDir->x) - pos->x;
-    phit.y = (rayOrig->y + *t*rayDir->y) - pos->y;
-    phit.z = (rayOrig->z + *t*rayDir->z) - pos->z;
+    phit.x = (ptRay->x + *t*vnRay->x) - pos->x;
+    phit.y = (ptRay->y + *t*vnRay->y) - pos->y;
+    phit.z = (ptRay->z + *t*vnRay->z) - pos->z;
     float dist2 = phit.x*phit.x + phit.y*phit.y + phit.z*phit.z;
     float rad2 = radius*radius;
     if (rad2 >= dist2)
@@ -441,15 +429,15 @@ static int intersectDisk(const point_t *rayOrig, const vector_t *rayDir,
 }
 *)
 
-PROCEDURE intersectDisk(rayOrig: vector_t; rayDir: vector_t; pos: vector_t; nor: vector_t; radius: REAL; VAR t: REAL): BOOLEAN;
+PROCEDURE intersectDisk(ptRay, vnRay: vector_t; pos: vector_t; nor: vector_t; radius: REAL; VAR t: REAL): BOOLEAN;
 VAR
 	phit: vector_t;
 	dist2, rad2: REAL;
 BEGIN
-	IF intersectPlane(rayOrig, rayDir, pos, nor, t) THEN
-		phit.x := (rayOrig.x + t * rayDir.x) - pos.x;
-		phit.y := (rayOrig.y + t * rayDir.y) - pos.y;
-		phit.z := (rayOrig.z + t * rayDir.z) - pos.z;
+	IF IntersectPlane(ptRay, vnRay, pos, nor, t) THEN
+		phit.x := (ptRay.x + t * vnRay.x) - pos.x;
+		phit.y := (ptRay.y + t * vnRay.y) - pos.y;
+		phit.z := (ptRay.z + t * vnRay.z) - pos.z;
 		dist2 := vecDot(phit, phit);
 		rad2 := radius * radius;
 		IF rad2 >= dist2 THEN
@@ -581,7 +569,7 @@ VAR
 	p: color_t;
 	i, j: LONGINT;
 BEGIN
-	Utilities.Concat(dspyName, ".ppm", fileName);
+	Strings.Concat(dspyName, ".ppm", fileName);
 	file := Files.New(fileName);
 	IF file # NIL THEN
 		Files.OpenWriter(stream, file, 0);

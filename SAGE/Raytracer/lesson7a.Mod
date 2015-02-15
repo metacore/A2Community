@@ -25,7 +25,7 @@ MODULE lesson7a;
 *)
 
 IMPORT
-	Math, Utilities, Files, Commands;
+	Math, Strings, Files, Commands;
 
 (*
 #define MAXBUFFER 256
@@ -516,7 +516,7 @@ VAR
 	p: color_t;
 	i, j: LONGINT;
 BEGIN
-	Utilities.Concat(dspyName, ".ppm", fileName);
+	Strings.Concat(dspyName, ".ppm", fileName);
 	file := Files.New(fileName);
 	IF file # NIL THEN
 		Files.OpenWriter(stream, file, 0);
