@@ -56,8 +56,9 @@ TYPE
 		pt, vn: Vector;
 	END;
 
-	Object = OBJECT
+	Object* = OBJECT
 	VAR
+		next: Object;
 		center: Vector;
 		radius, radius2: REAL;
 		color: Vector;
@@ -80,8 +81,6 @@ TYPE
 	END New;
 	
 	END Object;
-	
-	Objects = POINTER TO ARRAY OF Object;
 	
 	(*
 	Cone = OBJECT(Object)
@@ -210,8 +209,7 @@ TYPE
 		dx*, dy*: REAL;
 		angle*: REAL;
 		(* world *)
-		nObjects*: LONGINT;
-		objects*: Objects;
+		objects*: Object;
 		light*: Light;
 		clBackground*: Vector;
 		funcTrace*: TraceFunction;
@@ -226,8 +224,11 @@ TYPE
 	END;
 
 VAR
-	ZeroVector-: Vector;
-
+	ZeroVector-,
+	XAxisVector-, YAxisVector-, ZAxisVector-,
+	XAxisVectorNeg-, YAxisVectorNeg-, ZAxisVectorNeg-: Vector;
+	Black-, Red-, Green-, Yellow-,
+	Blue-, Magenta-, Cyan-, White-: Vector;
 (** Vector operations *)
 
 (** Vector constructor *)
@@ -840,9 +841,8 @@ END fresnel;
 PROCEDURE Trace*(rc: RenderContext; ray: Ray; depth: LONGINT): Vector;
 VAR
 	bias: REAL;
-	object: Object;
+	object, obj: Object;
 	hit, hitMin: Hit;
-	k: INTEGER;
 	reflectionRay, refractionRay: Ray;
 	cosi: REAL;
 	cost: REAL;
@@ -863,16 +863,18 @@ BEGIN
 	bias := 0.001;
 	hitMin.dist := INFINITY; 
 	object := NIL;
-	k := 0;
-	WHILE k < rc.nObjects DO
-		IF rc.objects[k].intersect(rc.objects[k], ray, hit) THEN 
+	
+	obj := rc.objects;
+	WHILE obj # NIL DO
+		IF obj.intersect(obj, ray, hit) THEN 
 			IF hit.dist < hitMin.dist THEN 
 				hitMin := hit; 
-				object := rc.objects[k]
+				object := obj
 			END
 		END;
-		INC(k)
+		obj := obj.next
 	END;
+	
 	IF object = NIL THEN 
 		RETURN rc.clBackground 
 	END;
@@ -930,20 +932,20 @@ BEGIN
 		RETURN ZeroVector
 	END;
 	lightColor := rc.light.object.color; 
-	k := 0; exit := FALSE;
-	WHILE (k < rc.nObjects) & ~exit DO
-		IF ~(rc.objects[k]^.isLight) &
-			(rc.objects[k].intersect(rc.objects[k], shadowRay, hitMin))
+	obj := rc.objects; exit := FALSE;
+	WHILE (obj # NIL) & ~exit DO
+		IF ~(obj.isLight) &
+			(obj.intersect(obj, shadowRay, hitMin))
 		THEN 
-			IF rc.objects[k].materialType = GLASS THEN
+			IF obj.materialType = GLASS THEN
 				(* attenuate light color by glass color *)
-				lightColor := lightColor * rc.objects[k].color; 
+				lightColor := lightColor * obj.color; 
 			ELSE
 				isInShadow := TRUE; 
 			END;
 			exit := TRUE
 		END;
-			INC(k);
+		obj := obj.next
 	END;
 	lightColor := lightColor / (len * len); 
 	IF isInShadow THEN
@@ -1099,12 +1101,14 @@ BEGIN
 	END
 END GammaCorrection;
 
-PROCEDURE CreateObject*(center: Vector; radius: REAL; color: Vector;
+PROCEDURE CreateObject*(rc: RenderContext; center: Vector; radius: REAL; color: Vector;
 	matType: INTEGER; isLight: BOOLEAN): Object;
 VAR
 	object: Object;
 BEGIN
 	NEW(object, center, radius, color, matType, isLight);
+	object.next := rc.objects;
+	rc.objects := object;
 	RETURN object
 END CreateObject;
 
@@ -1131,13 +1135,15 @@ BEGIN
 END CreateCylinder;
 *)
 
-PROCEDURE CreateDisk*(center: Vector; radius: REAL; vn: Vector; color: Vector;
+PROCEDURE CreateDisk*(rc: RenderContext; center: Vector; radius: REAL; vn: Vector; color: Vector;
 	matType: INTEGER; isLight: BOOLEAN): Object;
 VAR
 	object: Disk;
 BEGIN
 	NEW(object, center, radius, color, matType, isLight);
 	object.vn := vn;
+	object.next := rc.objects;
+	rc.objects := object;
 	RETURN object
 END CreateDisk;
 
@@ -1173,7 +1179,25 @@ BEGIN
 END Pow2;
 
 BEGIN
-	ZeroVector := vector(0, 0, 0);
+	ZeroVector		:= vector(0, 0, 0);
+
+	XAxisVector		:= vector(1, 0, 0);
+	YAxisVector		:= vector(0, 1, 0);
+	ZAxisVector		:= vector(0, 0, 1);
+
+	XAxisVectorNeg	:= -XAxisVector;
+	YAxisVectorNeg	:= -YAxisVector;
+	ZAxisVectorNeg	:= -ZAxisVector;
+	
+	Black				:= vector(0, 0, 0);
+	Red					:= vector(1, 0, 0);
+	Green				:= vector(0, 1, 0);
+	Yellow			:= vector(1, 1, 0);
+	Blue				:= vector(0, 0, 1);
+	Magenta			:= vector(1, 0, 1);
+	Cyan				:= vector(0, 1, 1);
+	White				:= vector(1, 1, 1);
+	
 END Lib3D_SSE.
 
 SystemTools.Free Lib3D_SSE ~

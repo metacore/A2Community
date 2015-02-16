@@ -18,15 +18,15 @@ MODULE Lesson1;
 IMPORT
 	Math, Events, Strings, Files, Commands, PreciseTimer,
 	
-	(*lib := Lib3D_SSE*)
-	lib := Lib3D
+	lib := Lib3D_SSE
+	(*lib := Lib3D*)
 	
 	;
 
 CONST
 
 	DEBUGLOG = FALSE;
-	TESTS = 1;
+	TESTS = 5;
 	EventClass = 3;
 	EventSubclass = 3;
 	moduleName = "Test";
@@ -233,6 +233,8 @@ BEGIN
 		context.out.String(", time elapsed: ");
 		context.out.String(str);
 		context.out.Ln;
+		
+		(*
 		context.out.String("nThreadComputedBuckets: [");
 		FOR iThread := 0 TO rc.nThreadsTotal - 1 DO
 			IF iThread # 0 THEN
@@ -251,6 +253,7 @@ BEGIN
 		END;
 		context.out.String("]");
 		context.out.Ln;
+		*)
 		
 		rc.nThreadsTotal := rc.nThreadsTotal * 2; 
 		
@@ -308,7 +311,8 @@ END SaveToFile;
 PROCEDURE RiBegin(): lib.RenderContext;
 BEGIN
 
-	NEW(rc);
+	NEW(rc); rc.objects := NIL;
+	
 	rc.options.imageWidth := 640;
 	rc.options.imageHeight := 480;
 	rc.options.cropWindow.xmin := 0;
@@ -339,10 +343,11 @@ END RiEnd;
 
 PROCEDURE RiWorldBegin(rc: lib.RenderContext);
 VAR
+	obj: lib.Object;
 	tmp: REAL;
-	vn: Vector;
+	pt: Vector;
 BEGIN
-	(* // check if crop window coordinates are valid *)
+	(* check if crop window coordinates are valid *)
 	IF rc.options.cropWindow.xmin > rc.options.cropWindow.xmax THEN
 		tmp := rc.options.cropWindow.xmin;
 		rc.options.cropWindow.xmin := rc.options.cropWindow.xmax;
@@ -360,26 +365,40 @@ BEGIN
 	
 	(** Create world *)
 	rc.clBackground := vector(0.5, 0.62, 0.78);
-	rc.nObjects := 5;
-	NEW(rc.objects, rc.nObjects);
-	
-	rc.objects[0] := lib.CreateObject(vector(0, 0, 15), 3,
+	(* Balls *)
+	obj := lib.CreateObject(rc, vector(0, 0, 15), 3,
 		vector(0.5, 0.7, 0.5), lib.GLASS, FALSE);
-		
-	rc.objects[1] := lib.CreateObject(vector(-4.5, 4.5, 17), 1.8,
+	obj := lib.CreateObject(rc, vector(-4.5, 4.5, 17), 1.8,
 		vector(1, 0.3, 0.3), lib.DIFFUSE, FALSE);
-		
-	rc.objects[2] := lib.CreateObject(vector(2, -2, 19), 2,
+	obj := lib.CreateObject(rc, vector(2, -2, 19), 2,
 		vector(0.3, 1, 0.3), lib.DIFFUSE, FALSE);
-		
-	rc.light.object := lib.CreateObject(vector(3, 3, 13), 0.5,
-		vector(75, 60, 50), lib.MATTE, TRUE);
-	rc.objects[3] := rc.light.object;
-	
-	vn := vector(-15, -2, -1.5);
-	lib.normalize(vn);
-	rc.objects[4] := lib.CreateDisk(vector(4.5, 4.5, 30), 16, vn,
-		vector(1, 0, 1), lib.DIFFUSE, FALSE);
+	(* Light *)
+	rc.light.object := lib.CreateObject(rc, vector(3, 3, 13), 0.25,
+		vector(150, 150, 150), lib.MATTE, TRUE);
+	(* Disks *)
+	pt := vector(8, -5, 21);
+	obj := lib.CreateDisk(rc, pt, 3, lib.XAxisVectorNeg,
+		lib.Red, lib.DIFFUSE, FALSE);
+	obj := lib.CreateDisk(rc, pt, 3, lib.YAxisVector,
+		lib.Green, lib.DIFFUSE, FALSE);
+	obj := lib.CreateDisk(rc, pt, 3, lib.ZAxisVectorNeg,
+		lib.Yellow, lib.DIFFUSE, FALSE);
+	(* Disks *)
+	pt := vector(8, 5, 21);
+	obj := lib.CreateDisk(rc, pt, 3, lib.XAxisVectorNeg,
+		lib.White, lib.DIFFUSE, FALSE);
+	obj := lib.CreateDisk(rc, pt, 3, lib.YAxisVectorNeg,
+		lib.Magenta, lib.DIFFUSE, FALSE);
+	obj := lib.CreateDisk(rc, pt, 3, lib.ZAxisVectorNeg,
+		lib.Cyan, lib.DIFFUSE, FALSE);
+	(* Disks *)
+	pt := vector(-8, -5, 21);
+	obj := lib.CreateDisk(rc, pt, 3, lib.XAxisVector,
+		lib.Red, lib.DIFFUSE, FALSE);
+	obj := lib.CreateDisk(rc, pt, 3, lib.YAxisVector,
+		lib.Blue, lib.DIFFUSE, FALSE);
+	obj := lib.CreateDisk(rc, pt, 3, lib.ZAxisVectorNeg,
+		lib.Cyan, lib.DIFFUSE, FALSE);
 	
 	rc.funcTrace := lib.Trace;
 	
@@ -416,22 +435,15 @@ SystemTools.Free Lesson1 Lib3D Lib3D_SSE ~
 
 Pentium(R) Dual-Core CPU T4200 @ 2.00 GHz (2 cores, 2 threads):
 
-nThreadsTotal: 1, bucket size: 320 x 240, nBucketsTotal: 4, time elapsed:   1.1512
-nThreadComputedBuckets: [4]
-nSecondaryRays: [45108]
-nThreadsTotal: 2, bucket size: 160 x 120, nBucketsTotal: 16, time elapsed:   0.5863
-nThreadComputedBuckets: [8, 8]
-nSecondaryRays: [29548, 32980]
-nThreadsTotal: 4, bucket size: 80 x 60, nBucketsTotal: 64, time elapsed:   0.6255
-nThreadComputedBuckets: [24, 9, 13, 18]
-nSecondaryRays: [35180, 12228, 23036, 26420]
-nThreadsTotal: 8, bucket size: 40 x 30, nBucketsTotal: 256, time elapsed:   0.6864
-nThreadComputedBuckets: [38, 50, 28, 6, 48, 16, 31, 39]
-nSecondaryRays: [25392, 32452, 18532, 3772, 27128, 13096, 19840, 23712]
-
-
 
 Intel Core i5 650 @ 3.20 GHz (2 cores, 4 threads):
-
-
-
+Pure code:
+nThreadsTotal: 1, bucket size: 320 x 240, nBucketsTotal: 4, time elapsed:   4.8978
+nThreadsTotal: 2, bucket size: 160 x 120, nBucketsTotal: 16, time elapsed:   2.9606
+nThreadsTotal: 4, bucket size: 80 x 60, nBucketsTotal: 64, time elapsed:   2.0760
+nThreadsTotal: 8, bucket size: 40 x 30, nBucketsTotal: 256, time elapsed:   2.3181
+SSE optimized (unaligned):
+nThreadsTotal: 1, bucket size: 320 x 240, nBucketsTotal: 4, time elapsed:   4.3120
+nThreadsTotal: 2, bucket size: 160 x 120, nBucketsTotal: 16, time elapsed:   2.5074
+nThreadsTotal: 4, bucket size: 80 x 60, nBucketsTotal: 64, time elapsed:   1.8252
+nThreadsTotal: 8, bucket size: 40 x 30, nBucketsTotal: 256, time elapsed:   2.0175
