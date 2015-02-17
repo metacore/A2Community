@@ -44,7 +44,8 @@ TYPE
 		and direction
 	*)
 	Ray* = RECORD
-		pt*, vn*: Vector
+		pt*, vn*: Vector;
+		fVnDot: REAL; (* vn +* vn *)
 	END;
 	
 	(**
@@ -52,8 +53,9 @@ TYPE
 		about hit: distance, point and normal
 	*)
 	Hit = RECORD
-		dist: REAL;
+		mint, maxt: REAL;
 		pt, vn: Vector;
+		object: Object;
 	END;
 
 	Object* = OBJECT
@@ -77,7 +79,7 @@ TYPE
 		SELF.materialType := iMatType;
 		isLight := bLight;
 		indexOfRefraction := 1.3;
-		intersect := IntersectObject;
+		intersect := (*IntersectObject*)IntersectSphere;
 	END New;
 	
 	END Object;
@@ -120,6 +122,7 @@ TYPE
 	END Cylinder;
 	*)
 	
+	(*
 	Disk = OBJECT(Object)
 	VAR
 		vn: Vector;
@@ -137,6 +140,8 @@ TYPE
 	END IntersectHandler;
 	
 	END Disk;
+	
+	*)
 	
 	(*
 	Sphere = OBJECT(Object)
@@ -427,7 +432,8 @@ BEGIN
 	dy := 2 / rc.options.imageHeight;
 	ray.vn := vector(angle * ((i + 0.5) * dx - rc.options.frameAspectRatio),
 		angle * (-(j + 0.5) * dy + 1), 1);
-	normalize(ray.vn)
+	normalize(ray.vn);
+	ray.fVnDot := ray.vn +* ray.vn
 END ComputePrimaryRay;
 
 PROCEDURE ComputeSecondaryRays*(rc: RenderContext;
@@ -456,15 +462,15 @@ BEGIN
 	ray11.vn := vector(angle * ((i + fDelta) * dx - rc.options.frameAspectRatio),
 	  angle * (-(j + fDelta) * dy + 1), 1);
 
-	normalize(ray00.vn);
-	normalize(ray10.vn);
-	normalize(ray01.vn);
-	normalize(ray11.vn)
+	normalize(ray00.vn); ray00.fVnDot := ray00.vn +* ray00.vn;
+	normalize(ray10.vn); ray10.fVnDot := ray10.vn +* ray10.vn;
+	normalize(ray01.vn); ray01.fVnDot := ray01.vn +* ray01.vn;
+	normalize(ray11.vn); ray11.fVnDot := ray11.vn +* ray11.vn
 END ComputeSecondaryRays;
 
 PROCEDURE IntersectObject(object: Object; CONST ray: Ray; VAR hit: Hit): BOOLEAN;
 VAR
-	oc2, tca, d2, thc: REAL;
+	oc2, tca, d2, thc, t: REAL;
 	outside: BOOLEAN;
 BEGIN
 	(* use geometric method *)
@@ -498,16 +504,18 @@ BEGIN
 		RETURN FALSE
 	END;
 	IF outside THEN 
-		hit.dist := tca - Math.sqrt(thc)
+		t := tca - Math.sqrt(thc)
 	ELSE
-		hit.dist := tca + Math.sqrt(thc)
+		t := tca + Math.sqrt(thc)
 	END;
 	
-	IF hit.dist <= 0 THEN  
+	IF (t <= 0) OR (t > hit.mint) THEN  
 		RETURN FALSE
 	END;
 	
-	hit.pt := ray.pt + ray.vn * hit.dist;
+	hit.mint := t;
+	hit.object := object;
+	hit.pt := ray.pt + ray.vn * t;
 	hit.vn := hit.pt - object.center;
 	normalize(hit.vn);
 	
@@ -647,7 +655,7 @@ BEGIN
 
 END IntersectTriangleMollerTrumbore;
 
-(*
+
 (**
 	Find roots of a quadratic equation. For floating point computation, this
 	algorithm is more robust than the usual quadratic formula.
@@ -684,6 +692,7 @@ BEGIN
 	RETURN TRUE
 END SolveQuadratic;
 
+(*
 (**
 	Compute ray-cone intersection (algebraic method)
 *)
@@ -739,6 +748,7 @@ BEGIN
 END IntersectCylinder;
 *)
 
+(*
 (**
 	Compute ray-plane intersection
 *)
@@ -787,27 +797,60 @@ BEGIN
 	END;
 	RETURN FALSE
 END IntersectDisk;
+*)
 
-(*
-PROCEDURE IntersectSphere(CONST ptRay, vnRay, pt: Vector; radius: REAL; VAR t: REAL): BOOLEAN;
+
+
+PROCEDURE IntersectSphere(object: Object; CONST ray: Ray; VAR hit: Hit): BOOLEAN;
 VAR
 	a, b, c, t0, t1: REAL;
 	o: Vector;
 BEGIN
-	o := ptRay - pt;
-	a := vnRay +* vnRay;
-	b := 2 * (o +* vnRay);
-	c := (o +* o) - radius * radius;
+	o := ray.pt - object.center;
+	a := ray.fVnDot;(*ray.vn +* ray.vn;*)
+	b := 2 * (o +* ray.vn);
+	c := (o +* o) - object.radius2;
+	
 	IF ~SolveQuadratic(a, b, c, t0, t1) THEN
 		RETURN FALSE
 	END;
-	t := t0;
-	IF t0 < 0 THEN
-		t := t1
+
+(*
+    // Compute intersection distance along ray
+    if (t0 > ray.maxt || t1 < ray.mint)
+        return false;
+    float thit = t0;
+    if (t0 < ray.mint) {
+        thit = t1;
+        if (thit > ray.maxt) return false;
+    }
+*)
+(*
+	IF (t0 > hit.maxt) OR (t1 < hit.mint) THEN  
+		RETURN FALSE
 	END;
+	t := t0;
+	IF t0 < hit.mint THEN
+		t := t1; 
+		IF t > hit.maxt THEN
+			RETURN FALSE
+		END
+	END;
+*)
+
+	IF (t0 < 0) OR (t0 > hit.maxt) THEN  
+		RETURN FALSE
+	END;
+
+	hit.maxt := t0;
+	hit.object := object;
+	hit.pt := ray.pt + ray.vn * t0;
+	hit.vn := hit.pt - object.center;
+	normalize(hit.vn);
+
 	RETURN TRUE
 END IntersectSphere;
-*)
+
 
 PROCEDURE snell(CONST incidentRay: Vector; CONST surfaceNormal: Vector; n1: REAL; n2: REAL; VAR reflectionDir: Vector; VAR refractionDir: Vector);
 VAR
@@ -841,8 +884,8 @@ END fresnel;
 PROCEDURE Trace*(rc: RenderContext; ray: Ray; depth: LONGINT): Vector;
 VAR
 	bias: REAL;
-	object, obj: Object;
-	hit, hitMin: Hit;
+	obj: Object;
+	hit: Hit;
 	reflectionRay, refractionRay: Ray;
 	cosi: REAL;
 	cost: REAL;
@@ -861,37 +904,40 @@ BEGIN
 	END;
 	
 	bias := 0.001;
-	hitMin.dist := INFINITY; 
-	object := NIL;
+	hit.maxt := INFINITY; 
+	hit.mint := 0;
+	hit.object := NIL;
 	
 	obj := rc.objects;
 	WHILE obj # NIL DO
 		IF obj.intersect(obj, ray, hit) THEN 
-			IF hit.dist < hitMin.dist THEN 
+			(*IF hit.dist < hitMin.dist THEN 
 				hitMin := hit; 
 				object := obj
-			END
+			END*)
 		END;
 		obj := obj.next
 	END;
 	
-	IF object = NIL THEN 
+	IF hit.object = NIL THEN 
 		RETURN rc.clBackground 
 	END;
 	
-	IF object.materialType = GLASS THEN 
+	IF hit.object.materialType = GLASS THEN 
 		(* compute reflection and refraction direction *)
-		reflectionRay.pt := hitMin.pt + hitMin.vn * bias;
-		refractionRay.pt := hitMin.pt - hitMin.vn * bias;
-		snell(ray.vn, -hitMin.vn, 1.0, object.indexOfRefraction,
+		reflectionRay.pt := hit.pt + hit.vn * bias;
+		refractionRay.pt := hit.pt - hit.vn * bias;
+		snell(ray.vn, -hit.vn, 1.0, hit.object.indexOfRefraction,
 			reflectionRay.vn, refractionRay.vn); 
 		normalize(reflectionRay.vn);
+		reflectionRay.fVnDot := reflectionRay.vn +* reflectionRay.vn;
 		normalize(refractionRay.vn);
+		refractionRay.fVnDot := refractionRay.vn +* refractionRay.vn;
 		
-		(*cosi := ray.vn +* (-hitMin.vn); 
-		cost := refractionRay.vn +* (-hitMin.vn);*)
+		(*cosi := ray.vn +* (-hit.vn); 
+		cost := refractionRay.vn +* (-hit.vn);*)
 
-		SSE.VectorToXMM0(-hitMin.vn);
+		SSE.VectorToXMM0(-hit.vn);
 		SSE.CopyXMM2XMM0;
 		SSE.VectorToXMM1(ray.vn);
 		SSE.VecDotXMM0XMM1;
@@ -901,7 +947,7 @@ BEGIN
 		SSE.VecDotXMM1XMM2;
 		SSE.XMM10ToReal(cost);
 
-		fresnel(1.0, object.indexOfRefraction, cosi, cost, Kr); 
+		fresnel(1.0, hit.object.indexOfRefraction, cosi, cost, Kr); 
 		IF Kr < 0.0 THEN
 			Kr := 0.0
 		ELSIF Kr > 1.0 THEN 
@@ -909,21 +955,22 @@ BEGIN
 		END;
 		reflectionColor := Trace(rc, reflectionRay, depth + 1); 
 		refractionColor := Trace(rc, refractionRay, depth + 1); 
-		RETURN object.color * refractionColor * (1 - Kr) + reflectionColor * Kr
+		RETURN hit.object.color * refractionColor * (1 - Kr) + reflectionColor * Kr
 	END;
 	
-	IF object.materialType = MATTE THEN 
-		RETURN object.color
+	IF hit.object.materialType = MATTE THEN 
+		RETURN hit.object.color
 	END;
 
 	isInShadow := FALSE;
-	shadowRay.pt := hitMin.pt + hitMin.vn * bias;
-	shadowRay.vn := rc.light.object.center - hitMin.pt; 
+	shadowRay.pt := hit.pt + hit.vn * bias;
+	shadowRay.vn := rc.light.object.center - hit.pt; 
 	len := length(shadowRay.vn); 
 	normalize(shadowRay.vn);
+	shadowRay.fVnDot := shadowRay.vn +* shadowRay.vn;
  
-	(*LdotN := shadowRay.vn +* hitMin.vn;*)
-	SSE.VectorToXMM0(hitMin.vn);
+	(*LdotN := shadowRay.vn +* hit.vn;*)
+	SSE.VectorToXMM0(hit.vn);
 	SSE.VectorToXMM1(shadowRay.vn);
 	SSE.VecDotXMM0XMM1;
 	SSE.XMM00ToReal(LdotN);
@@ -933,9 +980,14 @@ BEGIN
 	END;
 	lightColor := rc.light.object.color; 
 	obj := rc.objects; exit := FALSE;
+	
+	(* Reset hit structure *)
+	hit.maxt := INFINITY; 
+	hit.mint := 0;
+	
 	WHILE (obj # NIL) & ~exit DO
 		IF ~(obj.isLight) &
-			(obj.intersect(obj, shadowRay, hitMin))
+			(obj.intersect(obj, shadowRay, hit))
 		THEN 
 			IF obj.materialType = GLASS THEN
 				(* attenuate light color by glass color *)
@@ -951,7 +1003,7 @@ BEGIN
 	IF isInShadow THEN
 		RETURN ZeroVector
 	ELSE
-		RETURN object.color * lightColor * LdotN
+		RETURN hit.object.color * lightColor * LdotN
 	END
 END Trace;
 
@@ -1135,6 +1187,7 @@ BEGIN
 END CreateCylinder;
 *)
 
+(*
 PROCEDURE CreateDisk*(rc: RenderContext; center: Vector; radius: REAL; vn: Vector; color: Vector;
 	matType: INTEGER; isLight: BOOLEAN): Object;
 VAR
@@ -1146,6 +1199,7 @@ BEGIN
 	rc.objects := object;
 	RETURN object
 END CreateDisk;
+*)
 
 (*
 PROCEDURE CreateSphere*(center: Vector; radius: REAL; color: Vector;

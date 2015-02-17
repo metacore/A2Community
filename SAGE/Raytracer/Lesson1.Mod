@@ -18,15 +18,15 @@ MODULE Lesson1;
 IMPORT
 	Math, Events, Strings, Files, Commands, PreciseTimer,
 	
-	lib := Lib3D_SSE
-	(*lib := Lib3D*)
+	(*lib := Lib3D_SSE*)
+	lib := Lib3D
 	
 	;
 
 CONST
 
 	DEBUGLOG = FALSE;
-	TESTS = 5;
+	TESTS = 50;
 	EventClass = 3;
 	EventSubclass = 3;
 	moduleName = "Test";
@@ -190,9 +190,9 @@ BEGIN
 	xmax := ceil(rc.options.cropWindow.xmax * w);
 	ymax := ceil(rc.options.cropWindow.ymax * h);
 	
-	rc.nThreadsTotal := 1;
+	rc.nThreadsTotal := 2;
 	
-	WHILE rc.nThreadsTotal < 9 DO
+	WHILE rc.nThreadsTotal < 3 DO
 	
 		NEW(threads, rc.nThreadsTotal);
 	
@@ -327,7 +327,7 @@ BEGIN
 	(* Color distance threshold *)
 	rc.options.fAAThreshold := 0.1;
 	(* Antialiasing levels *)
-	rc.options.nAALevels := 4;
+	rc.options.nAALevels := 2;
 	rc.options.bShowAAPixels := FALSE;
 
 	COPY("untitled", rc.options.displayName);
@@ -374,7 +374,9 @@ BEGIN
 		vector(0.3, 1, 0.3), lib.DIFFUSE, FALSE);
 	(* Light *)
 	rc.light.object := lib.CreateObject(rc, vector(3, 3, 13), 0.25,
-		vector(150, 150, 150), lib.MATTE, TRUE);
+		vector(50, 50, 50), lib.MATTE, TRUE);
+		
+	(*
 	(* Disks *)
 	pt := vector(8, -5, 21);
 	obj := lib.CreateDisk(rc, pt, 3, lib.XAxisVectorNeg,
@@ -399,6 +401,7 @@ BEGIN
 		lib.Blue, lib.DIFFUSE, FALSE);
 	obj := lib.CreateDisk(rc, pt, 3, lib.ZAxisVectorNeg,
 		lib.Cyan, lib.DIFFUSE, FALSE);
+	*)
 	
 	rc.funcTrace := lib.Trace;
 	
@@ -434,6 +437,10 @@ Lesson1.Main ~
 SystemTools.Free Lesson1 Lib3D Lib3D_SSE ~
 
 Pentium(R) Dual-Core CPU T4200 @ 2.00 GHz (2 cores, 2 threads):
+Pure code:
+nThreadsTotal: 2, bucket size: 160 x 120, nBucketsTotal: 16, time elapsed:   0.3563
+SSE:
+nThreadsTotal: 2, bucket size: 160 x 120, nBucketsTotal: 16, time elapsed:   0.2783
 
 
 Intel Core i5 650 @ 3.20 GHz (2 cores, 4 threads):
