@@ -17,16 +17,16 @@ MODULE Lesson1;
 
 IMPORT
 	Math, Events, Strings, Files, Commands, PreciseTimer,
-	
-	(*lib := Lib3D_SSE*)
-	lib := Lib3D
-	
+
+	lib := Lib3D_SSE
+	(*lib := Lib3D*)
+
 	;
 
 CONST
 
 	DEBUGLOG = FALSE;
-	TESTS = 50;
+	TESTS = 1;
 	EventClass = 3;
 	EventSubclass = 3;
 	moduleName = "Test";
@@ -73,7 +73,7 @@ TYPE
 			b.x1 := b.x0 + td.rc.options.bucketSizeX - 1;
 			b.y0 := by * td.rc.options.bucketSizeY;
 			b.y1 := b.y0 + td.rc.options.bucketSizeY - 1;
-			
+
 			IF DEBUGLOG THEN
 				COPY("CalcThread # ", str1);
 				Strings.IntToStr(td.id, str2);
@@ -84,7 +84,7 @@ TYPE
 				Strings.Append(str1, "...");
 				Log(Events.Information, 0, str1, TRUE);
 			END;
-			
+
 			b.FrmLineCur := FrmLineCur;
 			b.FrmLinePrev := FrmLinePrev;
 			lib.RenderBucket(td.rc, b);
@@ -96,7 +96,7 @@ TYPE
 VAR
 	context: Commands.Context;
 	rc: lib.RenderContext;
-	
+
 (** Vector constructor *)
 PROCEDURE vector(x, y, z, dummy = 0 : REAL): Vector;
 VAR
@@ -108,7 +108,7 @@ BEGIN
 	v[3] := dummy;
 	RETURN v
 END vector;
-	
+
 PROCEDURE Log(type, code : SHORTINT; msg: ARRAY OF CHAR; showOnKernelLog : BOOLEAN);
 VAR message : Events.Message;
 BEGIN
@@ -132,7 +132,7 @@ BEGIN
 END tan;
 
 PROCEDURE GetNextBucket(rc: lib.RenderContext; VAR bi: LONGINT): BOOLEAN;
-BEGIN 
+BEGIN
 (*  pthread_mutex_lock(&rc->threadMutex); *)
 	BEGIN {EXCLUSIVE}
 		bi := rc.nComputedBuckets;
@@ -189,19 +189,19 @@ BEGIN
 	ymin := ceil(rc.options.cropWindow.ymin * h);
 	xmax := ceil(rc.options.cropWindow.xmax * w);
 	ymax := ceil(rc.options.cropWindow.ymax * h);
-	
+
 	rc.nThreadsTotal := 2;
-	
+
 	WHILE rc.nThreadsTotal < 3 DO
-	
+
 		NEW(threads, rc.nThreadsTotal);
-	
+
 		rc.nBucketsX := rc.nThreadsTotal * 2;
 		rc.nBucketsY := rc.nThreadsTotal * 2;
 		rc.nBucketsTotal := rc.nBucketsX * rc.nBucketsY;
 		rc.options.bucketSizeX := rc.options.imageWidth DIV rc.nBucketsX;
 		rc.options.bucketSizeY := rc.options.imageHeight DIV rc.nBucketsY;
-		
+
 		context.out.String("nThreadsTotal: ");
 		context.out.Int(rc.nThreadsTotal, 1);
 		context.out.String(", bucket size: ");
@@ -212,7 +212,7 @@ BEGIN
 		context.out.Int(rc.nBucketsTotal, 1);
 
 		t := PreciseTimer.GetTicks();
-		
+
 		FOR iTest := 0 TO TESTS - 1 DO
 			rc.nComputedBuckets := 0;
 			rc.nActiveThreads := 0;
@@ -227,13 +227,13 @@ BEGIN
 				AWAIT(rc.nActiveThreads = 0)
 			END;
 		END;
-		
+
 		Strings.FloatToStr(
 			PreciseTimer.GetTime(PreciseTimer.GetTicks() - t) / TESTS, 0, 4, 0, str);
 		context.out.String(", time elapsed: ");
 		context.out.String(str);
 		context.out.Ln;
-		
+
 		(*
 		context.out.String("nThreadComputedBuckets: [");
 		FOR iThread := 0 TO rc.nThreadsTotal - 1 DO
@@ -254,13 +254,13 @@ BEGIN
 		context.out.String("]");
 		context.out.Ln;
 		*)
-		
-		rc.nThreadsTotal := rc.nThreadsTotal * 2; 
-		
+
+		rc.nThreadsTotal := rc.nThreadsTotal * 2;
+
 	END;
 
 	lib.GammaCorrection(rc);
-	
+
 END Render;
 
 PROCEDURE SaveToFile(pix: lib.FrameBuffer; w: LONGINT; h: LONGINT; CONST dspyName: ARRAY OF CHAR);
@@ -312,7 +312,7 @@ PROCEDURE RiBegin(): lib.RenderContext;
 BEGIN
 
 	NEW(rc); rc.objects := NIL;
-	
+
 	rc.options.imageWidth := 640;
 	rc.options.imageHeight := 480;
 	rc.options.cropWindow.xmin := 0;
@@ -321,7 +321,7 @@ BEGIN
 	rc.options.cropWindow.ymax := 1;
 	rc.options.fieldOfView := 45;
 	rc.options.gamma := 1.0;
-	
+
 	(* Depth of tracing *)
 	rc.options.nTracingDepth := 5;
 	(* Color distance threshold *)
@@ -331,7 +331,7 @@ BEGIN
 	rc.options.bShowAAPixels := FALSE;
 
 	COPY("untitled", rc.options.displayName);
-	
+
 	RETURN rc;
 END RiBegin;
 
@@ -362,7 +362,7 @@ BEGIN
 	rc.options.cropWindow.ymin := MIN(1, MAX(0, rc.options.cropWindow.ymin));
 	rc.options.cropWindow.xmax := MIN(1, MAX(0, rc.options.cropWindow.xmax));
 	rc.options.cropWindow.ymax := MIN(1, MAX(0, rc.options.cropWindow.ymax));
-	
+
 	(** Create world *)
 	rc.clBackground := vector(0.5, 0.62, 0.78);
 	(* Balls *)
@@ -373,38 +373,51 @@ BEGIN
 	obj := lib.CreateObject(rc, vector(2, -2, 19), 2,
 		vector(0.3, 1, 0.3), lib.DIFFUSE, FALSE);
 	(* Light *)
+	rc.light.object := lib.CreateObject(rc, vector(3, 3, 2), 0.5,
+		vector(250, 250, 250), lib.MATTE, TRUE);
+
+	(*
+	(** Create world *)
+	rc.clBackground := vector(0.5, 0.62, 0.78);
+	(* Balls *)
+	obj := lib.CreateObject(rc, vector(0, 0, 15), 3,
+		vector(0.5, 0.7, 0.5), lib.GLASS, FALSE);
+	obj := lib.CreateCone(rc, vector(-4.5, 4.5, 17), 1.8,
+		vector(1, 0.3, 0.3), lib.DIFFUSE, 8);
+	obj := lib.CreateCylinder(rc, vector(2, -2, 19), 2,
+		vector(0.3, 1, 0.3), lib.DIFFUSE, -1, 1);
+	(* Light *)
 	rc.light.object := lib.CreateObject(rc, vector(3, 3, 13), 0.25,
 		vector(50, 50, 50), lib.MATTE, TRUE);
-		
-	(*
+	*)
+
 	(* Disks *)
 	pt := vector(8, -5, 21);
-	obj := lib.CreateDisk(rc, pt, 3, lib.XAxisVectorNeg,
-		lib.Red, lib.DIFFUSE, FALSE);
-	obj := lib.CreateDisk(rc, pt, 3, lib.YAxisVector,
-		lib.Green, lib.DIFFUSE, FALSE);
-	obj := lib.CreateDisk(rc, pt, 3, lib.ZAxisVectorNeg,
-		lib.Yellow, lib.DIFFUSE, FALSE);
+	obj := lib.CreateDisk(rc, pt, 3,
+		lib.Red, lib.DIFFUSE, lib.XAxisVector);
+	obj := lib.CreateDisk(rc, pt, 3,
+		lib.Green, lib.DIFFUSE, lib.YAxisVector);
+	obj := lib.CreateDisk(rc, pt, 3,
+		lib.Yellow, lib.DIFFUSE, lib.ZAxisVectorNeg);
 	(* Disks *)
 	pt := vector(8, 5, 21);
-	obj := lib.CreateDisk(rc, pt, 3, lib.XAxisVectorNeg,
-		lib.White, lib.DIFFUSE, FALSE);
-	obj := lib.CreateDisk(rc, pt, 3, lib.YAxisVectorNeg,
-		lib.Magenta, lib.DIFFUSE, FALSE);
-	obj := lib.CreateDisk(rc, pt, 3, lib.ZAxisVectorNeg,
-		lib.Cyan, lib.DIFFUSE, FALSE);
+	obj := lib.CreateDisk(rc, pt, 3,
+		lib.White, lib.DIFFUSE, lib.XAxisVector);
+	obj := lib.CreateDisk(rc, pt, 3,
+		lib.Magenta, lib.DIFFUSE, lib.YAxisVector);
+	obj := lib.CreateDisk(rc, pt, 3,
+		lib.Cyan, lib.DIFFUSE, lib.ZAxisVector);
 	(* Disks *)
 	pt := vector(-8, -5, 21);
-	obj := lib.CreateDisk(rc, pt, 3, lib.XAxisVector,
-		lib.Red, lib.DIFFUSE, FALSE);
-	obj := lib.CreateDisk(rc, pt, 3, lib.YAxisVector,
-		lib.Blue, lib.DIFFUSE, FALSE);
-	obj := lib.CreateDisk(rc, pt, 3, lib.ZAxisVectorNeg,
-		lib.Cyan, lib.DIFFUSE, FALSE);
-	*)
-	
+	obj := lib.CreateDisk(rc, pt, 3,
+		lib.Red, lib.DIFFUSE, lib.XAxisVector);
+	obj := lib.CreateDisk(rc, pt, 3,
+		lib.Blue, lib.DIFFUSE, lib.YAxisVector);
+	obj := lib.CreateDisk(rc, pt, 3,
+		lib.Cyan, lib.DIFFUSE, lib.ZAxisVector);
+
 	rc.funcTrace := lib.Trace;
-	
+
 END RiWorldBegin;
 
 PROCEDURE RiWorldEnd(rc: lib.RenderContext);
