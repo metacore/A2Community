@@ -741,8 +741,11 @@ VAR
 	t: REAL;
 	phit: Vector;
 
-	PROCEDURE Compute(CONST vn: Vector): BOOLEAN;
+	PROCEDURE Compute(vn: Vector): BOOLEAN;
 	BEGIN
+		IF ray.vn +* vn < 0 THEN
+			vn := -vn
+		END;
 		phit := (ray.pt + t * ray.vn) - disk.pt;
 		IF disk.r2 >= phit +* phit THEN
 			hit.maxt := t;
@@ -756,6 +759,8 @@ VAR
 
 BEGIN
 	disk := object(Disk);
+	
+	(*
 	IF disk.vn +* ray.vn < 0 THEN
 		IF IntersectPlane(disk.pt, -disk.vn, ray, t) &
 			~((t < 0) OR (t > hit.maxt))
@@ -769,18 +774,18 @@ BEGIN
 			RETURN Compute(disk.vn)
 		END
 	END;
-
-	(*
+	*)
+	
 	IF IntersectPlane(disk.pt, disk.vn, ray, t) &
 		~((t < 0) OR (t > hit.maxt))
 	THEN
 		RETURN Compute(disk.vn)
-	ELSIF IntersectPlane(disk.pt, -disk.vn, ray, t) &
+	(*ELSIF IntersectPlane(disk.pt, disk.vn, ray, t) &
 		~((t < 0) OR (t > hit.maxt))
 	THEN
-		RETURN Compute(-disk.vn)
+		RETURN Compute(disk.vn)*)
 	END;
-	*)
+	
 	RETURN FALSE
 END IntersectDisk;
 
