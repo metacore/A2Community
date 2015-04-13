@@ -11,8 +11,10 @@ CONST
 	EventClass = 3;
 	EventSubclass = 3;
 	moduleName = "Test";
+	
+	THREADS = 4;
 
-	BENCHMARK = FALSE;
+	BENCHMARK = TRUE;
 	TESTS = 50;
 	
 	DATA_FILE = "WMRaycasterData.zip";
@@ -541,12 +543,12 @@ TYPE
 		
 		IF BENCHMARK THEN
 			nThreadsTotal := 1;
-			WHILE nThreadsTotal < 9 DO
+			WHILE nThreadsTotal < (THREADS + 1) DO
 				RenderFrame(BENCHMARK);
 				nThreadsTotal := nThreadsTotal * 2; 
 			END;
 		ELSE
-			nThreadsTotal := 8;
+			nThreadsTotal := THREADS;
 			RenderFrame(BENCHMARK);
 		END;
 		
@@ -845,11 +847,9 @@ SystemTools.Free WMRaycaster ~
 
 Pentium(R) Dual-Core CPU T4200 @ 2.00 GHz:
 
-nThreadsTotal: 1, nBucketsX: 4, bucketSizeX: 160, time elapsed:   0.0112
+nThreadsTotal: 1, nBucketsX: 4, bucketSizeX: 160, time elapsed:   0.0107
 nThreadComputedBuckets: [4]
-nThreadsTotal: 2, nBucketsX: 8, bucketSizeX: 80, time elapsed:   0.0057
+nThreadsTotal: 2, nBucketsX: 8, bucketSizeX: 80, time elapsed:   0.0060
 nThreadComputedBuckets: [4, 4]
-nThreadsTotal: 4, nBucketsX: 16, bucketSizeX: 40, time elapsed:   0.0059
-nThreadComputedBuckets: [8, 1, 7, 0]
-nThreadsTotal: 8, nBucketsX: 32, bucketSizeX: 20, time elapsed:   0.0063
-nThreadComputedBuckets: [1, 16, 15, 0, 0, 0, 0, 0]
+nThreadsTotal: 4, nBucketsX: 16, bucketSizeX: 40, time elapsed:   0.0061
+nThreadComputedBuckets: [0, 0, 8, 8]

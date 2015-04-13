@@ -698,7 +698,7 @@ TYPE
 		iCurrentPos: LONGINT;
 		dictionary: Dictionary;
 		
-		PROCEDURE &New(dictionary: Dictionary);
+		PROCEDURE &New*(dictionary: Dictionary);
 		BEGIN
 			Init(dictionary);
 		END New;
