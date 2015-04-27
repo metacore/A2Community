@@ -449,20 +449,19 @@ Lesson1.Main ~
 
 SystemTools.Free Lesson1 Lib3D Lib3D_SSE ~
 
-Pentium(R) 4 CPU 650 with HT @ 3.40 GHz (1 cores, 2 threads):
-Pure code:
+=============== Pure code: ========================================================
+Pentium(R) 4 CPU 650 w/HT @ 3.40 GHz (1 cores, 2 threads):
 nThreadsTotal: 1, bucket size: 320 x 240, nBucketsTotal: 4, time elapsed:   7.9809
 nThreadsTotal: 2, bucket size: 160 x 120, nBucketsTotal: 16, time elapsed:   6.3666
-nThreadsTotal: 4, bucket size: 80 x 60, nBucketsTotal: 64, time elapsed:   6.8083
-nThreadsTotal: 8, bucket size: 40 x 30, nBucketsTotal: 256, time elapsed:   7.9483
 
 Pentium(R) Dual-Core CPU T4200 @ 2.00 GHz (2 cores, 2 threads):
-Pure code:
 nThreadsTotal: 1, bucket size: 320 x 240, nBucketsTotal: 4, time elapsed:   6.9457
 nThreadsTotal: 2, bucket size: 160 x 120, nBucketsTotal: 16, time elapsed:   3.5809
-nThreadsTotal: 4, bucket size: 80 x 60, nBucketsTotal: 64, time elapsed:   3.8336
-nThreadsTotal: 8, bucket size: 40 x 30, nBucketsTotal: 256, time elapsed:   4.2691
 
 Intel Core i5 650 @ 3.20 GHz (2 cores, 4 threads):
-Pure code:
 
+
+AMD A10-7850K Radeon R7, 12 Compute Cores 4C+8G @ 3.70 GHz (4 cores, 4 threads):
+nThreadsTotal: 1, bucket size: 320 x 240, nBucketsTotal: 4, time elapsed:   3.1762
+nThreadsTotal: 2, bucket size: 160 x 120, nBucketsTotal: 16, time elapsed:   1.6891
+nThreadsTotal: 4, bucket size: 80 x 60, nBucketsTotal: 64, time elapsed:   0.9812
