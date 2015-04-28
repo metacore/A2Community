@@ -459,7 +459,9 @@ nThreadsTotal: 1, bucket size: 320 x 240, nBucketsTotal: 4, time elapsed:   6.94
 nThreadsTotal: 2, bucket size: 160 x 120, nBucketsTotal: 16, time elapsed:   3.5809
 
 Intel Core i5 650 @ 3.20 GHz (2 cores, 4 threads):
-
+nThreadsTotal: 1, bucket size: 320 x 240, nBucketsTotal: 4, time elapsed:   3.7442
+nThreadsTotal: 2, bucket size: 160 x 120, nBucketsTotal: 16, time elapsed:   2.1556
+nThreadsTotal: 4, bucket size: 80 x 60, nBucketsTotal: 64, time elapsed:   1.6761
 
 AMD A10-7850K Radeon R7, 12 Compute Cores 4C+8G @ 3.70 GHz (4 cores, 4 threads):
 nThreadsTotal: 1, bucket size: 320 x 240, nBucketsTotal: 4, time elapsed:   3.1762
