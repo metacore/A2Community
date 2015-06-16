@@ -7,7 +7,7 @@ CONST
 	Trace=TRUE;
 	Tab=09X;
 
-TYPE 	DatagramHandler*=PROCEDURE{DELEGATE}(interface: IP.Interface; CONST datagram: ARRAY OF CHAR);
+TYPE 	DatagramHandler*=PROCEDURE{DELEGATE}(interface: IP.Interface; CONST datagram: ARRAY OF CHAR; len:LONGINT);
 
 TYPE Monitor*= OBJECT
 	VAR socket:WSock32.Socket;
@@ -81,7 +81,8 @@ TYPE Monitor*= OBJECT
 			fromLen:=1024;
 			res:=WSock32.recvfrom(socket,buffer,LEN(buffer),0,from,fromLen); 
 			IF res#WSock32.SocketError THEN 
-				handlePacket(interface, buffer);
+				(*"res" contains the number of bytes received, as long as it is not SocketError *)
+				handlePacket(interface, buffer, res);
 			ELSE 
 				IF error#NIL THEN error.String("?"); error.Update; END;
 			END;
@@ -93,7 +94,7 @@ VAR
 	log:Streams.Writer;
 	
 (*default datagram handler*)
-PROCEDURE DefaultHandler(interface: IP.Interface; CONST datagram: ARRAY OF CHAR); (*! not thread safe yet*)
+PROCEDURE DefaultHandler(interface: IP.Interface; CONST datagram: ARRAY OF CHAR; readLen:LONGINT); (*! not thread safe yet*)
 CONST IdentifyInterface=TRUE;
 VAR src,dst,str: ARRAY 16 OF CHAR; version, ipHeadLen, protocol, length:LONGINT;
 BEGIN
