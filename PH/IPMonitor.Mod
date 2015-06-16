@@ -1,6 +1,6 @@
 MODULE IPMonitor; (** AUTHOR "Patrick Hunziker"; PURPOSE "simple network sniffer"; *)
 
-IMPORT WSock32, Streams, Commands,IP, Modules, Network, Strings;
+IMPORT WSock32, Streams, Commands,IP, Modules, Network, Strings, Kernel;
 
 CONST 
 	MaxIPPacketSize=64*1024;
@@ -9,6 +9,9 @@ CONST
 
 TYPE 	DatagramHandler*=PROCEDURE{DELEGATE}(interface: IP.Interface; CONST datagram: ARRAY OF CHAR; len:LONGINT);
 
+		(*filter a datagram. TRUE signals that the datagram is to be handled.*)
+TYPE 	Filter*=PROCEDURE {DELEGATE}(interface: IP.Interface; CONST datagram: ARRAY OF CHAR; len:LONGINT):BOOLEAN;
+
 TYPE Monitor*= OBJECT
 	VAR socket:WSock32.Socket;
 		dest: WSock32.sockaddrIn;
@@ -16,30 +19,32 @@ TYPE Monitor*= OBJECT
 		(*local: WSock32.PHostent;*)
 		buffer: ARRAY MaxIPPacketSize OF CHAR;
 		from: WSock32.sockaddrIn; (*ARRAY 1024 OF CHAR;*)
-		fromLen,res:LONGINT;
+		fromLen,len:LONGINT;
 		trace, alive:BOOLEAN;
 		out, error:Streams.Writer;
 		adr:IP.Adr;
 		handlePacket: DatagramHandler;
+		filter: Filter;
 		interface: IP.Interface;
 		
 		(* interface=NIL implies currently default interface, but should include all interfaces *)
-		PROCEDURE &Init*(interface: IP.Interface; datagramHandler:DatagramHandler; out, error:Streams.Writer);
-		VAR  cmd, nRead, res:LONGINT; 
+		PROCEDURE &Init*(interface: IP.Interface; datagramHandler:DatagramHandler; filter:Filter; out, error:Streams.Writer);
+		VAR  cmd, nRead,res:LONGINT; 
 			str: ARRAY 128 OF CHAR; resStr:ARRAY 0 OF CHAR;
 		BEGIN
 			handlePacket:=datagramHandler;
 			SELF.interface:=interface;
+			SELF.filter:=filter;
 			SELF.error:=error;
 			SELF.out:=out;
 			trace:=Trace;
 
 			socket:=WSock32.socket(WSock32.AFINet, WSock32.SockRaw, WSock32.IPProtoIP);
 			IF (socket#WSock32.InvalidSocket ) THEN 
-				(*pool.Add( SELF, SELF.Finalize ) - if multiple monitor objects are used*)(*! to be done: proper finalization of multiple sockets*)
+				pool.Add( SELF, SELF.Finalize )
 			ELSE
 				IF error#NIL THEN error.String("socket=NIL"); error.Ln; error.Update; HALT(200) END;
-				RETURN (* to do: handle failure*)
+				RETURN 
 			END;
 			
 			res:=WSock32.gethostname(hostname, LEN(hostname)); 
@@ -58,31 +63,26 @@ TYPE Monitor*= OBJECT
 			alive:=TRUE;
 		END Init;
 		
-		PROCEDURE Finalize;
+		PROCEDURE Finalize( ptr: ANY );
 		VAR res: LONGINT;
 		BEGIN {EXCLUSIVE}
+			alive:=FALSE;
 			IF socket # WSock32.InvalidSocket THEN
 				res := WSock32.shutdown( socket, WSock32.SDboth );
 				res := WSock32.closesocket( socket );
 				socket := WSock32.InvalidSocket;
 			END;
+			
 		END Finalize;
-		
-		PROCEDURE Die*;
-		BEGIN
-			Finalize;
-			BEGIN{EXCLUSIVE}
-				alive:=FALSE
-			END;
-		END Die;
 		
 	BEGIN{ACTIVE}
 		WHILE alive DO
 			fromLen:=1024;
-			res:=WSock32.recvfrom(socket,buffer,LEN(buffer),0,from,fromLen); 
-			IF res#WSock32.SocketError THEN 
-				(*"res" contains the number of bytes received, as long as it is not SocketError *)
-				handlePacket(interface, buffer, res);
+			len:=WSock32.recvfrom(socket,buffer,LEN(buffer),0,from,fromLen); 
+			IF len#WSock32.SocketError THEN 
+				IF (filter=NIL) OR filter(interface, buffer, len) THEN
+					handlePacket(interface, buffer, len);
+				END;
 			ELSE 
 				IF error#NIL THEN error.String("?"); error.Update; END;
 			END;
@@ -91,6 +91,7 @@ TYPE Monitor*= OBJECT
 
 VAR 
 	monitor:Monitor;
+	pool*: Kernel.FinalizedCollection;
 	log:Streams.Writer;
 	
 (*default datagram handler*)
@@ -101,7 +102,7 @@ BEGIN
 	IF ORD(datagram[0]) DIV 16 # IP.IPv4 THEN HALT(200) END; (*Not yet implemented*)
 	protocol:=ORD(datagram[9]);
 	
-	IF IdentifyInterface & (interface#NIL) THEN (*identify the incoming interface, if multiple exist*)
+	IF IdentifyInterface & (interface#NIL) THEN (*identify the incoming interface*)
 		IP.AdrToStr(interface.localAdr,str);
 		log.String("("); log.String(str); log.String(")"); log.Char(Tab);
 	END;
@@ -149,28 +150,30 @@ END IpToStr;
 PROCEDURE Start*(context:Commands.Context);
 BEGIN
 	IF TRUE THEN
-		NEW(monitor, IP.default, DefaultHandler, context.out, context.error);
+		NEW(monitor, IP.default, DefaultHandler, NIL, context.out, context.error);
 	ELSIF IP.default.next#NIL THEN (*parallel readout not yet thread safe*)
-		NEW(monitor, IP.default.next, DefaultHandler, context.out, context.error);
+		NEW(monitor, IP.default.next, DefaultHandler, NIL, context.out, context.error);
 	END;
 	log:=context.out;
 END Start;
 
 PROCEDURE Stop*;
 BEGIN
-	IF monitor#NIL THEN monitor.Die END;
+	Cleanup;
 END Stop;
 
-PROCEDURE Cleanup*;
+PROCEDURE Finalize( obj: ANY;  VAR cont: BOOLEAN );
 BEGIN
-	IF monitor#NIL THEN 
-		monitor.Die;
-		BEGIN{EXCLUSIVE} AWAIT(~monitor.alive) END;
-		monitor:=NIL;
-	END;
+	obj( Monitor ).Finalize( obj );  cont := TRUE
+END Finalize;
+
+PROCEDURE Cleanup;
+BEGIN
+	pool.Enumerate( Finalize )
 END Cleanup;
 
 BEGIN
+	NEW( pool ); 
 	Modules.InstallTermHandler(Cleanup)
 END IPMonitor.
 
