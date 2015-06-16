@@ -159,7 +159,7 @@ END Start;
 
 PROCEDURE Stop*;
 BEGIN
-	Cleanup;
+	pool.Enumerate( Finalize )
 END Stop;
 
 PROCEDURE Finalize( obj: ANY;  VAR cont: BOOLEAN );
@@ -167,14 +167,9 @@ BEGIN
 	obj( Monitor ).Finalize( obj );  cont := TRUE
 END Finalize;
 
-PROCEDURE Cleanup;
-BEGIN
-	pool.Enumerate( Finalize )
-END Cleanup;
-
 BEGIN
 	NEW( pool ); 
-	Modules.InstallTermHandler(Cleanup)
+	Modules.InstallTermHandler(Stop)
 END IPMonitor.
 
 IPMonitor.Start~
