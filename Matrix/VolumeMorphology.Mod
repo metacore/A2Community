@@ -1,6 +1,9 @@
 MODULE VolumeMorphology; (** AUTHOR "Patrick Hunziker, Dima Shulga"; PURPOSE "Mathematical Morphology operators in 3¦D"; *)
 
-(** Mathematical Morphology operators, see wikipedia "Mathematical Morphology".
+(** Mathematical Morphology operators, see wikipedia "Mathematical Morphology":
+Erosion, Dilation, Opening, Closure. 
+Edge. 
+
 They work on either binary or floating point datasets, have concise interfaces and are suited for high performance,
 by making use of suitable implementation features of MathArrays etcs.
 
@@ -11,6 +14,8 @@ Applications include edge detection with noise elimination.
 the other variants use an arbitrary structuring element. 
 operation can be restricted to certain dimensions; the empty set parameter indicates all dimensions. (not yet implemented)
 *)
+
+(*! to do: choice of directions not yet imiplemented.*)
 
 IMPORT MatrixBase, WMStack, Commands, MatrixUtilities, Random;
 
@@ -39,17 +44,35 @@ BEGIN
 	RETURN n;
 END NNZ;
 
-PROCEDURE BinarySimpleErosion*(CONST t:BinaryVolume; directions:SET):BinaryVolume;
-VAR res:BinaryVolume;
+(* replace by generic ALL(x,y,op) as soon as the compiler supports it*)
+PROCEDURE All2(CONST x: ARRAY [?] OF MatrixBase.Datatype; y: ARRAY [?] OF BOOLEAN; func: PROCEDURE{DELEGATE}(v: MatrixBase.Datatype; w:BOOLEAN): MatrixBase.Datatype): ARRAY [?] OF MatrixBase.Datatype;
+VAR i: LONGINT;
 BEGIN
-	IF (DIM(res)=0) OR (LEN(res,0)=0) THEN NEW(res, LEN(t)) END;
-	res[1.., ..,..]:= t[1.., ..,..] & t[..LEN(t,0)-2, ..,..]; 
-	res[..LEN(res,0)-2, ..,..]:= res[..LEN(res,0)-2, ..,..] & res[1.., ..,..]; 
-	res[.., 1.., ..]:= res[.., 1.., ..] & res[.., ..LEN(res,1)-2, ..]; 
-	res[.., ..LEN(res,1)-2, ..]:= res[.., ..LEN(res,1)-2, ..] & res[.., 1.., ..]; 
-	res[.., .., 1..]:= res[.., .., 1..] & res[.., .., ..LEN(res,2)-2]; 
-	res[.., .., ..LEN(res,2)-2]:= res[.., .., ..LEN(res,2)-2] & res[.., .., 1..]; 
-	RETURN res
+	IF DIM(x) = 1 THEN (* last level of recursion *)
+		FOR i := 0 TO LEN(x,0)-1 DO
+			RESULT[i] := func(x[i],y[i]);
+		END;
+	ELSE
+		FOR i := 0 TO LEN(x,0)-1 DO
+			RESULT[i,?] := All2(x[i,?],y[i,?],func);
+		END;
+	END;
+	RETURN RESULT;
+END All2;
+
+
+PROCEDURE BinarySimpleErosion*(CONST t:BinaryVolume; directions:SET):BinaryVolume;
+VAR l0,l1,l2: LONGINT;
+BEGIN
+	IF (DIM(RESULT)=0) OR (LEN(RESULT,0)=0) THEN NEW(RESULT, LEN(t)) END;
+	l0:=LEN(t,0); l1:=LEN(t,1); l2:=LEN(t,2);
+	RESULT[1.., ..,..]:= t[1.., ..,..] & t[..l0-2, ..,..]; 
+	RESULT[..l0-2, ..,..]:= RESULT[..l0-2, ..,..] & RESULT[1.., ..,..]; 
+	RESULT[.., 1.., ..]:= RESULT[.., 1.., ..] & RESULT[.., ..l1-2, ..]; 
+	RESULT[.., ..l1-2, ..]:= RESULT[.., ..l1-2, ..] & RESULT[.., 1.., ..]; 
+	RESULT[.., .., 1..]:= RESULT[.., .., 1..] & RESULT[.., .., ..l2-2]; 
+	RESULT[.., .., ..l2-2]:= RESULT[.., .., ..l2-2] & RESULT[.., .., 1..]; 
+	RETURN RESULT
 END BinarySimpleErosion;
 
 
@@ -83,39 +106,67 @@ END BinaryErosion;
 
 
 PROCEDURE SimpleErosion*(CONST t:Volume; directions:SET):Volume;
-VAR res:Volume; len0, len1: ARRAY [*] OF LONGINT;
+VAR  l0,l1,l2: LONGINT;
 BEGIN
-	IF (DIM(res)=0) OR (LEN(res,0)=0) THEN NEW(res, LEN(t)) END;
-	len0:=LEN(t[1.., ..,..]);
-	len1:=LEN(t[..LEN(t,0)-2, ..,..]);
-	TRACE(LEN(t[1.., ..,..],0), LEN(t[1.., ..,..],1), LEN(t[1.., ..,..],2));
-	TRACE(LEN(t[..LEN(t,0)-2, ..,..],0),LEN(t[..LEN(t,0)-2, ..,..],1),LEN(t[..LEN(t,0)-2, ..,..],2));
-	res[1.., ..,..]:= MIN(t[1.., ..,..], t[..LEN(t,0)-2, ..,..]); 
-	res[..LEN(res,0)-2, ..,..]:= MIN(res[..LEN(res,0)-2, ..,..], res[1.., ..,..]); 
-	res[.., 1.., ..]:= MIN(res[.., 1.., ..], res[.., ..LEN(res,1)-2, ..]); 
-	res[.., ..LEN(res,1)-2, ..]:= MIN(res[.., ..LEN(res,1)-2, ..], res[.., 1.., ..]); 
-	res[.., .., 1..]:= MIN(res[.., .., 1..], res[.., .., ..LEN(res,2)-2]); 
-	res[.., .., ..LEN(res,2)-2]:= MIN(res[.., .., ..LEN(res,2)-2], res[.., .., 1..]); 
-	RETURN res
+	IF (DIM(RESULT)=0) OR (LEN(RESULT,0)=0) THEN NEW(RESULT, LEN(t)) END;
+	l0:=LEN(t,0); l1:=LEN(t,1); l2:=LEN(t,2);
+	RESULT[1.., ..,..]:= MIN(t[1.., ..,..], t[..l0-2, ..,..]); 
+	RESULT[..l0-2, ..,..]:= MIN(RESULT[..l0-2, ..,..], RESULT[1.., ..,..]); 
+	RESULT[.., 1.., ..]:= MIN(RESULT[.., 1.., ..], RESULT[.., ..l1-2, ..]); 
+	RESULT[.., ..l1-2, ..]:= MIN(RESULT[.., ..l1-2, ..], RESULT[.., 1.., ..]); 
+	RESULT[.., .., 1..]:= MIN(RESULT[.., .., 1..], RESULT[.., .., ..l2-2]); 
+	RESULT[.., .., ..l2-2]:= MIN(RESULT[.., .., ..l2-2], RESULT[.., .., 1..]); 
+	RETURN RESULT
 END SimpleErosion;
 
-(*
-PROCEDURE Erosion(CONST t:Volume; CONST structure:Volume):Volume;
-BEGIN
-END Erosion;
+
+(**
+	Erosion of 3D volume with structuring element
+	volume: volume to be processed
+	se: structuring element 
 *)
+PROCEDURE Erosion*(CONST volume,se:Volume):Volume;
+VAR 
+	e,c:Volume;
+	k0,k1,k2,m0,m1,m2: LONGINT;	
+BEGIN
+		HALT(200); (*! do do: use generic ALL operator. (will be delivered by Alexey for binary procedures)
+		use it with 
+			PROCEDURE Mask(data: Datatype; selector: BOOLEAN): Datatype;
+		Remove dependence from module Spaces.
+		Use 
+		*)
+(*
+	NEW(e, LEN(volume));
+	NEW(c,LEN(se));
+	m0 := LEN(se,0) DIV 2;
+	m1 := LEN(se,1) DIV 2;
+	m2 := LEN(se,2) DIV 2;
+	FOR k0 := m0 TO LEN(volume,0)-1-m0 DO	
+		FOR k1 := m1 TO LEN(volume,1)-1-m1 DO	
+			FOR k2 := m2 TO LEN(volume,2)-1-m2 DO
+				c := volume[k0-m0..k0+m0, k1-m1..k1+m1, k2-m2..k2+m2];											
+				c := All2(c,se,MaskCondition); 									
+				e[k0,k1,k2] := MIN(c[*]);
+			END;
+		END;
+	END;
+	*)
+	RETURN e;	
+END Erosion;
 
 PROCEDURE BinarySimpleDilation*(CONST t:BinaryVolume; directions:SET):BinaryVolume;
-VAR res:BinaryVolume;
+VAR l0,l1,l2: LONGINT;
 BEGIN
-	IF (DIM(res)=0) OR (LEN(res,0)=0) THEN NEW(res, LEN(t)) END;
-	res[1.., ..,..]:= t[1.., ..,..] OR t[..LEN(t,0)-2, ..,..]; 
-	res[..LEN(res,0)-2, ..,..]:= res[..LEN(res,0)-2, ..,..] OR res[1.., ..,..]; 
-	res[.., 1.., ..]:= res[.., 1.., ..] OR res[.., ..LEN(res,1)-2, ..]; 
-	res[.., ..LEN(res,1)-2, ..]:= res[.., ..LEN(res,1)-2, ..] OR res[.., 1.., ..]; 
-	res[.., .., 1..]:= res[.., .., 1..] OR res[.., .., ..LEN(res,2)-2]; 
-	res[.., .., ..LEN(res,2)-2]:= res[.., .., ..LEN(res,2)-2] OR res[.., .., 1..]; 
-	RETURN res
+	IF (DIM(RESULT)=0) OR (LEN(RESULT,0)=0) THEN NEW(RESULT, LEN(t)) END;
+	l0:=LEN(t,0); l1:=LEN(t,1); l2:=LEN(t,2);
+	RESULT[1.., ..,..]:= t[1.., ..,..] OR t[..l0-2, ..,..]; 
+	RESULT[..l0-2, ..,..]:= RESULT[..l0-2, ..,..] OR RESULT[1.., ..,..]; 
+	RESULT[.., 1.., ..]:= RESULT[.., 1.., ..] OR RESULT[.., ..l1-2, ..]; 
+	RESULT[.., ..l1-2, ..]:= RESULT[.., ..l1-2, ..] OR RESULT[.., 1.., ..]; 
+	RESULT[.., .., 1..]:= RESULT[.., .., 1..] OR RESULT[.., .., ..l2-2]; 
+	RESULT[.., .., ..l2-2]:= RESULT[.., .., ..l2-2] OR RESULT[.., .., 1..]; 
+	RETURN RESULT
 END BinarySimpleDilation;
 
 (**
@@ -144,22 +195,49 @@ END BinaryDilation;
 
 
 PROCEDURE SimpleDilation*(CONST t:Volume; directions:SET):Volume;
-VAR res:Volume;
+VAR l0,l1,l2: LONGINT;
 BEGIN
-	IF (DIM(res)=0) OR (LEN(res,0)=0) THEN NEW(res, LEN(t)) END;
-	res[1.., ..,..]:= MAX(t[1.., ..,..], t[..LEN(t,0)-2, ..,..]); 
-	res[..LEN(res,0)-2, ..,..]:= MAX(res[..LEN(res,0)-2, ..,..], res[1.., ..,..]); 
-	res[.., 1.., ..]:= MAX(res[.., 1.., ..], res[.., ..LEN(res,1)-2, ..]); 
-	res[.., ..LEN(res,1)-2, ..]:= MAX(res[.., ..LEN(res,1)-2, ..], res[.., 1.., ..]); 
-	res[.., .., 1..]:= MAX(res[.., .., 1..], res[.., .., ..LEN(res,2)-2]); 
-	res[.., .., ..LEN(res,2)-2]:= MAX(res[.., .., ..LEN(res,2)-2], res[.., .., 1..]); 
-	RETURN res
+	IF (DIM(RESULT)=0) OR (LEN(RESULT,0)=0) THEN NEW(RESULT, LEN(t)) END;
+	l0:=LEN(t,0); l1:=LEN(t,1); l2:=LEN(t,2);
+	RESULT[1.., ..,..]:= MAX(t[1.., ..,..], t[..l0-2, ..,..]); 
+	RESULT[..l0-2, ..,..]:= MAX(RESULT[..l0-2, ..,..], RESULT[1.., ..,..]); 
+	RESULT[.., 1.., ..]:= MAX(RESULT[.., 1.., ..], RESULT[.., ..l1-2, ..]); 
+	RESULT[.., ..l1-2, ..]:= MAX(RESULT[.., ..l1-2, ..], RESULT[.., 1.., ..]); 
+	RESULT[.., .., 1..]:= MAX(RESULT[.., .., 1..], RESULT[.., .., ..l2-2]); 
+	RESULT[.., .., ..l2-2]:= MAX(RESULT[.., .., ..l2-2], RESULT[.., .., 1..]); 
+	RETURN RESULT
 END SimpleDilation;
-(*
-PROCEDURE Dilation(CONST t:Volume; CONST structure:Volume):Volume;
-BEGIN
-END Dilation;
+
+(**
+	Dilation of 3D volume with structuring element
+	volume: volume to be processed
+	se: structuring element
 *)
+PROCEDURE Dilation*(CONST volume,se:Volume):Volume;
+VAR 
+	d,c:Volume;
+	k0,k1,k2,m0,m1,m2: LONGINT;	
+BEGIN
+	HALT(200); (*! do do: use generic ALL operator. Remove dependence from module Spaces*)
+	(*
+	NEW(d, LEN(volume));
+	NEW(c,LEN(volume));
+	m0 := LEN(se,0) DIV 2;
+	m1 := LEN(se,1) DIV 2;
+	m2 := LEN(se,2) DIV 2;
+	FOR k0 := m0 TO LEN(volume,0)-1-m0 DO	
+		FOR k1 := m1 TO LEN(volume,1)-1-m1 DO	
+			FOR k2 := m2 TO LEN(volume,2)-1-m2 DO
+				c := volume[k0-m0..k0+m0, k1-m1..k1+m1, k2-m2..k2+m2];
+				c := Spaces.ForAll2(c,se,MaskCondition); 									
+				d[k0,k1,k2] := MAX(c[*]);
+			END;
+		END;
+	END;
+	*)
+	RETURN d;	
+END Dilation;
+
 PROCEDURE BinarySimpleOpening*(CONST t:BinaryVolume; directions:SET):BinaryVolume;
 BEGIN
 	RETURN BinarySimpleDilation(BinarySimpleErosion(t,{}),{});
@@ -304,3 +382,7 @@ END VolumeMorphology.
 
 VolumeMorphology.Test ~
 VolumeMorphology.TestBinary ~
+
+SystemTools.FreeDownTo VolumeMorphology ~
+SystemTools.FreeDownTo WMMatrix ~
+SystemTools.FreeDownTo WMStack ~
