@@ -1,0 +1,347 @@
+MODULE VolumeBoundaries; 	(** AUTHOR "D. Shulga, 2015"; PURPOSE "Utilities for determination of volume boundary determination and application of boundary conditions"; *)
+
+(* implements boundary conditions frequently used in engineering: 
+Dirichlet = 1st type BC: specify the values that a solution needs to take on along the boundary of the domain. (see wikipedia "Dirichlet boundary conditions")
+Neumann BC = 2nd type BC: specify the values that the derivative of a solution is to take on the boundary of the domain.(see wikipedia "Neumann boundary conditions")
+Mixed boundary condition: not yet implemented
+Cauchy boundary condition: not yet implemented
+Robin boundary condition: not yet implemented
+
+when using specific types of signal processing, e.g. spline algorithms, other boundaries are also of interest,
+e.g. various types of mirror boundary conditions, cyclic boundary conditions, ...
+(to be implemented)
+*)
+
+
+IMPORT MatrixBase, MatrixUtilities, VolumeMorphology, Files, Streams; 
+
+CONST GridNotFound=123;
+
+TYPE 
+	BinaryVolume* = ARRAY [*,*,*] OF BOOLEAN;
+	Volume* = ARRAY [*,*,*] OF MatrixBase.Datatype;
+	VectorField* = ARRAY [*,*,*,*] OF MatrixBase.Datatype;
+	ScalarField* = ARRAY [*,*,*] OF MatrixBase.Datatype;
+
+	VolumeContainer* = RECORD
+		v*: BinaryVolume;   (* volume itself *)	
+		N0*,N1*,N2*: LONGINT; (* volume sizes *)
+		os*: BinaryVolume; (* outer surface of the volume*)
+		is*: BinaryVolume; (* inner surface of the volume*)			
+		name*: ARRAY 512 OF CHAR;
+	END;	
+
+	VolumeDomain* = OBJECT
+	CONST		
+		(*name0 = "booleanVolume256x256x1024.MtA";
+		name1 = "booleanVolume128x128x512.MtA";
+		name2 = "booleanVolume64x64x256.MtA";
+		name3 = "booleanVolume32x32x128.MtA";
+		name4 = "booleanVolume16x16x64.MtA";
+		*)
+					
+	VAR					
+		volumes*: ARRAY [*] OF VolumeContainer;
+		index*: LONGINT; (* current container index *)
+		p0,rho,dt: MatrixBase.Datatype;
+	
+		PROCEDURE &Init*(CONST name: ARRAY OF ARRAY OF CHAR; p0,rho,dt: MatrixBase.Datatype);
+		VAR i:LONGINT;
+		BEGIN
+			SELF.p0 := p0;
+			SELF.rho := rho;
+			SELF.dt := dt;
+			
+			NEW(volumes, LEN(name,0));
+			FOR i:=0 TO LEN(name,0)-1 DO
+				volumes[i].v := ReadBinaryVolume(name[i]);
+				ComputeVolumeContainer(volumes[i]);	
+			END;	
+		END Init;
+										
+		PROCEDURE ComputeVolumeContainer(VAR vc: VolumeContainer);
+		BEGIN		
+			vc.N0 := LEN(vc.v,0);
+			vc.N1 := LEN(vc.v,1);
+			vc.N2 := LEN(vc.v,2);														
+			IF log#NIL THEN log.String("Compute outer and inner surface ... "); log.Ln; log.Update; END;
+			vc.os := FindOuterSurface(vc.v); 
+			vc.is := FindInnerSurface(vc.v);
+		END ComputeVolumeContainer;		
+																					
+		PROCEDURE FlowBoundaries*(VAR field: Volume);
+		VAR
+			k,N0,N1,N2: LONGINT;
+			vc: VolumeContainer;
+		BEGIN
+			N0 := LEN(field,0);
+			N1 := LEN(field,1);
+			N2 := LEN(field,2);					
+			FOR k:=0 TO LEN(volumes,0)-1 DO
+				IF (N0 = volumes[k].N0) & (N1 = volumes[k].N1) & (N2 = volumes[k].N2) THEN
+					index := k;
+					vc := volumes[k];
+					DirichletBC(field, vc.is, 0);	 (* set field to zero at inner surface *)
+					DirichletBC(field, ~vc.v, 0);  (* set field to zero outside the domain *)	
+					RETURN;
+				
+				END;
+			END;		
+			HALT(GridNotFound);									
+		END FlowBoundaries;
+				
+		PROCEDURE PressureBoundaries*(VAR p: Volume);
+		BEGIN
+			PressureBoundaries0(p);
+			PressureBoundariesDelta(p);												
+		END PressureBoundaries;
+		
+		PROCEDURE PressureBoundaries0*(VAR p: Volume);
+		VAR
+			k,k0,k1,N0,N1,N2: LONGINT;
+			vc: VolumeContainer;
+		BEGIN			
+			N0 := LEN(p,0);
+			N1 := LEN(p,1);
+			N2 := LEN(p,2);	
+			FOR k:=0 TO LEN(volumes,0)-1 DO
+				IF (N0 = volumes[k].N0) & (N1 = volumes[k].N1) & (N2 = volumes[k].N2) THEN	
+					index := k;
+					vc := volumes[k];										
+					FOR k0:=0 TO LEN(vc.v,0)-1 DO
+						FOR k1:=0 TO LEN(vc.v,1)-1 DO												
+								IF(vc.v[k0,k1,0]=TRUE) THEN
+									p[k0,k1,0] := p0;
+								END;				
+								IF(vc.v[k0,k1,LEN(p,2)-1]=TRUE) THEN
+									p[k0,k1,LEN(p,2)-1] := -p0;
+								END;										
+						END;	
+					END;									
+					RETURN;
+				END;
+			END;			
+			HALT(GridNotFound);										
+		END PressureBoundaries0;
+		
+		(**
+			Zero pressure gradient perpendicular to wall
+		*)
+		PROCEDURE PressureBoundariesDelta*(VAR p: Volume);
+		VAR
+			k,N0,N1,N2: LONGINT;
+			vc: VolumeContainer;
+		BEGIN
+			N0 := LEN(p,0);
+			N1 := LEN(p,1);
+			N2 := LEN(p,2);					
+			FOR k:=0 TO LEN(volumes,0)-1 DO
+				IF (N0 = volumes[k].N0) & (N1 = volumes[k].N1) & (N2 = volumes[k].N2) THEN
+					index := k;
+					vc := volumes[k];					
+					NeumannBC2(p, vc.v, vc.is, vc.os); (* apply zero gradient pressure on boundary *)
+					RETURN;
+				END;
+			END;			
+			HALT(GridNotFound);																	
+		END PressureBoundariesDelta;
+		
+		(*pressure changed per step: 
+		-on locations with external pressure boundary conditions, no change
+		- zero pressure gradient perpendicular to the wall*)
+		PROCEDURE PressureBoundariesPDT*(VAR p: Volume);
+		VAR
+			k,N0,N1,N2: LONGINT;
+			vc: VolumeContainer;
+		BEGIN
+			N0 := LEN(p,0);
+			N1 := LEN(p,1);
+			N2 := LEN(p,2);
+								
+			FOR k:=0 TO LEN(volumes,0)-1 DO
+				IF (N0 = volumes[k].N0) & (N1 = volumes[k].N1) & (N2 = volumes[k].N2) THEN
+					index := k;
+					vc := volumes[k];
+					DirichletBC(p, ~vc.v, 0);  (* set field to zero outside the domain v *)		
+					p[..,..,0]:=0; (* no pressure gradient on inlet, as pressure there is an external boundary condition*)
+					p[..,..,N2-1]:=0; (*no pressure gradient on outlet, as pressure there is an external boundary condition*)
+					RETURN;
+				END;
+			END;			
+			HALT(GridNotFound);				
+		END PressureBoundariesPDT;
+	END VolumeDomain;
+
+VAR log*: Streams.Writer;
+
+PROCEDURE ReadBinaryVolume*(CONST filename: ARRAY OF CHAR): BinaryVolume;	
+VAR
+	file: Files.File;
+	fr: Files.Reader;
+	vol: Volume;
+BEGIN
+	file := Files.Old(filename);		
+	ASSERT(file # NIL);
+	Files.OpenReader(fr, file, 0);
+	vol := MatrixUtilities.LoadLR(fr);
+	file.Close;	
+	RETURN vol.>0;
+END ReadBinaryVolume;
+
+PROCEDURE FindOuterSurface*(CONST domain: BinaryVolume): BinaryVolume;
+BEGIN
+	RETURN VolumeMorphology.BinarySimpleDilation(domain,{})  & ~domain;	
+END FindOuterSurface;
+
+PROCEDURE FindInnerSurface*(CONST domain: BinaryVolume): BinaryVolume;
+BEGIN
+	RETURN domain & ~VolumeMorphology.BinarySimpleErosion(domain,{}) ;
+END FindInnerSurface;
+
+(**
+	Applies Neumann Boundary Condition for scalar field
+	p: Scalar Field
+	volume: BinaryVolume
+	mode: choose the mode to assign values to the boundary
+		1: MAX(neighbours); ('innerSurface' is not used here)
+		2: Average(nonzero neighbours)
+*)
+PROCEDURE NeumannBC*(VAR p: ScalarField; CONST volume, innerSurface, outerSurface: BinaryVolume; mode: LONGINT);
+BEGIN
+	CASE mode OF
+	1: NeumannBC1(p,volume,innerSurface, outerSurface);
+	|2: NeumannBC2(p,volume, innerSurface,outerSurface);
+	ELSE HALT(200)
+	END;
+END NeumannBC;
+
+PROCEDURE NeumannBC1(VAR p: ScalarField; CONST volume, innerSurface, outerSurface: BinaryVolume);
+VAR
+	k0,k1,k2: LONGINT;
+	tmp: ScalarField; (* as a local variable, tmp is always allocated again => move to object*)
+	e:  MatrixBase.Datatype;
+BEGIN
+	tmp := p;
+	(* set values outside of domain to min(datatype) *)			
+	FOR k0:=0 TO LEN(volume,0)-1 DO
+		FOR k1:=0 TO LEN(volume,1)-1 DO
+			FOR k2:=0 TO LEN(volume,2)-1 DO						
+				IF(volume[k0,k1,k2]=FALSE) THEN
+					p[k0,k1,k2] := MIN(MatrixBase.Datatype);
+				END;				
+			END;	
+		END;	
+	END;		
+	p := VolumeMorphology.SimpleDilation(p,{});		(* this will change p inside the domain, which is not desirable*)
+	
+	DirichletBC(p, ~outerSurface, 0);	 (* left p values only at outer surface*)			
+	e := SUM(p)/NNZ(outerSurface);
+		
+	DirichletBC(tmp, ~volume, 0);	 (* left tmp values only inside the volume *)							
+	p := tmp + p;				
+
+	DirichletBC(p, ~(volume OR outerSurface), e);	 (* fill out volume with avarage extension *)	
+
+END NeumannBC1;
+
+(**
+	Applies Neumann Boundary Condition for scalar field
+	p: Scalar Field
+	volume: BinaryVolume
+*)
+PROCEDURE NeumannBC2(VAR p: ScalarField; CONST volume, innerSurface, outerSurface: BinaryVolume);
+VAR
+	k0,k1,k2: LONGINT;
+	w: ARRAY [3,3,3] OF BOOLEAN;
+	pp: ARRAY [3,3,3] OF MatrixBase.Datatype;
+BEGIN	
+	FOR k0:=0 TO LEN(outerSurface,0)-1 DO
+		FOR k1:=0 TO LEN(outerSurface,1)-1 DO
+			FOR k2:=0 TO LEN(outerSurface,2)-1 DO						
+				IF outerSurface[k0,k1,k2] THEN
+					IF (k0-1 >=0) & (k1-1 >=0) & (k2-1 >=0) &
+					    (k0+1< LEN(outerSurface,0)) & (k1+1< LEN(outerSurface,1)) & (k2+1< LEN(outerSurface,2)) THEN
+							w := innerSurface[k0-1..k0+1,k1-1..k1+1,k2-1..k2+1];
+							pp := p[k0-1..k0+1,k1-1..k1+1,k2-1..k2+1];
+							pp := ForAll2(pp,w,Condition);
+							p[k0,k1,k2] := SUM(pp[*])/NNZ(w);
+					END;
+				END;				
+			END;	
+		END;	
+	END;		
+	
+	DirichletBC(p, ~(volume OR outerSurface), 0);	 (* fill out volume with zeros *)	
+	
+END NeumannBC2;
+
+PROCEDURE Condition(v:MatrixBase.Datatype; w: BOOLEAN): MatrixBase.Datatype;
+BEGIN
+	IF w THEN
+		RETURN v;
+	ELSE
+		RETURN 0;
+	END
+END Condition;
+
+PROCEDURE ForAll2(CONST x: ARRAY [?] OF MatrixBase.Datatype; y: ARRAY [?] OF BOOLEAN; func: PROCEDURE{DELEGATE}(v: MatrixBase.Datatype; w:BOOLEAN): MatrixBase.Datatype): ARRAY [?] OF MatrixBase.Datatype;
+VAR i: LONGINT;
+BEGIN
+	IF DIM(x) = 1 THEN (* last level of recursion *)
+		FOR i := 0 TO LEN(x,0)-1 DO
+			RESULT[i] := func(x[i],y[i]);
+		END;
+	ELSE
+		FOR i := 0 TO LEN(x,0)-1 DO
+			RESULT[i,?] := ForAll2(x[i,?],y[i,?],func);
+		END;
+	END;
+	RETURN RESULT;
+END ForAll2;
+
+(**
+	Sets values of scalar field "u" to "u0" in points defined by "volume" : u(volume) := u0;
+*)
+PROCEDURE DirichletBC*(VAR u: ScalarField; CONST volume: BinaryVolume; u0: MatrixBase.Datatype);
+VAR
+	k0,k1,k2: LONGINT;
+BEGIN
+	FOR k0:=0 TO LEN(volume,0)-1 DO
+		FOR k1:=0 TO LEN(volume,1)-1 DO
+			FOR k2:=0 TO LEN(volume,2)-1 DO
+				IF volume[k0,k1,k2] THEN	u[k0,k1,k2] := u0 END;
+			END;	
+		END;	
+	END;
+END DirichletBC;
+
+(**
+Number of nonzero elements in binary volume
+s: binary volume
+*)	
+PROCEDURE NNZ(s: BinaryVolume): LONGINT;
+VAR
+	k0,k1,k2,n: LONGINT;
+BEGIN
+	n := 0;
+	FOR k0:=0 TO LEN(s,0)-1 DO
+		FOR k1:=0 TO LEN(s,1)-1 DO
+			FOR k2:=0 TO LEN(s,2)-1 DO
+				IF s[k0,k1,k2] THEN INC(n);
+				END;	
+			END;	
+		END;	
+	END;
+	RETURN n;
+END NNZ;
+
+END VolumeBoundaries.
+
+
+SystemTools.FreeDownTo VolumeBoundaries ~
+
+
+
+
+
+
