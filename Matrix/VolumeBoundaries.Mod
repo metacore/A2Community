@@ -43,12 +43,13 @@ TYPE
 	VAR					
 		volumes*: ARRAY [*] OF VolumeContainer;
 		index*: LONGINT; (* current container index *)
-		p0,rho,dt: MatrixBase.Datatype;
+		pInlet, pOutlet, rho, dt: MatrixBase.Datatype;
 	
-		PROCEDURE &Init*(CONST names: ARRAY OF ARRAY OF CHAR; p0,rho,dt: MatrixBase.Datatype);
+		PROCEDURE &Init*(CONST names: ARRAY OF ARRAY OF CHAR; pInlet,pOutlet,rho,dt: MatrixBase.Datatype);
 		VAR i:LONGINT;
 		BEGIN
-			SELF.p0 := p0;
+			SELF.pInlet := pInlet;
+			SELF.pOutlet:=pOutlet;
 			SELF.rho := rho;
 			SELF.dt := dt;
 
@@ -97,11 +98,11 @@ TYPE
 				
 		PROCEDURE PressureBoundaries*(VAR p: Volume);
 		BEGIN
-			PressureBoundaries0(p);
+			PressureBoundaries0(p, pInlet,pOutlet);
 			PressureBoundariesDelta(p);												
 		END PressureBoundaries;
 		
-		PROCEDURE PressureBoundaries0*(VAR p: Volume);
+		PROCEDURE PressureBoundaries0*(VAR p: Volume; pI,pO:MatrixBase.Datatype);
 		VAR
 			k,k0,k1,N0,N1,N2: LONGINT;
 			vc: VolumeContainer;
@@ -116,10 +117,10 @@ TYPE
 					FOR k0:=0 TO LEN(vc.v,0)-1 DO
 						FOR k1:=0 TO LEN(vc.v,1)-1 DO												
 								IF(vc.v[k0,k1,0]=TRUE) THEN
-									p[k0,k1,0] := p0;
+									p[k0,k1,0] := pI;
 								END;				
 								IF(vc.v[k0,k1,LEN(p,2)-1]=TRUE) THEN
-									p[k0,k1,LEN(p,2)-1] := -p0;
+									p[k0,k1,LEN(p,2)-1] := pO;
 								END;										
 						END;	
 					END;									
