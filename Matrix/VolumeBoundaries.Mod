@@ -23,7 +23,7 @@ TYPE
 	VectorField* = ARRAY [*,*,*,*] OF MatrixBase.Datatype;
 	ScalarField* = ARRAY [*,*,*] OF MatrixBase.Datatype;
 
-	VolumeContainer* = RECORD
+	VolumeContainer* = POINTER TO RECORD	
 		v*: BinaryVolume;   (* volume itself *)	
 		N0*,N1*,N2*: LONGINT; (* volume sizes *)
 		os*: BinaryVolume; (* outer surface of the volume*)
@@ -45,16 +45,21 @@ TYPE
 		index*: LONGINT; (* current container index *)
 		p0,rho,dt: MatrixBase.Datatype;
 	
-		PROCEDURE &Init*(CONST name: ARRAY OF ARRAY OF CHAR; p0,rho,dt: MatrixBase.Datatype);
+		PROCEDURE &Init*(CONST names: ARRAY OF ARRAY OF CHAR; p0,rho,dt: MatrixBase.Datatype);
 		VAR i:LONGINT;
 		BEGIN
 			SELF.p0 := p0;
 			SELF.rho := rho;
 			SELF.dt := dt;
+
+			NEW(volumes, LEN(names,0));			
+			FOR i:=0 TO LEN(volumes,0)-1 DO
+				NEW(volumes[i]);
+			END;
 			
-			NEW(volumes, LEN(name,0));
-			FOR i:=0 TO LEN(name,0)-1 DO
-				volumes[i].v := ReadBinaryVolume(name[i]);
+			
+			FOR i:=0 TO LEN(names,0)-1 DO
+				volumes[i].v := ReadBinaryVolume(names[i]);
 				ComputeVolumeContainer(volumes[i]);	
 			END;	
 		END Init;
@@ -149,22 +154,23 @@ TYPE
 		(*pressure changed per step: 
 		-on locations with external pressure boundary conditions, no change
 		- zero pressure gradient perpendicular to the wall*)
-		PROCEDURE PressureBoundariesPDT*(VAR p: Volume);
+		PROCEDURE PressureBoundariesPDT*(VAR dp: Volume);
 		VAR
 			k,N0,N1,N2: LONGINT;
 			vc: VolumeContainer;
 		BEGIN
-			N0 := LEN(p,0);
-			N1 := LEN(p,1);
-			N2 := LEN(p,2);
+			N0 := LEN(dp,0);
+			N1 := LEN(dp,1);
+			N2 := LEN(dp,2);
 								
 			FOR k:=0 TO LEN(volumes,0)-1 DO
 				IF (N0 = volumes[k].N0) & (N1 = volumes[k].N1) & (N2 = volumes[k].N2) THEN
 					index := k;
 					vc := volumes[k];
-					DirichletBC(p, ~vc.v, 0);  (* set field to zero outside the domain v *)		
-					p[..,..,0]:=0; (* no pressure gradient on inlet, as pressure there is an external boundary condition*)
-					p[..,..,N2-1]:=0; (*no pressure gradient on outlet, as pressure there is an external boundary condition*)
+					DirichletBC(dp, ~vc.v, 0);  (* no pressure update outside the domain v *)		
+					dp[..,..,0]:=0; (* no pressure update on inlet, as pressure there is an external boundary condition*)
+					dp[..,..,N2-1]:=0; (*no pressure update on outlet, as pressure there is an external boundary condition*)
+					(*! boundary handling along walls needed here: the outer layer should interit the same pressure change as is observed in the inner layer*)
 					RETURN;
 				END;
 			END;			
@@ -179,13 +185,15 @@ VAR
 	file: Files.File;
 	fr: Files.Reader;
 	vol: Volume;
+	volume: BinaryVolume;
 BEGIN
 	file := Files.Old(filename);		
 	ASSERT(file # NIL);
 	Files.OpenReader(fr, file, 0);
 	vol := MatrixUtilities.LoadLR(fr);
 	file.Close;	
-	RETURN vol.>0;
+	volume:=vol.>0;
+	RETURN volume;
 END ReadBinaryVolume;
 
 PROCEDURE FindOuterSurface*(CONST domain: BinaryVolume): BinaryVolume;
@@ -270,9 +278,9 @@ BEGIN
 			END;	
 		END;	
 	END;		
-	
-	DirichletBC(p, ~(volume OR outerSurface), 0);	 (* fill out volume with zeros *)	
-	
+	(*
+	DirichletBC(p, ~(volume OR outerSurface), 0);	 (* fill out volume with zeros - not physical*)	
+	*)
 END NeumannBC2;
 
 PROCEDURE Condition(v:MatrixBase.Datatype; w: BOOLEAN): MatrixBase.Datatype;
