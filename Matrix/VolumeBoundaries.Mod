@@ -98,11 +98,11 @@ TYPE
 				
 		PROCEDURE PressureBoundaries*(VAR p: Volume);
 		BEGIN
-			PressureBoundaries0(p, pInlet,pOutlet);
+			PressureBoundaries0(p);
 			PressureBoundariesDelta(p);												
 		END PressureBoundaries;
 		
-		PROCEDURE PressureBoundaries0*(VAR p: Volume; pI,pO:MatrixBase.Datatype);
+		PROCEDURE PressureBoundaries0*(VAR p: Volume);
 		VAR
 			k,k0,k1,N0,N1,N2: LONGINT;
 			vc: VolumeContainer;
@@ -117,10 +117,10 @@ TYPE
 					FOR k0:=0 TO LEN(vc.v,0)-1 DO
 						FOR k1:=0 TO LEN(vc.v,1)-1 DO												
 								IF(vc.v[k0,k1,0]=TRUE) THEN
-									p[k0,k1,0] := pI;
+									p[k0,k1,0] := pInlet;
 								END;				
 								IF(vc.v[k0,k1,LEN(p,2)-1]=TRUE) THEN
-									p[k0,k1,LEN(p,2)-1] := pO;
+									p[k0,k1,LEN(p,2)-1] := pOutlet;
 								END;										
 						END;	
 					END;									
