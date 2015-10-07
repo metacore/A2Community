@@ -3,13 +3,21 @@ MODULE VolumeBoundaries; 	(** AUTHOR "D. Shulga, 2015"; PURPOSE "Utilities for d
 (* implements boundary conditions frequently used in engineering: 
 Dirichlet = 1st type BC: specify the values that a solution needs to take on along the boundary of the domain. (see wikipedia "Dirichlet boundary conditions")
 Neumann BC = 2nd type BC: specify the values that the derivative of a solution is to take on the boundary of the domain.(see wikipedia "Neumann boundary conditions")
+Robin boundary condition=3rd type BC: not yet implemented
 Mixed boundary condition: not yet implemented
 Cauchy boundary condition: not yet implemented
-Robin boundary condition: not yet implemented
+
+Robin boundary conditions are a weighted combination of Dirichlet boundary conditions and Neumann boundary conditions. 
+This contrasts to mixed boundary conditions, which are boundary conditions of different types specified on different subsets of the boundary. 
+Robin boundary conditions are also called impedance boundary conditions, from their application in electromagnetic problems, 
+or convective boundary conditions, from their application in heat transfer problems.
 
 when using specific types of signal processing, e.g. spline algorithms, other boundaries are also of interest,
 e.g. various types of mirror boundary conditions, cyclic boundary conditions, ...
 (to be implemented)
+When imposed on an ordinary or a partial differential equation, it is a specification of a linear combination of the values of a function and the values of its derivative on the boundary of the domain.
+
+
 *)
 
 
@@ -26,24 +34,16 @@ TYPE
 	VolumeContainer* = POINTER TO RECORD	
 		v*: BinaryVolume;   (* volume itself *)	
 		N0*,N1*,N2*: LONGINT; (* volume sizes *)
-		os*: BinaryVolume; (* outer surface of the volume*)
-		is*: BinaryVolume; (* inner surface of the volume*)			
+		outerShell*: BinaryVolume; (* outer surface of the volume*)
+		innerShell*: BinaryVolume; (* inner surface of the volume*)			
 		name*: ARRAY 512 OF CHAR;
 	END;	
 
 	VolumeDomain* = OBJECT
-	CONST		
-		(*name0 = "booleanVolume256x256x1024.MtA";
-		name1 = "booleanVolume128x128x512.MtA";
-		name2 = "booleanVolume64x64x256.MtA";
-		name3 = "booleanVolume32x32x128.MtA";
-		name4 = "booleanVolume16x16x64.MtA";
-		*)
-					
 	VAR					
 		volumes*: ARRAY [*] OF VolumeContainer;
 		index*: LONGINT; (* current container index *)
-		pInlet, pOutlet, rho, dt: MatrixBase.Datatype;
+		pInlet*, pOutlet*, rho*, dt*: MatrixBase.Datatype;
 	
 		PROCEDURE &Init*(CONST names: ARRAY OF ARRAY OF CHAR; pInlet,pOutlet,rho,dt: MatrixBase.Datatype);
 		VAR i:LONGINT;
@@ -52,13 +52,10 @@ TYPE
 			SELF.pOutlet:=pOutlet;
 			SELF.rho := rho;
 			SELF.dt := dt;
-
 			NEW(volumes, LEN(names,0));			
 			FOR i:=0 TO LEN(volumes,0)-1 DO
 				NEW(volumes[i]);
 			END;
-			
-			
 			FOR i:=0 TO LEN(names,0)-1 DO
 				volumes[i].v := ReadBinaryVolume(names[i]);
 				ComputeVolumeContainer(volumes[i]);	
@@ -71,8 +68,8 @@ TYPE
 			vc.N1 := LEN(vc.v,1);
 			vc.N2 := LEN(vc.v,2);														
 			IF log#NIL THEN log.String("Compute outer and inner surface ... "); log.Ln; log.Update; END;
-			vc.os := FindOuterSurface(vc.v); 
-			vc.is := FindInnerSurface(vc.v);
+			vc.outerShell := FindOuterSurface(vc.v); 
+			vc.innerShell := FindInnerSurface(vc.v);
 		END ComputeVolumeContainer;		
 																					
 		PROCEDURE FlowBoundaries*(VAR field: Volume);
@@ -87,10 +84,9 @@ TYPE
 				IF (N0 = volumes[k].N0) & (N1 = volumes[k].N1) & (N2 = volumes[k].N2) THEN
 					index := k;
 					vc := volumes[k];
-					DirichletBC(field, vc.is, 0);	 (* set field to zero at inner surface *)
+					DirichletBC(field, vc.innerShell, 0);	 (* set field to zero at inner surface *)
 					DirichletBC(field, ~vc.v, 0);  (* set field to zero outside the domain *)	
 					RETURN;
-				
 				END;
 			END;		
 			HALT(GridNotFound);									
@@ -145,7 +141,7 @@ TYPE
 				IF (N0 = volumes[k].N0) & (N1 = volumes[k].N1) & (N2 = volumes[k].N2) THEN
 					index := k;
 					vc := volumes[k];					
-					NeumannBC2(p, vc.v, vc.is, vc.os); (* apply zero gradient pressure on boundary *)
+					NeumannBC2(p, vc.v, vc.innerShell, vc.outerShell); (* apply zero gradient pressure on boundary *)
 					RETURN;
 				END;
 			END;			
@@ -171,7 +167,6 @@ TYPE
 					DirichletBC(dp, ~vc.v, 0);  (* no pressure update outside the domain v *)		
 					dp[..,..,0]:=0; (* no pressure update on inlet, as pressure there is an external boundary condition*)
 					dp[..,..,N2-1]:=0; (*no pressure update on outlet, as pressure there is an external boundary condition*)
-					(*! boundary handling along walls needed here: the outer layer should interit the same pressure change as is observed in the inner layer*)
 					RETURN;
 				END;
 			END;			
@@ -235,7 +230,7 @@ BEGIN
 	FOR k0:=0 TO LEN(volume,0)-1 DO
 		FOR k1:=0 TO LEN(volume,1)-1 DO
 			FOR k2:=0 TO LEN(volume,2)-1 DO						
-				IF(volume[k0,k1,k2]=FALSE) THEN
+				IF ~volume[k0,k1,k2] THEN
 					p[k0,k1,k2] := MIN(MatrixBase.Datatype);
 				END;				
 			END;	
@@ -279,9 +274,6 @@ BEGIN
 			END;	
 		END;	
 	END;		
-	(*
-	DirichletBC(p, ~(volume OR outerSurface), 0);	 (* fill out volume with zeros - not physical*)	
-	*)
 END NeumannBC2;
 
 PROCEDURE Condition(v:MatrixBase.Datatype; w: BOOLEAN): MatrixBase.Datatype;
