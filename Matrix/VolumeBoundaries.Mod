@@ -255,20 +255,31 @@ END NeumannBC1;
 *)
 PROCEDURE NeumannBC2(VAR p: ScalarField; CONST volume, innerSurface, outerSurface: BinaryVolume);
 VAR
-	k0,k1,k2: LONGINT;
+	k0,k1,k2, kk0,kk1,kk2,count: LONGINT; 
+	q: MatrixBase.Datatype;
 	w: ARRAY [3,3,3] OF BOOLEAN;
 	pp: ARRAY [3,3,3] OF MatrixBase.Datatype;
 BEGIN	
-	FOR k0:=0 TO LEN(outerSurface,0)-1 DO
-		FOR k1:=0 TO LEN(outerSurface,1)-1 DO
-			FOR k2:=0 TO LEN(outerSurface,2)-1 DO						
+	FOR k0:=1 TO LEN(outerSurface,0)-2 DO
+		FOR k1:=1 TO LEN(outerSurface,1)-2 DO
+			FOR k2:=1 TO LEN(outerSurface,2)-2 DO						
 				IF outerSurface[k0,k1,k2] THEN
-					IF (k0-1 >=0) & (k1-1 >=0) & (k2-1 >=0) &
-					    (k0+1< LEN(outerSurface,0)) & (k1+1< LEN(outerSurface,1)) & (k2+1< LEN(outerSurface,2)) THEN
-							w := innerSurface[k0-1..k0+1,k1-1..k1+1,k2-1..k2+1];
+					IF TRUE (* (k0-1 >=0) & (k1-1 >=0) & (k2-1 >=0) &
+					    (k0+1< LEN(outerSurface,0)) & (k1+1< LEN(outerSurface,1)) & (k2+1< LEN(outerSurface,2))*) THEN
+							(*w := innerSurface[k0-1..k0+1,k1-1..k1+1,k2-1..k2+1];
 							pp := p[k0-1..k0+1,k1-1..k1+1,k2-1..k2+1];
 							pp := ForAll2(pp,w,Condition);
 							p[k0,k1,k2] := SUM(pp[*])/NNZ(w);
+							*)
+							q:=0;
+							FOR kk0:=k0-1 TO k0+1 DO (* same as above, but faster ++  *)
+								FOR kk1:=k1-1 TO k1+1 DO
+									FOR kk2:=k2-1 TO k2+1 DO
+										IF innerSurface[kk0,kk1,kk2] THEN INC(count); q:=q+p[kk0,kk1,kk2] END;
+									END;
+								END;
+							END;
+							p[k0,k1,k2] := q/count; 
 					END;
 				END;				
 			END;	
