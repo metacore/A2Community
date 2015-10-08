@@ -36,13 +36,13 @@ END PSNR;
 (** root mean square error*)
 PROCEDURE RMSE*(CONST test, reference:Plane):Datatype;
 BEGIN
-	RETURN MathL.sqrt(SUM(PlanarMath.Sqr( reference-test))/(LEN(test,0)+LEN(test,1)))
+	RETURN MathL.sqrt(SUM(PlanarMath.Sqr( reference-test))/(LEN(test,0)*LEN(test,1)))
 END RMSE;
 
 (** mean absolute error *)
 PROCEDURE MAE*(CONST test, reference:Plane):Datatype;
 BEGIN
-	RETURN SUM(ABS( reference-test))/(LEN(test,0)+LEN(test,1))
+	RETURN SUM(ABS( reference-test))/(LEN(test,0)*LEN(test,1))
 END MAE;
 
 PROCEDURE Test*(context:Commands.Context);
