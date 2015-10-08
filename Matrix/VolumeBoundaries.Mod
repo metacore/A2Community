@@ -91,7 +91,8 @@ TYPE
 			END;		
 			HALT(GridNotFound);									
 		END FlowBoundaries;
-				
+		
+			
 		PROCEDURE PressureBoundaries*(VAR p: Volume);
 		BEGIN
 			PressureBoundaries0(p);
@@ -103,26 +104,27 @@ TYPE
 			k,k0,k1,N0,N1,N2: LONGINT;
 			vc: VolumeContainer;
 		BEGIN			
+			p[..,..,0]:=pInlet;
+			p[..,..,LEN(p,2)-1]:=pOutlet;		
+			RETURN;
+			(*
 			N0 := LEN(p,0);
 			N1 := LEN(p,1);
 			N2 := LEN(p,2);	
 			FOR k:=0 TO LEN(volumes,0)-1 DO
 				IF (N0 = volumes[k].N0) & (N1 = volumes[k].N1) & (N2 = volumes[k].N2) THEN	
 					index := k;
-					vc := volumes[k];										
+					vc := volumes[k];							
 					FOR k0:=0 TO LEN(vc.v,0)-1 DO
 						FOR k1:=0 TO LEN(vc.v,1)-1 DO												
-								IF(vc.v[k0,k1,0]=TRUE) THEN
-									p[k0,k1,0] := pInlet;
-								END;				
-								IF(vc.v[k0,k1,LEN(p,2)-1]=TRUE) THEN
-									p[k0,k1,LEN(p,2)-1] := pOutlet;
-								END;										
+								IF vc.v[k0,k1,0] THEN p[k0,k1,0] := pInlet	END;				
+								IF vc.v[k0,k1,LEN(p,2)-1] THEN p[k0,k1,LEN(p,2)-1] := pOutlet END;								
 						END;	
-					END;									
+					END;							
 					RETURN;
 				END;
-			END;			
+			END;		
+			*)	
 			HALT(GridNotFound);										
 		END PressureBoundaries0;
 		
