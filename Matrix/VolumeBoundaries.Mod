@@ -99,14 +99,17 @@ TYPE
 			PressureBoundariesDelta(p);												
 		END PressureBoundaries;
 		
+		(** control pressure at inlet and outlet *)
 		PROCEDURE PressureBoundaries0*(VAR p: Volume);
 		VAR
 			k,k0,k1,N0,N1,N2: LONGINT;
 			vc: VolumeContainer;
 		BEGIN			
+			 (*fast version. Does not lead to a disadvantage, as imposing a pressure on voxels outside the volume does not induce a flow*)
 			p[..,..,0]:=pInlet;
 			p[..,..,LEN(p,2)-1]:=pOutlet;		
 			RETURN;
+			
 			(*
 			N0 := LEN(p,0);
 			N1 := LEN(p,1);
@@ -124,13 +127,11 @@ TYPE
 					RETURN;
 				END;
 			END;		
-			*)	
+			*)
 			HALT(GridNotFound);										
 		END PressureBoundaries0;
 		
-		(**
-			Zero pressure gradient perpendicular to wall
-		*)
+		(** 	Zero pressure gradient perpendicular to wall	*)
 		PROCEDURE PressureBoundariesDelta*(VAR p: Volume);
 		VAR
 			k,N0,N1,N2: LONGINT;
@@ -182,26 +183,26 @@ PROCEDURE ReadBinaryVolume*(CONST filename: ARRAY OF CHAR): BinaryVolume;
 VAR
 	file: Files.File;
 	fr: Files.Reader;
-	vol: Volume;
-	volume: BinaryVolume;
 BEGIN
 	file := Files.Old(filename);		
 	ASSERT(file # NIL);
 	Files.OpenReader(fr, file, 0);
-	vol := MatrixUtilities.LoadLR(fr);
-	file.Close;	
-	volume:=vol.>0;
-	RETURN volume;
+	RETURN MatrixUtilities.LoadLR(fr) .> 0;
 END ReadBinaryVolume;
 
 PROCEDURE FindOuterSurface*(CONST domain: BinaryVolume): BinaryVolume;
 BEGIN
-	RETURN VolumeMorphology.BinarySimpleDilation(domain,{})  & ~domain;	
+	RESULT:= ~domain;
+	RETURN RESULT & VolumeMorphology.BinarySimpleDilation(domain,{}); (* there is still some temp memory allocation *)
+	(*RETURN VolumeMorphology.BinarySimpleDilation(domain,{})  & ~domain;	*) (* avoid temp memory allocation *)
 END FindOuterSurface;
 
 PROCEDURE FindInnerSurface*(CONST domain: BinaryVolume): BinaryVolume;
 BEGIN
-	RETURN domain & ~VolumeMorphology.BinarySimpleErosion(domain,{}) ;
+	RESULT:=VolumeMorphology.BinarySimpleErosion(domain,{});
+	RESULT:=~RESULT;
+	RETURN RESULT & domain; 
+	(*RETURN domain & ~VolumeMorphology.BinarySimpleErosion(domain,{}) ;*)(* avoid temp memory allocation *)
 END FindInnerSurface;
 
 (**
@@ -225,6 +226,7 @@ PROCEDURE NeumannBC1(VAR p: ScalarField; CONST volume, innerSurface, outerSurfac
 VAR
 	k0,k1,k2: LONGINT;
 	tmp: ScalarField; (* as a local variable, tmp is always allocated again => move to object*)
+	tmpBool: BinaryVolume;
 	e:  MatrixBase.Datatype;
 BEGIN
 	tmp := p;
@@ -238,16 +240,22 @@ BEGIN
 			END;	
 		END;	
 	END;		
-	p := VolumeMorphology.SimpleDilation(p,{});		(* this will change p inside the domain, which is not desirable*)
+	p := VolumeMorphology.SimpleDilation(p,{});		(* as a side effect, this will also change p inside the domain, which is not desirable, and thus has be reconstructed from tmp*)
 	
-	DirichletBC(p, ~outerSurface, 0);	 (* left p values only at outer surface*)			
+	tmpBool:=~outerSurface;
+	DirichletBC(p, tmpBool, 0);	 (* keep p values only at outer surface*)	
+	(*DirichletBC(p, ~outerSurface, 0);*)
 	e := SUM(p)/NNZ(outerSurface);
 		
-	DirichletBC(tmp, ~volume, 0);	 (* left tmp values only inside the volume *)							
+	tmpBool:=~volume;
+	DirichletBC(tmp, tmpBool, 0);	 (* keep tmp values only inside the volume *)	
+	(* DirichletBC(tmp, ~volume, 0); *)						
 	p := tmp + p;				
-
-	DirichletBC(p, ~(volume OR outerSurface), e);	 (* fill out volume with avarage extension *)	
-
+	
+	tmpBool:=volume OR outerSurface;
+	tmpBool:=~tmpBool;
+	DirichletBC(p, tmpBool, e);	 (* fill out volume with avarage extension *)	
+	(* DirichletBC(p, ~(volume OR outerSurface), e); *)
 END NeumannBC1;
 
 (**
@@ -266,23 +274,26 @@ BEGIN
 		FOR k1:=1 TO LEN(outerSurface,1)-2 DO
 			FOR k2:=1 TO LEN(outerSurface,2)-2 DO						
 				IF outerSurface[k0,k1,k2] THEN
-					IF TRUE (* (k0-1 >=0) & (k1-1 >=0) & (k2-1 >=0) &
-					    (k0+1< LEN(outerSurface,0)) & (k1+1< LEN(outerSurface,1)) & (k2+1< LEN(outerSurface,2))*) THEN
-							(*w := innerSurface[k0-1..k0+1,k1-1..k1+1,k2-1..k2+1];
+					(* DS version*)
+					(* IF  (k0-1 >=0) & (k1-1 >=0) & (k2-1 >=0) &
+					    (k0+1< LEN(outerSurface,0)) & (k1+1< LEN(outerSurface,1)) & (k2+1< LEN(outerSurface,2)) THEN
+							w := innerSurface[k0-1..k0+1,k1-1..k1+1,k2-1..k2+1];
 							pp := p[k0-1..k0+1,k1-1..k1+1,k2-1..k2+1];
 							pp := ForAll2(pp,w,Condition);
 							p[k0,k1,k2] := SUM(pp[*])/NNZ(w);
-							*)
-							q:=0;
-							FOR kk0:=k0-1 TO k0+1 DO (* same as above, but faster ++  *)
-								FOR kk1:=k1-1 TO k1+1 DO
-									FOR kk2:=k2-1 TO k2+1 DO
-										IF innerSurface[kk0,kk1,kk2] THEN INC(count); q:=q+p[kk0,kk1,kk2] END;
-									END;
-								END;
+						END;
+					*)
+					(*PH version*)
+					q:=0;
+					FOR kk0:=k0-1 TO k0+1 DO (* same as above, but faster ++  *)
+						FOR kk1:=k1-1 TO k1+1 DO
+							FOR kk2:=k2-1 TO k2+1 DO
+								IF innerSurface[kk0,kk1,kk2] THEN INC(count); q:=q+p[kk0,kk1,kk2] END;
 							END;
-							p[k0,k1,k2] := q/count; 
+						END;
 					END;
+					p[k0,k1,k2] := q/count; 
+					(* end PH version*)
 				END;				
 			END;	
 		END;	
