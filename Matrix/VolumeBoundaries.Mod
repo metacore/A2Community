@@ -152,24 +152,24 @@ TYPE
 		END PressureBoundariesDelta;
 		
 		(*pressure changed per step: 
-		-on locations with external pressure boundary conditions, no change
-		- zero pressure gradient perpendicular to the wall*)
-		PROCEDURE PressureBoundariesPDT*(VAR dp: Volume);
+		-on locations with external pressure boundary conditions, and in solid, no change*)
+		PROCEDURE PressureBoundariesPDT*(VAR pdt: Volume);
 		VAR
 			k,N0,N1,N2: LONGINT;
 			vc: VolumeContainer;
 		BEGIN
-			N0 := LEN(dp,0);
-			N1 := LEN(dp,1);
-			N2 := LEN(dp,2);
+			N0 := LEN(pdt,0);
+			N1 := LEN(pdt,1);
+			N2 := LEN(pdt,2);
 								
 			FOR k:=0 TO LEN(volumes,0)-1 DO
 				IF (N0 = volumes[k].N0) & (N1 = volumes[k].N1) & (N2 = volumes[k].N2) THEN
 					index := k;
 					vc := volumes[k];
-					DirichletBC(dp, ~vc.v, 0);  (* no pressure update outside the domain v *)		
-					dp[..,..,0]:=0; (* no pressure update on inlet, as pressure there is an external boundary condition*)
-					dp[..,..,N2-1]:=0; (*no pressure update on outlet, as pressure there is an external boundary condition*)
+					DirichletBC(pdt, ~vc.v, 0);  (* no pressure update outside the domain v *)		
+					pdt[..,..,0]:=0; (* no pressure update on inlet, as pressure there is an external boundary condition*)
+					pdt[..,..,N2-1]:=0; (*no pressure update on outlet, as pressure there is an external boundary condition*)
+					(*NeumannBC2(pdt, vc.v, vc.innerShell, vc.outerShell); (* outer shell mirrors inner shell. Expensive for boundary used in multigrid. *)*)
 					RETURN;
 				END;
 			END;			
@@ -275,7 +275,8 @@ BEGIN
 			FOR k2:=1 TO LEN(outerSurface,2)-2 DO						
 				IF outerSurface[k0,k1,k2] THEN
 					(* DS version*)
-					(* IF  (k0-1 >=0) & (k1-1 >=0) & (k2-1 >=0) &
+					(*
+					 IF  (k0-1 >=0) & (k1-1 >=0) & (k2-1 >=0) &
 					    (k0+1< LEN(outerSurface,0)) & (k1+1< LEN(outerSurface,1)) & (k2+1< LEN(outerSurface,2)) THEN
 							w := innerSurface[k0-1..k0+1,k1-1..k1+1,k2-1..k2+1];
 							pp := p[k0-1..k0+1,k1-1..k1+1,k2-1..k2+1];
@@ -284,7 +285,8 @@ BEGIN
 						END;
 					*)
 					(*PH version*)
-					q:=0;
+					
+					q:=0; count:=0;
 					FOR kk0:=k0-1 TO k0+1 DO (* same as above, but faster ++  *)
 						FOR kk1:=k1-1 TO k1+1 DO
 							FOR kk2:=k2-1 TO k2+1 DO
@@ -294,6 +296,7 @@ BEGIN
 					END;
 					p[k0,k1,k2] := q/count; 
 					(* end PH version*)
+					
 				END;				
 			END;	
 		END;	
