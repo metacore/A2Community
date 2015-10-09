@@ -32,7 +32,7 @@ TYPE
 	ScalarField* = ARRAY [*,*,*] OF MatrixBase.Datatype;
 
 	VolumeContainer* = POINTER TO RECORD	
-		v*: BinaryVolume;   (* volume itself *)	
+		v*, outside*: BinaryVolume;   (* volume itself *)	
 		N0*,N1*,N2*: LONGINT; (* volume sizes *)
 		outerShell*: BinaryVolume; (* outer surface of the volume*)
 		innerShell*: BinaryVolume; (* inner surface of the volume*)			
@@ -70,6 +70,7 @@ TYPE
 			IF log#NIL THEN log.String("Compute outer and inner surface ... "); log.Ln; log.Update; END;
 			vc.outerShell := FindOuterSurface(vc.v); 
 			vc.innerShell := FindInnerSurface(vc.v);
+			vc.outside := ~vc.v; 
 		END ComputeVolumeContainer;		
 																					
 		PROCEDURE FlowBoundaries*(VAR field: Volume);
@@ -85,7 +86,7 @@ TYPE
 					index := k;
 					vc := volumes[k];
 					DirichletBC(field, vc.innerShell, 0);	 (* set field to zero at inner surface *)
-					DirichletBC(field, ~vc.v, 0);  (* set field to zero outside the domain *)	
+					DirichletBC(field, vc.outside, 0);  (* set field to zero outside the domain *)	
 					RETURN;
 				END;
 			END;		
@@ -166,7 +167,7 @@ TYPE
 				IF (N0 = volumes[k].N0) & (N1 = volumes[k].N1) & (N2 = volumes[k].N2) THEN
 					index := k;
 					vc := volumes[k];
-					DirichletBC(pdt, ~vc.v, 0);  (* no pressure update outside the domain v *)		
+					DirichletBC(pdt, vc.outside, 0);  (* no pressure update outside the domain v *)		
 					pdt[..,..,0]:=0; (* no pressure update on inlet, as pressure there is an external boundary condition*)
 					pdt[..,..,N2-1]:=0; (*no pressure update on outlet, as pressure there is an external boundary condition*)
 					(*NeumannBC2(pdt, vc.v, vc.innerShell, vc.outerShell); (* outer shell mirrors inner shell. Expensive for boundary used in multigrid. *)*)
@@ -175,6 +176,24 @@ TYPE
 			END;			
 			HALT(GridNotFound);				
 		END PressureBoundariesPDT;
+		
+		PROCEDURE SoluteBoundaries*(VAR field: Volume); (* avoid leakage of solute to outside *)
+		VAR
+			k,N0,N1,N2: LONGINT;
+		BEGIN
+			N0 := LEN(field,0);
+			N1 := LEN(field,1);
+			N2 := LEN(field,2);					
+			FOR k:=0 TO LEN(volumes,0)-1 DO
+				IF (N0 = volumes[k].N0) & (N1 = volumes[k].N1) & (N2 = volumes[k].N2) THEN
+					index := k;
+					field[..N0 DIV 2, .., 0 ]:=1;
+					DirichletBC(field, volumes[k].outside, 0);  (* set field to zero outside the domain *)	
+					RETURN;
+				END;
+			END;		
+			HALT(GridNotFound);									
+		END SoluteBoundaries;
 	END VolumeDomain;
 
 VAR log*: Streams.Writer;
@@ -192,17 +211,12 @@ END ReadBinaryVolume;
 
 PROCEDURE FindOuterSurface*(CONST domain: BinaryVolume): BinaryVolume;
 BEGIN
-	RESULT:= ~domain;
-	RETURN RESULT & VolumeMorphology.BinarySimpleDilation(domain,{}); (* there is still some temp memory allocation *)
-	(*RETURN VolumeMorphology.BinarySimpleDilation(domain,{})  & ~domain;	*) (* avoid temp memory allocation *)
+	RETURN VolumeMorphology.BinarySimpleDilation(domain,{})  & ~domain;	
 END FindOuterSurface;
 
 PROCEDURE FindInnerSurface*(CONST domain: BinaryVolume): BinaryVolume;
 BEGIN
-	RESULT:=VolumeMorphology.BinarySimpleErosion(domain,{});
-	RESULT:=~RESULT;
-	RETURN RESULT & domain; 
-	(*RETURN domain & ~VolumeMorphology.BinarySimpleErosion(domain,{}) ;*)(* avoid temp memory allocation *)
+	RETURN domain & ~VolumeMorphology.BinarySimpleErosion(domain,{}) ;
 END FindInnerSurface;
 
 (**
@@ -226,7 +240,6 @@ PROCEDURE NeumannBC1(VAR p: ScalarField; CONST volume, innerSurface, outerSurfac
 VAR
 	k0,k1,k2: LONGINT;
 	tmp: ScalarField; (* as a local variable, tmp is always allocated again => move to object*)
-	tmpBool: BinaryVolume;
 	e:  MatrixBase.Datatype;
 BEGIN
 	tmp := p;
@@ -242,20 +255,13 @@ BEGIN
 	END;		
 	p := VolumeMorphology.SimpleDilation(p,{});		(* as a side effect, this will also change p inside the domain, which is not desirable, and thus has be reconstructed from tmp*)
 	
-	tmpBool:=~outerSurface;
-	DirichletBC(p, tmpBool, 0);	 (* keep p values only at outer surface*)	
-	(*DirichletBC(p, ~outerSurface, 0);*)
+	DirichletBC(p, ~outerSurface, 0);
 	e := SUM(p)/NNZ(outerSurface);
 		
-	tmpBool:=~volume;
-	DirichletBC(tmp, tmpBool, 0);	 (* keep tmp values only inside the volume *)	
-	(* DirichletBC(tmp, ~volume, 0); *)						
+	DirichletBC(tmp, ~volume, 0);	 (* keep tmp values only inside the volume *)	
 	p := tmp + p;				
 	
-	tmpBool:=volume OR outerSurface;
-	tmpBool:=~tmpBool;
-	DirichletBC(p, tmpBool, e);	 (* fill out volume with avarage extension *)	
-	(* DirichletBC(p, ~(volume OR outerSurface), e); *)
+	DirichletBC(p, ~(volume OR outerSurface), e); 
 END NeumannBC1;
 
 (**
@@ -284,10 +290,9 @@ BEGIN
 							p[k0,k1,k2] := SUM(pp[*])/NNZ(w);
 						END;
 					*)
-					(*PH version*)
-					
+					(*fast version*)
 					q:=0; count:=0;
-					FOR kk0:=k0-1 TO k0+1 DO (* same as above, but faster ++  *)
+					FOR kk0:=k0-1 TO k0+1 DO (* same as above, but faster *)
 						FOR kk1:=k1-1 TO k1+1 DO
 							FOR kk2:=k2-1 TO k2+1 DO
 								IF innerSurface[kk0,kk1,kk2] THEN INC(count); q:=q+p[kk0,kk1,kk2] END;
@@ -295,8 +300,7 @@ BEGIN
 						END;
 					END;
 					p[k0,k1,k2] := q/count; 
-					(* end PH version*)
-					
+					(* end fast version*)
 				END;				
 			END;	
 		END;	
