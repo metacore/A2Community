@@ -72,6 +72,26 @@ TYPE
 			vc.innerShell := FindInnerSurface(vc.v);
 			vc.outside := ~vc.v; 
 		END ComputeVolumeContainer;		
+		
+		(** 	Zero pressure gradient perpendicular to wall	*)
+		PROCEDURE ZeroBoundaryGradient*(VAR p: Volume);
+		VAR
+			k,N0,N1,N2: LONGINT;
+			vc: VolumeContainer;
+		BEGIN
+			N0 := LEN(p,0);
+			N1 := LEN(p,1);
+			N2 := LEN(p,2);					
+			FOR k:=0 TO LEN(volumes,0)-1 DO
+				IF (N0 = volumes[k].N0) & (N1 = volumes[k].N1) & (N2 = volumes[k].N2) THEN
+					index := k;
+					vc := volumes[k];					
+					NeumannBC2(p, vc.v, vc.innerShell, vc.outerShell); (* apply zero gradient pressure on boundary *)
+					RETURN;
+				END;
+			END;			
+			HALT(GridNotFound);																	
+		END ZeroBoundaryGradient;
 																					
 		PROCEDURE FlowBoundaries*(VAR field: Volume);
 		VAR
@@ -97,7 +117,7 @@ TYPE
 		PROCEDURE PressureBoundaries*(VAR p: Volume);
 		BEGIN
 			PressureBoundaries0(p);
-			PressureBoundariesDelta(p);												
+			ZeroBoundaryGradient(p);												
 		END PressureBoundaries;
 		
 		(** control pressure at inlet and outlet *)
@@ -132,25 +152,7 @@ TYPE
 			HALT(GridNotFound);										
 		END PressureBoundaries0;
 		
-		(** 	Zero pressure gradient perpendicular to wall	*)
-		PROCEDURE PressureBoundariesDelta*(VAR p: Volume);
-		VAR
-			k,N0,N1,N2: LONGINT;
-			vc: VolumeContainer;
-		BEGIN
-			N0 := LEN(p,0);
-			N1 := LEN(p,1);
-			N2 := LEN(p,2);					
-			FOR k:=0 TO LEN(volumes,0)-1 DO
-				IF (N0 = volumes[k].N0) & (N1 = volumes[k].N1) & (N2 = volumes[k].N2) THEN
-					index := k;
-					vc := volumes[k];					
-					NeumannBC2(p, vc.v, vc.innerShell, vc.outerShell); (* apply zero gradient pressure on boundary *)
-					RETURN;
-				END;
-			END;			
-			HALT(GridNotFound);																	
-		END PressureBoundariesDelta;
+
 		
 		(*pressure changed per step: 
 		-on locations with external pressure boundary conditions, and in solid, no change*)
@@ -177,7 +179,7 @@ TYPE
 			HALT(GridNotFound);				
 		END PressureBoundariesPDT;
 		
-		PROCEDURE SoluteBoundaries*(VAR field: Volume); (* avoid leakage of solute to outside *)
+		PROCEDURE SoluteBoundaries*(VAR field: Volume); (* avoid presence of solute to outside a channel. TO DO: do not suppress, but bring the material diffused outside inwards again, to avoid loss. *)
 		VAR
 			k,N0,N1,N2: LONGINT;
 		BEGIN
@@ -187,8 +189,10 @@ TYPE
 			FOR k:=0 TO LEN(volumes,0)-1 DO
 				IF (N0 = volumes[k].N0) & (N1 = volumes[k].N1) & (N2 = volumes[k].N2) THEN
 					index := k;
-					field[..N0 DIV 2, .., 0 ]:=1;
+					field[..N0 DIV 3, .., 0 ]:=1;field[N0 DIV 3+1.., .., 0 ]:=0;  (*inlet condition*)
+					(*to do: outlet condition: = black hole ?*)
 					DirichletBC(field, volumes[k].outside, 0);  (* set field to zero outside the domain *)	
+					ZeroBoundaryGradient(field); (* by establishing a zero solute gradient accross the wall, contents will not diffuse out *)
 					RETURN;
 				END;
 			END;		
@@ -256,7 +260,7 @@ BEGIN
 	p := VolumeMorphology.SimpleDilation(p,{});		(* as a side effect, this will also change p inside the domain, which is not desirable, and thus has be reconstructed from tmp*)
 	
 	DirichletBC(p, ~outerSurface, 0);
-	e := SUM(p)/NNZ(outerSurface);
+	e := SUM(p)/TrueCount(outerSurface);
 		
 	DirichletBC(tmp, ~volume, 0);	 (* keep tmp values only inside the volume *)	
 	p := tmp + p;				
@@ -273,24 +277,11 @@ PROCEDURE NeumannBC2(VAR p: ScalarField; CONST volume, innerSurface, outerSurfac
 VAR
 	k0,k1,k2, kk0,kk1,kk2,count: LONGINT; 
 	q: MatrixBase.Datatype;
-	w: ARRAY [3,3,3] OF BOOLEAN;
-	pp: ARRAY [3,3,3] OF MatrixBase.Datatype;
 BEGIN	
 	FOR k0:=1 TO LEN(outerSurface,0)-2 DO
 		FOR k1:=1 TO LEN(outerSurface,1)-2 DO
 			FOR k2:=1 TO LEN(outerSurface,2)-2 DO						
 				IF outerSurface[k0,k1,k2] THEN
-					(* DS version*)
-					(*
-					 IF  (k0-1 >=0) & (k1-1 >=0) & (k2-1 >=0) &
-					    (k0+1< LEN(outerSurface,0)) & (k1+1< LEN(outerSurface,1)) & (k2+1< LEN(outerSurface,2)) THEN
-							w := innerSurface[k0-1..k0+1,k1-1..k1+1,k2-1..k2+1];
-							pp := p[k0-1..k0+1,k1-1..k1+1,k2-1..k2+1];
-							pp := ForAll2(pp,w,Condition);
-							p[k0,k1,k2] := SUM(pp[*])/NNZ(w);
-						END;
-					*)
-					(*fast version*)
 					q:=0; count:=0;
 					FOR kk0:=k0-1 TO k0+1 DO (* same as above, but faster *)
 						FOR kk1:=k1-1 TO k1+1 DO
@@ -300,21 +291,11 @@ BEGIN
 						END;
 					END;
 					p[k0,k1,k2] := q/count; 
-					(* end fast version*)
 				END;				
 			END;	
 		END;	
 	END;		
 END NeumannBC2;
-
-PROCEDURE Condition(v:MatrixBase.Datatype; w: BOOLEAN): MatrixBase.Datatype;
-BEGIN
-	IF w THEN
-		RETURN v;
-	ELSE
-		RETURN 0;
-	END
-END Condition;
 
 PROCEDURE ForAll2(CONST x: ARRAY [?] OF MatrixBase.Datatype; y: ARRAY [?] OF BOOLEAN; func: PROCEDURE{DELEGATE}(v: MatrixBase.Datatype; w:BOOLEAN): MatrixBase.Datatype): ARRAY [?] OF MatrixBase.Datatype;
 VAR i: LONGINT;
@@ -351,7 +332,7 @@ END DirichletBC;
 Number of nonzero elements in binary volume
 s: binary volume
 *)	
-PROCEDURE NNZ(s: BinaryVolume): LONGINT;
+PROCEDURE TrueCount*(s: BinaryVolume): LONGINT;
 VAR
 	k0,k1,k2,n: LONGINT;
 BEGIN
@@ -365,7 +346,7 @@ BEGIN
 		END;	
 	END;
 	RETURN n;
-END NNZ;
+END TrueCount;
 
 END VolumeBoundaries.
 
