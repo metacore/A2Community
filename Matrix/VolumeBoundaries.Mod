@@ -34,6 +34,7 @@ TYPE
 	VolumeContainer* = POINTER TO RECORD	
 		v*, outside*: BinaryVolume;   (* volume itself *)	
 		N0*,N1*,N2*: LONGINT; (* volume sizes *)
+		nElements*: LONGINT; (* count of (TRUE) elements of v *)
 		outerShell*: BinaryVolume; (* outer surface of the volume*)
 		innerShell*: BinaryVolume; (* inner surface of the volume*)			
 		name*: ARRAY 512 OF CHAR;
@@ -71,6 +72,7 @@ TYPE
 			vc.outerShell := FindOuterSurface(vc.v); 
 			vc.innerShell := FindInnerSurface(vc.v);
 			vc.outside := ~vc.v; 
+			vc.nElements:=TrueCount(vc.v);
 		END ComputeVolumeContainer;		
 		
 		(** 	Zero pressure gradient perpendicular to wall	*)
@@ -113,7 +115,6 @@ TYPE
 			HALT(GridNotFound);									
 		END FlowBoundaries;
 		
-			
 		PROCEDURE PressureBoundaries*(VAR p: Volume);
 		BEGIN
 			PressureBoundaries0(p);
@@ -198,6 +199,24 @@ TYPE
 			END;		
 			HALT(GridNotFound);									
 		END SoluteBoundaries;
+		
+			
+	PROCEDURE CountElements*(CONST field: Volume):LONGINT; (* avoid presence of solute to outside a channel. TO DO: do not suppress, but bring the material diffused outside inwards again, to avoid loss. *)
+		VAR
+			k,N0,N1,N2: LONGINT;
+		BEGIN
+			N0 := LEN(field,0);
+			N1 := LEN(field,1);
+			N2 := LEN(field,2);					
+			FOR k:=0 TO LEN(volumes,0)-1 DO
+				IF (N0 = volumes[k].N0) & (N1 = volumes[k].N1) & (N2 = volumes[k].N2) THEN
+					RETURN volumes[k].nElements;
+				END;
+			END;		
+			HALT(GridNotFound);									
+		END CountElements;
+
+		
 	END VolumeDomain;
 
 VAR log*: Streams.Writer;
