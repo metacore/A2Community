@@ -18,9 +18,8 @@ MODULE Lesson6;
 IMPORT
 	Math, Events, Strings, Files, Commands, PreciseTimer,
 	
-	(*lib := Lib3D_SSE*)
-	lib := Lib3D
-	
+	(*lib := Lib3D*)
+	lib := Lib3D_SSE
 	;
 
 CONST
@@ -141,9 +140,9 @@ VAR
 BEGIN
 	IF
 		(~bMollerTrumbore &
-			lib.IntersectTriangle(tri[0], tri[1], tri[2], ray.pt, ray.vn, t, u, v)) OR
+			lib.IntersectTriangle(tri[0], tri[1], tri[2], ray, t, u, v)) OR
 		(bMollerTrumbore &
-			lib.IntersectTriangleMollerTrumbore(tri[0], tri[1], tri[2], ray.pt, ray.vn, t, u, v))
+			lib.IntersectTriangleMollerTrumbore(tri[0], tri[1], tri[2], ray, t, u, v))
 	THEN
 		(* uncomment the following line to vizualize the barycentric coord *)
 		p := vector(u, v, 0);
@@ -436,37 +435,20 @@ Lesson6.Lesson6b ~
 
 SystemTools.Free Lesson6 Lib3D Lib3D_SSE ~
 
-Pentium(R) Dual-Core CPU T4200 @ 2.00 GHz (2 cores, 2 threads):
-
-Lesson6a:
-nThreadsTotal: 1, bucket size: 320 x 240, nBucketsTotal: 4, time elapsed:   0.1663
-nThreadComputedBuckets: [4]
-nSecondaryRays: [0]
-nThreadsTotal: 2, bucket size: 160 x 120, nBucketsTotal: 16, time elapsed:   0.0934
-nThreadComputedBuckets: [8, 8]
-nSecondaryRays: [0, 0]
-nThreadsTotal: 4, bucket size: 80 x 60, nBucketsTotal: 64, time elapsed:   0.0894
-nThreadComputedBuckets: [31, 31, 1, 1]
-nSecondaryRays: [0, 0, 0, 0]
-nThreadsTotal: 8, bucket size: 40 x 30, nBucketsTotal: 256, time elapsed:   0.0910
-nThreadComputedBuckets: [17, 22, 19, 22, 20, 67, 18, 71]
-nSecondaryRays: [0, 0, 0, 0, 0, 0, 0, 0]
-
-Lesson6b:
-nThreadsTotal: 1, bucket size: 320 x 240, nBucketsTotal: 4, time elapsed:   0.1173
-nThreadComputedBuckets: [4]
-nSecondaryRays: [0]
-nThreadsTotal: 2, bucket size: 160 x 120, nBucketsTotal: 16, time elapsed:   0.0609
-nThreadComputedBuckets: [8, 8]
-nSecondaryRays: [0, 0]
-nThreadsTotal: 4, bucket size: 80 x 60, nBucketsTotal: 64, time elapsed:   0.0635
-nThreadComputedBuckets: [32, 30, 2, 0]
-nSecondaryRays: [0, 0, 0, 0]
-nThreadsTotal: 8, bucket size: 40 x 30, nBucketsTotal: 256, time elapsed:   0.0601
-nThreadComputedBuckets: [128, 128, 0, 0, 0, 0, 0, 0]
-nSecondaryRays: [0, 0, 0, 0, 0, 0, 0, 0]
-
-Intel Core i5 650 @ 3.20 GHz (2 cores, 4 threads):
-
-
-
+AMD A10-7850K Radeon R7, 12 Compute Cores 4C+8G @ 3.70 GHz (4 cores, 4 threads):
+Pure code, Lesson6a:
+nThreadsTotal: 1, bucket size: 320 x 240, nBucketsTotal: 4, time elapsed:   0.2253
+nThreadsTotal: 2, bucket size: 160 x 120, nBucketsTotal: 16, time elapsed:   0.1196
+nThreadsTotal: 4, bucket size: 80 x 60, nBucketsTotal: 64, time elapsed:   0.0673
+Pure code, Lesson6b:
+nThreadsTotal: 1, bucket size: 320 x 240, nBucketsTotal: 4, time elapsed:   0.2030
+nThreadsTotal: 2, bucket size: 160 x 120, nBucketsTotal: 16, time elapsed:   0.1079
+nThreadsTotal: 4, bucket size: 80 x 60, nBucketsTotal: 64, time elapsed:   0.0592
+SSE optimized, Lesson6a:
+nThreadsTotal: 2, bucket size: 160 x 120, nBucketsTotal: 16, time elapsed:   0.0976
+nThreadsTotal: 4, bucket size: 80 x 60, nBucketsTotal: 64, time elapsed:   0.0540
+nThreadsTotal: 8, bucket size: 40 x 30, nBucketsTotal: 256, time elapsed:   0.0581
+SSE optimized, Lesson6b:
+nThreadsTotal: 1, bucket size: 320 x 240, nBucketsTotal: 4, time elapsed:   0.1565
+nThreadsTotal: 2, bucket size: 160 x 120, nBucketsTotal: 16, time elapsed:   0.0826
+nThreadsTotal: 4, bucket size: 80 x 60, nBucketsTotal: 64, time elapsed:   0.0451

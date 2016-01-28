@@ -501,7 +501,7 @@ BEGIN
 	RETURN TRUE
 END IntersectSphereGeometric;
 
-PROCEDURE IntersectTriangle*(CONST va, vb, vc: Vector; rayOrig, rayDir: Vector; VAR t, u, v: REAL): BOOLEAN;
+PROCEDURE IntersectTriangle*(CONST va, vb, vc: Vector; CONST ray: Ray; VAR t, u, v: REAL): BOOLEAN;
 VAR
 	v0_to_v1, v0_to_v2, n, v0_to_p, ab_x_ap, v1_to_v2, v1_to_p, bc_x_bp, v2_to_p, ca_x_cp: Vector;
 	nd, d, v_num, u_num, denom: REAL;
@@ -518,20 +518,20 @@ BEGIN
 	*)
 
 	(* if ray and plane are parallel, they don't intersect ! *)
-	nd := n +* rayDir;
+	nd := n +* ray.vn;
 	IF nd = 0.0 THEN
 		RETURN FALSE
 	END;
 
 	d := n +* va;
-	t := (d - (n +* rayOrig)) / nd;
+	t := (d - (n +* ray.pt)) / nd;
 	IF t < 0.0 THEN
 		RETURN FALSE (* triangle is behind the ray, return *)
 	END;
 
-	p[0] := rayOrig[0] + t * rayDir[0];
-	p[1] := rayOrig[1] + t * rayDir[1];
-	p[2] := rayOrig[2] + t * rayDir[2];
+	p[0] := ray.pt[0] + t * ray.vn[0];
+	p[1] := ray.pt[1] + t * ray.vn[1];
+	p[2] := ray.pt[2] + t * ray.vn[2];
 
 	(*
 		step 2: inside-outside test

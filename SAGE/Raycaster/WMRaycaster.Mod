@@ -4,19 +4,21 @@ IMPORT
 	SYSTEM, Events, PreciseTimer, Modules, Inputs, Strings, Commands, Raster, Files,
 	WM := WMWindowManager, Rectangles := WMRectangles,
 	Math := Math, Graphics := WMGraphics;
-	
+
 CONST
 
 	DEBUGLOG = FALSE;
 	EventClass = 3;
 	EventSubclass = 3;
 	moduleName = "Test";
-	
-	THREADS = 4;
 
-	BENCHMARK = TRUE;
+	THREADS = 4;
+	SCREEN_WIDTH = 640;
+	SCREEN_HEIGHT = 480;
+
+	BENCHMARK = FALSE;
 	TESTS = 50;
-	
+
 	DATA_FILE = "WMRaycasterData.zip";
 	DATA_PATH = "pics/";
 
@@ -47,23 +49,23 @@ CONST
 			[2, 2, 0, 0, 0, 0, 0, 2, 2, 2, 0, 0, 0, 2, 2, 0, 5, 0, 5, 0, 0, 0, 5, 5],
 			[2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 5, 5, 5, 5, 5, 5, 5, 5, 5]
 		];
-		
+
 	MAP_HEIGHT = LEN(worldMap, 0);
 	MAP_WIDTH = LEN(worldMap, 1);
-		
+
 	SpriteX = 0;
 	SpriteY = 1;
 	SpriteTexture = 2;
-		
+
 	(** Sprites: x pos, y pos, texture num *)
-	sprites = 
+	sprites =
 		[
 			(** green light in front of playerstart *)
 			[20.5, 11.5, 10],
-			
+
 			(** devil *)
 			[20.0, 11.0, 11],
-			  
+
 			(** green lights in every room *)
 			[18.5, 4.5, 10],
 			[10.0, 4.5, 10],
@@ -72,12 +74,12 @@ CONST
 			[3.5, 20.5, 10],
 			[3.5, 14.5, 10],
 			[14.5, 20.5, 10],
-			  
+
 			(** row of pillars in front of wall: fisheye test *)
 			[18.5, 10.5, 9],
 			[18.5, 11.5, 9],
 			[18.5, 12.5, 9],
-			  
+
 			(** some barrels around the map *)
 			[21.5, 1.5, 8],
 			[15.5, 1.5, 8],
@@ -88,20 +90,17 @@ CONST
 			[10.0, 15.1, 8],
 			[10.5, 15.8, 8]
 		];
-	
+
 	numSprites = LEN(sprites, 0);
 
-	SCREEN_WIDTH = 640;
-	SCREEN_HEIGHT = 480;
-	
 	(** parameters for scaling and moving the sprites *)
 	uDiv = 1.0;
 	vDiv = 1.0;
 	vMove = 0.0;
-	
+
 	ceilingTexture = 6;
 	floorTexture = 3;
-	
+
 TYPE
 
 	Texture = RECORD
@@ -118,7 +117,7 @@ TYPE
 	VAR
 		nCount, nMaxMeasuresCount: LONGINT;
 		fTimeAverage, fTimeAverageOld, fFPSAverage: REAL;
-		
+
 	PROCEDURE &New(nMaxMeasuresCount: LONGINT);
 	BEGIN
 		SELF.nMaxMeasuresCount := nMaxMeasuresCount;
@@ -126,7 +125,7 @@ TYPE
 		fTimeAverage := 0.0;
 		fTimeAverageOld := 0.0;
 	END New;
-	
+
 	PROCEDURE AddTimeMeasure(fTime: REAL);
 	BEGIN
 		INC(nCount);
@@ -136,38 +135,38 @@ TYPE
 		fFPSAverage := 1 / fTimeAverage;
 		fFPSAverage := ENTIER(fFPSAverage * 10 + 0.5) / 10;
 	END AddTimeMeasure;
-	
+
 	PROCEDURE GetAverageFrameTime(): REAL;
 	BEGIN
 		RETURN fTimeAverage
 	END GetAverageFrameTime;
-	
+
 	PROCEDURE GetAverageFPS(): REAL;
 	BEGIN
 		RETURN fFPSAverage
 	END GetAverageFPS;
-	
+
 	END FPSCounter;
-	
+
 	ThreadData = POINTER TO RECORD
 		id: LONGINT;
 		nThreadComputedBuckets: LONGINT;
 	END;
-	
+
 	RenderThread = OBJECT
 	VAR
 		w: RaycasterWindow;
 		td: ThreadData;
 		bi, iXStart, iXEnd: LONGINT;
 		str1, str2: ARRAY 64 OF CHAR;
-	
+
 	PROCEDURE &New(w: RaycasterWindow; td: ThreadData);
 	BEGIN
 		SELF.w := w;
 		SELF.td := td;
 		w.IncActiveThreads
 	END New;
-	
+
 	PROCEDURE Render;
 	VAR
 		cameraX, (** x-coordinate in camera space *)
@@ -189,22 +188,22 @@ TYPE
 		x, y: LONGINT;
 	BEGIN
 		FOR x := iXStart TO iXEnd DO
-		
+
 			(** calculate ray position and direction *)
 			cameraX := 2 * x / SCREEN_WIDTH - 1;
 			rayDirX := w.dirX + w.planeX * cameraX;
 			rayDirY := w.dirY + w.planeY * cameraX;
-			
+
 			(** which box of the map we're in *)
 			mapX := ENTIER(w.posX);
 			mapY := ENTIER(w.posY);
-			       
+
 			(** length of ray from one x or y-side to next x or y-side *)
 			rayDirX2 := rayDirX * rayDirX;
 			rayDirY2 := rayDirY * rayDirY;
 			deltaDistX := Math.sqrt(1 + rayDirY2 / rayDirX2);
 			deltaDistY := Math.sqrt(1 + rayDirX2 / rayDirY2);
-			       			
+
 			(** calculate step and initial sideDist *)
 			IF rayDirX < 0 THEN
 				stepX := -1;
@@ -220,7 +219,7 @@ TYPE
 				stepY := 1;
 				sideDistY := (mapY + 1.0 - w.posY) * deltaDistY;
 			END;
-			
+
 			(** perform DDA *)
 			(** Check if ray has hit a wall *)
 			REPEAT
@@ -235,7 +234,7 @@ TYPE
 					side := 1
 				END
 			UNTIL worldMap[mapX, mapY] > 0;
-			
+
 			(** Calculate distance of perpendicular ray (calculate distance projected on camera direction) (oblique distance will give fisheye effect!) *)
 			(** calculate value of wallX *)
 			IF side = 0 THEN
@@ -247,27 +246,27 @@ TYPE
 			END;
 			perpWallDist := ABS(perpWallDist);
 			wallX := wallX - ENTIER(wallX);
-			      
+
 			(** Calculate height of line to draw on screen *)
 			lineHeight := ENTIER(SCREEN_HEIGHT / perpWallDist);
-			       
+
 			(** calculate lowest and highest pixel to fill in current stripe *)
 			drawStart := -lineHeight DIV 2 + SCREEN_HEIGHT DIV 2;
 			IF drawStart < 0 THEN drawStart := 0 END;
 			drawEnd := lineHeight DIV 2 + SCREEN_HEIGHT DIV 2 - 1;
 			IF drawEnd >= SCREEN_HEIGHT THEN drawEnd := SCREEN_HEIGHT - 1 END;
-			
+
 			(** texturing calculations *)
 			texNum := worldMap[mapX, mapY] - 1; (** 1 subtracted from it so that texture 0 can be used! *)
 			texWidth := w.textures[texNum].width;
 			texHeight := w.textures[texNum].height;
-			       
+
 			(** x coordinate on the texture *)
 			texX := ENTIER(wallX * texWidth);
 			IF ((side = 0) & (rayDirX > 0)) OR ((side = 1) & (rayDirY < 0)) THEN
 				texX := texWidth - texX - 1
 			END;
-			
+
 			d := -SCREEN_HEIGHT DIV 2 + lineHeight DIV 2;
 			pixelOffset := SCREEN_WIDTH * 4 * drawStart + x * 4;
 			FOR y := drawStart TO drawEnd DO
@@ -280,12 +279,12 @@ TYPE
 				END;
 				INC(pixelOffset, SCREEN_WIDTH * 4)
 			END;
-			
+
 			(** SET THE ZBUFFER FOR THE SPRITE CASTING *)
 			w.ZBuffer[x] := perpWallDist; (** perpendicular distance is used *)
-			
+
 			(** FLOOR CASTING *)
-			      
+
 			(** 4 different wall directions possible *)
 			IF (side = 0) & (rayDirX > 0) THEN
 				floorXWall := mapX;
@@ -300,7 +299,7 @@ TYPE
 				floorXWall := mapX + wallX;
 				floorYWall := mapY + 1.0
 			END;
-      
+
 			distWall := perpWallDist;
 			w.distPlayer := 0.0;
 
@@ -324,7 +323,7 @@ TYPE
 			END
 		END
 	END Render;
-	
+
 	BEGIN {ACTIVE}
 		WHILE w.GetNextBucket(bi) DO
 			INC(td.nThreadComputedBuckets);
@@ -361,25 +360,25 @@ TYPE
 		fpsCounter: FPSCounter;
 		floorTexWidth, floorTexHeight, ceilingTexWidth, ceilingTexHeight: LONGINT;
 		distPlayer: REAL;
-		
+
 		(** 1D Zbuffer *)
 		ZBuffer: ARRAY SCREEN_WIDTH OF REAL;
-		
-		
+
+
 		nActiveThreads, nBucketsX, nBucketSizeX, nBucketsComputed: LONGINT;
-		
+
 	PROCEDURE IncActiveThreads;
 	BEGIN {EXCLUSIVE}
 		INC(nActiveThreads)
 	END IncActiveThreads;
-	
+
 	PROCEDURE DecActiveThreads;
 	BEGIN {EXCLUSIVE}
 		DEC(nActiveThreads)
 	END DecActiveThreads;
-	
+
 	PROCEDURE GetNextBucket(VAR bi: LONGINT): BOOLEAN;
-	BEGIN 
+	BEGIN
 	(*  pthread_mutex_lock(&rc->threadMutex); *)
 		BEGIN {EXCLUSIVE}
 			bi := nBucketsComputed;
@@ -388,7 +387,7 @@ TYPE
 	(*  pthread_mutex_unlock(&rc->threadMutex); *)
 		RETURN bi < nBucketsX;
 	END GetNextBucket;
-	
+
 	PROCEDURE Terminate;
 	BEGIN
 		bDead := TRUE;
@@ -396,7 +395,7 @@ TYPE
 			AWAIT(nActiveThreads = 0)
 		END;
 	END Terminate;
-		
+
 	PROCEDURE &New(textures: TextureArray; alpha: BOOLEAN);
 	VAR
 		y: LONGINT;
@@ -423,7 +422,7 @@ TYPE
 		font := canvas.GetFont();
 		Frame;
 	END New;
-	
+
 	PROCEDURE Draw(canvas: Graphics.Canvas; w, h, q: LONGINT);
 	VAR
 		str: ARRAY 30 OF CHAR;
@@ -438,35 +437,35 @@ TYPE
 		font.GetStringSize(str, textWidth, textHeight);
 		canvas.DrawString(4, textHeight + 4, str);
 	END Draw;
-	
+
 	PROCEDURE Frame;
 	VAR
 		t, tTest: HUGEINT;
 		mode: Raster.Mode;
-		
+
 		(** arrays used to sort the sprites *)
 		spriteOrder: ARRAY numSprites OF LONGINT;
 		spriteDistance: ARRAY numSprites OF REAL;
-		
+
 		texX, texY, d,
 		spriteScreenX, vMoveScreen,
 		texWidth, texHeight,
-		pixelOffset, 
+		pixelOffset,
 		spritePixelOffset,
 		spriteHeight, drawStartY, drawEndY,
 		spriteWidth, drawStartX, drawEndX,
 		stripe, y, i, iTexture: LONGINT;
-		
+
 		spriteX, spriteY, invDet,
 		transformX, transformY: REAL;
-		
+
 		nThreadsTotal: LONGINT;
 		threads: POINTER TO ARRAY OF RenderThread;
 		iTest, iThread: LONGINT;
 		td: ThreadData;
-		
+
 		str: ARRAY 16 OF CHAR;
-		
+
 		PROCEDURE ThreadsRun;
 		BEGIN
 			nBucketsComputed := 0;
@@ -481,14 +480,14 @@ TYPE
 				AWAIT(nActiveThreads = 0)
 			END;
 		END ThreadsRun;
-		
+
 		PROCEDURE RenderFrame(bBenchmark: BOOLEAN);
 		BEGIN
 			NEW(threads, nThreadsTotal);
-		
+
 			nBucketsX := nThreadsTotal * 4;
 			nBucketSizeX := SCREEN_WIDTH DIV nBucketsX;
-			
+
 			IF bBenchmark THEN
 				context.out.String("nThreadsTotal: ");
 				context.out.Int(nThreadsTotal, 1);
@@ -501,7 +500,7 @@ TYPE
 			IF bBenchmark THEN
 				tTest := PreciseTimer.GetTicks();
 			END;
-			
+
 			IF bBenchmark THEN
 				FOR iTest := 0 TO TESTS - 1 DO
 					ThreadsRun;
@@ -509,7 +508,7 @@ TYPE
 			ELSE
 				ThreadsRun;
 			END;
-			
+
 			IF bBenchmark THEN
 				Strings.FloatToStr(PreciseTimer.GetTime(PreciseTimer.GetTicks() - tTest) / TESTS, 0, 4, 0, str);
 				context.out.String(", time elapsed: ");
@@ -525,33 +524,33 @@ TYPE
 				context.out.String("]");
 				context.out.Ln;
 			END;
-		
+
 		END RenderFrame;
-		
+
 	BEGIN
-	
+
 		IF bDead THEN RETURN END;
 
 		t := PreciseTimer.GetTicks();
-	
+
 		distPlayer := 0.0;
-		
+
 		floorTexWidth := textures[floorTexture].width;
 		floorTexHeight := textures[floorTexture].height;
 		ceilingTexWidth := textures[ceilingTexture].width;
 		ceilingTexHeight := textures[ceilingTexture].height;
-		
+
 		IF BENCHMARK THEN
 			nThreadsTotal := 1;
 			WHILE nThreadsTotal < (THREADS + 1) DO
 				RenderFrame(BENCHMARK);
-				nThreadsTotal := nThreadsTotal * 2; 
+				nThreadsTotal := nThreadsTotal * 2;
 			END;
 		ELSE
 			nThreadsTotal := THREADS;
 			RenderFrame(BENCHMARK);
 		END;
-		
+
 		(** SPRITE CASTING *)
 
 		(** sort sprites from far to close *)
@@ -561,13 +560,13 @@ TYPE
 		END;
 
 		CombSort(spriteOrder, spriteDistance, numSprites);
-		
+
 		(** after sorting the sprites, do the projection and draw them *)
 		FOR i := 0 TO numSprites - 1 DO
 			iTexture := ENTIER(sprites[spriteOrder[i], SpriteTexture]);
 			texWidth := textures[iTexture].width;
 			texHeight := textures[iTexture].height;
-			
+
 			(** translate sprite position to relative to camera *)
 			spriteX := sprites[spriteOrder[i], SpriteX] - posX;
 			spriteY := sprites[spriteOrder[i], SpriteY] - posY;
@@ -576,14 +575,14 @@ TYPE
 			(**  [ planeX   dirX ] -1                                       [ dirY      -dirX ] *)
 			(**  [               ]       =  1/(planeX*dirY-dirX*planeY) *   [                 ] *)
 			(**  [ planeY   dirY ]                                          [ -planeY  planeX ] *)
-			
+
 			invDet := 1.0 / (planeX * dirY - dirX * planeY); (** required for correct matrix multiplication *)
 			transformX := invDet * (dirY * spriteX - dirX * spriteY);
 			transformY := invDet * (-planeY * spriteX + planeX * spriteY); (** this is actually the depth inside the screen, that what Z is in 3D *)
 			spriteScreenX := ENTIER((SCREEN_WIDTH / 2) * (1 + transformX / transformY));
-			
+
 			vMoveScreen := ENTIER(vMove / transformY);
-			
+
 			(** calculate height of the sprite on screen *)
 			spriteHeight := ENTIER((SCREEN_HEIGHT / ABS(transformY)) / vDiv); (** using "transformY" instead of the real distance prevents fisheye *)
 			d := -SCREEN_HEIGHT DIV 2 + spriteHeight DIV 2;
@@ -593,14 +592,14 @@ TYPE
 			IF drawStartY < 0 THEN drawStartY := 0 END;
 			drawEndY := spriteHeight DIV 2 + SCREEN_HEIGHT DIV 2 + vMoveScreen;
 			IF drawEndY >= SCREEN_HEIGHT THEN drawEndY := SCREEN_HEIGHT - 1 END;
-			
+
 			(** calculate width of the sprite *)
 			spriteWidth := ENTIER((SCREEN_HEIGHT / ABS(transformY)) / uDiv);
 			drawStartX := -spriteWidth DIV 2 + spriteScreenX;
 			IF drawStartX < 0 THEN drawStartX := 0 END;
 			drawEndX := spriteWidth DIV 2 + spriteScreenX;
 			IF drawEndX >= SCREEN_WIDTH THEN drawEndX := SCREEN_WIDTH - 1 END;
-			
+
 			(** loop through every vertical stripe of the sprite on screen *)
 			FOR stripe := drawStartX TO drawEndX - 1 DO
 				texX := ENTIER(256 * (stripe - (-spriteWidth / 2 + spriteScreenX)) * texWidth / spriteWidth) DIV 256;
@@ -625,7 +624,7 @@ TYPE
 				END
 			END
 		END;
-		
+
 		Raster.InitMode(mode, Raster.srcCopy);
 		FOR y := 0 TO SCREEN_HEIGHT - 1 DO
 			Raster.PutPixels(img, 0, y, SCREEN_WIDTH, Raster.BGRA8888, bufferPixels^, y * SCREEN_WIDTH * 4, mode)
@@ -634,16 +633,16 @@ TYPE
 		fpsCounter.AddTimeMeasure(PreciseTimer.GetTime(PreciseTimer.GetTicks() - t));
 		moveSpeed := fpsCounter.GetAverageFrameTime() * 4.5;
 		rotSpeed := fpsCounter.GetAverageFrameTime() * 2.0;
-		
+
 	END Frame;
-			
+
 	PROCEDURE Close;
 	BEGIN
 		Terminate;
 		Close^;
 		instance:=NIL
 	END Close;
-	
+
 	PROCEDURE Rotate(dx: LONGINT);
 	VAR
 		fAngle, fSin, fCos: REAL;
@@ -662,7 +661,7 @@ TYPE
 			Frame
 		END
 	END Rotate;
-	
+
 	PROCEDURE Move(dy: LONGINT);
 	VAR
 		fDist: REAL;
@@ -702,21 +701,21 @@ TYPE
 		ELSE
 		END
 	END KeyEvent;
-		
+
 	END RaycasterWindow;
-	
+
 
 VAR
 	context: Commands.Context;
 	instance: RaycasterWindow;
-	
+
 PROCEDURE Log(type, code : SHORTINT; msg: ARRAY OF CHAR; showOnKernelLog : BOOLEAN);
 VAR message : Events.Message;
 BEGIN
 	COPY(msg, message);
 	Events.AddEvent(moduleName, type, EventClass, EventSubclass, code, message, showOnKernelLog);
 END Log;
-	
+
 (** sort algorithm *)
 PROCEDURE CombSort(VAR order: ARRAY OF LONGINT; VAR dist: ARRAY OF REAL; amount: LONGINT);
 VAR
@@ -747,7 +746,7 @@ BEGIN
 		END
 	END
 END CombSort;
-	
+
 PROCEDURE LoadTexture(CONST strPath, strName: ARRAY OF CHAR; VAR tex: Texture; bSprite: BOOLEAN): BOOLEAN;
 VAR
 	image: Graphics.Image;
@@ -790,7 +789,7 @@ BEGIN
 	END;
 	RETURN bResult
 END LoadTexture;
-	
+
 PROCEDURE Open*(c: Commands.Context);
 VAR
 	texArchive: Files.File;
@@ -847,9 +846,9 @@ SystemTools.Free WMRaycaster ~
 
 Pentium(R) Dual-Core CPU T4200 @ 2.00 GHz:
 
-nThreadsTotal: 1, nBucketsX: 4, bucketSizeX: 160, time elapsed:   0.0107
+nThreadsTotal: 1, nBucketsX: 4, bucketSizeX: 160, time elapsed:   0.0115
 nThreadComputedBuckets: [4]
-nThreadsTotal: 2, nBucketsX: 8, bucketSizeX: 80, time elapsed:   0.0060
+nThreadsTotal: 2, nBucketsX: 8, bucketSizeX: 80, time elapsed:   0.0058
 nThreadComputedBuckets: [4, 4]
-nThreadsTotal: 4, nBucketsX: 16, bucketSizeX: 40, time elapsed:   0.0061
-nThreadComputedBuckets: [0, 0, 8, 8]
+nThreadsTotal: 4, nBucketsX: 16, bucketSizeX: 40, time elapsed:   0.0060
+nThreadComputedBuckets: [0, 8, 8, 0]

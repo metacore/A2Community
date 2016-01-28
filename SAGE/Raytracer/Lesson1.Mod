@@ -17,10 +17,9 @@ MODULE Lesson1;
 
 IMPORT
 	Math, Events, Strings, Files, Commands, PreciseTimer,
-
-	(*lib := Lib3D_SSE*)
-	lib := Lib3D
-
+	
+	(*lib := Lib3D*)
+	lib := Lib3D_SSE
 	;
 
 CONST
@@ -196,8 +195,16 @@ BEGIN
 
 		NEW(threads, rc.nThreadsTotal);
 
-		rc.nBucketsX := rc.nThreadsTotal * 2;
-		rc.nBucketsY := rc.nThreadsTotal * 2;
+		rc.nBucketsX := rc.nThreadsTotal (* 2*);
+		rc.nBucketsY := rc.nThreadsTotal (* 2*);
+		
+		(*rc.nBucketsX := 1(*rc.nThreadsTotal (* 2*)*);
+		rc.nBucketsY := 1(*rc.nThreadsTotal (* 2*)*);
+		IF rc.nThreadsTotal > 1 THEN
+			rc.nBucketsX := 4(*rc.nThreadsTotal (* 2*)*);
+			rc.nBucketsY := 4(*rc.nThreadsTotal (* 2*)*);
+		END;*)
+		
 		rc.nBucketsTotal := rc.nBucketsX * rc.nBucketsY;
 		rc.options.bucketSizeX := rc.options.imageWidth DIV rc.nBucketsX;
 		rc.options.bucketSizeY := rc.options.imageHeight DIV rc.nBucketsY;
@@ -364,18 +371,7 @@ BEGIN
 	rc.options.cropWindow.ymax := MIN(1, MAX(0, rc.options.cropWindow.ymax));
 
 	(** Create world *)
-	rc.clBackground := vector(0.5, 0.62, 0.78);
-	(* Balls *)
-	obj := lib.CreateObject(rc, vector(0, 0, 15), 3,
-		vector(0.5, 0.7, 0.5), lib.GLASS, FALSE);
-	obj := lib.CreateObject(rc, vector(-4.5, 4.5, 17), 1.8,
-		vector(1, 0.3, 0.3), lib.DIFFUSE, FALSE);
-	obj := lib.CreateObject(rc, vector(2, -2, 19), 2,
-		vector(0.3, 1, 0.3), lib.DIFFUSE, FALSE);
-	(* Light *)
-	rc.light.object := lib.CreateObject(rc, vector(3, 3, 2), 0.5,
-		vector(250, 250, 250), lib.MATTE, TRUE);
-
+	
 	(*
 	(** Create world *)
 	rc.clBackground := vector(0.5, 0.62, 0.78);
@@ -389,8 +385,24 @@ BEGIN
 	(* Light *)
 	rc.light.object := lib.CreateObject(rc, vector(3, 3, 13), 0.25,
 		vector(50, 50, 50), lib.MATTE, TRUE);
-	*)
+	*)	
+	
+	rc.clBackground := vector(0.5, 0.62, 0.78);
+	(* Balls *)
+	obj := lib.CreateObject(rc, vector(0, 0, 15), 3,
+		vector(0.5, 0.7, 0.5), lib.GLASS, FALSE);
+	obj := lib.CreateObject(rc, vector(-4.5, 4.5, 17), 1.8,
+		vector(1, 0.3, 0.3), lib.DIFFUSE, FALSE);
+	obj := lib.CreateObject(rc, vector(2, -2, 19), 2,
+		vector(0.3, 1, 0.3), lib.DIFFUSE, FALSE);
+	(* Light *)
+	rc.light.object := lib.CreateObject(rc, vector(3, 3, 13), 0.5,
+		vector(50, 50, 50), lib.MATTE, TRUE);
 
+(*
+	(* Light *)
+	rc.light.object := lib.CreateObject(rc, vector(3, 3, 2), 0.5,
+		vector(250, 250, 250), lib.MATTE, TRUE);
 	(* Disks *)
 	pt := vector(8, -5, 21);
 	obj := lib.CreateDisk(rc, pt, 3,
@@ -415,6 +427,7 @@ BEGIN
 		lib.Blue, lib.DIFFUSE, lib.YAxisVector);
 	obj := lib.CreateDisk(rc, pt, 3,
 		lib.Cyan, lib.DIFFUSE, lib.ZAxisVector);
+*)
 
 	rc.funcTrace := lib.Trace;
 
@@ -449,21 +462,12 @@ Lesson1.Main ~
 
 SystemTools.Free Lesson1 Lib3D Lib3D_SSE ~
 
-=============== Pure code: ========================================================
-Pentium(R) 4 CPU 650 w/HT @ 3.40 GHz (1 cores, 2 threads):
-nThreadsTotal: 1, bucket size: 320 x 240, nBucketsTotal: 4, time elapsed:   7.9809
-nThreadsTotal: 2, bucket size: 160 x 120, nBucketsTotal: 16, time elapsed:   6.3666
-
-Pentium(R) Dual-Core CPU T4200 @ 2.00 GHz (2 cores, 2 threads):
-nThreadsTotal: 1, bucket size: 320 x 240, nBucketsTotal: 4, time elapsed:   6.9457
-nThreadsTotal: 2, bucket size: 160 x 120, nBucketsTotal: 16, time elapsed:   3.5809
-
-Intel Core i5 650 @ 3.20 GHz (2 cores, 4 threads):
-nThreadsTotal: 1, bucket size: 320 x 240, nBucketsTotal: 4, time elapsed:   3.7442
-nThreadsTotal: 2, bucket size: 160 x 120, nBucketsTotal: 16, time elapsed:   2.1556
-nThreadsTotal: 4, bucket size: 80 x 60, nBucketsTotal: 64, time elapsed:   1.6761
-
 AMD A10-7850K Radeon R7, 12 Compute Cores 4C+8G @ 3.70 GHz (4 cores, 4 threads):
-nThreadsTotal: 1, bucket size: 320 x 240, nBucketsTotal: 4, time elapsed:   3.1762
-nThreadsTotal: 2, bucket size: 160 x 120, nBucketsTotal: 16, time elapsed:   1.6891
-nThreadsTotal: 4, bucket size: 80 x 60, nBucketsTotal: 64, time elapsed:   0.9812
+Pure code:
+nThreadsTotal: 1, bucket size: 640 x 480, nBucketsTotal: 1, time elapsed:   1.2909
+nThreadsTotal: 2, bucket size: 320 x 240, nBucketsTotal: 4, time elapsed:   0.7199
+nThreadsTotal: 4, bucket size: 160 x 120, nBucketsTotal: 16, time elapsed:   0.3787
+SSE optimized:
+nThreadsTotal: 1, bucket size: 640 x 480, nBucketsTotal: 1, time elapsed:   1.0590
+nThreadsTotal: 2, bucket size: 320 x 240, nBucketsTotal: 4, time elapsed:   0.5875
+nThreadsTotal: 4, bucket size: 160 x 120, nBucketsTotal: 16, time elapsed:   0.3032
