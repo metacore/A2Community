@@ -436,18 +436,20 @@ Lesson6.Lesson6b ~
 SystemTools.Free Lesson6 Lib3D Lib3D_SSE ~
 
 AMD A10-7850K Radeon R7, 12 Compute Cores 4C+8G @ 3.70 GHz (4 cores, 4 threads):
+
 Pure code, Lesson6a:
 nThreadsTotal: 1, bucket size: 320 x 240, nBucketsTotal: 4, time elapsed:   0.2253
 nThreadsTotal: 2, bucket size: 160 x 120, nBucketsTotal: 16, time elapsed:   0.1196
 nThreadsTotal: 4, bucket size: 80 x 60, nBucketsTotal: 64, time elapsed:   0.0673
+SSE optimized, Lesson6a:
+nThreadsTotal: 1, bucket size: 320 x 240, nBucketsTotal: 4, time elapsed:   0.1826
+nThreadsTotal: 2, bucket size: 160 x 120, nBucketsTotal: 16, time elapsed:   0.0976
+nThreadsTotal: 4, bucket size: 80 x 60, nBucketsTotal: 64, time elapsed:   0.0541
+
 Pure code, Lesson6b:
 nThreadsTotal: 1, bucket size: 320 x 240, nBucketsTotal: 4, time elapsed:   0.2030
 nThreadsTotal: 2, bucket size: 160 x 120, nBucketsTotal: 16, time elapsed:   0.1079
 nThreadsTotal: 4, bucket size: 80 x 60, nBucketsTotal: 64, time elapsed:   0.0592
-SSE optimized, Lesson6a:
-nThreadsTotal: 2, bucket size: 160 x 120, nBucketsTotal: 16, time elapsed:   0.0976
-nThreadsTotal: 4, bucket size: 80 x 60, nBucketsTotal: 64, time elapsed:   0.0540
-nThreadsTotal: 8, bucket size: 40 x 30, nBucketsTotal: 256, time elapsed:   0.0581
 SSE optimized, Lesson6b:
 nThreadsTotal: 1, bucket size: 320 x 240, nBucketsTotal: 4, time elapsed:   0.1565
 nThreadsTotal: 2, bucket size: 160 x 120, nBucketsTotal: 16, time elapsed:   0.0826
