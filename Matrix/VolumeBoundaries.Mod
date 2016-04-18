@@ -1,4 +1,4 @@
-MODULE VolumeBoundaries; 	(** AUTHOR "D. Shulga, 2015"; PURPOSE "Utilities for determination of volume boundary determination and application of boundary conditions"; *)
+MODULE VolumeBoundaries; 	(** AUTHOR "D. Shulga, contributions PH, 2015"; PURPOSE "Utilities for determination of volume boundary determination and application of boundary conditions"; *)
 
 (* implements boundary conditions frequently used in engineering: 
 Dirichlet = 1st type BC: specify the values that a solution needs to take on along the boundary of the domain. (see wikipedia "Dirichlet boundary conditions")
@@ -75,7 +75,8 @@ TYPE
 			vc.nElements:=TrueCount(vc.v);
 		END ComputeVolumeContainer;		
 		
-		(** 	Zero pressure gradient perpendicular to wall	*)
+		(** 	Zero gradient perpendicular to wall, by assigning the inner layer value to the outer layer
+		This is not perfect for Nabla operators that take 3 elements into account	*)
 		PROCEDURE ZeroBoundaryGradient*(VAR p: Volume);
 		VAR
 			k,N0,N1,N2: LONGINT;
@@ -182,7 +183,7 @@ TYPE
 		
 		PROCEDURE SoluteBoundaries*(VAR field: Volume); (* avoid presence of solute to outside a channel. TO DO: do not suppress, but bring the material diffused outside inwards again, to avoid loss. *)
 		VAR
-			k,N0,N1,N2: LONGINT;
+			i,j,k,N0,N1,N2: LONGINT;
 		BEGIN
 			N0 := LEN(field,0);
 			N1 := LEN(field,1);
@@ -190,7 +191,20 @@ TYPE
 			FOR k:=0 TO LEN(volumes,0)-1 DO
 				IF (N0 = volumes[k].N0) & (N1 = volumes[k].N1) & (N2 = volumes[k].N2) THEN
 					index := k;
+					 (* for triple/double helix *)
+					FOR i:=0 TO LEN(field, 0)-1 DO
+						FOR j:=0 TO LEN(field,1)-1 DO
+							IF DyeInlet(LEN(field,0), LEN(field,1), i,j) THEN 
+								field[i,j, 0 ]:=1; (*inlet condition*)
+							ELSE
+								field[i,j, 0 ]:=0; 
+							END;
+						END;
+					END;
+					
+					(*
 					field[..N0 DIV 3, .., 0 ]:=1;field[N0 DIV 3+1.., .., 0 ]:=0;  (*inlet condition*)
+					*)
 					(*to do: outlet condition: = black hole ?*)
 					DirichletBC(field, volumes[k].outside, 0);  (* set field to zero outside the domain *)	
 					ZeroBoundaryGradient(field); (* by establishing a zero solute gradient accross the wall, contents will not diffuse out *)
@@ -220,6 +234,18 @@ TYPE
 	END VolumeDomain;
 
 VAR log*: Streams.Writer;
+
+PROCEDURE Sqr(a:LONGREAL):LONGREAL;
+BEGIN
+	RETURN a*a
+END Sqr;
+
+
+PROCEDURE DyeInlet(sizeY,sizeZ,y,z: LONGINT): BOOLEAN;
+CONST radius=0.055 * 2.8;
+BEGIN
+	RETURN Sqr(y-sizeY/2) + Sqr(z - sizeZ/2) < Sqr(radius*sizeY)
+END DyeInlet;
 
 PROCEDURE ReadBinaryVolume*(CONST filename: ARRAY OF CHAR): BinaryVolume;	
 VAR
@@ -305,11 +331,11 @@ BEGIN
 					FOR kk0:=k0-1 TO k0+1 DO (* same as above, but faster *)
 						FOR kk1:=k1-1 TO k1+1 DO
 							FOR kk2:=k2-1 TO k2+1 DO
-								IF innerSurface[kk0,kk1,kk2] THEN INC(count); q:=q+p[kk0,kk1,kk2] END;
+								IF innerSurface[kk0,kk1,kk2] THEN INC(count); q:=q+p[kk0,kk1,kk2] END; 
 							END;
 						END;
 					END;
-					p[k0,k1,k2] := q/count; 
+					p[k0,k1,k2] := q/count; (* outer layer becomes average of nearby inner layer elements*)
 				END;				
 			END;	
 		END;	

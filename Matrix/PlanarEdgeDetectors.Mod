@@ -181,9 +181,9 @@ END TestFile;
 END PlanarEdgeDetectors.
 
 
-PlanarEdgeDetectors.Test
-
-"C:/C/Documents and Settings/Pat/My Documents/Malaria/Discognosis FP7/Size Standards QLC/PS Beads/B_237_AA_1_Time 4.tif"
-PlanarEdgeDetectors.Test
-"C:/C/Documents and Settings/Pat/My Documents/Malaria/Discognosis FP7/Size Standards QLC/PS Beads/image_140703_002.tif"
+PlanarEdgeDetectors.Test ~
+PlanarEdgeDetectors.TestFile
+"C:/C/Documents and Settings/Pat/My Documents/Malaria/Discognosis FP7/Size Standards QLC/PS Beads/B_237_AA_1_Time 4.tif" ~
+PlanarEdgeDetectors.TestFile
+"C:/C/Documents and Settings/Pat/My Documents/Malaria/Discognosis FP7/Size Standards QLC/PS Beads/image_140703_002.tif" ~
 

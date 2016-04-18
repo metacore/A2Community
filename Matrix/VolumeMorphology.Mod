@@ -300,37 +300,37 @@ BEGIN
 		imgB[..,..,30..33]:=TRUE;
 		NEW(img, LEN(imgB));
 		img:=MatrixUtilities.BoolToFloat(imgB);
-		NEW(window, img, ""); window.AddWindow;
+		NEW(window, img, "",0); window.AddWindow;
 		
 		imgB1:=BinarySimpleErosion(imgB,{});
 		NEW(img1, LEN(imgB));
 		img1:=MatrixUtilities.BoolToFloat(imgB1);
-		NEW(window, img1, "Erosion"); window.AddWindow;
+		NEW(window, img1, "Erosion",0); window.AddWindow;
 		
 		imgB2:=BinarySimpleDilation(imgB,{});
 		NEW(img2, LEN(imgB));
 		img2:=MatrixUtilities.BoolToFloat(imgB2);
-		NEW(window, img2, "Dilation"); window.AddWindow;
+		NEW(window, img2, "Dilation",0); window.AddWindow;
 		
 		imgB3:=BinarySimpleOpening(imgB,{});
 		NEW(img3, LEN(imgB));
 		img3:=MatrixUtilities.BoolToFloat(imgB3);
-		NEW(window, img3, "Opening"); window.AddWindow;
+		NEW(window, img3, "Opening",0); window.AddWindow;
 		
 		imgB4:=BinarySimpleClosure(imgB,{});
 		NEW(img4, LEN(imgB));
 		img4:=MatrixUtilities.BoolToFloat(imgB4);
-		NEW(window, img4, "Closure"); window.AddWindow;
+		NEW(window, img4, "Closure",0); window.AddWindow;
 		
 		imgB5:=BinarySimpleDilation(imgB,{}) & ~imgB;
 		NEW(img5, LEN(imgB));
 		img5:=MatrixUtilities.BoolToFloat(imgB5);
-		NEW(window, img5, "OuterEdge"); window.AddWindow;
+		NEW(window, img5, "OuterEdge",0); window.AddWindow;
 		
 		imgB6:=imgB & ~BinarySimpleErosion(imgB,{}) ;
 		NEW(img6, LEN(imgB));
 		img6:=MatrixUtilities.BoolToFloat(imgB6);
-		NEW(window, img6, "InnerEdge"); window.AddWindow;
+		NEW(window, img6, "InnerEdge",0); window.AddWindow;
 	END;
 END TestBinary;
 
@@ -352,27 +352,27 @@ BEGIN
 		imgB[..,..,30..33]:=rand.Uniform();
 		NEW(img, LEN(imgB));
 		img:=imgB;
-		NEW(window, img, ""); window.AddWindow;
+		NEW(window, img, "",0); window.AddWindow;
 		
 		imgB1:=SimpleErosion(imgB,{});
 		NEW(img1, LEN(imgB));
 		img1:=imgB1;
-		NEW(window, img1, "Erosion"); window.AddWindow;
+		NEW(window, img1, "Erosion",0); window.AddWindow;
 		
 		imgB2:=SimpleDilation(imgB,{});
 		NEW(img2, LEN(imgB));
 		img2:=imgB2;
-		NEW(window, img2, "Dilation"); window.AddWindow;
+		NEW(window, img2, "Dilation",0); window.AddWindow;
 		
 		imgB3:=SimpleOpening(imgB,{});
 		NEW(img3, LEN(imgB));
 		img3:=imgB3;
-		NEW(window, img3, "Opening"); window.AddWindow;
+		NEW(window, img3, "Opening",0); window.AddWindow;
 		
 		imgB4:=SimpleClosure(imgB,{});
 		NEW(img4, LEN(imgB));
 		img4:=imgB4;
-		NEW(window, img4, "Closure"); window.AddWindow;
+		NEW(window, img4, "Closure",0); window.AddWindow;
 	END;
 END Test;
 
