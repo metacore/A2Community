@@ -2,7 +2,7 @@ MODULE WinStarter;   (** fof , source Win32.Windows.Mod+Win32.Displays.Mod+Win32
 
 IMPORT SYSTEM, Kernel32, User32, Modules, KernelLog, GDI32, Displays, Strings,
 	AosInputs := Inputs, Commands, Objects,WinFS, Options,
-	WMWindowManager, WindowManager, WMNavigate, WMComponents;
+	WMWindowManager, WindowManager, WMNavigate;
 
 CONST
 	dbgDisableReleaseMsg = TRUE;
