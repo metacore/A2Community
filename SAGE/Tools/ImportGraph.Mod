@@ -2,7 +2,7 @@ MODULE ImportGraph; (** AUTHOR "SAGE"; PURPOSE "Utility for generation of import
 
 IMPORT
 	Commands, Files, Options, Codecs, Streams, Strings, UTF8Strings,
-	Diagnostics, ModuleParser, Containers;
+	Diagnostics, ModuleParser, Containers, Modules, KernelLog;
 
 CONST
 	DefaultOutputFilename = "ImportGraph.dot";
@@ -109,6 +109,32 @@ BEGIN
 	END
 END ProcessModule;
 
+(* Get the list of actually imported modules *)
+PROCEDURE ActualImports(CONST modName: ARRAY OF CHAR);
+VAR
+	objModule: Modules.Module;
+	res: LONGINT;
+	msg: ARRAY 8 OF CHAR;
+	i: LONGINT;
+BEGIN
+	objModule := Modules.ThisModule(modName, res, msg);
+	IF (objModule # NIL) & (res = Modules.Ok) THEN
+		KernelLog.Ln;
+		KernelLog.String("Module: ");
+		KernelLog.String(objModule.name);
+		KernelLog.String(", imports: ");
+		IF objModule.module # NIL THEN
+			FOR i := 0 TO LEN(objModule.module) - 1 DO
+				KernelLog.String(objModule.module[i].name);
+				IF i # LEN(objModule.module) - 1 THEN
+					KernelLog.String(", ");
+				END
+			END
+		END;
+		KernelLog.Ln
+	END
+END ActualImports;
+
 PROCEDURE Output(stream: Streams.Writer; modules: ModulesVector; modulesNotFound: Containers.StringVector);
 
 	PROCEDURE OutputName(n: Strings.String);
@@ -139,6 +165,9 @@ BEGIN
 	FOR i := 0 TO modules.vector.GetCount() - 1 DO
 		m := modules.GetItem(i);
 		IF m # NIL THEN
+		
+			ActualImports(m.ident.name^);
+			
 			OutputName(m.ident.name);
 			IF m.FindImport("SYSTEM") # NIL THEN
 				stream.String(' [fontcolor = red]; ')
@@ -215,5 +244,14 @@ ImportGraph.Generate -f=ImportGraphWMWindowManager.dot WMWindowManager ~
 ImportGraph.Generate -f=ImportGraphImportGraph.dot ImportGraph ~
 
 ImportGraph.Generate -f=ImportGraphWebBrowser.dot WebBrowser ~
+
+Import graph of all components (generator procedure present):
+ImportGraph.Generate -f=ImportGraphWMStringGrids.dot 
+	WMStringGrids~
+ImportGraph.Generate -f=ImportGraphWMTextView.dot 
+	WMTextView ~
+
+ImportGraph.Generate -f=ImportGraphWMEditors.dot 
+	WMEditors ~
 
 SystemTools.Free ImportGraph ~
