@@ -1,4 +1,4 @@
-MODULE RaycasterMaze; (** AUTHOR "SAGE"; PURPOSE "Wolfenstein 3D like raycasting game engine with maze generator"; *)
+MODULE WMRaycasterMaze; (** AUTHOR "SAGE"; PURPOSE "Wolfenstein 3D like raycasting game engine with maze generator"; *)
 
 (*
 Raycasting game engine tutorial:
@@ -761,17 +761,17 @@ BEGIN
 	END
 END mapView;
 	
-PROCEDURE Open*(context: Commands.Context);
+PROCEDURE WindowGenerator*(ctx: Commands.Context): WM.Window;
 VAR
 	y: LONGINT;
 	bError: BOOLEAN;
 	strPath: ARRAY 256 OF CHAR;
 BEGIN
-	IF instance # NIL THEN RETURN END;
+	IF instance # NIL THEN RETURN NIL END;
 	
-	context.out.Ln;
+	ctx.out.Ln;
 	
-	context.out.String("Loading textures..."); context.out.Ln;
+	ctx.out.String("Loading textures..."); ctx.out.Ln;
 	bError := FALSE;
 	
 	Strings.Concat(DATA_FILE, "://", strPath);
@@ -782,7 +782,7 @@ BEGIN
 	bError := bError OR ~LoadTexture(strPath, "stone2.png", textures[2]);
 	
 	IF ~bError THEN
-		context.out.String("Textures loaded successfully"); context.out.Ln;
+		ctx.out.String("Textures loaded successfully"); ctx.out.Ln;
 		
 		IF INIT_SEED THEN
 			random.InitSeed(SHORT(PreciseTimer.GetTicks()))
@@ -810,9 +810,9 @@ BEGIN
 		
 		mapClear;
 		
-		context.out.String("Generating maze..."); context.out.Ln;
+		ctx.out.String("Generating maze..."); ctx.out.Ln;
 		generateMaze;
-		context.out.String("Maze generated"); context.out.Ln;
+		ctx.out.String("Maze generated"); ctx.out.Ln;
 		
 		paintMaze;
 		paintPlayer;
@@ -827,10 +827,23 @@ BEGIN
 		
 		NEW(instance, FALSE);
 		
-		InstallMessageHandler
+		InstallMessageHandler;
 		
-	END
+		RETURN instance
+		
+	END;
+	
+	RETURN NIL
 
+END WindowGenerator;
+
+PROCEDURE Open*(ctx: Commands.Context);
+VAR
+	wDummy: WM.Window;
+BEGIN
+	IF instance = NIL THEN
+		wDummy := WindowGenerator(ctx)
+	END
 END Open;
 
 PROCEDURE Cleanup;
@@ -843,8 +856,8 @@ END Cleanup;
 BEGIN
 	NEW(random);
 	Modules.InstallTermHandler(Cleanup)
-END RaycasterMaze.
+END WMRaycasterMaze.
 
-RaycasterMaze.Open ~
-SystemTools.Free RaycasterMaze ~
+WMRaycasterMaze.Open ~
+SystemTools.Free WMRaycasterMaze ~
 

@@ -392,7 +392,7 @@ TYPE
 			bResult: BOOLEAN;
 		BEGIN
 			timPeriod.enabled.Set(FALSE);
-			bResult := (WMDialogs.QueryString("Open file", sName) = WMDialogs.ResOk)
+			bResult := (WMDialogs.QueryStringXY(bounds.l + 10, bounds.t + 60, "Open file", sName) = WMDialogs.ResOk)
 				& (sName # "");
 			timPeriod.enabled.Set(TRUE);
 			RETURN bResult
@@ -687,22 +687,6 @@ VAR
 	bBASSInitialized: BOOLEAN;
 	bEAXSupported: BOOLEAN;
 
-(*
-(* Convert path delimiters *)
-PROCEDURE ConvertChar(VAR name: ARRAY OF CHAR; from, to: CHAR);
-VAR
-	i: LONGINT;
-BEGIN
-	i := 0;
-	WHILE name[i] # 0X DO
-		IF name[i] = from THEN
-			name[i] := to
-		END;
-		INC(i)
-	END
-END ConvertChar;
-*)
-
 PROCEDURE BASS_CheckVersion(context: Commands.Context): BOOLEAN;
 BEGIN
 	IF (BASS.BASS_GetVersion() DIV 10000H) MOD 10000H = BASS.BASSVERSION THEN
@@ -769,7 +753,7 @@ FINALLY
 
 END WireComponents;
 
-PROCEDURE Open*(ctx: Commands.Context);
+PROCEDURE WindowGenerator*(ctx: Commands.Context): WMWindowManager.Window;
 VAR
 	xml: XML.Content;
 	root: WMComponents.VisualComponent;
@@ -792,13 +776,13 @@ BEGIN
 			IF ~WireComponents(root, window) THEN
 				context.out.String("Form resource corrupted"); context.out.Ln;
 				context.out.Update;
-				RETURN
+				RETURN NIL
 			END;
 
 		  IF BASS.BASS_Init(-1, 44100, BASS.BASS_DEVICE_3D, 0, NIL) = 0 THEN
 		    context.out.String("Can't initialize output device"); context.out.Ln;
 		    context.out.Update;
-		    RETURN
+		    RETURN NIL
 		  END;
 
 			context.out.String("BASS initialized"); context.out.Ln;
@@ -826,9 +810,19 @@ BEGIN
 				{WMWindowManager.FlagFrame, WMWindowManager.FlagClose,
 					WMWindowManager.FlagMinimize, WMWindowManager.FlagNoResizing});
 			manager := WMWindowManager.GetDefaultManager();
-			manager.SetFocus(window)
-
+			manager.SetFocus(window);
+			
 	  END
+	END;
+	RETURN window
+END WindowGenerator;
+
+PROCEDURE Open*(ctx: Commands.Context);
+VAR
+	wDummy: WMWindowManager.Window;
+BEGIN
+	IF window = NIL THEN
+		wDummy := WindowGenerator(ctx)
 	END
 END Open;
 

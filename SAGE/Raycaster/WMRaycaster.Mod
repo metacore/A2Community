@@ -2,7 +2,7 @@ MODULE WMRaycaster; (** AUTHOR "Yaroslav Romanchenko (SAGE)"; PURPOSE "Lode's Co
 
 IMPORT
 	SYSTEM, Events, PreciseTimer, Modules, Inputs, Strings, Commands, Raster, Files,
-	WM := WMWindowManager, Rectangles := WMRectangles,
+	WMWindowManager, Rectangles := WMRectangles,
 	Math := Math, Graphics := WMGraphics;
 
 CONST
@@ -344,7 +344,7 @@ TYPE
 		w.DecActiveThreads
 	END RenderThread;
 
-	RaycasterWindow* = OBJECT(WM.BufferWindow)
+	RaycasterWindow* = OBJECT(WMWindowManager.BufferWindow)
 	VAR
 		alpha, bDead: BOOLEAN;
 		font: Graphics.Font;
@@ -416,7 +416,7 @@ TYPE
 		NEW(bufferPixels, SCREEN_WIDTH * SCREEN_HEIGHT * 4);
 		NEW(fpsCounter, 200);
 		Init(SCREEN_WIDTH, SCREEN_HEIGHT, alpha);
-		WM.DefaultAddWindow(SELF);
+		WMWindowManager.DefaultAddWindow(SELF);
 		SetTitle(Strings.NewString("Textured raycaster with floor, ceiling and sprites"));
 		canvas.SetColor(Graphics.White);
 		font := canvas.GetFont();
@@ -640,7 +640,7 @@ TYPE
 	BEGIN
 		Terminate;
 		Close^;
-		instance:=NIL
+		window:=NIL
 	END Close;
 
 	PROCEDURE Rotate(dx: LONGINT);
@@ -707,7 +707,7 @@ TYPE
 
 VAR
 	context: Commands.Context;
-	instance: RaycasterWindow;
+	window: RaycasterWindow;
 
 PROCEDURE Log(type, code : SHORTINT; msg: ARRAY OF CHAR; showOnKernelLog : BOOLEAN);
 VAR message : Events.Message;
@@ -790,15 +790,15 @@ BEGIN
 	RETURN bResult
 END LoadTexture;
 
-PROCEDURE Open*(c: Commands.Context);
+PROCEDURE WindowGenerator*(ctx: Commands.Context): WMWindowManager.Window;
 VAR
 	texArchive: Files.File;
 	bError: BOOLEAN;
 	strPath: ARRAY 256 OF CHAR;
 	textures: TextureArray;
 BEGIN
-	IF instance # NIL THEN RETURN END;
-	context := c;
+	IF window # NIL THEN RETURN NIL END;
+	context := ctx;
 	context.out.Ln;
 	texArchive := Files.Old(DATA_FILE);
 	bError := ~(texArchive # NIL);
@@ -824,16 +824,27 @@ BEGIN
 		END;
 		IF ~bError THEN
 			context.out.String("Textures loaded successfully"); context.out.Ln;
-			NEW(instance, textures, FALSE)
+			NEW(window, textures, FALSE);
+			RETURN window
 		END
+	END;
+	RETURN NIL
+END WindowGenerator;
+
+PROCEDURE Open*(ctx: Commands.Context);
+VAR
+	wDummy: WMWindowManager.Window;
+BEGIN
+	IF window = NIL THEN
+		wDummy := WindowGenerator(ctx)
 	END
 END Open;
 
 PROCEDURE Cleanup;
 BEGIN
-	IF instance # NIL THEN
-		instance.Terminate;
-		instance.Close
+	IF window # NIL THEN
+		window.Terminate;
+		window.Close
 	END
 END Cleanup;
 
