@@ -1220,34 +1220,35 @@ VAR
 		
 		win := NIL;
 		IF wg # NIL THEN
-			
 			manager	 := WMWindowManager.GetDefaultManager();
 			IF (manager # NIL) & (manager IS WindowManager.WindowManager) THEN
-				WMNavigate.HideNavigation;
-				
 				win := wg(context);
-				
-				manager.SetWindowPos(win, 0, 0);
-				h := win.GetHeight();
-				IF (win.topW # NIL) & (win.bottomW # NIL) THEN
-					INC(h, win.topW.GetHeight());
-					DEC(h, win.bottomW.GetHeight()) 
-				END;
-				w := win.GetWidth();
-				IF win.leftW # NIL THEN
-					INC(w, win.leftW.GetWidth())
-				END;
-				
-				COPY(win.GetTitle()^, windowTitle);
+				IF win # NIL THEN
+					
+					WMNavigate.HideNavigation;
+					
+					manager.SetWindowPos(win, 0, 0);
+					h := win.GetHeight();
+					IF (win.topW # NIL) & (win.bottomW # NIL) THEN
+						INC(h, win.topW.GetHeight());
+						DEC(h, win.bottomW.GetHeight()) 
+					END;
+					w := win.GetWidth();
+					IF win.leftW # NIL THEN
+						INC(w, win.leftW.GetWidth())
+					END;
+					
+					COPY(win.GetTitle()^, windowTitle);
 
-				DoInstall(w, h, 0, 0);
-				NEW(view, disp);
-				manager(WindowManager.WindowManager).lock.AcquireWrite;
-				manager.AddView(view);
-				manager.AddDirty(win.bounds);
-				manager(WindowManager.WindowManager).lock.ReleaseWrite;
-				manager.ToFront(win)
+					DoInstall(w, h, 0, 0);
+					NEW(view, disp);
+					manager(WindowManager.WindowManager).lock.AcquireWrite;
+					manager.AddView(view);
+					manager.AddDirty(win.bounds);
+					manager(WindowManager.WindowManager).lock.ReleaseWrite;
+					manager.ToFront(win)
 				
+				END
 			END
 		END;
 		

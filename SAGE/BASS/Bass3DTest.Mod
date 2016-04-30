@@ -159,14 +159,18 @@ TYPE
 			grChannels.alwaysShowScrollX.Set(FALSE);
 			grChannels.showScrollX.Set(FALSE);
 
+			(* Assertions triggered here means inproperly initialized system *)
+			
 			ASSERT(WMProperties.GetModel(slDoppler.model, model));
 			(* model.AcquireWrite; *)
 			model(Models.Integer).Set(50);
 			(*model.ReleaseWrite;*)
+
 			ASSERT(WMProperties.GetModel(slRollOff.model, model));
 			(*model.AcquireWrite;*)
 			model(Models.Integer).Set(50);
 			(*model.ReleaseWrite;*)
+
 		END SetupComponents;
 
 		PROCEDURE WireEvents;
@@ -690,6 +694,9 @@ VAR
 PROCEDURE BASS_CheckVersion(context: Commands.Context): BOOLEAN;
 BEGIN
 	IF (BASS.BASS_GetVersion() DIV 10000H) MOD 10000H = BASS.BASSVERSION THEN
+		context.out.String("Version of BASS library is correct");
+		context.out.Ln;
+		context.out.Update;
 		RETURN TRUE
 	ELSE
 		context.out.String("An incorrect version of BASS library was loaded");
@@ -767,11 +774,21 @@ BEGIN
 
 		xml := WMComponents.Load("Bass3DTest.xml");
 		IF (xml # NIL) & (xml IS WMComponents.VisualComponent) THEN
+		
+			context.out.String("Form is loaded");
+			context.out.Ln;
+			context.out.Update;
 
 			root := xml(WMComponents.VisualComponent);
 
 			(* Window setup *)
 			NEW(window, root.bounds.GetWidth(), root.bounds.GetHeight(), FALSE);
+			IF window # NIL THEN
+				context.out.String("Window is created");
+				context.out.Ln;
+				context.out.Update
+			END;
+			
 			window.SetContent(root);
 			IF ~WireComponents(root, window) THEN
 				context.out.String("Form resource corrupted"); context.out.Ln;
