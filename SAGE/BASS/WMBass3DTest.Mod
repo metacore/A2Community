@@ -1,4 +1,4 @@
-MODULE Bass3DTest; (** AUTHOR "SAGE"; PURPOSE "BASS 2.4 A2 OS Wrapper - BASS 3D Test"; *)
+MODULE WMBass3DTest; (** AUTHOR "SAGE"; PURPOSE "BASS 2.4 A2 OS Wrapper - BASS 3D Test"; *)
 
 IMPORT
 	Modules, Commands, Strings, UTF8Strings, Files, Codecs, Streams,
@@ -160,7 +160,7 @@ TYPE
 			grChannels.showScrollX.Set(FALSE);
 
 			(* Assertions triggered here means inproperly initialized system *)
-			
+
 			ASSERT(WMProperties.GetModel(slDoppler.model, model));
 			(* model.AcquireWrite; *)
 			model(Models.Integer).Set(50);
@@ -394,9 +394,11 @@ TYPE
 		PROCEDURE RequestFileName(VAR sName: FileName): BOOLEAN;
 		VAR
 			bResult: BOOLEAN;
+			x, y: LONGINT;
 		BEGIN
 			timPeriod.enabled.Set(FALSE);
-			bResult := (WMDialogs.QueryStringXY(bounds.l + 10, bounds.t + 60, "Open file", sName) = WMDialogs.ResOk)
+			DialogPos(x, y, SELF, 350, 100);
+			bResult := (WMDialogs.QueryStringXY(x, y, "Open file", sName) = WMDialogs.ResOk)
 				& (sName # "");
 			timPeriod.enabled.Set(TRUE);
 			RETURN bResult
@@ -760,6 +762,18 @@ FINALLY
 
 END WireComponents;
 
+PROCEDURE DialogPos(VAR x, y: LONGINT; win: WMWindowManager.Window; dlgWidth, dlgHeight: LONGINT);
+VAR
+	manager: WMWindowManager.WindowManager;
+	s: WMWindowManager.WindowStyle;
+BEGIN
+	manager := WMWindowManager.GetDefaultManager();
+	s := manager.GetStyle();
+	x := ENTIER(win.bounds.l + (win.bounds.r - win.bounds.l - dlgWidth) / 2);
+	y := ENTIER(win.bounds.t + (win.bounds.b - win.bounds.t - dlgHeight) / 2);
+	IF s # NIL THEN y := y +  s.th END;
+END DialogPos;
+
 PROCEDURE WindowGenerator*(ctx: Commands.Context): WMWindowManager.Window;
 VAR
 	xml: XML.Content;
@@ -772,9 +786,9 @@ BEGIN
 		bBASSInitialized := FALSE;
 		bEAXSupported := FALSE;
 
-		xml := WMComponents.Load("Bass3DTest.xml");
+		xml := WMComponents.Load("WMBass3DTest.xml");
 		IF (xml # NIL) & (xml IS WMComponents.VisualComponent) THEN
-		
+
 			context.out.String("Form is loaded");
 			context.out.Ln;
 			context.out.Update;
@@ -788,7 +802,7 @@ BEGIN
 				context.out.Ln;
 				context.out.Update
 			END;
-			
+
 			window.SetContent(root);
 			IF ~WireComponents(root, window) THEN
 				context.out.String("Form resource corrupted"); context.out.Ln;
@@ -828,7 +842,7 @@ BEGIN
 					WMWindowManager.FlagMinimize, WMWindowManager.FlagNoResizing});
 			manager := WMWindowManager.GetDefaultManager();
 			manager.SetFocus(window);
-			
+
 	  END
 	END;
 	RETURN window
@@ -853,7 +867,7 @@ END Cleanup;
 BEGIN
 	bBASSInitialized := FALSE;
 	Modules.InstallTermHandler(Cleanup)
-END Bass3DTest.
+END WMBass3DTest.
 
 
 

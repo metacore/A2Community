@@ -1,10 +1,10 @@
-MODULE AStar; (** AUTHOR ""; PURPOSE ""; *)
+MODULE WMAStar; (** AUTHOR "Yaroslav Romanchenko (SAGE)"; PURPOSE "A* Pathfinder"; *)
 
 IMPORT
 
 	SYSTEM, Modules, Commands, Raster, WMWindowManager,
 	WMDialogs, WMGraphics, WMRectangles, Strings,
-	Containers, PreciseTimer;
+	Containers;
 	
 CONST
 
@@ -210,9 +210,8 @@ TYPE
 		
 		PROCEDURE Frame;
 		VAR
-			x, y: LONGINT;
+			y: LONGINT;
 			mode: Raster.Mode;
-			pixel: Raster.Pixel;
 		BEGIN
 			(* Draw map *)
 			Raster.InitMode(mode, Raster.srcCopy);
@@ -353,12 +352,24 @@ VAR
 		END
 	END AddAdjacentNodes;
 	
+	PROCEDURE DialogPos(VAR x, y: LONGINT; win: WMWindowManager.Window; dlgWidth, dlgHeight: LONGINT);
+	VAR
+		manager: WMWindowManager.WindowManager;
+		s: WMWindowManager.WindowStyle;
+	BEGIN
+		manager := WMWindowManager.GetDefaultManager();
+		s := manager.GetStyle();
+		x := ENTIER(win.bounds.l + (win.bounds.r - win.bounds.l - dlgWidth) / 2);
+		y := ENTIER(win.bounds.t + (win.bounds.b - win.bounds.t - dlgHeight) / 2);
+		IF s # NIL THEN y := y +  s.th END;
+	END DialogPos;
+	
 	PROCEDURE FindPath(ptStart, ptStop: PointDesc; VAR nodeStop: Node);
 	VAR
 		node, nodeStart: Node;
 		heapOpen: NodeFHeap;
 		mapXY: NodeXYMap;
-		iStop, nRes: LONGINT;
+		iStop, nRes, x, y: LONGINT;
 	BEGIN
 	
 		nodeStart := NewNode(NIL, ptStart.x, ptStart.y, ptStop);
@@ -380,7 +391,8 @@ VAR
 			(heapOpen.GetCount() = 0);
 		
 		IF heapOpen.GetCount() = 0 THEN
-			nRes := WMDialogs.Message(WMDialogs.TError, A_STAR,
+			DialogPos(x, y, instance, 350, 100);
+			nRes := WMDialogs.MessageXY(WMDialogs.TError, x, y, A_STAR,
 			  "There is no path!", {WMDialogs.ResOk})
 		ELSE
 			nodeStart := mapXY.GetItem(mapXY.IndexOf(nodeStart));
@@ -483,15 +495,25 @@ VAR
 			END
 		END
 	END InitNodePixels;
-
-	PROCEDURE Open*(context: Commands.Context);
+	
+	PROCEDURE WindowGenerator*(ctx: Commands.Context): WMWindowManager.Window;
 	BEGIN
-		IF instance # NIL THEN RETURN END;
+		IF instance # NIL THEN RETURN NIL END;
 		nMapPixelsWidth := CELL_WIDTH * (MAP_WIDTH - 2) + 2;
 		nMapPixelsHeight := CELL_WIDTH * (MAP_HEIGHT - 2) + 2;
 		InitMapPixels;
 		InitNodePixels;		
 		NEW(instance);
+		RETURN instance
+	END WindowGenerator;
+
+	PROCEDURE Open*(ctx: Commands.Context);
+	VAR
+		wDummy: WMWindowManager.Window;
+	BEGIN
+		IF instance = NIL THEN
+			wDummy := WindowGenerator(ctx)
+		END
 	END Open;
 	
 	PROCEDURE Cleanup;
@@ -503,9 +525,9 @@ VAR
 
 BEGIN
 	Modules.InstallTermHandler(Cleanup)
-END AStar.
+END WMAStar.
 
-AStar.Open ~
-SystemTools.Free AStar Containers ~
+WMAStar.Open ~
+SystemTools.Free WMAStar Containers ~
 
 
