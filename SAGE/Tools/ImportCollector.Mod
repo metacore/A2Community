@@ -250,10 +250,9 @@ ImportCollector.Collect
 
 	WinStarter Bass3DTest WMRaycaster WMRaycasterMaze
 	
-	Traps FileTrapWriter FSTools RelativeFileSystem DisplayNull
-	Loader Options WMOTFonts WMOberonFonts WMSystemComponents
-	SystemVersion Clipboard Autostart BootConsole ProcessInfo Runtime
-  SkinEngine PNGDecoder Tar SystemTools UpTime MainMenu StartMenu ~
+	DisplayNull Traps FileTrapWriter FSTools RelativeFileSystem
+	Loader WMOTFonts WMOberonFonts	Clipboard Autostart
+  SkinEngine PNGDecoder Tar SystemTools UpTime ~
 
 SystemTools.Free ImportCollector ~
 

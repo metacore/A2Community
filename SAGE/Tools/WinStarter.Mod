@@ -2,7 +2,7 @@ MODULE WinStarter;   (** fof , source Win32.Windows.Mod+Win32.Displays.Mod+Win32
 
 IMPORT SYSTEM, Kernel32, User32, Modules, KernelLog, GDI32, Displays, Strings,
 	AosInputs := Inputs, Commands, Objects,WinFS, Options,
-	WMWindowManager, WindowManager, WMNavigate;
+	WMWindowManager, WindowManager;
 
 CONST
 	dbgDisableReleaseMsg = TRUE;
@@ -1224,8 +1224,6 @@ VAR
 			IF (manager # NIL) & (manager IS WindowManager.WindowManager) THEN
 				win := wg(context);
 				IF win # NIL THEN
-					
-					WMNavigate.HideNavigation;
 					
 					manager.SetWindowPos(win, 0, 0);
 					h := win.GetHeight();
