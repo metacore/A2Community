@@ -11,7 +11,7 @@ Maze generation tutorial:
 
 IMPORT
 	SYSTEM, PreciseTimer, Modules, Inputs, Strings (*:= Utilities*), Commands, Raster,
-	WM := WMWindowManager, Rectangles := WMRectangles,
+	WMWindowManager, Rectangles := WMRectangles,
 	Math := Math, Graphics := WMGraphics, Random;
 	
 CONST
@@ -125,7 +125,7 @@ TYPE
 	
 	END FPSCounter;
 
-	RaycasterWindow* = OBJECT(WM.BufferWindow)
+	RaycasterWindow* = OBJECT(WMWindowManager.BufferWindow)
 	VAR
 		alpha, bShowMap: BOOLEAN;
 		font: Graphics.Font;
@@ -135,7 +135,9 @@ TYPE
 		SELF.alpha:=alpha;
 		bShowMap := FALSE;
 		Init(SCREEN_WIDTH, SCREEN_HEIGHT, alpha);
-		WM.DefaultAddWindow(SELF);
+		WMWindowManager.ExtAddWindow(SELF, 200, 200,
+			{WMWindowManager.FlagFrame, WMWindowManager.FlagClose,
+			WMWindowManager.FlagMinimize, WMWindowManager.FlagNoResizing});
 		SetTitle(Strings.NewString("Textured raycaster with floor and ceiling"));
 		canvas.SetColor(Graphics.White);
 		font := canvas.GetFont();
@@ -761,7 +763,7 @@ BEGIN
 	END
 END mapView;
 	
-PROCEDURE WindowGenerator*(ctx: Commands.Context): WM.Window;
+PROCEDURE WindowGenerator*(ctx: Commands.Context): WMWindowManager.Window;
 VAR
 	y: LONGINT;
 	bError: BOOLEAN;
@@ -839,7 +841,7 @@ END WindowGenerator;
 
 PROCEDURE Open*(ctx: Commands.Context);
 VAR
-	wDummy: WM.Window;
+	wDummy: WMWindowManager.Window;
 BEGIN
 	IF instance = NIL THEN
 		wDummy := WindowGenerator(ctx)

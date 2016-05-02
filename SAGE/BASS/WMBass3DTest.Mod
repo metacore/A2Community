@@ -771,7 +771,7 @@ BEGIN
 	s := manager.GetStyle();
 	x := ENTIER(win.bounds.l + (win.bounds.r - win.bounds.l - dlgWidth) / 2);
 	y := ENTIER(win.bounds.t + (win.bounds.b - win.bounds.t - dlgHeight) / 2);
-	IF s # NIL THEN y := y +  s.th END;
+	(*IF s # NIL THEN y := y +  s.th END;*)
 END DialogPos;
 
 PROCEDURE WindowGenerator*(ctx: Commands.Context): WMWindowManager.Window;

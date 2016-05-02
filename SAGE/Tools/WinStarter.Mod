@@ -2,7 +2,7 @@ MODULE WinStarter;   (** fof , source Win32.Windows.Mod+Win32.Displays.Mod+Win32
 
 IMPORT SYSTEM, Kernel32, User32, Modules, KernelLog, GDI32, Displays, Strings,
 	AosInputs := Inputs, Commands, Objects,WinFS, Options,
-	WMWindowManager, WindowManager;
+	WMWindowManager, WindowManager, WMRectangles;
 
 CONST
 	dbgDisableReleaseMsg = TRUE;
@@ -93,7 +93,7 @@ TYPE
 		padding: INTEGER;
 	END;
 	DEV_BROADCAST_VOLUMEP= POINTER TO DEV_BROADCAST_VOLUME;
-	
+
 	WindowGenerator* = PROCEDURE {DELEGATE} (context: Commands.Context): WMWindowManager.Window;
 
 	Inputs = RECORD
@@ -236,6 +236,8 @@ VAR
 	fullscreen: BOOLEAN;   (*ALEX 2005.11.30*)
 
 	closeRequests: LONGINT;
+
+	AdjustWindowRect-: PROCEDURE {WINAPI} (VAR lpRect: User32.Rect; dwStyle: SET; bMenu: Kernel32.BOOL): Kernel32.BOOL;
 
 	PROCEDURE CreateHWND( create: CreateStruct );
 	VAR str: ARRAY 32 OF CHAR;
@@ -454,7 +456,7 @@ VAR
 	VAR m: AosInputs.AbsMouseMsg;  oldx, oldy: LONGINT;  keys: SET; ret: Kernel32.BOOL;
 	BEGIN
 		(* User32.SetCursor(hCurrentCursor);*)
-		oldx := win.track.X;  oldy := win.track.Y;  
+		oldx := win.track.X;  oldy := win.track.Y;
 		win.track.X := SHORT( lParam MOD ASH( 1, 16 ) ) - win.dx;
 		win.track.Y := SHORT( (* win.height-*) ASH( lParam, -16 ) - 1 ) - win.dy;
 		m.x := win.track.X;  m.y := win.track.Y;  m.z := win.track.Z;
@@ -1043,7 +1045,7 @@ VAR
 		ISOToOberon[254] := CHR( 112 );  ISOToOberon[255] := CHR( 121 );
 
 		InitBMI;
-		
+
 	END InitMod;
 
 	PROCEDURE DisableCursor*;
@@ -1070,6 +1072,7 @@ VAR
 
 	PROCEDURE Shutdown;
 	VAR disp: Window;
+		res: LONGINT;
 	BEGIN
 		(*
 		disp := Displays.root;
@@ -1089,23 +1092,53 @@ VAR
 		*)
 		UnregisterControlWinClass()
 	END Shutdown;
-
-	PROCEDURE DoInstall( w, h, left, top: LONGINT );
-	VAR ts: ARRAY 16 OF CHAR;
-		res: LONGINT;  create: CreateStruct;  win: Window;  hMenu: User32.HMenu;  x, y: LONGINT;
-	VAR border: LONGINT;  rect: User32.Rect;   (*ALEX 2005.11.30*)
-
+	
+	PROCEDURE DoInstall(winA2: WMWindowManager.Window; width, height, left, top: LONGINT );
+	VAR
+		ts: ARRAY 16 OF CHAR;
+		res: LONGINT;  create: CreateStruct;  win: Window;  hMenu: User32.HMenu;
+		x, y, w, h: LONGINT;
+		border: LONGINT;  rect: User32.Rect;   (*ALEX 2005.11.30*)
 		hDC: User32.HDC;
-
 	CONST SMCYMaximized = 62;  SMCXMaximized = 61;
 	BEGIN
+	
+		KernelLog.String("Initial size of A2 window: ");
+		KernelLog.Int(width, 0); KernelLog.Char('x');
+		KernelLog.Int(height, 0); KernelLog.Ln;
+		KernelLog.Ln;
+		
+		KernelLog.String("captionY: "); KernelLog.Int(captionY, 0);
+		KernelLog.String(", frameX: "); KernelLog.Int(frameX, 0);
+		KernelLog.String(", frameY: "); KernelLog.Int(frameY, 0);
+		KernelLog.Ln;
+		
+		w := width;
+		h := height;
+	
 		IF disp = NIL THEN
 			NEW( win );  Init( win );  hMenu := Kernel32.NULL;  RegisterClasses();  NEW( create );  create.win := win;
 			create.hMenu := hMenu;
 			IF ~fullscreen THEN
-				create.style :=
-					{User32.WSMinimizeBox, User32.WSMaximizeBox, User32.WSSysMenu, User32.WSVisible, User32.WSBorder, User32.WSThickFrame};
-				x := User32.CWUseDefault;  y := User32.CWUseDefault;  COPY( windowClassName, create.className );  border := 0;
+			
+				IF winA2 # NIL THEN
+					IF WMWindowManager.FlagNoResizing IN winA2.flags THEN
+						create.style :=
+							{User32.WSMinimizeBox, User32.WSSysMenu,
+							User32.WSVisible, User32.WSBorder}
+					ELSE
+						create.style :=
+							{User32.WSMinimizeBox, User32.WSMaximizeBox, User32.WSSysMenu,
+							User32.WSVisible, User32.WSBorder, User32.WSThickFrame}
+					END
+				ELSE
+					create.style :=
+						{User32.WSMinimizeBox, User32.WSMaximizeBox, User32.WSSysMenu,
+						User32.WSVisible, User32.WSBorder, User32.WSThickFrame}
+				END;
+				x := User32.CWUseDefault;  y := User32.CWUseDefault;
+				
+				COPY( windowClassName, create.className );  border := 0;
 				IF h = 0 THEN
 					h := User32.GetSystemMetrics( SMCYMaximized ) - captionY - 2 * frameY;
 					IF w = 0 THEN
@@ -1113,18 +1146,62 @@ VAR
 						create.style := create.style + {User32.WSMaximize};
 					END;
 				ELSE
-					h := h - captionY - 2 * frameY;
+					(*h := h - captionY - 2 * frameY;
 					IF (w # 0) THEN
 						w := w - 2 * frameX;
+					END;*)
+					(* We actually need to increase window size, because h x w is the
+					client rect size! *)
+					h := h + captionY + 2 * frameY - 2;
+					IF (w # 0) THEN
+						w := w + 2 * frameX - 2;
 					END;
 				END;
 				IF w = 0 THEN w := User32.GetSystemMetrics( SMCXMaximized ) - 2 * frameX;  END;
-				create.w := w + 2 * frameX;  create.h := h  + captionY + 2*frameY;
+				
+				(*create.w := w + 2 * frameX;  create.h := h  + captionY + 2*frameY;*)
+				
 				create.x := x;  create.y := y;
+				create.w := w;  create.h := h;
 
 				IF (left # 0) THEN
 					create.x := left; create.y := top;
 				END;
+				
+				(*
+				rect.left := create.x;
+				rect.top := create.y;
+				rect.right := create.x + create.w - 1;
+				rect.bottom := create.y + create.h - 1;
+				
+				KernelLog.String("Before AdjustWindowRect call, rect: ");
+				KernelLog.Int(rect.left, 0); KernelLog.Char(' ');
+				KernelLog.Int(rect.top, 0); KernelLog.Char(' ');
+				KernelLog.Int(rect.right, 0); KernelLog.Char(' ');
+				KernelLog.Int(rect.bottom, 0); KernelLog.Char(' ');
+				KernelLog.Ln;				
+				
+				res := AdjustWindowRect(rect, create.style, 0);
+				
+				KernelLog.String("After AdjustWindowRect call, rect: ");
+				KernelLog.Int(rect.left, 0); KernelLog.Char(' ');
+				KernelLog.Int(rect.top, 0); KernelLog.Char(' ');
+				KernelLog.Int(rect.right, 0); KernelLog.Char(' ');
+				KernelLog.Int(rect.bottom, 0); KernelLog.Char(' ');
+				KernelLog.Ln;	
+				
+				create.x := User32.CWUseDefault;
+				create.y := User32.CWUseDefault;
+				create.w := rect.right - rect.left + 1;
+				create.h := rect.top - rect.bottom + 1;
+				*)
+				
+				KernelLog.String("Window parameters: x: "); KernelLog.Int(create.x, 0);
+				KernelLog.String(", y: "); KernelLog.Int(create.y, 0);
+				KernelLog.String(", w: "); KernelLog.Int(create.w, 0);
+				KernelLog.String(", h: "); KernelLog.Int(create.h, 0);
+				KernelLog.Ln;
+				
 			ELSE
 				create.style := {};  x := User32.CWUseDefault;  y := User32.CWUseDefault;
 				COPY( windowClassName, create.className );  border := 0;  h := User32.GetSystemMetrics( SMCYScreen );
@@ -1132,7 +1209,8 @@ VAR
 				create.x := x;  create.y := y;  create.w := w;  create.h := h + captionY;
 			END;
 
-			NEW( disp );  disp.width := w;  disp.height := h;  disp.format := format;  disp.desc := "Display driver (";  Strings.IntToStr( disp.width, ts );
+			NEW( disp );  disp.width := width;  disp.height := height;  disp.format := format;
+			disp.desc := "Display driver (";  Strings.IntToStr( disp.width, ts );
 			Strings.Append( disp.desc, ts );  Strings.Append( disp.desc, "x" );  Strings.IntToStr( disp.height, ts );
 			Strings.Append( disp.desc, ts );  Strings.Append( disp.desc, "x" );  Strings.IntToStr( disp.format, ts );
 			Strings.Append( disp.desc, ts );  Strings.Append( disp.desc, ")" );  create.finished := FALSE;
@@ -1176,7 +1254,7 @@ VAR
 		disp.unit := ENTIER((36000.0*disp.unit)/25.4);
 		User32.ReleaseDC(0,hDC);
 	END DoInstall;
-	
+
 	PROCEDURE Install*(context : Commands.Context); (** ["H"] [ width [height] ] ["FULLSCREEN"] [ x [y] ] *)
 	VAR
 		x,y,w,h: LONGINT;
@@ -1202,7 +1280,7 @@ VAR
 		IF ~options.Parse(context.arg, context.error) THEN
 			w := 0; h := 0; x := 0; y := 0;
 		ELSE
-			IF ~options.GetString("m", sModName) THEN sModName := "" END; 
+			IF ~options.GetString("m", sModName) THEN sModName := "" END;
 			IF options.GetFlag("b") THEN format := Displays.color565; InitBMI END;
 			fullscreen := options.GetFlag("f");
 			IF ~options.GetInteger("x", x) THEN x := 0 END;
@@ -1212,56 +1290,53 @@ VAR
 			IF options.GetFlag("n") THEN DisableCursor END;
 		END;
 		closeRequests := 0;
-		
+
 		wg := NIL;
 		IF sModName # "" THEN
 			GETPROCEDURE(sModName, "WindowGenerator", wg)
 		END;
-		
+
 		win := NIL;
 		IF wg # NIL THEN
 			manager	 := WMWindowManager.GetDefaultManager();
 			IF (manager # NIL) & (manager IS WindowManager.WindowManager) THEN
 				win := wg(context);
 				IF win # NIL THEN
-					
+
 					manager.SetWindowPos(win, 0, 0);
 					h := win.GetHeight();
-					IF (win.topW # NIL) & (win.bottomW # NIL) THEN
-						INC(h, win.topW.GetHeight());
-						DEC(h, win.bottomW.GetHeight()) 
-					END;
 					w := win.GetWidth();
-					IF win.leftW # NIL THEN
-						INC(w, win.leftW.GetWidth())
-					END;
-					
+
 					COPY(win.GetTitle()^, windowTitle);
 
-					DoInstall(w, h, 0, 0);
+					DoInstall(win, w, h, 0, 0);
 					NEW(view, disp);
 					manager(WindowManager.WindowManager).lock.AcquireWrite;
 					manager.AddView(view);
+					
+					(* redraw window *)
 					manager.AddDirty(win.bounds);
+					
 					manager(WindowManager.WindowManager).lock.ReleaseWrite;
 					manager.ToFront(win)
-				
+
 				END
 			END
 		END;
-		
+
 		IF win = NIL THEN
-			DoInstall(w, h, x, y)
+			DoInstall(NIL, w, h, x, y)
 		END
-		
+
 	END Install;
 
-VAR traceDisplay: BOOLEAN;
+VAR
+	traceDisplay: BOOLEAN;
+
 	PROCEDURE TraceDisplay*;
 	BEGIN
 		traceDisplay := ~traceDisplay;
 	END TraceDisplay;
-
 
 BEGIN
 	traceDisplay := FALSE;

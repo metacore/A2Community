@@ -346,7 +346,7 @@ TYPE
 
 	RaycasterWindow* = OBJECT(WMWindowManager.BufferWindow)
 	VAR
-		alpha, bDead: BOOLEAN;
+		alpha: BOOLEAN;
 		font: Graphics.Font;
 		(** Lookup table for speedup *)
 		textures: TextureArray;
@@ -390,7 +390,6 @@ TYPE
 
 	PROCEDURE Terminate;
 	BEGIN
-		bDead := TRUE;
 		BEGIN {EXCLUSIVE}
 			AWAIT(nActiveThreads = 0)
 		END;
@@ -400,7 +399,6 @@ TYPE
 	VAR
 		y: LONGINT;
 	BEGIN
-		bDead := FALSE;
 		nActiveThreads := 0;
 		SELF.textures := textures;
 		SELF.alpha := alpha;
@@ -416,7 +414,9 @@ TYPE
 		NEW(bufferPixels, SCREEN_WIDTH * SCREEN_HEIGHT * 4);
 		NEW(fpsCounter, 200);
 		Init(SCREEN_WIDTH, SCREEN_HEIGHT, alpha);
-		WMWindowManager.DefaultAddWindow(SELF);
+		WMWindowManager.ExtAddWindow(SELF, 200, 200,
+			{WMWindowManager.FlagFrame, WMWindowManager.FlagClose,
+			WMWindowManager.FlagMinimize, WMWindowManager.FlagNoResizing});
 		SetTitle(Strings.NewString("Textured raycaster with floor, ceiling and sprites"));
 		canvas.SetColor(Graphics.White);
 		font := canvas.GetFont();
@@ -529,8 +529,6 @@ TYPE
 
 	BEGIN
 
-		IF bDead THEN RETURN END;
-
 		t := PreciseTimer.GetTicks();
 
 		distPlayer := 0.0;
@@ -640,7 +638,7 @@ TYPE
 	BEGIN
 		Terminate;
 		Close^;
-		window:=NIL
+		window := NIL
 	END Close;
 
 	PROCEDURE Rotate(dx: LONGINT);
@@ -843,7 +841,6 @@ END Open;
 PROCEDURE Cleanup;
 BEGIN
 	IF window # NIL THEN
-		window.Terminate;
 		window.Close
 	END
 END Cleanup;

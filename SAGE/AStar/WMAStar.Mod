@@ -171,7 +171,9 @@ TYPE
 			bSetStop := FALSE;
 			nodeStop := NIL;
 			Init(nMapPixelsWidth, nMapPixelsHeight, FALSE);
-			WMWindowManager.AddWindow(SELF, 200, 200);
+			WMWindowManager.ExtAddWindow(SELF, 200, 200,
+				{WMWindowManager.FlagFrame, WMWindowManager.FlagClose,
+					WMWindowManager.FlagMinimize, WMWindowManager.FlagNoResizing});
 			SetTitle(Strings.NewString(A_STAR));
 			canvas.Fill(WMRectangles.MakeRect(0, 0, GetWidth(), GetHeight()), WMGraphics.Black, WMGraphics.ModeCopy);
 			Invalidate(WMRectangles.MakeRect(0, 0, GetWidth(), GetHeight()));
@@ -361,7 +363,7 @@ VAR
 		s := manager.GetStyle();
 		x := ENTIER(win.bounds.l + (win.bounds.r - win.bounds.l - dlgWidth) / 2);
 		y := ENTIER(win.bounds.t + (win.bounds.b - win.bounds.t - dlgHeight) / 2);
-		IF s # NIL THEN y := y +  s.th END;
+		(*IF s # NIL THEN y := y +  s.th END;*)
 	END DialogPos;
 	
 	PROCEDURE FindPath(ptStart, ptStop: PointDesc; VAR nodeStop: Node);
