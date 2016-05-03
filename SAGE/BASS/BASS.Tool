@@ -25,13 +25,18 @@ x64:
 Demos
 
 x86:
-	Compiler.Compile -b=AMD MathUtils.Mod Containers.Mod AAGraphics.Mod WMBass3DTest.Mod ~
+	Compiler.Compile -b=AMD
+		MathUtils.Mod Containers.Mod AAGraphics.Mod
+		WMDropDownLists.Mod WMBass3DTest.Mod ~
 x64:
-	Compiler.Compile -b=AMD --bits=64 MathUtils.Mod Containers.Mod AAGraphics.Mod WMBass3DTest.Mod ~
+	Compiler.Compile -b=AMD --bits=64
+		MathUtils.Mod Containers.Mod AAGraphics.Mod
+		WMDropDownLists.Mod WMBass3DTest.Mod ~
 
 	WMBass3DTest.Open ~
 
-SystemTools.Free WMBass3DTest BassDSPTest MathUtils Containers AAGraphics BASS BASScpu ~
+SystemTools.Free WMBass3DTest WMDropDownLists MathUtils
+	Containers AAGraphics BASS BASScpu ~
 
 Installation in Darwin:
 
