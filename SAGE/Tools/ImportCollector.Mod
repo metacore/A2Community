@@ -248,7 +248,7 @@ END ImportCollector.
 
 ImportCollector.Collect
 
-	WinStarter WMBass3DTest WMRaycaster WMRaycasterMaze WMAStar
+	WinStarter WMBass3DTest WMRaycaster WMRaycasterMaze WMAStar WMFM
 	
 	DisplayNull Traps FileTrapWriter FSTools RelativeFileSystem
 	Loader WMOTFonts WMOberonFonts	Clipboard Autostart

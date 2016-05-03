@@ -228,7 +228,14 @@ VAR
 		info: BitmapInfo;
 		pal: ARRAY 256 OF GDI32.ColorRef
 	END;
+	
+	
 	disp: Display;
+	view: WindowManager.ViewPort;
+	winA2: WMWindowManager.Window;
+	manager: WMWindowManager.WindowManager;
+	
+	
 	format* : SHORTINT;
 
 	KeyHandled: BOOLEAN;
@@ -658,9 +665,13 @@ VAR
 
 	PROCEDURE UpdateDisplay( win: Window;  id: LONGINT;  lParam: User32.LParam;  wParam: User32.WParam );
 	VAR x, y, w, h, dx, dy, bw, bh: LONGINT;  hOldBr: GDI32.HBrush;  ret: Kernel32.BOOL;
+		
 	BEGIN
 		IF ~(minimized IN win.state) THEN
-			IF id = resize THEN win.width := lParam MOD ASH( 1, 16 );  win.height := lParam DIV ASH( 1, 16 );  SetDocRect( win, TRUE ) END;
+			IF id = resize THEN
+				win.width := lParam MOD ASH( 1, 16 );  win.height := lParam DIV ASH( 1, 16 );
+				  SetDocRect( win, TRUE )
+			END;
 			ret := User32.ValidateRect( win.hWnd, NIL );
 			IF win.hDC = 0 THEN GetDC( win );  END;
 
@@ -670,23 +681,44 @@ VAR
 			END;
 
 			w := win.width;  h := win.height;
-			IF disp.width < w THEN  (* fill rest with color *)
-				dx := (w - disp.width) DIV 2;  bw := disp.width;  ret := GDI32.PatBlt( win.hDC, 0, 0, dx, h, GDI32.PatCopy );
-				ret := GDI32.PatBlt( win.hDC, w - dx, 0, dx, h, GDI32.PatCopy );
-			ELSE bw := w;
+			
+			IF (id = resize) & (manager # NIL) & ((disp.width # w) OR (disp.height # h)) THEN
+				
+				BEGIN {EXCLUSIVE}
+					manager(WindowManager.WindowManager).lock.AcquireWrite;
+					(* Reset display *)
+					root.bmadr := 0; disp.width := w; disp.height := h;
+					(* Resize window *)
+					manager.SetWindowSize(winA2, w, h);
+					winA2.Resized(w, h);
+					manager.RemoveView(view);
+					NEW(view, disp);
+					manager.AddView(view);
+					manager(WindowManager.WindowManager).lock.ReleaseWrite;
+				END;
+
+			ELSE
+			
+
+				IF disp.width < w THEN  (* fill rest with color *)
+					dx := (w - disp.width) DIV 2;  bw := disp.width;  ret := GDI32.PatBlt( win.hDC, 0, 0, dx, h, GDI32.PatCopy );
+					ret := GDI32.PatBlt( win.hDC, w - dx, 0, dx, h, GDI32.PatCopy );
+				ELSE bw := w;
+				END;
+
+				IF disp.height < h THEN  (* fill rest with color *)
+					dy := (h - disp.height) DIV 2;  bh := disp.height;  ret := GDI32.PatBlt( win.hDC, 0, 0, w, dy, GDI32.PatCopy );
+					ret := GDI32.PatBlt( win.hDC, 0, h - dy, w, dy, GDI32.PatCopy );
+				ELSE bh := h;
+				END;
+
+				hOldBr := GDI32.SelectObject( win.hDC, hOldBr );
+
+				(* IF win.fullScreen THEN dy := dy- User32.GetSystemMetrics(User32.SMCYCaption); END; *)
+
+				win.dx := dx;  win.dy := dy;  ToWindow( win, x, y, bw, bh, dx, dy );
+			
 			END;
-
-			IF disp.height < h THEN  (* fill rest with color *)
-				dy := (h - disp.height) DIV 2;  bh := disp.height;  ret := GDI32.PatBlt( win.hDC, 0, 0, w, dy, GDI32.PatCopy );
-				ret := GDI32.PatBlt( win.hDC, 0, h - dy, w, dy, GDI32.PatCopy );
-			ELSE bh := h;
-			END;
-
-			hOldBr := GDI32.SelectObject( win.hDC, hOldBr );
-
-			(* IF win.fullScreen THEN dy := dy- User32.GetSystemMetrics(User32.SMCYCaption); END; *)
-
-			win.dx := dx;  win.dy := dy;  ToWindow( win, x, y, bw, bh, dx, dy );
 
 		END
 	END UpdateDisplay;
@@ -1213,7 +1245,9 @@ VAR
 			disp.desc := "Display driver (";  Strings.IntToStr( disp.width, ts );
 			Strings.Append( disp.desc, ts );  Strings.Append( disp.desc, "x" );  Strings.IntToStr( disp.height, ts );
 			Strings.Append( disp.desc, ts );  Strings.Append( disp.desc, "x" );  Strings.IntToStr( disp.format, ts );
-			Strings.Append( disp.desc, ts );  Strings.Append( disp.desc, ")" );  create.finished := FALSE;
+			Strings.Append( disp.desc, ts );  Strings.Append( disp.desc, ")" );
+			
+			create.finished := FALSE;
 			CreateWin( create );
 			User32.SetWindowText(root.hWnd, windowTitle);
 			User32.BringWindowToTop( root.hWnd );  User32.SetForegroundWindow( root.hWnd );
@@ -1264,9 +1298,7 @@ VAR
 		sModName: Modules.Name;
 		msg: ARRAY 2 OF CHAR;
 		wg: WindowGenerator;
-		manager: WMWindowManager.WindowManager;
-		view: WindowManager.ViewPort;
-		win: WMWindowManager.Window;
+		
 	BEGIN
 		NEW(options);
 		options.Add("m","module",Options.String);
@@ -1296,35 +1328,35 @@ VAR
 			GETPROCEDURE(sModName, "WindowGenerator", wg)
 		END;
 
-		win := NIL;
+		winA2 := NIL;
 		IF wg # NIL THEN
 			manager	 := WMWindowManager.GetDefaultManager();
 			IF (manager # NIL) & (manager IS WindowManager.WindowManager) THEN
-				win := wg(context);
-				IF win # NIL THEN
+				winA2 := wg(context);
+				IF winA2 # NIL THEN
 
-					manager.SetWindowPos(win, 0, 0);
-					h := win.GetHeight();
-					w := win.GetWidth();
+					manager.SetWindowPos(winA2, 0, 0);
+					h := winA2.GetHeight();
+					w := winA2.GetWidth();
 
-					COPY(win.GetTitle()^, windowTitle);
+					COPY(winA2.GetTitle()^, windowTitle);
 
-					DoInstall(win, w, h, 0, 0);
+					DoInstall(winA2, w, h, 0, 0);
 					NEW(view, disp);
 					manager(WindowManager.WindowManager).lock.AcquireWrite;
 					manager.AddView(view);
 					
 					(* redraw window *)
-					manager.AddDirty(win.bounds);
+					manager.AddDirty(winA2.bounds);
 					
 					manager(WindowManager.WindowManager).lock.ReleaseWrite;
-					manager.ToFront(win)
+					manager.ToFront(winA2)
 
 				END
 			END
 		END;
 
-		IF win = NIL THEN
+		IF winA2 = NIL THEN
 			DoInstall(NIL, w, h, x, y)
 		END
 
