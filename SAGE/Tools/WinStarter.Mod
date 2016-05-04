@@ -665,7 +665,6 @@ VAR
 
 	PROCEDURE UpdateDisplay( win: Window;  id: LONGINT;  lParam: User32.LParam;  wParam: User32.WParam );
 	VAR x, y, w, h, dx, dy, bw, bh: LONGINT;  hOldBr: GDI32.HBrush;  ret: Kernel32.BOOL;
-		
 	BEGIN
 		IF ~(minimized IN win.state) THEN
 			IF id = resize THEN
@@ -682,20 +681,22 @@ VAR
 
 			w := win.width;  h := win.height;
 			
-			IF (id = resize) & (manager # NIL) & ((disp.width # w) OR (disp.height # h)) THEN
+			IF ~(WMWindowManager.FlagNoResizing IN winA2.flags) & (id = resize) &
+				(manager # NIL) & ((disp.width # w) OR (disp.height # h))
+			THEN
 				
-				BEGIN {EXCLUSIVE}
-					manager(WindowManager.WindowManager).lock.AcquireWrite;
-					(* Reset display *)
-					root.bmadr := 0; disp.width := w; disp.height := h;
-					(* Resize window *)
-					manager.SetWindowSize(winA2, w, h);
-					winA2.Resized(w, h);
-					manager.RemoveView(view);
-					NEW(view, disp);
-					manager.AddView(view);
-					manager(WindowManager.WindowManager).lock.ReleaseWrite;
-				END;
+				manager(WindowManager.WindowManager).lock.AcquireWrite;
+				(* Reset display *)
+				root.bmadr := 0; disp.width := w; disp.height := h;
+				(* Resize window *)
+				manager.SetWindowSize(winA2, w, h);
+				winA2.Resized(w, h);
+
+				manager.RemoveView(view);
+				NEW(view, disp);
+				manager.AddView(view);
+
+				manager(WindowManager.WindowManager).lock.ReleaseWrite;
 
 			ELSE
 			
