@@ -2,7 +2,7 @@ MODULE Math;  (** AUTHOR "SAGE"; PURPOSE "Math utility module (REAL). Ported fro
 
 IMPORT
 	SYSTEM, Reals;
-	
+
 CONST
 
 	(* Standard constants according to "The Oakwood Guidelines for Oberon-2 Compiler Developers" *)
@@ -55,10 +55,10 @@ CODE {SYSTEM.i386, SYSTEM.FPU}
 	DB 0DDH, 0D9H ; remove st[1]
 END FSTPst1;
 
-PROCEDURE -WAIT;
+PROCEDURE -FWAIT;
 CODE {SYSTEM.i386, SYSTEM.FPU}
 	DB 09BH
-END WAIT;
+END FWAIT;
 
 PROCEDURE -FNOP;
 CODE {SYSTEM.i386, SYSTEM.FPU}
@@ -205,7 +205,7 @@ END F2XM1;
 PROCEDURE sqrt* (x: REAL): REAL;
 BEGIN
 	ASSERT(x >= 0, 20); (* argument of sqrt must not be negative *)
-	FLD(x); FSQRT; WAIT; RETURN TOP()
+	FLD(x); FSQRT; FWAIT; RETURN TOP()
 END sqrt;
 
 PROCEDURE power* (x, y: REAL): REAL;
@@ -221,7 +221,7 @@ BEGIN
 	ELSE
 		FLDst0; FRNDINT; FXCH; FSUBst1; FNOP; F2XM1; FLD1; FADD
 	END;
-	FSCALE; FSTPst1; WAIT;
+	FSCALE; FSTPst1; FWAIT;
 	RETURN TOP()
 END power;
 
@@ -241,7 +241,7 @@ PROCEDURE ln* (x: REAL): REAL;
 BEGIN
 	ASSERT(x >= 0, 20); (* argument of ln must not be negative *)
 	(* ln(2) * ld(x) *)
-	FLDLN2; FLD(x); FYL2X; WAIT;
+	FLDLN2; FLD(x); FYL2X; FWAIT;
 	RETURN TOP()
 END ln;
 
@@ -249,13 +249,13 @@ PROCEDURE log* (x: REAL): REAL;
 BEGIN
 	ASSERT(x >= 0, 20); (* argument of log must not be negative *)
 	(* log(2) * ld(x) *)
-	FLDLG2; FLD(x); FYL2X; WAIT;
+	FLDLG2; FLD(x); FYL2X; FWAIT;
 	RETURN TOP()
 END log;
 
 PROCEDURE round* (x: REAL): REAL;
 BEGIN
-	FLD(x); 
+	FLD(x);
 	IF ABS(ST0()) = INF THEN
 		RETURN TOP()
 	END;
@@ -269,7 +269,7 @@ END round;
 (* sin, cos, tan argument reduction *)
 PROCEDURE Reduce;
 BEGIN
-	FXAM; WAIT;
+	FXAM; FWAIT;
 	IF ~(8 IN FSWs()) & (ABS(ST0()) > 1.0E18) THEN
 		(* to be completed *)
 		FSTPst0; FLD0
@@ -279,26 +279,26 @@ END Reduce;
 PROCEDURE sin* (x: REAL): REAL;
 BEGIN
 	(* 20, ABS(x) # INF *)
-	FLD(x); Reduce; FSIN; WAIT; RETURN TOP()
+	FLD(x); Reduce; FSIN; FWAIT; RETURN TOP()
 END sin;
 
 PROCEDURE cos* (x: REAL): REAL;
 BEGIN
 	(* 20, ABS(x) # INF *)
-	FLD(x); Reduce; FCOS; WAIT; RETURN TOP()
+	FLD(x); Reduce; FCOS; FWAIT; RETURN TOP()
 END cos;
 
 PROCEDURE tan* (x: REAL): REAL;
 BEGIN
 	(* 20, ABS(x) # INF *)
-	FLD(x); Reduce; FTAN; FSTPst0; WAIT; RETURN TOP()
+	FLD(x); Reduce; FTAN; FSTPst0; FWAIT; RETURN TOP()
 END tan;
 
 PROCEDURE arcsin* (x: REAL): REAL;
 BEGIN
 	(* 20, -1.0 <= x <= 1.0 *)
 	(* atan2(x, sqrt(1 - x*x)) *)
-	FLD(x); FLDst0; FMULst0; FLD1; FSUBR; FSQRT; FNOP; FATAN; WAIT;
+	FLD(x); FLDst0; FMULst0; FLD1; FSUBR; FSQRT; FNOP; FATAN; FWAIT;
 	RETURN TOP()
 END arcsin;
 
@@ -306,7 +306,7 @@ PROCEDURE arccos* (x: REAL): REAL;
 BEGIN
 	(* 20, -1.0 <= x <= 1.0 *)
 	(* atan2(sqrt(1 - x*x), x) *)
-	FLD(x); FMULst0; FLD1; FSUBR; FSQRT; FLD(x); FATAN; WAIT;
+	FLD(x); FMULst0; FLD1; FSUBR; FSQRT; FLD(x); FATAN; FWAIT;
 	RETURN TOP()
 END arccos;
 
@@ -321,7 +321,7 @@ PROCEDURE arctan2* (y, x: REAL): REAL;
 BEGIN
 	ASSERT((y # 0) OR (x # 0), 20);
 	ASSERT((ABS(y) # INF) OR (ABS(x) # INF), 21);
-	FLD(y); FLD(x); FATAN; WAIT;
+	FLD(y); FLD(x); FATAN; FWAIT;
 	RETURN TOP()
 END arctan2;
 
@@ -347,7 +347,7 @@ BEGIN
 	(* IF IsNan(x) THEN RETURN x END; *)
 	(* 2^(abs(x) * 1/ln(2)) *)
 	FLD(ABS(x));
-	IF ST0() # INF THEN 
+	IF ST0() # INF THEN
 		FLDL2E; FMUL; FLDst0; FRNDINT; FXCH; FSUBst1; FNOP; F2XM1; FLD1; FADD; FSCALE;
 		FSTPst1;
 		(* z + 1/z *)
@@ -396,7 +396,7 @@ BEGIN
 	(* 20, x >= 1.0 *)
 	(* IF IsNan(x) THEN RETURN x END; *)
 	(* ln(2) * ld(x + sqrt(x*x - 1)) *)
-	FLDLN2; FLD(x); FLDst0; FMULst0; FLD1; FSUB; FSQRT; FADD; FYL2X; WAIT;
+	FLDLN2; FLD(x); FLDst0; FMULst0; FLD1; FSUB; FSQRT; FADD; FYL2X; FWAIT;
 	RETURN TOP()
 END arccosh;
 
@@ -405,7 +405,7 @@ BEGIN
 	(* 20, -1.0 <= x <= 1.0 *)
 	(* IF IsNan(x) THEN RETURN x END; *)
 	(* |x| *)
-	FLDLN2; FLD(ABS(x)); 
+	FLDLN2; FLD(ABS(x));
 	IF ST0() < 0.12 THEN
 		(* ln(2) * ld(1 + 2*x / (1 - x)) *)
 		FLDst0; FLD1; FSUBR; FDIV; FADDst0; FYL2XP1
@@ -414,7 +414,7 @@ BEGIN
 		FLDst0; FLD1; FADD; FXCH; FLD1; FSUBR; FDIV; FNOP; FYL2X
 	END;
 	IF x < 0 THEN FCHS END;
-	WAIT;
+	FWAIT;
 	RETURN TOP() * 0.5
 END arctanh;
 
