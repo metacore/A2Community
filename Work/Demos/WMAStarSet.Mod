@@ -1,4 +1,4 @@
-MODULE AStarSet; (** AUTHOR ""; PURPOSE ""; *)
+MODULE WMAStarSet; (** AUTHOR ""; PURPOSE ""; *)
 
 IMPORT
 
@@ -631,9 +631,9 @@ VAR
 
 BEGIN
 	Modules.InstallTermHandler(Cleanup)
-END AStarSet.
+END WMAStarSet.
 
-AStarSet.Open ~
-SystemTools.Free AStarSet Containers ~
+WMAStarSet.Open ~
+SystemTools.Free WMAStarSet Containers ~
 
 

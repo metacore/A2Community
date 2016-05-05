@@ -1,4 +1,22 @@
 
+Lode`s Computer Graphics Raycasting Tutorial ported to Active Oberon
+
+Compile:
+
+Native A2:
+	Compiler.Compile -b=AMD PreciseTimer.Mod WMRaycaster.Mod WMRaycasterMaze.Mod ~
+WinAos:
+	Compiler.Compile -b=AMD Win32.PreciseTimer.Mod WMRaycaster.Mod WMRaycasterMaze.Mod ~
+	
+Run:
+
+	WMRaycaster.Open ~
+	WMRaycasterMaze.Open ~
+
+
+
+
+
 BASS 2.4.12 A2 OS (WinAos, UnixAos) Wrapper
 
 Windows
@@ -53,3 +71,4 @@ change if needed
 4. Go to working directory and run Aos
 	cd /Users/User/Desktop/BASS
 	aos
+
