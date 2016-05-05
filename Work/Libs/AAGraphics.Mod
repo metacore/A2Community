@@ -1,0 +1,624 @@
+MODULE AAGraphics;	(** AUTHOR "BohdanT"; PURPOSE "Anti-aliasing drawing of graphics primitives"; *)
+
+IMPORT SYSTEM, WMGraphics,  WMRectangles, 	Raster, 	WMGraphicUtilities, Math, KernelLog, Strings;
+
+
+(*Fast Antialiased Circle*)
+PROCEDURE Circle*(img: Raster.Image;CX, CY, R,cl : LONGINT);
+
+VAR  X, Y: LONGINT;
+        XChange, YChange: LONGINT;
+        RadiusError: LONGINT;
+        r, g, b, a: LONGINT;
+        dx: LONGINT;
+        rmode: Raster.Mode;
+        p1, p2: Raster.Pixel;
+BEGIN       
+	X := R;
+	Y := 0;
+	XChange :=  1- 2*R; 
+	YChange := 1;
+	RadiusError := 0;
+	WMGraphics.ColorToRGBA(cl,r,g,b,a);
+	Raster.InitMode(rmode,Raster.srcOverDst); (* use ModeSrcOverDst in all cases *)
+	WHILE ( X>= Y ) DO
+		a:=ABS(Div(XChange,255*RadiusError));
+		Raster.SetRGBA(p1,r,g,b,255-a);	Raster.SetRGBA(p2,r,g,b,a);
+
+		IF RadiusError>=0 THEN dx:=-1 ELSE dx:=+1 END;
+		Raster.Put(img, CX-X, CY+Y, p1, rmode);	Raster.Put(img, CX-X-dx, CY+Y, p2, rmode);
+		Raster.Put(img, CX+X, CY+Y, p1, rmode);	Raster.Put(img, CX+X+dx, CY+Y, p2, rmode);
+
+		Raster.Put(img, CX-X, CY-Y, p1, rmode);	Raster.Put(img, CX-X-dx, CY-Y, p2, rmode);
+		Raster.Put(img, CX+X, CY-Y, p1, rmode);	Raster.Put(img, CX+X+dx, CY-Y, p2, rmode);
+
+		Raster.Put(img, CX-Y, CY+X, p1, rmode);	Raster.Put(img, CX-Y, CY+X+dx, p2, rmode);
+		Raster.Put(img, CX+Y, CY+X, p1, rmode);	Raster.Put(img, CX+Y, CY+X+dx, p2, rmode);
+
+		Raster.Put(img, CX-Y, CY-X, p1, rmode);	Raster.Put(img, CX-Y, CY-X-dx, p2, rmode);
+		Raster.Put(img, CX+Y, CY-X, p1, rmode);	Raster.Put(img, CX+Y, CY-X-dx, p2, rmode);
+
+
+		INC(Y);
+		INC(RadiusError, YChange);
+         
+		INC(YChange,2);
+		IF ( 2*RadiusError + XChange > 0 ) THEN
+			DEC(X);
+			INC(RadiusError, XChange);
+			INC(XChange,2);
+		END;
+      END;
+(*  	Raster.SetRGBA(p2,r,g,b,127);
+	Raster.Put(img, CX-X-1, CY+Y, p2, rmode);      (*fixed artifact*)
+	Raster.Put(img, CX+X+1, CY+Y, p2, rmode);      
+	Raster.Put(img, CX-X-1, CY-Y, p2, rmode);      
+	Raster.Put(img, CX+X+1, CY-Y, p2, rmode);      *)
+END Circle;
+(*Fast Antialiased Disk*)
+PROCEDURE AADisk*(img : Raster.Image; CX, CY, R,cl : LONGINT);
+
+VAR  
+	X, Y: LONGINT;
+	XChange, YChange: LONGINT;
+	RadiusError: LONGINT;
+	r, g, b, a: LONGINT;
+	dx: LONGINT;
+	rmode: Raster.Mode;
+	p0, p1, p2: Raster.Pixel;
+BEGIN       
+	X := R;
+	Y := 0;
+	XChange :=  1- 2*R; 
+	YChange := 1;
+	RadiusError := 0;
+	WMGraphics.ColorToRGBA(cl,r,g,b,a);
+	Raster.SetRGBA(p0,r,g,b,a);
+	Raster.InitMode(rmode,Raster.srcOverDst); (* use ModeSrcOverDst in all cases *)
+
+  WHILE ( X>= Y ) DO
+(*	a:=255-ENTIER(ABS(255*RadiusError/XChange)+0.5);*)
+	a:=ABS(Div(XChange,255*RadiusError));
+	Raster.SetRGBA(p1,r,g,b,255-a);	Raster.SetRGBA(p2,r,g,b,a);
+
+  	IF RadiusError>=0 THEN
+  		dx:=-1;
+(*  	Raster.SetRGBA(p2,0,255,0,255-a);*)(*Debug*)
+	ELSE
+(*		Raster.SetRGBA(p2,255,0,0,255-a);*)(*Debug*)
+		dx:=+1;
+	END;
+	
+	Raster.Put(img, CX-X, CY+Y, p1, rmode); Raster.Put(img, CX-X-dx, CY+Y, p2, rmode);
+	Raster.Put(img, CX+X, CY+Y, p1, rmode); Raster.Put(img, CX+X+dx, CY+Y, p2, rmode);
+	Raster.Fill(img, CX-X, CY+Y, CX+X+1, CY+Y+1, p0, rmode);
+
+	Raster.Put(img, CX-X, CY-Y, p1, rmode); Raster.Put(img, CX-X-dx, CY-Y, p2, rmode);
+	Raster.Put(img, CX+X, CY-Y, p1, rmode); Raster.Put(img, CX+X+dx, CY-Y, p2, rmode);
+	Raster.Fill(img, CX-X, CY-Y, CX+X+1, CY-Y+1, p0, rmode);
+
+	Raster.Put(img, CX+Y, CY+X, p1, rmode); Raster.Put(img, CX+Y, CY+X+dx, p2, rmode);
+	Raster.Put(img, CX-Y, CY+X, p1, rmode); Raster.Put(img, CX-Y, CY+X+dx, p2, rmode);
+	Raster.Fill(img, CX-Y, CY+X, CX+Y+1, CY+X+1, p0, rmode);
+
+	Raster.Put(img, CX-Y, CY-X, p1, rmode); Raster.Put(img, CX-Y, CY-X-dx, p2, rmode);
+	Raster.Put(img, CX+Y, CY-X, p1, rmode); Raster.Put(img, CX+Y, CY-X-dx, p2, rmode);
+	Raster.Fill(img, CX-Y, CY-X, CX+Y+1, CY-X+1, p0, rmode);
+
+(*	KernelLog.String("a= "); KernelLog.Int(a, 0);KernelLog.String(" dX= "); KernelLog.Int(XChange, 0);   KernelLog.String(" REr= "); KernelLog.Int(RadiusError, 0);KernelLog.Ln;*)
+
+         INC(Y);
+         INC(RadiusError, YChange);
+         
+         INC(YChange,2);
+         IF ( 2*RadiusError + XChange > 0 ) THEN
+               DEC(X);
+               INC(RadiusError, XChange);
+               INC(XChange,2);
+        END;
+      END;
+    	Raster.Put(img, CX-X-1, CY+Y, p2, rmode);      (*fixed artifact*)
+	Raster.Put(img, CX+X+1, CY+Y, p2, rmode);      
+	Raster.Put(img, CX-X-1, CY-Y, p2, rmode);      
+	Raster.Put(img, CX+X+1, CY-Y, p2, rmode);      
+
+END AADisk;
+
+TYPE
+	FillCB * = PROCEDURE{DELEGATE} (y:LONGINT):LONGINT; (*Return color*)
+PROCEDURE AADiskCB*(img:Raster.Image;CX, CY, R : LONGINT;cb:FillCB);
+
+VAR  
+	X, Y: LONGINT;
+	XChange, YChange: LONGINT;
+	RadiusError: LONGINT;
+	r, g, b, a, a1: LONGINT;
+	dx, lx: LONGINT;
+	rmode: Raster.Mode;
+	p0, p1, p2: Raster.Pixel;
+	oy: LONGINT;
+
+BEGIN       
+	X := R;
+	Y := 0;
+	oy:=-1;
+	XChange :=  1- 2*R; 
+	YChange := 1;
+	RadiusError := 0;
+	Raster.InitMode(rmode,Raster.srcOverDst); (* use ModeSrcOverDst in all cases *)
+
+
+  WHILE ( X>=Y ) DO
+	a:=ABS(Div(XChange,255*RadiusError));
+
+  	IF RadiusError>=0 THEN
+  		dx:=-1;lx:=0;
+	ELSE
+		dx:=+1;lx:=1;
+	END;
+	WMGraphics.ColorToRGBA(cb(CY+Y),r,g,b,a1);
+	Raster.SetRGBA(p0,r,g,b,255); Raster.SetRGBA(p1,r,g,b,255-a);	Raster.SetRGBA(p2,r,g,b,a);
+	Raster.Put(img, CX-X, CY+Y, p1, rmode);	Raster.Put(img, CX-X-dx, CY+Y, p2, rmode);
+	Raster.Put(img, CX+X, CY+Y, p1, rmode);	Raster.Put(img, CX+X+dx, CY+Y, p2, rmode);
+	Raster.Fill(img, CX-X+1-lx, CY+Y, CX+X+lx, CY+Y+1, p0, rmode);
+
+	WMGraphics.ColorToRGBA(cb(CY-Y),r,g,b,a1);
+	Raster.SetRGBA(p0,r,g,b,255); Raster.SetRGBA(p1,r,g,b,255-a);	Raster.SetRGBA(p2,r,g,b,a);
+	Raster.Put(img, CX-X, CY-Y, p1, rmode);	Raster.Put(img, CX-X-dx, CY-Y, p2, rmode);
+	Raster.Put(img, CX+X, CY-Y, p1, rmode);	Raster.Put(img, CX+X+dx, CY-Y, p2, rmode);
+	Raster.Fill(img, CX-X+1-lx, CY-Y, CX+X+lx, CY-Y+1, p0, rmode);
+
+		WMGraphics.ColorToRGBA(cb(CY+X),r,g,b,a1);
+		Raster.SetRGBA(p0,r,g,b,255); Raster.SetRGBA(p1,r,g,b,255-a);	Raster.SetRGBA(p2,r,g,b,a);
+		Raster.Put(img, CX+Y, CY+X+dx, p2, rmode);
+		Raster.Put(img, CX-Y, CY+X+dx, p2, rmode);
+		IF lx>0 THEN
+			Raster.Put(img, CX-Y, CY+X, p0, rmode);
+			Raster.Put(img, CX+Y, CY+X, p0, rmode);
+		ELSE
+			Raster.Put(img, CX-Y, CY+X, p1, rmode);	
+			Raster.Put(img, CX+Y, CY+X, p1, rmode);	
+		END;
+		IF X#oy THEN
+			Raster.Fill(img, CX-Y, CY+X, CX+Y+1, CY+X+1, p0, rmode); 
+		END;
+
+		WMGraphics.ColorToRGBA(cb(CY-X),r,g,b,a1);
+		Raster.SetRGBA(p0,r,g,b,255); Raster.SetRGBA(p1,r,g,b,255-a);	Raster.SetRGBA(p2,r,g,b,a);
+		Raster.Put(img, CX-Y, CY-X-dx, p2, rmode);
+		Raster.Put(img, CX+Y, CY-X-dx, p2, rmode);
+		IF lx>0 THEN
+			Raster.Put(img, CX-Y, CY-X, p0, rmode);
+			Raster.Put(img, CX+Y, CY-X, p0, rmode);	
+		ELSE
+			Raster.Put(img, CX-Y, CY-X, p1, rmode);
+			Raster.Put(img, CX+Y, CY-X, p1, rmode);	
+		END;
+
+		IF X#oy THEN
+			Raster.Fill(img, CX-Y, CY-X, CX+Y+1, CY-X+1, p0, rmode);
+		END;
+	oy:=X;
+         INC(Y);
+         INC(RadiusError, YChange);
+         
+         INC(YChange,2);
+         IF ( 2*RadiusError + XChange > 0 ) THEN
+               DEC(X);
+               INC(RadiusError, XChange);
+               INC(XChange,2);
+        END;
+      END;
+    	Raster.Put(img, CX-X-1, CY+Y, p2, rmode);      (*fixed artifact*)
+	Raster.Put(img, CX+X+1, CY+Y, p2, rmode);      
+	Raster.Put(img, CX-X-1, CY-Y, p2, rmode);      
+	Raster.Put(img, CX+X+1, CY-Y, p2, rmode);      
+
+END AADiskCB;
+
+VAR
+	gradcolor1, gradcolor2 : LONGINT;
+	gradmin, gradmax : LONGINT;
+PROCEDURE GradFiller(y : LONGINT):LONGINT;
+VAR
+	f, dist: LONGINT;
+BEGIN
+	IF y>gradmin THEN
+		dist := gradmax - gradmin;
+		f := ENTIER(256 * (y-gradmin) / dist);
+		RETURN WMGraphicUtilities.InterpolateColorLinear(gradcolor1, gradcolor2, f);
+	ELSE
+		RETURN gradcolor1;
+	END;
+END GradFiller;
+VAR
+	
+PROCEDURE DiskGrad*(img: Raster.Image; X, Y, R: LONGINT; c1, c2: LONGINT);
+BEGIN
+	gradmin:=Y;
+	gradmax:=Y+R;
+	gradcolor1:=c1;gradcolor2:=c2;
+	AADiskCB(img, X, Y, R, GradFiller);
+END DiskGrad;
+
+
+(* Bresenham Type Algorithm For Drawing Ellipses*)
+PROCEDURE Ellipse*(img: Raster.Image; CX, CY, XRadius, YRadius, cl : LONGINT);
+VAR
+	X, Y: LONGINT;
+	XChange, YChange: LONGINT;
+	EllipseError: LONGINT;
+	TwoASquare, TwoBSquare : LONGINT;
+	StoppingX, StoppingY   : LONGINT;
+	rmode: Raster.Mode;
+	p1, p2: Raster.Pixel;
+	r, g, b, a, dx:LONGINT;
+BEGIN       
+
+	WMGraphics.ColorToRGBA(cl,r,g,b,a);
+	Raster.InitMode(rmode,Raster.srcOverDst); (* use ModeSrcOverDst in all cases *)
+	Raster.SetRGBA(p1,r,g,b,255);
+	
+	TwoASquare := 2*XRadius*XRadius;
+	TwoBSquare := 2*YRadius*YRadius;
+	X := XRadius; 
+	Y := 0;
+	XChange :=  YRadius*YRadius*(1-2*XRadius);
+	YChange :=  XRadius*XRadius;
+	EllipseError := 0;
+	StoppingX := TwoBSquare*XRadius;
+	StoppingY := 0;
+	WHILE ( StoppingX>= StoppingY ) DO     (*1st set of points, y> 1*)
+	
+		a:=ABS(Div(XChange,255*EllipseError));
+		Raster.SetRGBA(p1,r,g,b,255-a);	Raster.SetRGBA(p2,r,g,b,a);
+	  	IF EllipseError>=0 THEN dx:=-1; ELSE dx:=+1; END;
+
+		Raster.Put(img, CX+X, CY+Y, p1, rmode);(*point in quadrant 1*)	Raster.Put(img, CX+X+dx, CY+Y, p2, rmode);
+		Raster.Put(img, CX-X, CY+Y, p1, rmode);(*point in quadrant 2*)	Raster.Put(img, CX-X-dx, CY+Y, p2, rmode);
+		Raster.Put(img, CX-X, CY-Y, p1, rmode);(*point in quadrant 3*)	Raster.Put(img, CX+X+dx, CY-Y, p2, rmode);
+		Raster.Put(img, CX+X, CY-Y, p1, rmode);(*point in quadrant 4*)	Raster.Put(img, CX-X-dx, CY-Y, p2, rmode);
+
+		INC(Y);
+		INC(StoppingY, TwoASquare);
+		INC(EllipseError, YChange);
+		INC(YChange,TwoASquare);
+		IF ((2*EllipseError + XChange) > 0 ) THEN
+			DEC(X);
+			DEC(StoppingX, TwoBSquare);
+			INC(EllipseError, XChange);
+			INC(XChange,TwoBSquare)
+		END
+	END;
+	(* 1st point set is done; start the 2nd set of points *)
+	X := 0;
+	Y := YRadius;
+	XChange := YRadius*YRadius;
+	YChange := XRadius*XRadius*(1-2*YRadius);
+	EllipseError := 0;
+	StoppingX := 0;
+	StoppingY := TwoASquare*YRadius;
+	WHILE ( StoppingX<= StoppingY ) DO  (*2nd set of points, y < 1*)
+
+		a:=ABS(Div(YChange,255*EllipseError));
+		Raster.SetRGBA(p1,r,g,b,255-a);	Raster.SetRGBA(p2,r,g,b,a);
+	  	IF EllipseError>=0 THEN dx:=-1; ELSE dx:=+1; END;
+
+		Raster.Put(img, CX+X, CY+Y, p1, rmode);(*point in quadrant 1*)	Raster.Put(img, CX+X, CY+Y+dx, p2, rmode);
+		Raster.Put(img, CX-X, CY+Y, p1, rmode);(*point in quadrant 2*)	Raster.Put(img, CX-X, CY+Y+dx, p2, rmode);
+		Raster.Put(img, CX-X, CY-Y, p1, rmode);(*point in quadrant 3*)	Raster.Put(img, CX-X, CY-Y-dx, p2, rmode);
+		Raster.Put(img, CX+X, CY-Y, p1, rmode);(*point in quadrant 4*)	Raster.Put(img, CX+X, CY-Y-dx, p2, rmode);
+
+		INC(X);
+		INC(StoppingX, TwoBSquare);
+		INC(EllipseError, XChange);
+		INC(XChange,TwoBSquare);
+		IF ((2*EllipseError + YChange) > 0 ) THEN
+			DEC(Y);
+			DEC(StoppingY, TwoASquare);
+			INC(EllipseError, YChange);
+			INC(YChange,TwoASquare)
+		END;
+	END;
+END Ellipse;
+
+PROCEDURE RoundRect*(img: Raster.Image; rect : WMRectangles.Rectangle;XRadius, YRadius, cl : LONGINT);
+VAR
+	X, Y: LONGINT;
+	XChange, YChange: LONGINT;
+	EllipseError: LONGINT;
+	TwoASquare, TwoBSquare : LONGINT;
+	StoppingX, StoppingY   : LONGINT;
+	rmode: Raster.Mode;
+	p1, p2: Raster.Pixel;
+	r, g, b, a, dx:LONGINT;
+	CX1, CY1, CX2, CY2: LONGINT;
+BEGIN       
+	
+	WMGraphics.ColorToRGBA(cl,r,g,b,a);
+	Raster.InitMode(rmode,Raster.srcOverDst); (* use ModeSrcOverDst in all cases *)
+	Raster.SetRGBA(p1,r,g,b,255);
+	
+	CX1:=rect.l+XRadius;CY1:=rect.t+YRadius;
+	CX2:=rect.r-XRadius;CY2:=rect.b-YRadius;
+	Raster.Fill(img, CX1, rect.t, CX2+1, rect.t+1, p1, rmode);
+	Raster.Fill(img, CX1, rect.b, CX2+1, rect.b+1, p1, rmode);
+	Raster.Fill(img, rect.l, CY1, rect.l+1, CY2+1, p1, rmode);
+	Raster.Fill(img, rect.r, CY1, rect.r+1, CY2+1, p1, rmode);
+
+	TwoASquare := 2*XRadius*XRadius;
+	TwoBSquare := 2*YRadius*YRadius;
+	X := XRadius; 
+	Y := 0;
+	XChange :=  YRadius*YRadius*(1-2*XRadius);
+	YChange :=  XRadius*XRadius;
+	EllipseError := 0;
+	StoppingX := TwoBSquare*XRadius;
+	StoppingY := 0;
+	WHILE ( StoppingX>= StoppingY ) DO     (*1st set of points, y> 1*)
+	
+		a:=ABS(Div(XChange,255*EllipseError));
+		Raster.SetRGBA(p1,r,g,b,255-a);	Raster.SetRGBA(p2,r,g,b,a);
+	  	IF EllipseError>=0 THEN dx:=-1; ELSE dx:=+1; END;
+
+		Raster.Put(img, CX2+X, CY2+Y, p1, rmode);(*point in quadrant 1*)	Raster.Put(img, CX2+X+dx, CY2+Y, p2, rmode);
+		Raster.Put(img, CX1-X, CY2+Y, p1, rmode);(*point in quadrant 2*)	Raster.Put(img, CX1-X-dx, CY2+Y, p2, rmode);
+		Raster.Put(img, CX1-X, CY1-Y, p1, rmode);(*point in quadrant 3*)	Raster.Put(img, CX2+X+dx, CY1-Y, p2, rmode);
+		Raster.Put(img, CX2+X, CY1-Y, p1, rmode);(*point in quadrant 4*)	Raster.Put(img, CX1-X-dx, CY1-Y, p2, rmode);
+
+		INC(Y);
+		INC(StoppingY, TwoASquare);
+		INC(EllipseError, YChange);
+		INC(YChange,TwoASquare);
+		IF ((2*EllipseError + XChange) > 0 ) THEN
+			DEC(X);
+			DEC(StoppingX, TwoBSquare);
+			INC(EllipseError, XChange);
+			INC(XChange,TwoBSquare)
+		END
+	END;
+	(* 1st point set is done; start the 2nd set of points *)
+	X := 0;
+	Y := YRadius;
+	XChange := YRadius*YRadius;
+	YChange := XRadius*XRadius*(1-2*YRadius);
+	EllipseError := 0;
+	StoppingX := 0;
+	StoppingY := TwoASquare*YRadius;
+	WHILE ( StoppingX<= StoppingY ) DO  (*2nd set of points, y < 1*)
+
+		a:=ABS(Div(YChange,255*EllipseError));
+		Raster.SetRGBA(p1,r,g,b,255-a);	Raster.SetRGBA(p2,r,g,b,a);
+	  	IF EllipseError>=0 THEN dx:=-1; ELSE dx:=+1; END;
+
+		Raster.Put(img, CX2+X, CY2+Y, p1, rmode);(*point in quadrant 1*)	Raster.Put(img, CX2+X, CY2+Y+dx, p2, rmode);
+		Raster.Put(img, CX1-X, CY2+Y, p1, rmode);(*point in quadrant 2*)	Raster.Put(img, CX1-X, CY2+Y+dx, p2, rmode);
+		Raster.Put(img, CX1-X, CY1-Y, p1, rmode);(*point in quadrant 3*)	Raster.Put(img, CX1-X, CY1-Y-dx, p2, rmode);
+		Raster.Put(img, CX2+X, CY1-Y, p1, rmode);(*point in quadrant 4*)	Raster.Put(img, CX2+X, CY1-Y-dx, p2, rmode);
+
+		INC(X);
+		INC(StoppingX, TwoBSquare);
+		INC(EllipseError, XChange);
+		INC(XChange,TwoBSquare);
+		IF ((2*EllipseError + YChange) > 0 ) THEN
+			DEC(Y);
+			DEC(StoppingY, TwoASquare);
+			INC(EllipseError, YChange);
+			INC(YChange,TwoASquare)
+		END;
+	END;
+	
+END RoundRect;
+
+PROCEDURE RoundRectFlat*(img: Raster.Image; rect : WMRectangles.Rectangle;XRadius, YRadius, cl : LONGINT);
+VAR
+	X, Y: LONGINT;
+	XChange, YChange: LONGINT;
+	EllipseError: LONGINT;
+	TwoASquare, TwoBSquare : LONGINT;
+	StoppingX, StoppingY   : LONGINT;
+	rmode: Raster.Mode;
+	p0, p1, p2: Raster.Pixel;
+	r, g, b, a, dx:LONGINT;
+	CX1, CY1, CX2, CY2: LONGINT;
+BEGIN       
+	
+	WMGraphics.ColorToRGBA(cl,r,g,b,a);
+	Raster.InitMode(rmode,Raster.srcOverDst); (* use ModeSrcOverDst in all cases *)
+	Raster.SetRGBA(p0,r,g,b,255);
+	
+	CX1:=rect.l+XRadius;CY1:=rect.t+YRadius;
+	CX2:=rect.r-XRadius;CY2:=rect.b-YRadius;
+	TwoASquare := 2*XRadius*XRadius;
+	TwoBSquare := 2*YRadius*YRadius;
+	X := XRadius; 
+	Y := 0;
+	XChange :=  YRadius*YRadius*(1-2*XRadius);
+	YChange :=  XRadius*XRadius;
+	EllipseError := 0;
+	StoppingX := TwoBSquare*XRadius;
+	StoppingY := 0;
+	WHILE ( StoppingX>= StoppingY ) DO     (*1st set of points, y> 1*)
+	
+		a:=ABS(Div(XChange,255*EllipseError));
+		Raster.SetRGBA(p1,r,g,b,255-a);	Raster.SetRGBA(p2,r,g,b,a);
+	  	IF EllipseError>=0 THEN dx:=-1; ELSE dx:=+1; END;
+
+		Raster.Put(img, CX2+X, CY2+Y, p1, rmode);(*point in quadrant 1*)	Raster.Put(img, CX2+X+dx, CY2+Y, p2, rmode);
+		Raster.Put(img, CX1-X, CY2+Y, p1, rmode);(*point in quadrant 2*)	Raster.Put(img, CX1-X-dx, CY2+Y, p2, rmode);
+		Raster.Fill(img, CX1-X, CY2+Y, CX2+X+1, CY2+Y+1, p0, rmode);
+		
+		Raster.Put(img, CX1-X, CY1-Y, p1, rmode);(*point in quadrant 3*)	Raster.Put(img, CX2+X+dx, CY1-Y, p2, rmode);
+		Raster.Put(img, CX2+X, CY1-Y, p1, rmode);(*point in quadrant 4*)	Raster.Put(img, CX1-X-dx, CY1-Y, p2, rmode);
+		Raster.Fill(img, CX1-X, CY1-Y, CX2+X+1, CY1-Y+1, p0, rmode);
+
+		INC(Y);
+		INC(StoppingY, TwoASquare);
+		INC(EllipseError, YChange);
+		INC(YChange,TwoASquare);
+		IF ((2*EllipseError + XChange) > 0 ) THEN
+			DEC(X);
+			DEC(StoppingX, TwoBSquare);
+			INC(EllipseError, XChange);
+			INC(XChange,TwoBSquare)
+		END
+	END;
+	(* 1st point set is done; start the 2nd set of points *)
+	X := 0;
+	Y := YRadius;
+	XChange := YRadius*YRadius;
+	YChange := XRadius*XRadius*(1-2*YRadius);
+	EllipseError := 0;
+	StoppingX := 0;
+	StoppingY := TwoASquare*YRadius;
+	WHILE ( StoppingX<= StoppingY ) DO  (*2nd set of points, y < 1*)
+
+		a:=ABS(Div(YChange,255*EllipseError));
+		Raster.SetRGBA(p1,r,g,b,255-a);	Raster.SetRGBA(p2,r,g,b,a);
+	  	IF EllipseError>=0 THEN dx:=-1; ELSE dx:=+1; END;
+
+		Raster.Put(img, CX2+X, CY2+Y, p1, rmode);(*point in quadrant 1*)	Raster.Put(img, CX2+X, CY2+Y+dx, p2, rmode);
+		Raster.Put(img, CX1-X, CY2+Y, p1, rmode);(*point in quadrant 2*)	Raster.Put(img, CX1-X, CY2+Y+dx, p2, rmode);
+		Raster.Fill(img, CX1-X, CY2+Y, CX2+X+1, CY2+Y+1, p0, rmode);
+
+		Raster.Put(img, CX1-X, CY1-Y, p1, rmode);(*point in quadrant 3*)	Raster.Put(img, CX1-X, CY1-Y-dx, p2, rmode);
+		Raster.Put(img, CX2+X, CY1-Y, p1, rmode);(*point in quadrant 4*)	Raster.Put(img, CX2+X, CY1-Y-dx, p2, rmode);
+		Raster.Fill(img, CX1-X, CY1-Y, CX2+X+1, CY1-Y+1, p0, rmode);
+
+		INC(X);
+		INC(StoppingX, TwoBSquare);
+		INC(EllipseError, XChange);
+		INC(XChange,TwoBSquare);
+		IF ((2*EllipseError + YChange) > 0 ) THEN
+			DEC(Y);
+			DEC(StoppingY, TwoASquare);
+			INC(EllipseError, YChange);
+			INC(YChange,TwoASquare)
+		END;
+	END;
+	Raster.Fill(img, rect.l, CY1, rect.r+1, CY2, p0, rmode);
+	
+END RoundRectFlat;
+
+(* draw a anti-aliased line *)
+(** draw a line within the current clipping rectangle *)
+PROCEDURE Line*(img:Raster.Image; x0, y0, x1, y1 : LONGINT; color : LONGINT);
+VAR t, xi, mi, xf, mf, dt2 : LONGINT;
+VAR
+	p : Raster.Pixel;
+	r, g, b, a : LONGINT;
+	rmode: Raster.Mode;
+
+BEGIN
+	WMGraphics.ColorToRGBA(color,r,g,b,a);
+	Raster.InitMode(rmode,Raster.srcOverDst); (* use ModeSrcOverDst in all cases *)
+	Raster.SetRGBA(p,r,g,b, a);
+
+	IF y0 = y1 THEN (* horizontal case *)
+		IF x0 > x1 THEN t := x0; x0 := x1; x1 := t END;
+		Raster.Fill(img, x0, y0, x1 + 1, y0 + 1, p, rmode);
+
+	ELSIF x0 = x1 THEN (* vertical case *)
+		IF y0 > y1 THEN t := y0; y0 := y1; y1 := t END;
+		Raster.Fill(img, x0, y0, x0 + 1, y1 + 1, p, rmode);
+	ELSE (* general case *)
+		IF ABS(y1 - y0) > ABS(x1 - x0) THEN
+			IF y0 > y1 THEN t := y0; y0 := y1; y1 := t; t := x0; x0 := x1; x1 := t END;
+			xi := x0; xf :=	y0 - y1; mi := (x1 - x0) DIV (y1 - y0); mf := 2 * ( (x1 - x0) MOD (y1 - y0)); dt2 := 2 * (y1 - y0);
+			FOR t := y0 TO y1 DO
+				a:=255*ABS(xf) DIV dt2;
+				Raster.SetRGBA(p,r,g,b, a);
+				Raster.Put(img, xi, t, p, rmode);
+				Raster.SetRGBA(p,r,g,b, 255-a);
+				Raster.Put(img, xi+1, t, p, rmode);
+
+				INC(xi, mi); INC(xf, mf);
+				IF xf > 0 THEN INC(xi); DEC(xf, dt2); END
+			END
+		ELSE
+			IF x0 > x1 THEN t := y0; y0 := y1; y1 := t; t := x0; x0 := x1; x1 := t END;
+			xi := y0; xf :=	x0 - x1; mi := (y1 - y0) DIV (x1 - x0); mf := 2 * ( (y1 - y0) MOD (x1 - x0)); dt2 := 2 * (x1 - x0);
+			FOR t := x0 TO x1 DO
+				a:=255*ABS(xf) DIV dt2;
+				Raster.SetRGBA(p,r,g,b, a);
+				Raster.Put(img, t, xi, p, rmode);
+				Raster.SetRGBA(p,r,g,b, 255-a);
+				Raster.Put(img, t, xi+1, p, rmode);
+						
+				INC(xi, mi); INC(xf, mf);
+				IF xf > 0 THEN INC(xi); DEC(xf, dt2); END
+			END
+		END
+	END
+END Line;
+
+PROCEDURE PolyLine*(img:Raster.Image; CONST points : ARRAY OF WMGraphics.Point2d; nofPoints : LONGINT; closed : BOOLEAN;	color : LONGINT);
+VAR i : LONGINT;
+BEGIN
+	FOR i := 1 TO nofPoints - 1 DO
+		Line(img, points[i-1].x, points[i-1].y, points[i].x, points[i].y, color)
+	END;
+	IF closed THEN
+		Line(img, points[nofPoints-1].x, points[nofPoints-1].y, points[0].x, points[0].y, color)
+	END
+END PolyLine;
+
+(* The DrawSolidArc function takes standard arc drawing
+ arguments but the "radius" has been split into 2 different
+ variables, "innerRadius" and "outerRadius".*)
+ VAR
+	p:ARRAY 200 OF WMGraphics.Point2d;
+PROCEDURE DrawArcFlat* (c:WMGraphics.Canvas; centerX, centerY, innerRadius, outerRadius:LONGINT; startAngle, arcAngle : REAL; color : LONGINT);
+VAR
+    (* How much to rotate for each point along the arc.*)
+	steps:LONGINT;
+	angleStep:REAL;
+	angle, endAngle:REAL;
+	i, j : LONGINT;
+				str : ARRAY 32 OF CHAR;
+
+BEGIN
+	steps:=64;
+	 angleStep:=arcAngle/steps;
+    (* Find the coordinates of the first point on the inner arc.*)
+	p[0].x := ENTIER(centerX + Math.cos(startAngle) * innerRadius+0.5);
+	p[0].y := ENTIER(centerY + Math.sin(startAngle) * innerRadius+0.5);
+
+	(* Draw all of the other points along the inner arc.*)
+	j := 1;
+	FOR i:=1 TO steps DO
+		angle := (startAngle + i * angleStep);
+(*		KernelLog.String(' i = '); KernelLog.Int(i, 0);  KernelLog.String(' angle = '); Strings.FloatToStr(angle, 4, 10, 0, str); KernelLog.String(str);KernelLog.Ln;*)
+		p[i].x :=  ENTIER(centerX + Math.cos(angle) * innerRadius+0.5);
+		p[i].y :=  ENTIER(centerY + Math.sin(angle) * innerRadius+0.5);
+		INC(j);
+	END;
+	(*Determine the ending angle of the arc so you can
+	rotate around the outer arc in the opposite direction.*)
+	endAngle := startAngle + arcAngle;
+
+    (*Start drawing all points on the outer arc.*)
+    FOR i:=0 TO steps DO
+		(* To go the opposite direction, we subtract rather than add.*)
+		angle := (endAngle - i * angleStep);
+(*		KernelLog.String(' i = '); KernelLog.Int(j+i, 0);  KernelLog.String(' angle = '); Strings.FloatToStr(angle, 4, 10, 0, str); KernelLog.String(str);KernelLog.Ln;*)
+		p[j+i].x :=  ENTIER(centerX + Math.cos(angle) * outerRadius+0.5);
+		p[j+i].y :=  ENTIER(centerY + Math.sin(angle) * outerRadius+0.5);
+		
+	END;
+
+	c.FillPolygonFlat(p, steps*2+2, color, WMGraphics.ModeCopy);
+END DrawArcFlat;
+		
+(*!!!b/a for the speed*)
+PROCEDURE -Div(a,b:LONGINT):LONGINT;
+CODE
+	POP	EAX
+	CDQ
+	DB 	0F7H, 3CH, 24H ;	(*IDIV	[ESP+b]*)
+	ADD	ESP, 4
+END Div;
+
+END AAGraphics.
+
+
