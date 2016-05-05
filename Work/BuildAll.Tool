@@ -1,4 +1,57 @@
 
+*** Bindings ***
+
+Compiler.Compile -b=AMD
+
+	Bindings\I386.BASScpu.Mod
+	Bindings\Win32.BASS.Mod
+	Bindings\Win32.Pipe.Mod ~
+
+*** Components ***
+
+Compiler.Compile -b=AMD
+
+	Components\WMChart.Mod
+	Components\WMLCD.Mod
+	Components\WMLEDLadder.Mod ~
+
+*** Demos ***
+
+Compiler.Compile -b=AMD
+
+	Demos\WMAStar.Mod
+	Demos\WMAStarSet.Mod
+	Demos\WMBass3DTest.Mod
+	Demos\WMFM.Mod
+	Demos\WMRaycaster.Mod
+	Demos\WMRaycasterMaze.Mod
+	Demos\WMXmas.Mod ~
+
+*** Dialogs ***
+
+Compiler.Compile -b=AMD
+	Dialogs\WMColorPicker.Mod ~
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 Lode`s Computer Graphics Raycasting Tutorial ported to Active Oberon
 
 Compile:
