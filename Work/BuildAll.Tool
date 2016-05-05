@@ -23,6 +23,7 @@ Compiler.Compile -b=AMD
 Compiler.Compile -b=AMD
 	Components/WMChart.Mod
 	Components/WMComboBox.Mod
+	Components/WMDropDownLists.Mod
 	Components/WMLCD.Mod
 	Components/WMLEDLadder.Mod ~
 
@@ -30,6 +31,13 @@ Compiler.Compile -b=AMD
 
 Compiler.Compile -b=AMD
 	Dialogs/WMColorPicker.Mod ~
+	
+*** Tools ***
+
+Compiler.Compile -b=AMD
+	Tools/ImportCollector.Mod
+	Tools/ImportGraph.Mod
+	Tools/WinStarter.Mod ~
 
 *** Demos ***
 

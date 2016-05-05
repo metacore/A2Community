@@ -208,7 +208,6 @@
 				</Bounds>
 				<EditMode loader="WMProperties.NewBoolean">false</EditMode>
 				<Mode loader="WMProperties.NewInt32">2</Mode>
-				<IsDropDown loader="WMProperties.NewBoolean">false</IsDropDown>
 			</Properties>
 		</DropDownList>
 	</GroupPanel>

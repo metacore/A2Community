@@ -40,6 +40,10 @@ TYPE
 		shadowRect, borderRect : WMRectangles.Rectangle;
 
 		PROCEDURE&New(x, y, width, height : LONGINT; grid : WMStringGrids.StringGrid; dropDownList : DropDownList);
+		VAR
+			bDropDown: BOOLEAN;
+			vp: WMWindowManager.ViewPort;
+			rW, rVP: WMRectangles.Rectangle;
 		BEGIN
 			ASSERT((width > 0) & (height > 0) & (grid # NIL) & (dropDownList # NIL));
 			SELF.grid := grid;
@@ -47,8 +51,18 @@ TYPE
 			isClosed := FALSE;
 
 			Init(width, height, TRUE);
+			
+			bDropDown := TRUE;
+			vp := WMWindowManager.GetDefaultView();
+			IF vp # NIL THEN
+				rW := WMRectangles.MakeRect(x, y, x + width - 1, y + height - 1);
+				rVP := WMRectangles.MakeRect(
+					ENTIER(vp.range.l + 0.5), ENTIER(vp.range.t + 0.5),
+					ENTIER(vp.range.r + 0.5), ENTIER(vp.range.b + 0.5));
+				bDropDown := WMRectangles.IsContained(rVP, rW);
+			END;
 
-			IF dropDownList.isDropDown.Get() THEN
+			IF bDropDown THEN
 				grid.bearing.Set(WMRectangles.MakeRect(1, 1, ShadowWidth, ShadowWidth));
 				borderRect := WMRectangles.MakeRect(0, 0, width - ShadowWidth, height - ShadowWidth);
 				shadowRect := WMRectangles.MakeRect(ShadowWidth, ShadowWidth, width, height)
@@ -64,7 +78,7 @@ TYPE
 			SetContent(grid);
 
 			manager := WMWindowManager.GetDefaultManager();
-			IF dropDownList.isDropDown.Get() THEN
+			IF bDropDown THEN
 				manager.Add(x, y,
 					SELF, {WMWindowManager.FlagStayOnTop, WMWindowManager.FlagHidden})
 			ELSE
@@ -341,8 +355,6 @@ TYPE
 		textColor- : WMProperties.ColorProperty;
 		minGridWidth- : WMProperties.Int32Property;
 		maxGridHeight- : WMProperties.Int32Property;
-		
-		isDropDown-: WMProperties.BooleanProperty;
 
 		model- : DropDownListModel;
 
@@ -369,8 +381,6 @@ TYPE
 			NEW(textColor, PrototypeTextColor, NIL, NIL); properties.Add(textColor);
 			NEW(minGridWidth, PrototypeMinGridWidth, NIL, NIL); properties.Add(minGridWidth);
 			NEW(maxGridHeight, PrototypeMaxGridHeight, NIL, NIL); properties.Add(maxGridHeight);
-			
-			NEW(isDropDown, PrototypeIsDropDown, NIL, NIL); properties.Add(isDropDown);
 
 			NEW(model); model.onChanged.Add(ModelChanged);
 			NEW(onSelect, NIL, NIL, NIL, NIL); events.Add(onSelect);
@@ -603,7 +613,7 @@ VAR
 	StrDropDownList : Strings.String;
 	PrototypeTextColor : WMProperties.ColorProperty;
 	PrototypeMode, PrototypeMinGridWidth, PrototypeMaxGridHeight : WMProperties.Int32Property;
-	PrototypeIsEditable, PrototypeIsDropDown : WMProperties.BooleanProperty;
+	PrototypeIsEditable : WMProperties.BooleanProperty;
 
 PROCEDURE GenDropDownList*() : XML.Element;
 VAR dropDownList : DropDownList;
@@ -623,9 +633,6 @@ BEGIN
 	PrototypeMaxGridHeight.Set(100);
 	NEW(PrototypeIsEditable, NIL, Strings.NewString("IsEditable"), Strings.NewString("is the user allowed to insert text into the editor?"));
 	PrototypeIsEditable.Set(TRUE);
-	NEW(PrototypeIsDropDown, NIL, Strings.NewString("IsDropDown"), Strings.NewString("list drops down or up"));
-	PrototypeIsDropDown.Set(TRUE);
-	
 END Init;
 
 BEGIN
