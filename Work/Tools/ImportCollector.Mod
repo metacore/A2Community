@@ -50,7 +50,7 @@ TYPE
 		END GetItem;
 
 	END ModulesVector;
-	
+
 PROCEDURE FileExists(CONST fileName: ARRAY OF CHAR): BOOLEAN;
 VAR
 	file: Files.File;
@@ -58,28 +58,31 @@ BEGIN
 	file := Files.Old(fileName);
 	RETURN (file # NIL)
 END FileExists;
-	
-PROCEDURE GenerateFilename(CONST prefix, moduleName: ARRAY OF CHAR): Files.FileName;
-VAR
-	fileName: Files.FileName;
-BEGIN
-	COPY(prefix, fileName);
-	Strings.Append(fileName, moduleName); Strings.Append(fileName, ".Mod");
-	RETURN fileName
-END GenerateFilename;
-	
+
 (* Simple heuristics that tries to find the filename of a given module name *)
-PROCEDURE FindCorrectFilename(CONST moduleName: ARRAY OF CHAR): Files.FileName;
+PROCEDURE FindCorrectFilename(CONST path, moduleName: ARRAY OF CHAR): Files.FileName;
+
+	PROCEDURE GenerateFilename(CONST path, prefix, moduleName: ARRAY OF CHAR): Files.FileName;
+	VAR
+		fileName: Files.FileName;
+	BEGIN
+		COPY(path, fileName);
+		Strings.Append(fileName, prefix);
+		Strings.Append(fileName, moduleName);
+		Strings.Append(fileName, ".Mod");
+		RETURN fileName
+	END GenerateFilename;
+
 VAR
 	fileName: Files.FileName;
 BEGIN
-	fileName := GenerateFilename("", moduleName);
+	fileName := GenerateFilename(path, "", moduleName);
 	IF ~FileExists(fileName) THEN
-		fileName := GenerateFilename("I386.", moduleName);
+		fileName := GenerateFilename(path, "I386.", moduleName);
 		IF ~FileExists(fileName) THEN
-			fileName := GenerateFilename("Win32.", moduleName);
+			fileName := GenerateFilename(path, "Win32.", moduleName);
 			IF ~FileExists(fileName) THEN
-				fileName := GenerateFilename("Unix.", moduleName);
+				fileName := GenerateFilename(path, "Unix.", moduleName);
 				IF ~FileExists(fileName) THEN
 					COPY(moduleName, fileName)
 				END
@@ -89,25 +92,44 @@ BEGIN
 	RETURN fileName
 END FindCorrectFilename;
 
-PROCEDURE ParseModule(CONST modName: ARRAY OF CHAR): ModuleParser.Module;
+(* Simple heuristics that tries to find the filepath of a given module name *)
+PROCEDURE FindCorrectFilepath(CONST moduleName: ARRAY OF CHAR; vecModulesPaths: Containers.StringVector): Files.FileName;
 VAR
-	module: ModuleParser.Module;
-	diag: Diagnostics.Diagnostics;
+	pathName: Files.FileName;
+	i: LONGINT;
 BEGIN
-	module := ModuleParser.ParseFile(FindCorrectFilename(modName), diag);
-	RETURN module
-END ParseModule;
-
-PROCEDURE ProperModuleInfo(import: ModuleParser.Import): ModuleParser.InfoItem;
-BEGIN
-	IF (import.alias # NIL) & (import.alias.name^ # "") THEN
-		RETURN import.alias
+	IF vecModulesPaths.GetCount() = 0 THEN
+		pathName := FindCorrectFilename("", moduleName)
 	ELSE
-		RETURN import.ident
-	END
-END ProperModuleInfo;
+		i := 0;
+		REPEAT
+			pathName := FindCorrectFilename(vecModulesPaths.GetItem(i)^, moduleName);
+			INC(i)
+		UNTIL FileExists(pathName) OR (i > vecModulesPaths.GetCount() - 1)
+	END;
+	RETURN pathName
+END FindCorrectFilepath;
 
-PROCEDURE ProcessModule(context: Commands.Context; modules: ModulesVector; modulesNotFound: Containers.StringVector; CONST modName: ARRAY OF CHAR);
+PROCEDURE ProcessModule(context: Commands.Context; vecModules: ModulesVector; vecModulesNotFound, vecModulesPaths: Containers.StringVector; CONST modName: ARRAY OF CHAR);
+
+	PROCEDURE ParseModule(CONST modName: ARRAY OF CHAR): ModuleParser.Module;
+	VAR
+		module: ModuleParser.Module;
+		diag: Diagnostics.Diagnostics;
+	BEGIN
+		module := ModuleParser.ParseFile(FindCorrectFilepath(modName, vecModulesPaths), diag);
+		RETURN module
+	END ParseModule;
+
+	PROCEDURE ProperModuleInfo(import: ModuleParser.Import): ModuleParser.InfoItem;
+	BEGIN
+		IF (import.alias # NIL) & (import.alias.name^ # "") THEN
+			RETURN import.alias
+		ELSE
+			RETURN import.ident
+		END
+	END ProperModuleInfo;
+
 VAR
 	module: ModuleParser.Module;
 	import: ModuleParser.Import;
@@ -118,22 +140,22 @@ BEGIN
 	IF Strings.EndsWith(".Mod", name^) THEN
 		name^[Strings.Length(name^) - 4] := 0X
 	END;
-	IF modules.Contains(name^) OR (modulesNotFound.IndexOf(name^) >= 0) THEN
+	IF vecModules.Contains(name^) OR (vecModulesNotFound.IndexOf(name^) >= 0) THEN
 		RETURN
 	END;
 	module := ParseModule(name^);
 	IF module = NIL THEN
-		modulesNotFound.Add(name^);
+		vecModulesNotFound.Add(name^);
 		RETURN
 	END;
-	modules.Add(module);
+	vecModules.Add(module);
 	context.out.String("Added "); context.out.String(module.ident.name^);
 	context.out.Ln; context.out.Update;
 	import := module.importList;
 	WHILE import # NIL DO
 		info := ProperModuleInfo(import);
-		IF (info # NIL) & ~modules.Contains(info.name^) THEN
-			ProcessModule(context, modules, modulesNotFound, info.name^)
+		IF (info # NIL) & ~vecModules.Contains(info.name^) THEN
+			ProcessModule(context, vecModules, vecModulesNotFound, vecModulesPaths, info.name^)
 		END;
 		IF import.next # NIL THEN
 			import := import.next(ModuleParser.Import)
@@ -171,7 +193,7 @@ BEGIN
 END ActualImports;
 *)
 
-PROCEDURE Output(CONST sFileName: ARRAY OF CHAR; modules: ModulesVector; modulesNotFound: Containers.StringVector): BOOLEAN;
+PROCEDURE Output(CONST sFileName: ARRAY OF CHAR; vecModules: ModulesVector; vecModulesNotFound: Containers.StringVector): BOOLEAN;
 VAR
 	i: LONGINT;
 	m: ModuleParser.Module;
@@ -182,54 +204,91 @@ BEGIN
 
 	archive := Zip.CreateArchive(sFileName, res);
 	IF (archive # NIL) & (res = Zip.Ok) THEN
-		FOR i := 0 TO modules.vector.GetCount() - 1 DO
-			m := modules.GetItem(i);
+		FOR i := 0 TO vecModules.vector.GetCount() - 1 DO
+			m := vecModules.GetItem(i);
 			IF m # NIL THEN
 				(** TODO: Implement more robust generation of file name
 					as in Modules.ThisModule. Or propose ETHZ to add real
 					file name as field to Modules.Module *)
 				s := Strings.ConcatToNew(m.ident.name^, ".Obw");
 				ZipTool.AddFile(archive, s^, s^, Zip.DefaultCompression, Zip.DefaultStrategy, res);
-				IF (res # Zip.Ok) & (modulesNotFound.IndexOf(m.ident.name^) = -1) THEN
-					modulesNotFound.Add(m.ident.name^)
+				IF (res # Zip.Ok) & (vecModulesNotFound.IndexOf(m.ident.name^) = -1) THEN
+					vecModulesNotFound.Add(m.ident.name^)
 				END
 			END
 		END;
 		RETURN TRUE
 	END;
-	
+
 	RETURN FALSE
 END Output;
 
+PROCEDURE ParsePaths(CONST paths: ARRAY OF CHAR; vecModulesPaths: Containers.StringVector);
+VAR
+	j, k: LONGINT;
+	dir: Files.FileName;
+
+	PROCEDURE AddDir;
+	BEGIN
+		IF k > 0 THEN
+			dir[k] := 0X;
+			IF (dir # "") & (vecModulesPaths.IndexOf(dir) = -1) THEN
+				vecModulesPaths.Add(dir)
+			END;
+			k := 0
+		END
+	END AddDir;
+
+BEGIN
+	k := 0;
+	WHILE paths[j] # 0X DO
+		IF paths[j] = ';' THEN
+			AddDir
+		ELSE
+			dir[k] := paths[j]; INC(k)
+		END;
+		INC(j)
+	END;
+	AddDir
+END ParsePaths;
+
 PROCEDURE Collect*(context: Commands.Context); (** [options] moduleName {" " modulename} ~  *)
 VAR
-	modules: ModulesVector;
-	modulesNotFound: Containers.StringVector;
+	vecModules: ModulesVector;
+	vecModulesNotFound,
+	vecModulesPaths: Containers.StringVector;
 	moduleName, outputFilename: Files.FileName;
+	paths: ARRAY 1024 OF CHAR;
 	options: Options.Options;
 	i: LONGINT;
 	s: Strings.String;
 BEGIN
 	NEW(options);
 	options.Add("f", "file", Options.String);
+	options.Add("p", "paths", Options.String);
 	IF options.Parse(context.arg, context.out) THEN
 		IF ~options.GetString("file", outputFilename) THEN
-			COPY(DefaultOutputFilename, outputFilename);
+			COPY(DefaultOutputFilename, outputFilename)
+		END;
+		NEW(vecModulesPaths, {Containers.VECTOR_SORTED, Containers.VECTOR_NO_DUPLICATES});
+		vecModulesPaths.Add("");
+		IF options.GetString("paths", paths) THEN
+			ParsePaths(paths, vecModulesPaths)
 		END;
 
-		NEW(modules);
-		NEW(modulesNotFound, {Containers.VECTOR_SORTED, Containers.VECTOR_NO_DUPLICATES});
+		NEW(vecModules);
+		NEW(vecModulesNotFound, {Containers.VECTOR_SORTED, Containers.VECTOR_NO_DUPLICATES});
 
 		WHILE context.arg.GetString(moduleName) DO
-			ProcessModule(context, modules, modulesNotFound, moduleName)
+			ProcessModule(context, vecModules, vecModulesNotFound, vecModulesPaths, moduleName)
 		END;
 
-		IF Output(outputFilename, modules, modulesNotFound) THEN
+		IF Output(outputFilename, vecModules, vecModulesNotFound) THEN
 			context.out.String("Collected modules written to "); context.out.String(outputFilename); context.out.Ln;
-			IF modulesNotFound.GetCount() > 0 THEN
+			IF vecModulesNotFound.GetCount() > 0 THEN
 				context.out.String("Some modules wasn't found: "); context.out.Ln;
-				FOR i := 0 TO modulesNotFound.GetCount() - 1 DO
-					s := modulesNotFound.GetItem(i);
+				FOR i := 0 TO vecModulesNotFound.GetCount() - 1 DO
+					s := vecModulesNotFound.GetItem(i);
 					IF s # NIL THEN
 						context.out.String(s^); context.out.Ln
 					END
@@ -248,11 +307,25 @@ END ImportCollector.
 
 ImportCollector.Collect
 
-	WinStarter WMBass3DTest WMRaycaster WMRaycasterMaze WMAStar WMFM
-	
+	-p=Bindings/BASS/;Libs/;Components/;Tools/;Demos/
+
+	WinStarter WMBass3DTest WMRaycaster
+	WMRaycasterMaze WMAStar WMFM
+
 	DisplayNull Traps FileTrapWriter FSTools RelativeFileSystem
 	Loader WMOTFonts WMOberonFonts	Clipboard Autostart
   SkinEngine PNGDecoder Tar SystemTools UpTime ~
+  
+ImportCollector.Collect
+
+	-p=Bindings/BASS/;Libs/;Components/;Tools/;Demos/
+
+	WinStarter WMBass3DTest WMRaycaster
+	WMRaycasterMaze WMAStar WMFM
+
+	DisplayNull Traps FileTrapWriter FSTools RelativeFileSystem
+	Loader WMOTFonts WMOberonFonts	Clipboard Autostart
+  SkinEngine PNGDecoder Tar UpTime ~
 
 SystemTools.Free ImportCollector ~
 

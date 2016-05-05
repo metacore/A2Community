@@ -9,7 +9,7 @@ MODULE WMDropDownLists; (** AUTHOR "staubesv"; PURPOSE "DropDownList widget"; *)
 
 
 IMPORT
-	Objects, Inputs, Strings, XML,
+	Objects, Inputs, Strings, XML, Plugins,
 	WMRectangles, WMGraphics, WMGraphicUtilities, WMProperties, WMEvents, WMWindowManager, WMComponents, WMStandardComponents,
 	WMEditors, WMGrids, WMStringGrids;
 
@@ -42,8 +42,11 @@ TYPE
 		PROCEDURE&New(x, y, width, height : LONGINT; grid : WMStringGrids.StringGrid; dropDownList : DropDownList);
 		VAR
 			bDropDown: BOOLEAN;
+			m: WMWindowManager.WindowManager;
 			vp: WMWindowManager.ViewPort;
 			rW, rVP: WMRectangles.Rectangle;
+			tab: Plugins.Table;
+			i: LONGINT;
 		BEGIN
 			ASSERT((width > 0) & (height > 0) & (grid # NIL) & (dropDownList # NIL));
 			SELF.grid := grid;
@@ -53,15 +56,23 @@ TYPE
 			Init(width, height, TRUE);
 			
 			bDropDown := TRUE;
-			vp := WMWindowManager.GetDefaultView();
-			IF vp # NIL THEN
-				rW := WMRectangles.MakeRect(x, y, x + width - 1, y + height - 1);
-				rVP := WMRectangles.MakeRect(
-					ENTIER(vp.range.l + 0.5), ENTIER(vp.range.t + 0.5),
-					ENTIER(vp.range.r + 0.5), ENTIER(vp.range.b + 0.5));
-				bDropDown := WMRectangles.IsContained(rVP, rW);
+			m := WMWindowManager.GetDefaultManager();
+			m.lock.AcquireRead;
+			m.viewRegistry.GetAll(tab);
+			i := 0;
+			rW := WMRectangles.MakeRect(x, y, x + width - 1, y + height - 1);
+			WHILE bDropDown & (i < LEN(tab)) DO
+				IF tab[i] IS WMWindowManager.ViewPort THEN
+					vp := tab[i](WMWindowManager.ViewPort);
+					rVP := WMRectangles.MakeRect(
+						ENTIER(vp.range.l + 0.5), ENTIER(vp.range.t + 0.5),
+						ENTIER(vp.range.r + 0.5), ENTIER(vp.range.b + 0.5));
+					bDropDown := WMRectangles.IsContained(rVP, rW)
+				END;
+				INC(i)
 			END;
-
+			m.lock.ReleaseRead;
+			
 			IF bDropDown THEN
 				grid.bearing.Set(WMRectangles.MakeRect(1, 1, ShadowWidth, ShadowWidth));
 				borderRect := WMRectangles.MakeRect(0, 0, width - ShadowWidth, height - ShadowWidth);
