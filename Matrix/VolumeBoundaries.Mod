@@ -45,6 +45,7 @@ TYPE
 		volumes*: ARRAY [*] OF VolumeContainer;
 		index*: LONGINT; (* current container index *)
 		pInlet*, pOutlet*, rho*, dt*: MatrixBase.Datatype;
+		dyeInlet*: PROCEDURE(sizeY,sizeZ,y,z: LONGINT): BOOLEAN;
 	
 		PROCEDURE &Init*(CONST names: ARRAY OF ARRAY OF CHAR; pInlet,pOutlet,rho,dt: MatrixBase.Datatype);
 		VAR i:LONGINT;
@@ -53,6 +54,7 @@ TYPE
 			SELF.pOutlet:=pOutlet;
 			SELF.rho := rho;
 			SELF.dt := dt;
+			SELF.dyeInlet:=DyeInlet; (*default dye behaviour*)
 			NEW(volumes, LEN(names,0));			
 			FOR i:=0 TO LEN(volumes,0)-1 DO
 				NEW(volumes[i]);
@@ -194,7 +196,7 @@ TYPE
 					 (* for triple/double helix *)
 					FOR i:=0 TO LEN(field, 0)-1 DO
 						FOR j:=0 TO LEN(field,1)-1 DO
-							IF DyeInlet(LEN(field,0), LEN(field,1), i,j) THEN 
+							IF dyeInlet(LEN(field,0), LEN(field,1), i,j) THEN 
 								field[i,j, 0 ]:=1; (*inlet condition*)
 							ELSE
 								field[i,j, 0 ]:=0; 
@@ -241,10 +243,10 @@ BEGIN
 END Sqr;
 
 
-PROCEDURE DyeInlet(sizeY,sizeZ,y,z: LONGINT): BOOLEAN;
+PROCEDURE DyeInlet(sizeZ,sizeY,z,y: LONGINT): BOOLEAN;
 CONST radius=0.055 * 2.8;
 BEGIN
-	RETURN Sqr(y-sizeY/2) + Sqr(z - sizeZ/2) < Sqr(radius*sizeY)
+	RETURN Sqr(y-sizeY/2) + Sqr(z - sizeZ/2) < Sqr(radius*sizeY) (*? >= ?*)
 END DyeInlet;
 
 PROCEDURE ReadBinaryVolume*(CONST filename: ARRAY OF CHAR): BinaryVolume;	
