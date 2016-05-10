@@ -315,6 +315,17 @@ TYPE
 			DEC(nCount);
 			array[nCount] := NIL
 		END RemoveUnlocked;
+		
+		PROCEDURE Clear*;
+		VAR
+			i: LONGINT;
+		BEGIN {EXCLUSIVE}
+			AWAIT(nReadLock = 0);
+			FOR i := 0 TO nCount - 1 DO
+				array[i] := NIL
+			END;
+			nCount := 0
+		END Clear;
 
 		(** atomic replace x by y. That means that x is removed and y is added to the SortedList *)
 		(*PROCEDURE Replace*(x, y: ANY);
