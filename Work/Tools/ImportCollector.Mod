@@ -193,7 +193,7 @@ BEGIN
 END ActualImports;
 *)
 
-PROCEDURE Output(CONST sFileName: ARRAY OF CHAR; vecModules: ModulesVector; vecModulesNotFound: Containers.StringVector): BOOLEAN;
+PROCEDURE Output(CONST sFileName: ARRAY OF CHAR; vecModules: ModulesVector; vecModulesNotFound, vecModulesExcludes: Containers.StringVector): BOOLEAN;
 VAR
 	i: LONGINT;
 	m: ModuleParser.Module;
@@ -206,12 +206,14 @@ BEGIN
 	IF (archive # NIL) & (res = Zip.Ok) THEN
 		FOR i := 0 TO vecModules.vector.GetCount() - 1 DO
 			m := vecModules.GetItem(i);
-			IF m # NIL THEN
+			IF (m # NIL) & (vecModulesExcludes.IndexOf(m.ident.name^) = -1) THEN
+			
 				(** TODO: Implement more robust generation of file name
 					as in Modules.ThisModule. Or propose ETHZ to add real
 					file name as field to Modules.Module *)
 				s := Strings.ConcatToNew(m.ident.name^, ".Obw");
-				ZipTool.AddFile(archive, s^, s^, Zip.DefaultCompression, Zip.DefaultStrategy, res);
+				
+				ZipTool.AddFile(archive, s^, s^, Zip.BestCompression, Zip.DefaultStrategy, res);
 				IF (res # Zip.Ok) & (vecModulesNotFound.IndexOf(m.ident.name^) = -1) THEN
 					vecModulesNotFound.Add(m.ident.name^)
 				END
@@ -223,42 +225,43 @@ BEGIN
 	RETURN FALSE
 END Output;
 
-PROCEDURE ParsePaths(CONST paths: ARRAY OF CHAR; vecModulesPaths: Containers.StringVector);
+PROCEDURE ParseSemicolonList(CONST list: ARRAY OF CHAR; vecList: Containers.StringVector);
 VAR
 	j, k: LONGINT;
-	dir: Files.FileName;
+	part: Files.FileName;
 
-	PROCEDURE AddDir;
+	PROCEDURE AddPart;
 	BEGIN
 		IF k > 0 THEN
-			dir[k] := 0X;
-			IF (dir # "") & (vecModulesPaths.IndexOf(dir) = -1) THEN
-				vecModulesPaths.Add(dir)
+			part[k] := 0X;
+			IF (part # "") & (vecList.IndexOf(part) = -1) THEN
+				vecList.Add(part)
 			END;
 			k := 0
 		END
-	END AddDir;
+	END AddPart;
 
 BEGIN
 	k := 0;
-	WHILE paths[j] # 0X DO
-		IF paths[j] = ';' THEN
-			AddDir
+	WHILE list[j] # 0X DO
+		IF list[j] = ';' THEN
+			AddPart
 		ELSE
-			dir[k] := paths[j]; INC(k)
+			part[k] := list[j]; INC(k)
 		END;
 		INC(j)
 	END;
-	AddDir
-END ParsePaths;
+	AddPart
+END ParseSemicolonList;
 
 PROCEDURE Collect*(context: Commands.Context); (** [options] moduleName {" " modulename} ~  *)
 VAR
 	vecModules: ModulesVector;
 	vecModulesNotFound,
-	vecModulesPaths: Containers.StringVector;
+	vecModulesPaths,
+	vecModulesExcludes: Containers.StringVector;
 	moduleName, outputFilename: Files.FileName;
-	paths: ARRAY 1024 OF CHAR;
+	paths, excludes: ARRAY 1024 OF CHAR;
 	options: Options.Options;
 	i: LONGINT;
 	s: Strings.String;
@@ -266,6 +269,7 @@ BEGIN
 	NEW(options);
 	options.Add("f", "file", Options.String);
 	options.Add("p", "paths", Options.String);
+	options.Add("x", "excludes", Options.String);
 	IF options.Parse(context.arg, context.out) THEN
 		IF ~options.GetString("file", outputFilename) THEN
 			COPY(DefaultOutputFilename, outputFilename)
@@ -273,7 +277,11 @@ BEGIN
 		NEW(vecModulesPaths, {Containers.VECTOR_SORTED, Containers.VECTOR_NO_DUPLICATES});
 		vecModulesPaths.Add("");
 		IF options.GetString("paths", paths) THEN
-			ParsePaths(paths, vecModulesPaths)
+			ParseSemicolonList(paths, vecModulesPaths)
+		END;
+		NEW(vecModulesExcludes, {Containers.VECTOR_SORTED, Containers.VECTOR_NO_DUPLICATES});
+		IF options.GetString("excludes", excludes) THEN
+			ParseSemicolonList(excludes, vecModulesExcludes)
 		END;
 
 		NEW(vecModules);
@@ -283,7 +291,7 @@ BEGIN
 			ProcessModule(context, vecModules, vecModulesNotFound, vecModulesPaths, moduleName)
 		END;
 
-		IF Output(outputFilename, vecModules, vecModulesNotFound) THEN
+		IF Output(outputFilename, vecModules, vecModulesNotFound, vecModulesExcludes) THEN
 			context.out.String("Collected modules written to "); context.out.String(outputFilename); context.out.Ln;
 			IF vecModulesNotFound.GetCount() > 0 THEN
 				context.out.String("Some modules wasn't found: "); context.out.Ln;
@@ -307,25 +315,25 @@ END ImportCollector.
 
 ImportCollector.Collect
 
+	-f=Obj.Zip
 	-p=Bindings/BASS/;Libs/;Components/;Tools/;Demos/
+	-x=Kernel32;Trace;Machine;Heaps;Modules;Objects;Kernel;KernelLog;Streams;Commands;Files;WinFS;Loader;BootConsole
 
 	WinStarter WMBass3DTest WMRaycaster
 	WMRaycasterMaze WMAStar WMFM
 
 	DisplayNull Traps FileTrapWriter FSTools RelativeFileSystem
 	Loader WMOTFonts WMOberonFonts	Clipboard Autostart
-  SkinEngine PNGDecoder Tar SystemTools UpTime ~
+  SkinEngine PNGDecoder Tar ~
   
 ImportCollector.Collect
-
+	
+	-f=ZipLoader.zip
 	-p=Bindings/BASS/;Libs/;Components/;Tools/;Demos/
+	-x=Kernel32;Trace;Machine;Heaps;Modules;Objects;Kernel;KernelLog;Streams;Commands;Files;WinFS;Loader;BootConsole
 
-	WinStarter WMBass3DTest WMRaycaster
-	WMRaycasterMaze WMAStar WMFM
-
-	DisplayNull Traps FileTrapWriter FSTools RelativeFileSystem
-	Loader WMOTFonts WMOberonFonts	Clipboard Autostart
-  SkinEngine PNGDecoder Tar UpTime ~
+	ZipLoader ~
+  
 
 SystemTools.Free ImportCollector ~
 
