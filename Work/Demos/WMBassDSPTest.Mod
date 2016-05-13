@@ -87,67 +87,71 @@ TYPE
 			res: LONGINT;
 			r: Streams.Reader;
 			info: BASS.BASS_CHANNELINFO;
+			x, y: LONGINT;
 		BEGIN
 			IF ~IsCallFromSequencer() THEN
 				sequencer.ScheduleEvent(SELF.OpenOnClick, sender, par)
-			ELSIF (WMDialogs.QueryString("Open file", sName) = WMDialogs.ResOk)
-				& (sName # "")
-			THEN
+			ELSE
+				DialogPos(x, y, SELF, 350, 100);
+				IF (WMDialogs.QueryStringXY(x, y, "Open file", sName) = WMDialogs.ResOk)
+					& (sName # "")
+				THEN
 
-				r := Codecs.OpenInputStream(sName);
-				IF r # NIL THEN
-					(* File exists, get full path *)
-					r(Codecs.FileInputStream).f.GetName(sFullPath);
-				ELSE
-					context.out.String("File doesn't exist"); context.out.Ln;
-					context.out.Update;
-					RETURN
-				END;
+					r := Codecs.OpenInputStream(sName);
+					IF r # NIL THEN
+						(* File exists, get full path *)
+						r(Codecs.FileInputStream).f.GetName(sFullPath);
+					ELSE
+						context.out.String("File doesn't exist"); context.out.Ln;
+						context.out.Update;
+						RETURN
+					END;
 
-				context.out.String("Full path: ");
-				context.out.String(sFullPath);
-				context.out.Ln;
-				context.out.Update;
-
-				(* free both MOD and stream, it must be one of them! :) *)
-				res := BASS.BASS_MusicFree(chan);
-				res := BASS.BASS_StreamFree(chan);
-
-				chan := BASS.BASS_StreamCreateFile(0, ADDRESSOF(sFullPath), 0, 0,
-					floatable + BASS.BASS_SAMPLE_LOOP);
-				IF (chan = 0) THEN
-					chan := BASS.BASS_MusicLoad(0, ADDRESSOF(sFullPath), 0, 0,
-						floatable + BASS.BASS_MUSIC_LOOP + BASS.BASS_MUSIC_RAMPS, 1)
-				END;
-				IF chan = 0 THEN
-					(* whatever it is, it ain't playable *)
-					btnOpen.caption.Set(Strings.NewString("click here to open a file..."));
-					context.out.String("Can't play the file");
+					context.out.String("Full path: ");
+					context.out.String(sFullPath);
 					context.out.Ln;
 					context.out.Update;
-					RETURN
-				END;
 
-				res := BASS.BASS_ChannelGetInfo(chan, info);
-				IF info.chans # 2 THEN (* only stereo is allowed *)
-					btnOpen.caption.Set(Strings.NewString("click here to open a file..."));
+					(* free both MOD and stream, it must be one of them! :) *)
 					res := BASS.BASS_MusicFree(chan);
 					res := BASS.BASS_StreamFree(chan);
-					context.out.String("Only stereo sources are supported");
-					context.out.Ln;
-					context.out.Update;
-					RETURN
-				END;
 
-				btnOpen.caption.Set(Strings.NewString(sFullPath));
+					chan := BASS.BASS_StreamCreateFile(0, ADDRESSOF(sFullPath), 0, 0,
+						floatable + BASS.BASS_SAMPLE_LOOP);
+					IF (chan = 0) THEN
+						chan := BASS.BASS_MusicLoad(0, ADDRESSOF(sFullPath), 0, 0,
+							floatable + BASS.BASS_MUSIC_LOOP + BASS.BASS_MUSIC_RAMPS, 1)
+					END;
+					IF chan = 0 THEN
+						(* whatever it is, it ain't playable *)
+						btnOpen.caption.Set(Strings.NewString("click here to open a file..."));
+						context.out.String("Can't play the file");
+						context.out.Ln;
+						context.out.Update;
+						RETURN
+					END;
 
-				(* setup DSPs on new channel *)
-				(*CheckBox1.OnClick(Self);
-				CheckBox2.OnClick(Self);
-				CheckBox3.OnClick(Self);*)
+					res := BASS.BASS_ChannelGetInfo(chan, info);
+					IF info.chans # 2 THEN (* only stereo is allowed *)
+						btnOpen.caption.Set(Strings.NewString("click here to open a file..."));
+						res := BASS.BASS_MusicFree(chan);
+						res := BASS.BASS_StreamFree(chan);
+						context.out.String("Only stereo sources are supported");
+						context.out.Ln;
+						context.out.Update;
+						RETURN
+					END;
 
-				(* play both MOD and stream, it must be one of them! *)
-				res := BASS.BASS_ChannelPlay(chan, 0)
+					btnOpen.caption.Set(Strings.NewString(sFullPath));
+
+					(* setup DSPs on new channel *)
+					(*CheckBox1.OnClick(Self);
+					CheckBox2.OnClick(Self);
+					CheckBox3.OnClick(Self);*)
+
+					(* play both MOD and stream, it must be one of them! *)
+					res := BASS.BASS_ChannelPlay(chan, 0)
+				END
 
 			END
 		END OpenOnClick;
@@ -397,6 +401,18 @@ BEGIN
 	END;
 	
 END Flanger;
+
+PROCEDURE DialogPos(VAR x, y: LONGINT; win: WMWindowManager.Window; dlgWidth, dlgHeight: LONGINT);
+VAR
+	manager: WMWindowManager.WindowManager;
+	s: WMWindowManager.WindowStyle;
+BEGIN
+	manager := WMWindowManager.GetDefaultManager();
+	s := manager.GetStyle();
+	x := ENTIER(win.bounds.l + (win.bounds.r - win.bounds.l - dlgWidth) / 2);
+	y := ENTIER(win.bounds.t + (win.bounds.b - win.bounds.t - dlgHeight) / 2);
+	(*IF s # NIL THEN y := y +  s.th END;*)
+END DialogPos;
 
 PROCEDURE BASS_CheckVersion(context: Commands.Context): BOOLEAN;
 BEGIN

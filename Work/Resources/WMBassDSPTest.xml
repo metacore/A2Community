@@ -4,7 +4,7 @@
 			<Left>0</Left>
 			<Top>0</Top>
 			<Width>352</Width>
-			<Height>108</Height>
+			<Height>156</Height>
 		</Bounds>
 		<FillColor loader="WMProperties.NewColor">CCCCCCFF</FillColor>
 		<Alignment loader="WMProperties.NewInt32">5</Alignment>
@@ -17,7 +17,7 @@
 			<UID loader="WMProperties.NewString">btnOpen</UID>
 			<Bounds loader="WMProperties.NewRectangle">
 				<Left>16</Left>
-				<Top>16</Top>
+				<Top>32</Top>
 				<Width>320</Width>
 				<Height>40</Height>
 			</Bounds>
@@ -31,7 +31,7 @@
 			<UID loader="WMProperties.NewString">chbRotate</UID>
 			<Bounds loader="WMProperties.NewRectangle">
 				<Left>32</Left>
-				<Top>72</Top>
+				<Top>104</Top>
 				<Width>20</Width>
 				<Height>20</Height>
 			</Bounds>
@@ -46,7 +46,7 @@
 			<UID loader="WMProperties.NewString">chbEcho</UID>
 			<Bounds loader="WMProperties.NewRectangle">
 				<Left>144</Left>
-				<Top>72</Top>
+				<Top>104</Top>
 				<Width>20</Width>
 				<Height>20</Height>
 			</Bounds>
@@ -59,7 +59,7 @@
 			<UID loader="WMProperties.NewString">chbFlanger</UID>
 			<Bounds loader="WMProperties.NewRectangle">
 				<Left>256</Left>
-				<Top>72</Top>
+				<Top>104</Top>
 				<Width>20</Width>
 				<Height>20</Height>
 			</Bounds>
@@ -71,7 +71,7 @@
 		<Properties>
 			<Bounds loader="WMProperties.NewRectangle">
 				<Left>56</Left>
-				<Top>72</Top>
+				<Top>104</Top>
 				<Width>64</Width>
 				<Height>20</Height>
 			</Bounds>
@@ -84,7 +84,7 @@
 		<Properties>
 			<Bounds loader="WMProperties.NewRectangle">
 				<Left>168</Left>
-				<Top>72	</Top>
+				<Top>104</Top>
 				<Width>64</Width>
 				<Height>20</Height>
 			</Bounds>
@@ -97,7 +97,7 @@
 		<Properties>
 			<Bounds loader="WMProperties.NewRectangle">
 				<Left>280</Left>
-				<Top>72</Top>
+				<Top>104</Top>
 				<Width>64</Width>
 				<Height>20</Height>
 			</Bounds>
