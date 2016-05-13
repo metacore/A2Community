@@ -97,7 +97,8 @@ TYPE
 		Flags* : SET;
 		Reserved* : ARRAY 32 OF LONGINT;
 	END;
-  UnRarCallback* = PROCEDURE (Msg: LONGINT; UserData, P1, P2: LONGINT);
+  UnRarCallback* = PROCEDURE{WINAPI} (Msg: LONGINT; UserData, P1, P2: LONGINT):LONGINT;
+
 CONST
 	unrardll = "unrar.dll";
 VAR

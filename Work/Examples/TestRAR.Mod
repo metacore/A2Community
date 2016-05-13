@@ -8,18 +8,11 @@ PROCEDURE TestVer*;
 BEGIN
 	KernelLog.String("Rar version= "); KernelLog.Int(UnRAR.RARGetDllVersion(), 0); KernelLog.Ln;
 END TestVer;
-PROCEDURE{WINAPI} TestAPI ( P2, P1, UserData, msg : LONGINT) ;
-BEGIN
-END TestAPI;
-PROCEDURE CallbackProc ( P2, P1, UserData, msg : LONGINT);
+
+PROCEDURE{WINAPI} CallbackProc (msg: LONGINT; UserData, P1, P2: LONGINT) :LONGINT;
 VAR
   i: LONGINT;
 BEGIN
-CODE
-PUSH	EBX	
-PUSH	EDI	
-PUSH	ESI	
-END;
   CASE msg OF
 	|UnRAR.UcmChangeVolume:
 		IF (P2 = UnRAR.RarVolAsk) THEN
@@ -40,16 +33,14 @@ END;
 		END;
 	ELSE
 	END;
-	
 	CODE
-POP	ESI	
-POP	EDI	
-POP	EBX	
-
-		XOR 	EAX,EAX
-		MOV	ESP, EBP	
-		POP	EBP	
-		RET	16
+		XOR EAX,EAX
+		POP ESI; 
+		POP EDI; 
+		POP EBX; 
+		MOV ESP, EBP; 
+		POP EBP; 
+		RET 16 
 	END;
 END CallbackProc;
 
@@ -241,7 +232,7 @@ VAR
 	s:String;
 BEGIN
 	NEW(s,80);
-	s^:="4.00.rar";
+	s^:="real.rar";
 	ListArchive(s);
 
 END Test;
@@ -250,7 +241,7 @@ VAR
 	s:String;
 BEGIN
 	NEW(s,80);
-	s^:="4.00.rar";
+	s^:="real.rar";
 	ExtractArchive(s,Mode.Extract);
 
 END Test2;
