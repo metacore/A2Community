@@ -148,7 +148,7 @@ TYPE
 
 				(* play both MOD and stream, it must be one of them! *)
 				res := BASS.BASS_ChannelPlay(chan, 0)
-				
+
 			END
 		END OpenOnClick;
 
@@ -169,19 +169,48 @@ TYPE
 		END RotateOnClick;
 
 		PROCEDURE EchoOnClick(sender, par: ANY);
+		VAR
+			i, j, res: LONGINT;
 		BEGIN
 			IF ~IsCallFromSequencer() THEN
 				sequencer.ScheduleEvent(SELF.EchoOnClick, sender, par)
 			ELSE
-
+				IF chbEcho.state.Get() = 1 THEN
+					FOR i := 0 TO LEN(echbuf, 0) - 1 DO
+						FOR j := 0 TO LEN(echbuf, 1) - 1 DO
+							echbuf[i][j] := 0.0
+						END
+					END;
+					echpos := 0;
+					echdsp := BASS.BASS_ChannelSetDSP(chan, Echo, 0, 1);
+				ELSE
+					res := BASS.BASS_ChannelRemoveDSP(chan, echdsp)
+				END
 			END
 		END EchoOnClick;
 
 		PROCEDURE FlangerOnClick(sender, par: ANY);
+		VAR
+			i, j, res: LONGINT;
 		BEGIN
 			IF ~IsCallFromSequencer() THEN
 				sequencer.ScheduleEvent(SELF.FlangerOnClick, sender, par)
 			ELSE
+
+				IF chbFlanger.state.Get() = 1 THEN
+					FOR i := 0 TO LEN(flabuf, 0) - 1 DO
+						FOR j := 0 TO LEN(flabuf, 1) - 1 DO
+							flabuf[i][j] := 0.0
+						END
+					END;
+
+					flapos := 0;
+					flas := FLABUFLEN / 2;
+					flasinc := 0.002;
+					fladsp := BASS.BASS_ChannelSetDSP(chan, Flanger, 0, 0);
+				ELSE
+					res := BASS.BASS_ChannelRemoveDSP(chan, fladsp)
+				END
 
 			END
 		END FlangerOnClick;
@@ -251,8 +280,111 @@ BEGIN
 		INC(offset, 4);
 		SYSTEM.PUT(buffer + offset,
 			SYSTEM.VAL(REAL, SYSTEM.GET32(buffer + offset)) * ABS(Math.cos(rotpos)));
+		rotpos := fmod(rotpos + 0.00003, Math.pi);
+		INC(offset, 4)
+	END;
+
+	CODE
+		POP ESI
+		POP EDI
+		POP EBX
+		MOV ESP, EBP
+		POP EBP
+		RET 20
+	END;
+
+END Rotate;
+
+PROCEDURE {WINAPI} Echo(handle: HDSP; channel: DWORD; buffer: ADDRESS; length: DWORD; user: ADDRESS);
+VAR
+	offset: DWORD;
+	l, r: REAL;
+BEGIN
+
+	CODE
+		PUSH EBX
+		PUSH EDI
+		PUSH ESI
+	END;
+
+	offset := 0;
+	WHILE offset < length DO
+
+		l := SYSTEM.VAL(REAL, SYSTEM.GET32(buffer + offset)) + (echbuf[echpos, 1] / 2);
 		INC(offset, 4);
-		rotpos := fmod(rotpos + 0.00003, Math.pi)
+		r := SYSTEM.VAL(REAL, SYSTEM.GET32(buffer + offset)) + (echbuf[echpos, 0] / 2);
+		DEC(offset, 4);
+
+		(* Basic "bathroom" reverb *)
+		SYSTEM.PUT(buffer + offset, l);
+		echbuf[echpos, 0] := l;
+		INC(offset, 4);
+		SYSTEM.PUT(buffer + offset, r);
+		echbuf[echpos, 1] := r;
+
+		INC(echpos);
+		IF echpos = ECHBUFLEN THEN
+			echpos := 0
+		END;
+		INC(offset, 4)
+
+	END;
+
+	CODE
+		POP ESI
+		POP EDI
+		POP EBX
+		MOV ESP, EBP
+		POP EBP
+		RET 20
+	END;
+
+END Echo;
+
+PROCEDURE {WINAPI} Flanger(handle: HDSP; channel: DWORD; buffer: ADDRESS; length: DWORD; user: ADDRESS); 
+VAR
+	offset: DWORD;
+	d, f, s: REAL;
+	p1, p2: LONGINT;
+BEGIN
+
+	CODE
+		PUSH EBX
+		PUSH EDI
+		PUSH ESI
+	END;
+
+	offset := 0;
+	WHILE offset < length DO
+	
+		p1 := MathUtils.trunc(flapos + flas) MOD FLABUFLEN;
+		p2 := (p1 + 1) MOD FLABUFLEN;
+		f := fmod(flas, 1);
+
+		d := SYSTEM.VAL(REAL, SYSTEM.GET32(buffer + offset));
+		s := d + ((flabuf[p1, 0] * (1 - f)) + (flabuf[p2, 0] * f));
+		flabuf[flapos, 0] := d;
+		SYSTEM.PUT(buffer + offset, s);
+
+		INC(offset, 4);
+
+		d := SYSTEM.VAL(REAL, SYSTEM.GET32(buffer + offset));
+		s := d + ((flabuf[p1, 1] * (1 - f)) + (flabuf[p2, 1] * f));
+		flabuf[flapos, 1] := d;
+		SYSTEM.PUT(buffer + offset, s);
+
+		INC(flapos);
+		IF flapos = FLABUFLEN THEN
+			flapos := 0
+		END;
+
+		flas := flas + flasinc;
+		IF (flas < 0.0) OR (flas > FLABUFLEN) THEN
+			flasinc := -flasinc
+		END;
+
+		INC(offset, 4)
+
 	END;
 	
 	CODE
@@ -264,7 +396,7 @@ BEGIN
 		RET 20
 	END;
 	
-END Rotate;
+END Flanger;
 
 PROCEDURE BASS_CheckVersion(context: Commands.Context): BOOLEAN;
 BEGIN
@@ -277,16 +409,6 @@ BEGIN
 		RETURN FALSE
 	END
 END BASS_CheckVersion;
-
-PROCEDURE BASS_Error(CONST msg: ARRAY OF CHAR);
-BEGIN
-	context.out.String(msg);
-	context.out.String(" (error code: ");
-	context.out.Int(BASS.BASS_ErrorGetCode(), 0);
-	context.out.Char(')');
-	context.out.Ln;
-	context.out.Update
-END BASS_Error;
 
 PROCEDURE FindComponents(c: XML.Content; data: ANY);
 VAR
@@ -401,14 +523,14 @@ VAR
 	a: ADDRESS;
 	f: REAL;
 	i: LONGINT;
-	
+
 BEGIN
 	fa[0] := 1.2;
 	fa[1] := 3.4;
 	fa[2] := 5.6;
 	fa[3] := 7.8;
 	a := ADDRESSOF(fa);
-	
+
 	FOR i := 0 TO 3 DO
 		f := SYSTEM.VAL(REAL, SYSTEM.GET32(a));
 		c.out.Float(fa[i], 16);
@@ -417,7 +539,7 @@ BEGIN
 		SYSTEM.PUT(a, f);
 		INC(a, 4)
 	END;
-	
+
 	c.out.Ln;
 
 	FOR i := 0 TO 3 DO
