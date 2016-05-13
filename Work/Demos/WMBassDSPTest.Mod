@@ -1,0 +1,441 @@
+MODULE WMBassDSPTest; (** AUTHOR "SAGE"; PURPOSE "BASS 2.4 A2 OS Wrapper - BASS simple DSP Test"; *)
+
+IMPORT
+	SYSTEM, Math, Modules, Commands, Strings, UTF8Strings, Files, Codecs, Streams,
+	XML, WMComponents, WMWindowManager, WMDialogs, WMStandardComponents,
+	BASS, MathUtils, Containers;
+
+CONST
+	ECHBUFLEN = 1200;	(* buffer length *)
+	FLABUFLEN = 350;		(* buffer length *)
+
+TYPE
+	DWORD = LONGINT;
+	HDSP = LONGINT;
+
+	UidCompItem = POINTER TO RECORD
+		uid: ARRAY 32 OF CHAR;
+		comp: WMComponents.Component
+	END;
+
+	UidCompVector = OBJECT (Containers.CustomVector)
+
+		PROCEDURE &New;
+		BEGIN
+			NEW(vector, Compare, {Containers.VECTOR_SORTED, Containers.VECTOR_NO_DUPLICATES})
+		END New;
+
+		PROCEDURE Compare(first, second: ANY): LONGINT;
+		BEGIN
+			RETURN UTF8Strings.Compare(first(UidCompItem).uid,
+				second(UidCompItem).uid)
+		END Compare;
+
+		PROCEDURE Add(CONST uid: ARRAY OF CHAR; comp: WMComponents.Component);
+		VAR
+			item: UidCompItem;
+		BEGIN
+			NEW(item);
+			COPY(uid, item.uid);
+			item.comp := comp;
+			vector.Add(item)
+		END Add;
+
+		PROCEDURE Get(CONST uid: ARRAY OF CHAR): WMComponents.Component;
+		VAR
+			item: UidCompItem;
+			i: LONGINT;
+		BEGIN
+			NEW(item);
+			COPY(uid, item.uid);
+			i := vector.IndexOf(item);
+			RETURN vector.GetItem(i)(UidCompItem).comp(WMComponents.Component)
+		END Get;
+
+	END UidCompVector;
+
+	FileName = ARRAY Files.NameLength + 1 OF CHAR;
+
+	Window = OBJECT(WMComponents.FormWindow)
+	VAR
+		btnOpen: WMStandardComponents.Button;
+		chbRotate,
+		chbEcho,
+		chbFlanger: WMStandardComponents.Checkbox;
+
+		PROCEDURE WireEvents;
+		BEGIN
+			btnOpen.onClick.Add(OpenOnClick);
+			chbRotate.onClick.Add(RotateOnClick);
+			chbEcho.onClick.Add(EchoOnClick);
+			chbFlanger.onClick.Add(FlangerOnClick);
+		END WireEvents;
+
+		PROCEDURE FormInit;
+		BEGIN
+			SetTitle(Strings.NewString("BASS simple DSP Test"));
+			chbRotate.hasThreeStates.Set(FALSE);
+			chbEcho.hasThreeStates.Set(FALSE);
+			chbFlanger.hasThreeStates.Set(FALSE);
+			WireEvents
+		END FormInit;
+
+		PROCEDURE OpenOnClick(sender, par: ANY);
+		VAR
+			sName: FileName;
+			sFullPath: FileName;
+			res: LONGINT;
+			r: Streams.Reader;
+			info: BASS.BASS_CHANNELINFO;
+		BEGIN
+			IF ~IsCallFromSequencer() THEN
+				sequencer.ScheduleEvent(SELF.OpenOnClick, sender, par)
+			ELSIF (WMDialogs.QueryString("Open file", sName) = WMDialogs.ResOk)
+				& (sName # "")
+			THEN
+
+				r := Codecs.OpenInputStream(sName);
+				IF r # NIL THEN
+					(* File exists, get full path *)
+					r(Codecs.FileInputStream).f.GetName(sFullPath);
+				ELSE
+					context.out.String("File doesn't exist"); context.out.Ln;
+					context.out.Update;
+					RETURN
+				END;
+
+				context.out.String("Full path: ");
+				context.out.String(sFullPath);
+				context.out.Ln;
+				context.out.Update;
+
+				(* free both MOD and stream, it must be one of them! :) *)
+				res := BASS.BASS_MusicFree(chan);
+				res := BASS.BASS_StreamFree(chan);
+
+				chan := BASS.BASS_StreamCreateFile(0, ADDRESSOF(sFullPath), 0, 0,
+					floatable + BASS.BASS_SAMPLE_LOOP);
+				IF (chan = 0) THEN
+					chan := BASS.BASS_MusicLoad(0, ADDRESSOF(sFullPath), 0, 0,
+						floatable + BASS.BASS_MUSIC_LOOP + BASS.BASS_MUSIC_RAMPS, 1)
+				END;
+				IF chan = 0 THEN
+					(* whatever it is, it ain't playable *)
+					btnOpen.caption.Set(Strings.NewString("click here to open a file..."));
+					context.out.String("Can't play the file");
+					context.out.Ln;
+					context.out.Update;
+					RETURN
+				END;
+
+				res := BASS.BASS_ChannelGetInfo(chan, info);
+				IF info.chans # 2 THEN (* only stereo is allowed *)
+					btnOpen.caption.Set(Strings.NewString("click here to open a file..."));
+					res := BASS.BASS_MusicFree(chan);
+					res := BASS.BASS_StreamFree(chan);
+					context.out.String("Only stereo sources are supported");
+					context.out.Ln;
+					context.out.Update;
+					RETURN
+				END;
+
+				btnOpen.caption.Set(Strings.NewString(sFullPath));
+
+				(* setup DSPs on new channel *)
+				(*CheckBox1.OnClick(Self);
+				CheckBox2.OnClick(Self);
+				CheckBox3.OnClick(Self);*)
+
+				(* play both MOD and stream, it must be one of them! *)
+				res := BASS.BASS_ChannelPlay(chan, 0)
+				
+			END
+		END OpenOnClick;
+
+		PROCEDURE RotateOnClick(sender, par: ANY);
+		VAR
+			res: LONGINT;
+		BEGIN
+			IF ~IsCallFromSequencer() THEN
+				sequencer.ScheduleEvent(SELF.RotateOnClick, sender, par)
+			ELSE
+				IF chbRotate.state.Get() = 1 THEN
+					rotpos := 0.7853981;
+					rotdsp := BASS.BASS_ChannelSetDSP(chan, Rotate, 0, 2);
+				ELSE
+					res := BASS.BASS_ChannelRemoveDSP(chan, rotdsp)
+				END
+			END
+		END RotateOnClick;
+
+		PROCEDURE EchoOnClick(sender, par: ANY);
+		BEGIN
+			IF ~IsCallFromSequencer() THEN
+				sequencer.ScheduleEvent(SELF.EchoOnClick, sender, par)
+			ELSE
+
+			END
+		END EchoOnClick;
+
+		PROCEDURE FlangerOnClick(sender, par: ANY);
+		BEGIN
+			IF ~IsCallFromSequencer() THEN
+				sequencer.ScheduleEvent(SELF.FlangerOnClick, sender, par)
+			ELSE
+
+			END
+		END FlangerOnClick;
+
+		PROCEDURE Close;
+		VAR
+			res: LONGINT;
+		BEGIN
+			Close^;
+			IF bBASSInitialized THEN
+				res := BASS.BASS_Stop();
+				IF BASS.BASS_Free() # 0 THEN
+					context.out.String("BASS freed");
+					context.out.Ln
+				ELSE
+					context.out.String("BASS didn't freed");
+					context.out.Ln
+				END;
+				context.out.Update;
+			END;
+			window := NIL
+		END Close;
+
+	END Window;
+
+VAR
+	window: Window;
+	context: Commands.Context;
+	bBASSInitialized: BOOLEAN;
+	floatable: SET;		(* floating-point channel support? *)
+
+	chan: DWORD;				(* the channel... HMUSIC or HSTREAM *)
+
+	rotdsp: HDSP;			(* DSP handle *)
+	rotpos: REAL;			(* cur.pos *)
+
+	echdsp: HDSP;			(* DSP handle *)
+	echbuf: ARRAY ECHBUFLEN OF ARRAY 2 OF REAL;	(* buffer *)
+	echpos: LONGINT;		(* cur.pos *)
+
+	fladsp: HDSP;			(* DSP handle *)
+	flabuf: ARRAY FLABUFLEN OF ARRAY 2 OF REAL;	(* buffer *)
+	flapos: LONGINT;		(* cur.pos *)
+	flas,
+	flasinc: REAL;			(* sweep pos/increment *)
+
+PROCEDURE fmod(a, b: REAL): REAL;
+BEGIN
+	RETURN a - (b * MathUtils.trunc(a / b));
+END fmod;
+
+PROCEDURE {WINAPI} Rotate(handle: HDSP; channel: DWORD; buffer: ADDRESS; length: DWORD; user: ADDRESS);
+VAR
+	offset: DWORD;
+BEGIN
+
+	CODE
+		PUSH EBX
+		PUSH EDI
+		PUSH ESI
+	END;
+
+	offset := 0;
+	WHILE offset < length DO
+		SYSTEM.PUT(buffer + offset,
+			SYSTEM.VAL(REAL, SYSTEM.GET32(buffer + offset)) * ABS(Math.sin(rotpos)));
+		INC(offset, 4);
+		SYSTEM.PUT(buffer + offset,
+			SYSTEM.VAL(REAL, SYSTEM.GET32(buffer + offset)) * ABS(Math.cos(rotpos)));
+		INC(offset, 4);
+		rotpos := fmod(rotpos + 0.00003, Math.pi)
+	END;
+	
+	CODE
+		POP ESI
+		POP EDI
+		POP EBX
+		MOV ESP, EBP
+		POP EBP
+		RET 20
+	END;
+	
+END Rotate;
+
+PROCEDURE BASS_CheckVersion(context: Commands.Context): BOOLEAN;
+BEGIN
+	IF (BASS.BASS_GetVersion() DIV 10000H) MOD 10000H = BASS.BASSVERSION THEN
+		RETURN TRUE
+	ELSE
+		context.out.String("An incorrect version of BASS library was loaded");
+		context.out.Ln;
+		context.out.Update;
+		RETURN FALSE
+	END
+END BASS_CheckVersion;
+
+PROCEDURE BASS_Error(CONST msg: ARRAY OF CHAR);
+BEGIN
+	context.out.String(msg);
+	context.out.String(" (error code: ");
+	context.out.Int(BASS.BASS_ErrorGetCode(), 0);
+	context.out.Char(')');
+	context.out.Ln;
+	context.out.Update
+END BASS_Error;
+
+PROCEDURE FindComponents(c: XML.Content; data: ANY);
+VAR
+	comp: WMComponents.Component;
+	sUID: Strings.String;
+BEGIN
+	IF c IS WMComponents.Component THEN
+		comp := c(WMComponents.Component);
+		sUID := comp.uid.Get();
+		IF (sUID # NIL) & (sUID^ # "") THEN
+			data(UidCompVector).Add(sUID^, comp)
+		END
+	END
+END FindComponents;
+
+PROCEDURE WireComponents(root: WMComponents.VisualComponent; win: Window): BOOLEAN;
+VAR
+	trap: BOOLEAN;
+	components: UidCompVector;
+BEGIN
+	trap := FALSE;
+
+	NEW(components);
+	root.Traverse(FindComponents, components);
+
+	win.btnOpen := components.Get("btnOpen")(WMStandardComponents.Button);
+	win.chbRotate := components.Get("chbRotate")(WMStandardComponents.Checkbox);
+	win.chbEcho := components.Get("chbEcho")(WMStandardComponents.Checkbox);
+	win.chbFlanger := components.Get("chbFlanger")(WMStandardComponents.Checkbox);
+
+FINALLY
+
+	RETURN ~trap
+
+END WireComponents;
+
+PROCEDURE Open*(ctx: Commands.Context);
+VAR
+	xml: XML.Content;
+	root: WMComponents.VisualComponent;
+	x, y, res: LONGINT;
+	manager: WMWindowManager.WindowManager;
+
+BEGIN
+	IF (window = NIL) & BASS_CheckVersion(ctx) THEN
+		context := ctx;
+		bBASSInitialized := FALSE;
+
+		xml := WMComponents.Load("WMBassDSPTest.xml");
+		IF (xml # NIL) & (xml IS WMComponents.VisualComponent) THEN
+
+			root := xml(WMComponents.VisualComponent);
+
+			(* Window setup *)
+			NEW(window, root.bounds.GetWidth(), root.bounds.GetHeight(), FALSE);
+			window.SetContent(root);
+			IF ~WireComponents(root, window) THEN
+				context.out.String("Form resource corrupted"); context.out.Ln;
+				context.out.Update;
+				RETURN
+			END;
+
+			BASS.BASS_SetConfig(BASS.BASS_CONFIG_FLOATDSP, 1);
+		  IF BASS.BASS_Init(-1, 44100, {}, 0, NIL) = 0 THEN
+		    context.out.String("Can't initialize output device"); context.out.Ln;
+		    context.out.Update;
+		    RETURN
+		  END;
+
+			context.out.String("BASS initialized"); context.out.Ln;
+			context.out.Update;
+		  bBASSInitialized := TRUE;
+
+		  floatable := {};
+		  res := BASS.BASS_StreamCreate(44100, 2, BASS.BASS_SAMPLE_FLOAT, NIL, 0);
+			IF res > 0 THEN
+				BASS.BASS_StreamFree(res);
+				floatable := BASS.BASS_SAMPLE_FLOAT;
+				context.out.String("Floating-point samples supported"); context.out.Ln;
+				context.out.Update;
+			ELSE
+				context.out.String("Floating-point samples not supported"); context.out.Ln;
+				context.out.Update;
+			END;
+
+			(* Initialize form and wire event handlers *)
+			window.FormInit;
+
+			(* Form show *)
+			WMDialogs.DefaultPos(x, y, window.GetWidth(), window.GetHeight());
+			WMWindowManager.ExtAddWindow(	window, x, y,
+				{WMWindowManager.FlagFrame, WMWindowManager.FlagClose,
+					WMWindowManager.FlagMinimize, WMWindowManager.FlagNoResizing});
+			manager := WMWindowManager.GetDefaultManager();
+			manager.SetFocus(window)
+
+	  END
+	END
+END Open;
+
+PROCEDURE Cleanup;
+BEGIN
+	IF window # NIL THEN
+		window.Close;
+	END
+END Cleanup;
+
+(*
+PROCEDURE Test*(c: Commands.Context);
+VAR
+	fa: ARRAY 4 OF REAL;
+	a: ADDRESS;
+	f: REAL;
+	i: LONGINT;
+	
+BEGIN
+	fa[0] := 1.2;
+	fa[1] := 3.4;
+	fa[2] := 5.6;
+	fa[3] := 7.8;
+	a := ADDRESSOF(fa);
+	
+	FOR i := 0 TO 3 DO
+		f := SYSTEM.VAL(REAL, SYSTEM.GET32(a));
+		c.out.Float(fa[i], 16);
+		c.out.Ln;
+		f := f + 0.1;
+		SYSTEM.PUT(a, f);
+		INC(a, 4)
+	END;
+	
+	c.out.Ln;
+
+	FOR i := 0 TO 3 DO
+		c.out.Float(fa[i], 16);
+		c.out.Ln
+	END;
+
+	c.out.Update
+END Test;
+*)
+
+BEGIN
+	bBASSInitialized := FALSE;
+	Modules.InstallTermHandler(Cleanup)
+END WMBassDSPTest.
+
+WMBassDSPTest.Open ~
+SystemTools.Free WMBassDSPTest ~
+
+
+

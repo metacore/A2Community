@@ -45,6 +45,7 @@ Compiler.Compile -b=AMD
 	Demos/WMAStar.Mod
 	Demos/WMAStarSet.Mod
 	Demos/WMBass3DTest.Mod
+	Demos/WMBassDSPTest.Mod
 	Demos/WMFM.Mod
 	Demos/WMRaycaster.Mod
 	Demos/WMRaycasterMaze.Mod
@@ -55,6 +56,7 @@ Run demos
 	WMAStar.Open ~
 	WMAStarSet.Open ~
 	WMBass3DTest.Open ~
+	WMBassDSPTest.Open ~
 	WMRaycaster.Open ~
 	WMRaycasterMaze.Open ~
 
