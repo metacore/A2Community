@@ -445,7 +445,7 @@ FINALLY
 
 END WireComponents;
 
-PROCEDURE Open*(ctx: Commands.Context);
+PROCEDURE WindowGenerator*(ctx: Commands.Context): WMWindowManager.Window;
 VAR
 	xml: XML.Content;
 	root: WMComponents.VisualComponent;
@@ -468,14 +468,14 @@ BEGIN
 			IF ~WireComponents(root, window) THEN
 				context.out.String("Form resource corrupted"); context.out.Ln;
 				context.out.Update;
-				RETURN
+				RETURN NIL
 			END;
 
 			BASS.BASS_SetConfig(BASS.BASS_CONFIG_FLOATDSP, 1);
 		  IF BASS.BASS_Init(-1, 44100, {}, 0, NIL) = 0 THEN
 		    context.out.String("Can't initialize output device"); context.out.Ln;
 		    context.out.Update;
-		    RETURN
+		    RETURN NIL
 		  END;
 
 			context.out.String("BASS initialized"); context.out.Ln;
@@ -503,9 +503,20 @@ BEGIN
 				{WMWindowManager.FlagFrame, WMWindowManager.FlagClose,
 					WMWindowManager.FlagMinimize, WMWindowManager.FlagNoResizing});
 			manager := WMWindowManager.GetDefaultManager();
-			manager.SetFocus(window)
+			manager.SetFocus(window);
+			
+			RETURN window
 
 	  END
+	END
+END WindowGenerator;
+
+PROCEDURE Open*(ctx: Commands.Context);
+VAR
+	wDummy: WMWindowManager.Window;
+BEGIN
+	IF window = NIL THEN
+		wDummy := WindowGenerator(ctx)
 	END
 END Open;
 
