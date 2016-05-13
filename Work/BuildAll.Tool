@@ -16,7 +16,8 @@ Compiler.Compile -b=AMD
 	Libs/CanvasTools.Mod
 	Libs/Containers.Mod
 	Libs/MathUtils.Mod
-	Libs/Win32.PreciseTimer.Mod ~
+	Libs/Win32.PreciseTimer.Mod
+	Libs/ZipLoader.Mod ~
 
 *** Components ***
 
@@ -46,6 +47,7 @@ Compiler.Compile -b=AMD
 	Demos/WMAStarSet.Mod
 	Demos/WMBass3DTest.Mod
 	Demos/WMBassDSPTest.Mod
+	Demos/WMColorLines.Mod
 	Demos/WMFM.Mod
 	Demos/WMRaycaster.Mod
 	Demos/WMRaycasterMaze.Mod
@@ -57,7 +59,9 @@ Run demos
 	WMAStarSet.Open ~
 	WMBass3DTest.Open ~
 	WMBassDSPTest.Open ~
+	WMColorLines.Open ~
 	WMRaycaster.Open ~
 	WMRaycasterMaze.Open ~
+	WMXmas.Open ~
 
 

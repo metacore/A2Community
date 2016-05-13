@@ -450,12 +450,12 @@ ImportCollector.Collect
 	-p=Bindings/BASS/;Libs/;Components/;Tools/;Demos/
 	-x=ref:ZipLoaderList;Kernel32;Trace;Machine;Heaps;Modules;Objects;Kernel;KernelLog;Streams;Commands;Files;WinFS;Loader;BootConsole
 
-	WinStarter WMBass3DTest WMRaycaster
-	WMRaycasterMaze WMAStar WMFM
+	WinStarter WMBass3DTest WMBassDSPTest WMRaycaster
+	WMRaycasterMaze WMAStar WMFM WMColorLines
 
 	DisplayNull Traps FileTrapWriter FSTools RelativeFileSystem
 	WMOTFonts WMOberonFonts	Clipboard Autostart
-  SkinEngine PNGDecoder Tar ~
+  SkinEngine PNGDecoder BMPCodec Tar ~
 
 SystemTools.Free ImportCollector ~
 
