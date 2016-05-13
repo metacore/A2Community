@@ -1351,7 +1351,8 @@ VAR
 					manager.AddDirty(winA2.bounds);
 					
 					manager(WindowManager.WindowManager).lock.ReleaseWrite;
-					manager.ToFront(winA2)
+					manager.ToFront(winA2);
+					manager.SetFocus(winA2)
 
 				END
 			END
