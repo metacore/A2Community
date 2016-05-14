@@ -16,7 +16,7 @@ IMPORT
 	
 CONST
 
-	DATA_FILE = "WMRaycasterData.zip";
+	DATA_FILE = "WMRaycaster.zip";
 	DATA_PATH = "hqtex/";
 
 	INIT_SEED = FALSE;
@@ -30,8 +30,8 @@ CONST
 	MAP_DRAW_START_Y = 20;
 	MAP_SCALE = 60;
 	
-	SCREEN_WIDTH = 480;
-	SCREEN_HEIGHT = 360;
+	SCREEN_WIDTH = 640;
+	SCREEN_HEIGHT = 480;
 		
 	ceilingTexture = 1;
 	floorTexture = 2;

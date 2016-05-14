@@ -9,7 +9,7 @@ CONST
 	CELL_SIZE = 30;
 	STATUS_SIZE = 16;
 	TOTAL_SIZE = M * CELL_SIZE;
-	RES = "WMColorLinesRes.zip";
+	RES = "WMColorLines.zip";
 	ICON = "WMColorLines.png";
 	BOARD_COLOR = WMGraphics.White;
 	GRID_COLOR = WMGraphics.Black;
@@ -47,7 +47,7 @@ TYPE
 		NEW(random);
 		NEW(timer);
 		FOR i := 0 TO LEN(imgSpheres) - 1 DO
-			Strings.IntToStr(i + 1, a); s := a + ".bmp";
+			Strings.IntToStr(i + 1, a); s := a + ".png";
 			imgSpheres[i] := LoadImage(RES, s^)
 		END;
 		Restart;

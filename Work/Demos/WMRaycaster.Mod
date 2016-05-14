@@ -19,7 +19,7 @@ CONST
 	BENCHMARK = FALSE;
 	TESTS = 50;
 
-	DATA_FILE = "WMRaycasterData.zip";
+	DATA_FILE = "WMRaycaster.zip";
 	DATA_PATH = "pics/";
 
 	worldMap =
