@@ -271,12 +271,6 @@ VAR
 	offset: DWORD;
 BEGIN
 
-	CODE
-		PUSH EBX
-		PUSH EDI
-		PUSH ESI
-	END;
-
 	offset := 0;
 	WHILE offset < length DO
 		SYSTEM.PUT(buffer + offset,
@@ -286,16 +280,7 @@ BEGIN
 			SYSTEM.VAL(REAL, SYSTEM.GET32(buffer + offset)) * ABS(Math.cos(rotpos)));
 		rotpos := fmod(rotpos + 0.00003, Math.pi);
 		INC(offset, 4)
-	END;
-
-	CODE
-		POP ESI
-		POP EDI
-		POP EBX
-		MOV ESP, EBP
-		POP EBP
-		RET 20
-	END;
+	END
 
 END Rotate;
 
@@ -304,12 +289,6 @@ VAR
 	offset: DWORD;
 	l, r: REAL;
 BEGIN
-
-	CODE
-		PUSH EBX
-		PUSH EDI
-		PUSH ESI
-	END;
 
 	offset := 0;
 	WHILE offset < length DO
@@ -332,16 +311,7 @@ BEGIN
 		END;
 		INC(offset, 4)
 
-	END;
-
-	CODE
-		POP ESI
-		POP EDI
-		POP EBX
-		MOV ESP, EBP
-		POP EBP
-		RET 20
-	END;
+	END
 
 END Echo;
 
@@ -351,12 +321,6 @@ VAR
 	d, f, s: REAL;
 	p1, p2: LONGINT;
 BEGIN
-
-	CODE
-		PUSH EBX
-		PUSH EDI
-		PUSH ESI
-	END;
 
 	offset := 0;
 	WHILE offset < length DO
@@ -389,17 +353,8 @@ BEGIN
 
 		INC(offset, 4)
 
-	END;
-	
-	CODE
-		POP ESI
-		POP EDI
-		POP EBX
-		MOV ESP, EBP
-		POP EBP
-		RET 20
-	END;
-	
+	END
+
 END Flanger;
 
 PROCEDURE DialogPos(VAR x, y: LONGINT; win: WMWindowManager.Window; dlgWidth, dlgHeight: LONGINT);
