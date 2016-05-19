@@ -4,14 +4,18 @@ do a copy named "myaos.ini" and make changes in it)
 
 *** Bindings ***
 
-Compiler.Compile -b=AMD
+Compiler.Compile -b=AMD --objectFile=Generic --newObjectFile
+		--mergeSections --symbolFileExtension=.SymW --objectFileExtension=.GofW
+
 	Bindings/BASS/I386.BASScpu.Mod
 	Bindings/BASS/Win32.BASS.Mod
 	Bindings/Win32.Pipe.Mod ~
 
 *** Libraries ***
 
-Compiler.Compile -b=AMD
+Compiler.Compile -b=AMD --objectFile=Generic --newObjectFile
+		--mergeSections --symbolFileExtension=.SymW --objectFileExtension=.GofW
+
 	Libs/AAGraphics.Mod
 	Libs/CanvasTools.Mod
 	Libs/Containers.Mod
@@ -21,7 +25,9 @@ Compiler.Compile -b=AMD
 
 *** Components ***
 
-Compiler.Compile -b=AMD
+Compiler.Compile -b=AMD --objectFile=Generic --newObjectFile
+		--mergeSections --symbolFileExtension=.SymW --objectFileExtension=.GofW
+
 	Components/WMChart.Mod
 	Components/WMComboBox.Mod
 	Components/WMDropDownLists.Mod
@@ -30,19 +36,32 @@ Compiler.Compile -b=AMD
 
 *** Dialogs ***
 
-Compiler.Compile -b=AMD
+Compiler.Compile -b=AMD --objectFile=Generic --newObjectFile
+		--mergeSections --symbolFileExtension=.SymW --objectFileExtension=.GofW
+
 	Dialogs/WMColorPicker.Mod ~
 	
+*** Examples ***
+
+Compiler.Compile -b=AMD --objectFile=Generic --newObjectFile
+		--mergeSections --symbolFileExtension=.SymW --objectFileExtension=.GofW
+
+	Examples/WMAAGraphicsExample.Mod ~
+
 *** Tools ***
 
-Compiler.Compile -b=AMD
+Compiler.Compile -b=AMD --objectFile=Generic --newObjectFile
+		--mergeSections --symbolFileExtension=.SymW --objectFileExtension=.GofW
+
 	Tools/ImportCollector.Mod
 	Tools/ImportGraph.Mod
 	Tools/WinStarter.Mod ~
 
 *** Demos ***
 
-Compiler.Compile -b=AMD
+Compiler.Compile -b=AMD --objectFile=Generic --newObjectFile
+		--mergeSections --symbolFileExtension=.SymW --objectFileExtension=.GofW
+
 	Demos/WMAStar.Mod
 	Demos/WMAStarSet.Mod
 	Demos/WMBass3DTest.Mod

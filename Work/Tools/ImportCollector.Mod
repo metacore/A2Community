@@ -1,8 +1,8 @@
 MODULE ImportCollector; (** AUTHOR "SAGE"; PURPOSE "Utility for collecting of all imported modules for specified applications"; *)
 
 IMPORT
-	Commands, Files, Options, Strings, UTF8Strings,
-	Diagnostics, ModuleParser, Containers, Zip, ZipTool;
+	Machine, Commands, Files, Options, Strings, UTF8Strings,
+	Diagnostics, ModuleParser, Containers, Zip, ZipTool, KernelLog;
 
 CONST
 	DefaultOutputFilename = "CollectedModules.zip";
@@ -257,7 +257,14 @@ VAR
 	outputFilename: Files.FileName;
 	listRemember: Containers.StringVector;
 	item: RememberMapItem;
+	sysextension: ARRAY 6 OF CHAR;
 BEGIN
+
+	Machine.GetConfig("ObjectFileExtension", sysextension);
+	IF sysextension = "" THEN
+		COPY(Machine.DefaultObjectFileExtension, sysextension)
+	END;
+	KernelLog.String(sysextension); KernelLog.Ln;
 
 	listRemember := NIL;
 	IF sRememberKey # "" THEN
@@ -281,7 +288,7 @@ BEGIN
 					as in Modules.ThisModule. Or propose ETHZ to add real
 					file name as field to Modules.Module *)
 				COPY(m.ident.name^, outputFilename);
-				Strings.Concat(outputFilename, ".Obw", outputFilename);
+				Strings.Concat(outputFilename, sysextension, outputFilename);
 				
 				ZipTool.AddFile(archive, outputFilename, outputFilename,
 					Zip.BestCompression, Zip.DefaultStrategy, res);
@@ -456,6 +463,19 @@ ImportCollector.Collect
 	DisplayNull Traps FileTrapWriter FSTools RelativeFileSystem
 	WMOTFonts WMOberonFonts	Clipboard Autostart
   SkinEngine PNGDecoder BMPCodec Tar ~
+  
+ImportCollector.Collect
+
+	-p=Bindings/BASS/;Libs/;Components/;Tools/;Demos/;Examples/
+	-x=ref:ZipLoaderList;Kernel32;Trace;Machine;Heaps;Modules;Objects;Kernel;KernelLog;Streams;Commands;Files;WinFS;Loader;BootConsole
+
+	WinStarter WMAAGraphicsExample
+
+	DisplayNull Traps FileTrapWriter SystemVersion
+	
+   PNGDecoder  ~
+  
+  SkinEngine
 
 SystemTools.Free ImportCollector ~
 
