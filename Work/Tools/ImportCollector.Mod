@@ -469,13 +469,10 @@ ImportCollector.Collect
 	-p=Bindings/BASS/;Libs/;Components/;Tools/;Demos/;Examples/
 	-x=ref:ZipLoaderList;Kernel32;Trace;Machine;Heaps;Modules;Objects;Kernel;KernelLog;Streams;Commands;Files;WinFS;Loader;BootConsole
 
-	WinStarter WMAAGraphicsExample
+	WMAAGraphicsExample
 
-	DisplayNull Traps FileTrapWriter SystemVersion
-	
-   PNGDecoder  ~
-  
-  SkinEngine
+	WinStarter DisplayNull Traps FileTrapWriter SystemVersion PNGDecoder ~
+
 
 SystemTools.Free ImportCollector ~
 
