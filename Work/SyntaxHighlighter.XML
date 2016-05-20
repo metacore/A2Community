@@ -73,7 +73,7 @@
 					*)
 				</Group>
 				<Group style="Red">
-					= := * + - /
+					= := * + - / |
 					&lt; &lt;= &gt;= &gt; #
 				</Group>
 				<Group style="Comment">
@@ -252,7 +252,7 @@
 					*)
 				</Group>
 				<Group style="Red">
-					= := * + - /
+					= := * + - / |
 					&lt; &lt;= &gt;= &gt; #
 				</Group>
 				<Group style="Comment">
