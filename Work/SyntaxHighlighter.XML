@@ -33,7 +33,7 @@
 			multiline CDATA #REQUIRED
 		>
 	]>
-
+	
 <SyntaxHighlighter>
 	<Styles>
 		<Style name="Default"		fontsize="15" fontname="VeraMo" 							/>
@@ -43,6 +43,7 @@
 		<Style name="Blue" 		fontsize="15" fontname="VeraMo" 				color="FFFF"		/>
 		<Style name="Green" 		fontsize="15" fontname="VeraMo" 	fontstyle="{0}" 	color="9000FF"		/>
 		<Style name="Comment" 		fontsize="15" fontname="VeraMo" 				color="808080FF"	/>
+		<Style name="Code" 		fontsize="12" fontname="VeraMo" 	fontstyle="{0}"		color="04040FFH"	/>
 		<Style name="ToDo" 		fontsize="15" fontname="VeraMo" 	fontstyle="{0}"		color = "FF0000FF"	/>
 		<Style name="CommentItalic" 	fontsize="15" fontname="VeraMo" 	fontstyle="{1}" 	color="808080FF"	/>
 		<Style name="Control" 		fontsize="15" fontname="VeraMo" 	fontstyle="{0}" 	color="FFFF"		/>
@@ -227,7 +228,7 @@
 				/>
 
 				<Region
-					style="Default" styleOpen="Default" styleClose="Default"
+					style="Code" styleOpen="Code" styleClose="Code"
 					open="CODE" close="END" nesting="FALSE" multiline="TRUE"
 				/>
 			</Regions>
