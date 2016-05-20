@@ -1,4 +1,4 @@
-MODULE TestRAR; (** AUTHOR ""; PURPOSE ""; *)
+MODULE TestRAR; (** AUTHOR "BohdanT"; PURPOSE "UnRar.Dll example"; *)
 
 IMPORT SYSTEM, UnRAR, Strings, WMDialogs, KernelLog;
 TYPE
@@ -33,15 +33,7 @@ BEGIN
 		END;
 	ELSE
 	END;
-	CODE
-		XOR EAX,EAX
-		POP ESI; 
-		POP EDI; 
-		POP EBX; 
-		MOV ESP, EBP; 
-		POP EBP; 
-		RET 16 
-	END;
+	RETURN 0;
 END CallbackProc;
 
 PROCEDURE ExtractArchive*(ArcName: Strings.String; mode: Mode);

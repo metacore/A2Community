@@ -1,4 +1,4 @@
-MODULE	UnRAR;	(**	AUTHOR	"";	PURPOSE	"";	*)
+MODULE	UnRAR;	(**	AUTHOR	"BohdanT";	PURPOSE	"";	*)
 IMPORT SYSTEM,  Kernel32, Modules;
 CONST
 	ERarEndArchive*			=	10;
