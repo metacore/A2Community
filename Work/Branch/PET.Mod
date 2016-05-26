@@ -68,7 +68,7 @@ CONST
 	DefaultShowLineNumbers = FALSE;
 	DefaultIndicateTabs = FALSE;
 	DefaultCurrentLineColor = 0;
-	DefaultBackgroundColor = 0;
+	DefaultBackgroundColor = WMGraphics.White;
 	
 	(* Compiler *)
 	DefaultCompilerName = "Fox";
@@ -2275,9 +2275,16 @@ TYPE
 		VAR found : BOOLEAN; i : LONGINT;
 		BEGIN
 			(* close current tab, warn user if not saved *)
-			IF (currentPage = NIL) OR (currentPage.modified) & (
-				WMDialogs.Confirmation(WindowTitle, "The current text was not stored. Continue ?") = WMDialogs.ResNo)
-			THEN RETURN END;
+			IF (currentPage = NIL) OR (currentPage.modified) THEN
+				i:=WMDialogs.Confirmation(WindowTitle, "Save changes?");
+				IF i = WMDialogs.ResYes THEN
+					StoreHandler(SELF, NIL);
+				ELSIF i = WMDialogs.ResNo THEN
+				;
+				ELSE
+					RETURN
+				END;
+			END;
 			(* remove current page *)
 			found := FALSE; i := 0;
 			WHILE (~found & (i < MaxNbrOfTabs)) DO
