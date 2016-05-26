@@ -479,7 +479,7 @@ TYPE
 
 		PROCEDURE URL(CONST url : ARRAY OF CHAR; VAR res : LONGINT);
 		BEGIN
-			win.Load(url, "AUTO");
+			IF ~FindOpenedFile(url) THEN win.Load(url, "AUTO");END;
 			res := 0
 		END URL;
 	END DropURL;
@@ -1896,14 +1896,18 @@ TYPE
 						filenameEdit.SetAsString("");
 					END;
 				ELSE
-					Load(filename, codecFormat);
-					IF (currentPage # NIL) THEN
-						optionsEdit.GetAsString(currentPage.options);
+					IF FindOpenedFile(filename) THEN
+					ELSE
+						Load(filename, codecFormat);
+						IF (currentPage # NIL) THEN
+							optionsEdit.GetAsString(currentPage.options);
+						END;
 					END;
 				END;
 			END;
 		END LoadHandler;
-
+		
+		
 		PROCEDURE Load(CONST filename,  format : ARRAY OF CHAR);
 		VAR
 			text : Texts.Text; res : LONGINT;
@@ -2693,6 +2697,52 @@ VAR
 	StrScratchPanel, StrPETPanel : Strings.String;
 	timeout: BOOLEAN;
 
+
+		(**Find open in editor file *)
+		PROCEDURE FindOpenedFile*(CONST filename : ARRAY OF CHAR):BOOLEAN;
+		VAR
+			i : LONGINT;
+			file : Files.File;fullname : Filename;
+			window : WMWindowManager.Window;
+			manager : WMWindowManager.WindowManager;
+		BEGIN
+			manager := WMWindowManager.GetDefaultManager();
+			file := Files.Old(filename);
+			IF (file # NIL) THEN
+				file.GetName(fullname);
+				file:=NIL;
+			END;
+			manager.lock.AcquireWrite;
+			window := manager.GetFirst();
+			LOOP
+				IF window = NIL THEN EXIT END;
+				IF window IS Window THEN
+					WITH window:Window DO
+						i := 0;
+						WHILE (i < LEN(window.pages)) DO
+							IF (window.pages[i] # NIL) THEN
+								IF window.pages[i].filename = fullname THEN
+									manager.lock.ReleaseWrite;
+									manager.SetFocus(window);manager.ToFront(window);
+									window.SelectTab(i);
+									window.pages[i].Invalidate;
+									window.tabs.Invalidate;
+									RETURN TRUE;
+								END
+							END;
+							INC(i);
+						END;
+					END;
+				END;
+				window := manager.GetNext(window);
+	
+			END
+		FINALLY 
+			manager.lock.ReleaseWrite;
+			RETURN FALSE;
+		END FindOpenedFile;
+		
+
 (** Open document *)
 PROCEDURE Open*(context : Commands.Context); (** [Options] {filename['@'position]} ~ *)
 VAR
@@ -2714,9 +2764,12 @@ BEGIN
 		WHILE context.arg.GetString(filename) DO
 			position := 0; index := Strings.Find(filename, 0, '@');
 			IF index >= 0 THEN temp := index + 1; Strings.StrToIntPos(filename, position, temp); ASSERT (position # 0); Strings.Truncate(filename, index) END;
-			IF filename # "" THEN window.Load(filename, format); window.SetCursorPosition(position); INC(count) END
+			IF (filename # "")&(~FindOpenedFile(filename)) THEN window.Load(filename, format); window.SetCursorPosition(position); INC(count) END;
 		END;
-		IF count = 0 THEN window.Load("Untitled.Mod", "AUTO") END;
+		IF count = 0 THEN window.Load("Untitled.Mod", "AUTO") 
+		ELSIF count<0 THEN
+			window.Close;
+		END;
 	END;
 END Open;
 
