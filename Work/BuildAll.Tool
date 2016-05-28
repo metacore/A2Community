@@ -1,6 +1,22 @@
 Before compilation add root "Work" and "Work/Resources"
-folders to Paths.Search parameter in aos.ini (or better
+folders to Paths.Search parameter (in listed sequence) in aosg.ini (or better
 do a copy named "myaos.ini" and make changes in it)
+
+To enable a dark color scheme in PET add "Branch" folder to Paths.Search parameter
+and add this to Configuration.XML:
+
+		<Section name="Applications">
+			<Section name="PET">
+				<Section name="General">
+					<Setting name="BackgroundColor" value="0004080FFH"/>
+
+*** A2 sources improvements and small modifications ("Branch") ***
+
+Compiler.Compile -b=AMD --objectFile=Generic --newObjectFile
+		--mergeSections --symbolFileExtension=.SymW --objectFileExtension=.GofW
+
+	Branch/PETTrees.Mod
+	Branch/PET.Mod ~
 
 *** Bindings ***
 
