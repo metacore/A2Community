@@ -57,9 +57,6 @@ TYPE
 		BEGIN
 			ASSERT(grow # NIL);
 			ASSERT(nElementSize > 0);
-
-			TRACE(nElementSize);
-
 			bSorted := {SORTED} * options # {};
 			bNoDuplicates := {NO_DUPLICATES} * options # {};
 			ASSERT(~bSorted OR (bSorted & (compare # NIL)));
@@ -110,6 +107,11 @@ TYPE
 		BEGIN
 			RETURN nCount
 		END GetCount;
+		
+		PROCEDURE IsEmpty*(): BOOLEAN;
+		BEGIN
+			RETURN nCount = 0
+		END IsEmpty;
 		
 		(** Add an object to the list. Add may block if number of
 			calls to Lock is bigger than the number of calls to Unlock *)

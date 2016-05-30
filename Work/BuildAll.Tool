@@ -34,10 +34,16 @@ Compiler.Compile -b=AMD --objectFile=Generic --newObjectFile
 
 	Libs/AAGraphics.Mod
 	Libs/CanvasTools.Mod
-	Libs/Containers.Mod
+
+	Libs/Vector.Mod
+	Libs/NewContainers.Mod
+	
 	Libs/MathUtils.Mod
 	Libs/Win32.PreciseTimer.Mod
-	Libs/ZipLoader.Mod ~
+	Libs/ZipLoader.Mod
+	
+	(* deprecated *)
+	Libs/Containers.Mod ~
 
 *** Components ***
 
@@ -61,6 +67,12 @@ Compiler.Compile -b=AMD --objectFile=Generic --newObjectFile
 
 Compiler.Compile -b=AMD --objectFile=Generic --newObjectFile
 		--mergeSections --symbolFileExtension=.SymW --objectFileExtension=.GofW
+		
+	Examples/RegExp/RegExpNFA.Mod
+	Examples/RegExp/RegExpMaps.Mod
+	Examples/RegExp/RegExpDFA.Mod
+	Examples/RegExp/RegExpSubsetConstruct.Mod
+	Examples/RegExp/RegExpParse.Mod
 
 	Examples/WMAAGraphicsExample.Mod ~
 

@@ -19,7 +19,7 @@ TYPE
 	VAR
 		array: LongintValues;
 
-		PROCEDURE &Init(options: SET);
+		PROCEDURE &Init*(options: SET);
 		BEGIN
 			New(Vector.INITIAL_SIZE, SIZEOF(LongintValue), options, Create, Compare)
 		END Init;
@@ -75,6 +75,66 @@ TYPE
 
 	END LongintVector;
 	
+	(** Vector of LONGINT vectors *)	
+
+	LongintVectorValue* = RECORD(Vector.Value)
+		value*: LongintVector
+	END;
+
+	LongintVectorVector* = OBJECT(Vector.Vector)
+	TYPE
+		LongintVectorValues = POINTER TO ARRAY OF LongintVectorValue;
+	VAR
+		array: LongintVectorValues;
+
+		PROCEDURE &Init*(options: SET);
+		BEGIN
+			New(Vector.INITIAL_SIZE, SIZEOF(LongintVectorValue), options, Create, Compare)
+		END Init;
+
+		PROCEDURE Create(nSize: LONGINT; VAR pArray: ANY; VAR adrArray: ADDRESS);
+		BEGIN
+			NEW(array, nSize);
+			pArray := array; adrArray := ADDRESSOF(array^[0])
+		END Create;
+		
+		PROCEDURE Compare(iLeft: LONGINT; VAR right: Vector.Value): LONGINT;
+		BEGIN
+			RETURN CompareLongintVectors(array^[iLeft].value, right(LongintVectorValue).value)
+		END Compare;
+
+		PROCEDURE Add*(VAR x: LongintVector);
+		VAR
+			v: LongintVectorValue;
+		BEGIN
+			v.value := x;
+			AddInternal(v)
+		END Add;
+
+		PROCEDURE Insert*(pos: LONGINT; VAR x: LongintVector);
+		VAR
+			v: LongintVectorValue;
+		BEGIN
+			v.value := x;
+			InsertInternal(pos, v)
+		END Insert;
+
+		PROCEDURE IndexOf*(VAR x: LongintVector): LONGINT;
+		VAR
+			v: LongintVectorValue;
+		BEGIN
+			v.value := x;
+			RETURN IndexOfInternal(v)
+		END IndexOf;
+
+		PROCEDURE Get*(pos: LONGINT): LongintVector;
+		BEGIN
+			ASSERT((pos >= 0) & (pos < GetCount()), 101);
+			RETURN array[pos].value
+		END Get;
+
+	END LongintVectorVector;
+	
 	(* CHAR vector *)
 
 	CharValue* = RECORD(Vector.Value)
@@ -87,7 +147,7 @@ TYPE
 	VAR
 		array: CharValues;
 
-		PROCEDURE &Init(options: SET);
+		PROCEDURE &Init*(options: SET);
 		BEGIN
 			New(Vector.INITIAL_SIZE, SIZEOF(CharValue), options, Create, Compare)
 		END Init;
@@ -142,6 +202,43 @@ TYPE
 		END Get;
 
 	END CharVector;
+
+	PROCEDURE CompareLongintVectors*(first, second: LongintVector): LONGINT;
+	VAR
+		n, i, nRes: LONGINT;
+	BEGIN
+		n := MIN(first.GetCount(), second.GetCount());
+		IF n = 0 THEN
+			IF first.GetCount() > 0 THEN
+				RETURN 1
+			ELSIF second.GetCount() > 0 THEN
+				RETURN -1
+			ELSE
+				RETURN 0
+			END
+		ELSE
+			i := 0; nRes := 0;
+			WHILE (i < n) & (nRes = 0) DO
+				IF first.Get(i) < second.Get(i) THEN
+					nRes := -1
+				ELSIF first.Get(i) > second.Get(i) THEN
+					nRes := 1
+				ELSE
+					nRes := 0
+				END;
+				INC(i)
+			END;
+			IF nRes # 0 THEN
+				RETURN nRes
+			ELSIF first.GetCount() > n THEN
+				RETURN 1
+			ELSIF second.GetCount() > n THEN
+				RETURN -1
+			ELSE
+				RETURN 0
+			END
+		END
+	END CompareLongintVectors;
 
 	PROCEDURE Test*(context : Commands.Context);
 	VAR
