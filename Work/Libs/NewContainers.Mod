@@ -1,0 +1,212 @@
+MODULE NewContainers;
+
+(** AUTHOR "Yaroslav Romanchenko (SAGE) http://sage.com.ua/";
+	PURPOSE "Standard collections based on Vector"; *)
+
+IMPORT
+	Vector, Commands;
+	
+TYPE
+	(* LONGINT vector *)
+
+	LongintValue* = RECORD(Vector.Value)
+		value*: LONGINT
+	END;
+
+	LongintVector* = OBJECT(Vector.Vector)
+	TYPE
+		LongintValues = POINTER TO ARRAY OF LongintValue;
+	VAR
+		array: LongintValues;
+
+		PROCEDURE &Init(options: SET);
+		BEGIN
+			New(Vector.INITIAL_SIZE, SIZEOF(LongintValue), options, Create, Compare)
+		END Init;
+
+		PROCEDURE Create(nSize: LONGINT; VAR pArray: ANY; VAR adrArray: ADDRESS);
+		BEGIN
+			NEW(array, nSize);
+			pArray := array; adrArray := ADDRESSOF(array^[0])
+		END Create;
+		
+		PROCEDURE Compare(iLeft: LONGINT; VAR right: Vector.Value): LONGINT;
+		BEGIN
+			WITH right: LongintValue DO
+				IF array^[iLeft].value < right.value THEN
+					RETURN -1
+				ELSIF array^[iLeft].value > right.value THEN
+					RETURN 1
+				ELSE
+					RETURN 0
+				END
+			END
+		END Compare;
+
+		PROCEDURE Add*(x: LONGINT);
+		VAR
+			v: LongintValue;
+		BEGIN
+			v.value := x;
+			AddInternal(v)
+		END Add;
+
+		PROCEDURE Insert*(pos, x: LONGINT);
+		VAR
+			v: LongintValue;
+		BEGIN
+			v.value := x;
+			InsertInternal(pos, v)
+		END Insert;
+
+		PROCEDURE IndexOf*(x: LONGINT): LONGINT;
+		VAR
+			v: LongintValue;
+		BEGIN
+			v.value := x;
+			RETURN IndexOfInternal(v)
+		END IndexOf;
+
+		PROCEDURE Get*(pos: LONGINT): LONGINT;
+		BEGIN
+			ASSERT((pos >= 0) & (pos < GetCount()), 101);
+			RETURN array[pos].value
+		END Get;
+
+	END LongintVector;
+	
+	(* CHAR vector *)
+
+	CharValue* = RECORD(Vector.Value)
+		value*: CHAR
+	END;
+
+	CharVector* = OBJECT(Vector.Vector)
+	TYPE
+		CharValues = POINTER TO ARRAY OF CharValue;
+	VAR
+		array: CharValues;
+
+		PROCEDURE &Init(options: SET);
+		BEGIN
+			New(Vector.INITIAL_SIZE, SIZEOF(CharValue), options, Create, Compare)
+		END Init;
+		
+		PROCEDURE Create(nSize: LONGINT; VAR pArray: ANY; VAR adrArray: ADDRESS);
+		BEGIN
+			NEW(array, nSize);
+			pArray := array; adrArray := ADDRESSOF(array^[0])
+		END Create;
+		
+		PROCEDURE Compare(iLeft: LONGINT; VAR right: Vector.Value): LONGINT;
+		BEGIN
+			WITH right: CharValue DO
+				IF array^[iLeft].value < right.value THEN
+					RETURN -1
+				ELSIF array^[iLeft].value > right.value THEN
+					RETURN 1
+				ELSE
+					RETURN 0
+				END
+			END
+		END Compare;
+
+		PROCEDURE Add*(x: CHAR);
+		VAR
+			v: CharValue;
+		BEGIN
+			v.value := x;
+			AddInternal(v)
+		END Add;
+
+		PROCEDURE Insert*(pos: LONGINT; x: CHAR);
+		VAR
+			v: CharValue;
+		BEGIN
+			v.value := x;
+			InsertInternal(pos, v)
+		END Insert;
+
+		PROCEDURE IndexOf*(x: CHAR): LONGINT;
+		VAR
+			v: CharValue;
+		BEGIN
+			v.value := x;
+			RETURN IndexOfInternal(v)
+		END IndexOf;
+
+		PROCEDURE Get*(pos: LONGINT): CHAR;
+		BEGIN
+			ASSERT((pos >= 0) & (pos < GetCount()), 101);
+			RETURN array[pos].value
+		END Get;
+
+	END CharVector;
+
+	PROCEDURE Test*(context : Commands.Context);
+	VAR
+		vLong: LongintVector;
+		vChar: CharVector;
+		i, j: LONGINT;
+	BEGIN
+
+		context.out.Ln;
+
+		NEW(vLong, {});
+		FOR i := 0 TO 25 DO
+			vLong.Add(i)
+		END;
+
+		vLong.Remove(vLong.IndexOf(2));
+		vLong.Remove(vLong.IndexOf(4));
+		vLong.Remove(vLong.IndexOf(6));
+		vLong.Remove(vLong.IndexOf(11));
+		vLong.Remove(vLong.IndexOf(13));
+		vLong.Remove(vLong.IndexOf(15));
+
+		FOR i := 0 TO 25 DO
+			j := vLong.IndexOf(i);
+			context.out.Int(i, 0);
+			IF j >= 0 THEN
+				context.out.String(" located at pos: "); context.out.Int(j, 0)
+			ELSE
+				context.out.String(" not found")
+			END;
+			context.out.Ln
+		END;
+
+		context.out.Ln;
+
+		NEW(vChar, {Vector.SORTED, Vector.NO_DUPLICATES});
+		FOR i := 0 TO 25 DO
+			vChar.Add(CHR(i + 61H))
+		END;
+
+		vChar.Remove(vChar.IndexOf('b'));
+		vChar.Remove(vChar.IndexOf('d'));
+		vChar.Remove(vChar.IndexOf('f'));
+		vChar.Remove(vChar.IndexOf('k'));
+		vChar.Remove(vChar.IndexOf('m'));
+		vChar.Remove(vChar.IndexOf('o'));
+
+		FOR i := 0 TO 25 DO
+			j := vChar.IndexOf(CHR(i + 61H));
+			context.out.Char(CHR(i + 61H));
+			IF j >= 0 THEN
+				context.out.String(" located at pos: "); context.out.Int(j, 0)
+			ELSE
+				context.out.String(" not found")
+			END;
+			context.out.Ln
+		END
+		
+	END Test;
+
+BEGIN
+
+END NewContainers.
+
+NewContainers.Test ~
+SystemTools.Free NewContainers Vector ~
+
+
