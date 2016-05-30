@@ -2,107 +2,131 @@ MODULE ImportCollector; (** AUTHOR "SAGE"; PURPOSE "Utility for collecting of al
 
 IMPORT
 	Machine, Commands, Files, Options, Strings, UTF8Strings,
-	Diagnostics, ModuleParser, Containers, Zip, ZipTool, KernelLog;
+	Diagnostics, ModuleParser, Vector, NewContainers, Zip, ZipTool, KernelLog;
 
 CONST
 	DefaultOutputFilename = "CollectedModules.zip";
 
 TYPE
-	ModulesVector = OBJECT (Containers.CustomVector)
-	VAR
-		null: ModuleParser.Module; (* for speedup of Contains procedure *)
 
-		PROCEDURE &New;
+	ModulesValue = RECORD(Vector.Value)
+		module: ModuleParser.Module
+	END;
+
+	ModulesVector = OBJECT (Vector.Vector)
+	TYPE
+		ModulesValues = POINTER TO ARRAY OF ModulesValue;
+	VAR
+		array: ModulesValues;
+
+		(* for speedup of Contains procedure *)
+		null: ModuleParser.Module;
+
+		PROCEDURE &Init;
 		BEGIN
 			NEW(null, NIL);
 			NEW(null.ident);
 			NEW(null.ident.name, 257);
-			NEW(vector, Compare, {Containers.VECTOR_SORTED, Containers.VECTOR_NO_DUPLICATES})
-		END New;
+			New(Vector.INITIAL_SIZE, SIZEOF(ModulesValue),
+				{Vector.SORTED, Vector.NO_DUPLICATES}, Create, Compare)
+		END Init;
 
-		PROCEDURE Compare(first, second: ANY): LONGINT;
+		PROCEDURE Create(nSize: LONGINT; VAR pArray: ANY; VAR adrArray: ADDRESS);
 		BEGIN
-			RETURN UTF8Strings.Compare(first(ModuleParser.Module).ident.name^,
-				second(ModuleParser.Module).ident.name^)
+			NEW(array, nSize);
+			pArray := array; adrArray := ADDRESSOF(array^[0])
+		END Create;
+
+		PROCEDURE Compare(iLeft: LONGINT; VAR right: Vector.Value): LONGINT;
+		BEGIN
+			RETURN UTF8Strings.Compare(array^[iLeft].module.ident.name^,
+				right(ModulesValue).module.ident.name^)
 		END Compare;
 
 		PROCEDURE Add(module: ModuleParser.Module);
+		VAR
+			v: ModulesValue;
 		BEGIN
-			vector.Add(module)
+			v.module := module;
+			AddInternal(v)
 		END Add;
 
 		PROCEDURE Contains(CONST name: ARRAY OF CHAR): BOOLEAN;
+		VAR
+			v: ModulesValue;
 		BEGIN
 			COPY(name, null.ident.name^);
-			RETURN vector.IndexOf(null) >= 0
+			v.module := null;
+			RETURN IndexOfInternal(v) >= 0
 		END Contains;
 
-		PROCEDURE GetItem(pos: LONGINT): ModuleParser.Module;
-		VAR
-			ptr: ANY;
+		PROCEDURE Get(pos: LONGINT): ModuleParser.Module;
 		BEGIN
-			ptr := vector.GetItem(pos);
-			IF ptr # NIL THEN
-				RETURN ptr(ModuleParser.Module)
-			ELSE
-				RETURN NIL
-			END
-		END GetItem;
+			ASSERT((pos >= 0) & (pos < GetCount()), 101);
+			RETURN array[pos].module
+		END Get;
 
 	END ModulesVector;
-	
-	RememberMapItem = POINTER TO RECORD
-		key: Files.FileName;
-		list: Containers.StringVector;
-	END;
-	
-	RememberMap = OBJECT (Containers.CustomVector)
-	VAR
-		null: RememberMapItem;
-	
-		PROCEDURE &New;
-		BEGIN
-			NEW(null);
-			NEW(vector, Compare, {Containers.VECTOR_SORTED, Containers.VECTOR_NO_DUPLICATES})
-		END New;
 
-		PROCEDURE Compare(first, second: ANY): LONGINT;
+	RememberMapValue = RECORD(Vector.Value)
+		key: Files.FileName;
+		list: NewContainers.StringVector;
+	END;
+
+	RememberMap = OBJECT(Vector.Vector)
+	TYPE
+		RememberMapValues = POINTER TO ARRAY OF RememberMapValue;
+	VAR
+		array: RememberMapValues;
+
+		PROCEDURE &Init;
 		BEGIN
-			RETURN UTF8Strings.Compare(first(RememberMapItem)^.key,
-				second(RememberMapItem)^.key)
+			New(Vector.INITIAL_SIZE, SIZEOF(RememberMapValue),
+				{Vector.SORTED, Vector.NO_DUPLICATES}, Create, Compare)
+		END Init;
+
+		PROCEDURE Create(nSize: LONGINT; VAR pArray: ANY; VAR adrArray: ADDRESS);
+		BEGIN
+			NEW(array, nSize);
+			pArray := array; adrArray := ADDRESSOF(array^[0])
+		END Create;
+
+		PROCEDURE Compare(iLeft: LONGINT; VAR right: Vector.Value): LONGINT;
+		BEGIN
+			RETURN UTF8Strings.Compare(array^[iLeft].key,
+				right(RememberMapValue).key)
 		END Compare;
 
-		PROCEDURE Add(key: ARRAY OF CHAR; list: Containers.StringVector);
+		PROCEDURE Add(CONST key: ARRAY OF CHAR; list: NewContainers.StringVector);
 		VAR
-			item: RememberMapItem;
+			v: RememberMapValue;
 		BEGIN
-			NEW(item);
-			COPY(key, item^.key);
-			item.list := list;
-			vector.Add(item)
+			COPY(key, v.key);
+			v.list := list;
+			AddInternal(v)
 		END Add;
 		
 		PROCEDURE Contains(CONST key: ARRAY OF CHAR): BOOLEAN;
+		VAR
+			v: RememberMapValue;
 		BEGIN
-			COPY(key, null^.key);
-			RETURN vector.IndexOf(null) >= 0
+			COPY(key, v.key);
+			RETURN IndexOfInternal(v) >= 0
 		END Contains;
 
-		PROCEDURE GetItem(CONST key: ARRAY OF CHAR): RememberMapItem;
+		PROCEDURE Get(CONST key: ARRAY OF CHAR): RememberMapValue;
 		VAR
-			i: LONGINT;
+			v: RememberMapValue;
+			pos: LONGINT;
 		BEGIN
-			COPY(key, null^.key);
-			i := vector.IndexOf(null);
-			IF i >= 0 THEN
-				RETURN vector.GetItem(i)(RememberMapItem)
-			ELSE
-				RETURN NIL
-			END
-		END GetItem;
-		
+			COPY(key, v.key);
+			pos := IndexOfInternal(v);
+			ASSERT((pos >= 0) & (pos < GetCount()), 101);
+			RETURN array[pos]
+		END Get;
+
 	END RememberMap;
-	
+
 VAR
 	mapRemember: RememberMap;
 
@@ -148,7 +172,7 @@ BEGIN
 END FindCorrectFilename;
 
 (* Simple heuristics that tries to find the filepath of a given module name *)
-PROCEDURE FindCorrectFilepath(CONST moduleName: ARRAY OF CHAR; vecModulesPaths: Containers.StringVector): Files.FileName;
+PROCEDURE FindCorrectFilepath(CONST moduleName: ARRAY OF CHAR; vecModulesPaths: NewContainers.StringVector): Files.FileName;
 VAR
 	pathName: Files.FileName;
 	i: LONGINT;
@@ -158,14 +182,14 @@ BEGIN
 	ELSE
 		i := 0;
 		REPEAT
-			pathName := FindCorrectFilename(vecModulesPaths.GetItem(i)^, moduleName);
+			pathName := FindCorrectFilename(vecModulesPaths.Get(i)^, moduleName);
 			INC(i)
 		UNTIL FileExists(pathName) OR (i > vecModulesPaths.GetCount() - 1)
 	END;
 	RETURN pathName
 END FindCorrectFilepath;
 
-PROCEDURE ProcessModule(context: Commands.Context; vecModules: ModulesVector; vecModulesNotFound, vecModulesPaths: Containers.StringVector; CONST modName: ARRAY OF CHAR);
+PROCEDURE ProcessModule(context: Commands.Context; vecModules: ModulesVector; vecModulesNotFound, vecModulesPaths: NewContainers.StringVector; CONST modName: ARRAY OF CHAR);
 
 	PROCEDURE ParseModule(CONST modName: ARRAY OF CHAR): ModuleParser.Module;
 	VAR
@@ -248,15 +272,15 @@ BEGIN
 END ActualImports;
 *)
 
-PROCEDURE Output(CONST sFileName, sRememberKey: ARRAY OF CHAR; vecModules: ModulesVector; vecModulesNotFound, vecModulesExcludes: Containers.StringVector): BOOLEAN;
+PROCEDURE Output(CONST sFileName, sRememberKey: ARRAY OF CHAR; vecModules: ModulesVector; vecModulesNotFound, vecModulesExcludes: NewContainers.StringVector): BOOLEAN;
 VAR
 	i: LONGINT;
 	m: ModuleParser.Module;
 	archive: Zip.Archive;
 	res: LONGINT;
 	outputFilename: Files.FileName;
-	listRemember: Containers.StringVector;
-	item: RememberMapItem;
+	listRemember: NewContainers.StringVector;
+	item: RememberMapValue;
 	sysextension: ARRAY 6 OF CHAR;
 BEGIN
 
@@ -268,31 +292,31 @@ BEGIN
 
 	listRemember := NIL;
 	IF sRememberKey # "" THEN
-		item := mapRemember.GetItem(sRememberKey);
-		IF item # NIL THEN
-			item.list.vector.Clear;
+		IF mapRemember.Contains(sRememberKey) THEN
+			item := mapRemember.Get(sRememberKey);
+			item.list.Clear;
 			listRemember := item.list
 		ELSE
-			NEW(listRemember, {Containers.VECTOR_SORTED, Containers.VECTOR_NO_DUPLICATES});
+			NEW(listRemember, {Vector.SORTED, Vector.NO_DUPLICATES});
 			mapRemember.Add(sRememberKey, listRemember)
 		END
 	END;
 
 	archive := Zip.CreateArchive(sFileName, res);
 	IF (archive # NIL) & (res = Zip.Ok) THEN
-		FOR i := 0 TO vecModules.vector.GetCount() - 1 DO
-			m := vecModules.GetItem(i);
+		FOR i := 0 TO vecModules.GetCount() - 1 DO
+			m := vecModules.Get(i);
 			IF (m # NIL) & (vecModulesExcludes.IndexOf(m.ident.name^) = -1) THEN
-			
+
 				(** TODO: Implement more robust generation of file name
 					as in Modules.ThisModule. Or propose ETHZ to add real
 					file name as field to Modules.Module *)
 				COPY(m.ident.name^, outputFilename);
 				Strings.Concat(outputFilename, sysextension, outputFilename);
-				
+
 				ZipTool.AddFile(archive, outputFilename, outputFilename,
 					Zip.BestCompression, Zip.DefaultStrategy, res);
-					
+
 				IF res = Zip.Ok THEN
 					IF listRemember # NIL THEN
 						listRemember.Add(m.ident.name^)
@@ -308,7 +332,7 @@ BEGIN
 	RETURN FALSE
 END Output;
 
-PROCEDURE ParseSemicolonList(CONST list: ARRAY OF CHAR; vecList: Containers.StringVector);
+PROCEDURE ParseSemicolonList(CONST list: ARRAY OF CHAR; vecList: NewContainers.StringVector);
 VAR
 	j, k: LONGINT;
 	part: Files.FileName;
@@ -338,29 +362,29 @@ BEGIN
 END ParseSemicolonList;
 
 (* Try to find references to remembered lists inside excludes *)
-PROCEDURE ResolveExcludes(vecList: Containers.StringVector);
+PROCEDURE ResolveExcludes(vecList: NewContainers.StringVector);
 VAR
 	i, j: LONGINT;
 	s: Strings.String;
 	sa: Strings.StringArray;
 	a: ARRAY 8 OF CHAR;
 	bRelationResolved: BOOLEAN;
-	vecTemp, list: Containers.StringVector;
+	vecTemp, list: NewContainers.StringVector;
 BEGIN
 	NEW(vecTemp, {});
 	i := 0;
 	WHILE i < vecList.GetCount() DO
 		bRelationResolved := FALSE;
-		s := vecList.GetItem(i);
+		s := vecList.Get(i);
 		IF (s # NIL) THEN
 			sa := Strings.Split(s^, ':');
 			IF LEN(sa) > 1 THEN
 				COPY(sa[0]^, a);
 				Strings.UpperCase(a);
 				IF (a = "REF") & (mapRemember.Contains(sa[1]^)) THEN
-					list := mapRemember.GetItem(sa[1]^).list;
+					list := mapRemember.Get(sa[1]^).list;
 					FOR j := 0 TO list.GetCount() - 1 DO
-						vecTemp.Add(list.GetItem(j)^)
+						vecTemp.Add(list.Get(j)^)
 					END
 				END
 			END
@@ -369,7 +393,7 @@ BEGIN
 	END;
 	IF vecTemp.GetCount() > 0 THEN
 		FOR i := 0 TO vecTemp.GetCount() - 1 DO
-			vecList.Add(vecTemp.GetItem(i)^)
+			vecList.Add(vecTemp.Get(i)^)
 		END
 	END
 END ResolveExcludes;
@@ -379,7 +403,7 @@ VAR
 	vecModules: ModulesVector;
 	vecModulesNotFound,
 	vecModulesPaths,
-	vecModulesExcludes: Containers.StringVector;
+	vecModulesExcludes: NewContainers.StringVector;
 	moduleName, outputFilename: Files.FileName;
 	paths, excludes, remember: ARRAY 1024 OF CHAR;
 	options: Options.Options;
@@ -396,23 +420,23 @@ BEGIN
 		IF ~options.GetString("file", outputFilename) THEN
 			COPY(DefaultOutputFilename, outputFilename)
 		END;
-		NEW(vecModulesPaths, {Containers.VECTOR_SORTED, Containers.VECTOR_NO_DUPLICATES});
+		NEW(vecModulesPaths, {Vector.SORTED, Vector.NO_DUPLICATES});
 		vecModulesPaths.Add("");
 		IF options.GetString("paths", paths) THEN
 			ParseSemicolonList(paths, vecModulesPaths)
 		END;
-		
-		NEW(vecModulesExcludes, {Containers.VECTOR_SORTED, Containers.VECTOR_NO_DUPLICATES});
+
+		NEW(vecModulesExcludes, {Vector.SORTED, Vector.NO_DUPLICATES});
 		IF options.GetString("excludes", excludes) THEN
 			ParseSemicolonList(excludes, vecModulesExcludes)
 		END;
-		
+
 		ResolveExcludes(vecModulesExcludes);
-	
+
 		bDummy := options.GetString("remember", remember);
 
 		NEW(vecModules);
-		NEW(vecModulesNotFound, {Containers.VECTOR_SORTED, Containers.VECTOR_NO_DUPLICATES});
+		NEW(vecModulesNotFound, {Vector.SORTED, Vector.NO_DUPLICATES});
 
 		WHILE context.arg.GetString(moduleName) DO
 			ProcessModule(context, vecModules, vecModulesNotFound, vecModulesPaths, moduleName)
@@ -423,7 +447,7 @@ BEGIN
 			IF vecModulesNotFound.GetCount() > 0 THEN
 				context.out.String("Some modules wasn't found: "); context.out.Ln;
 				FOR i := 0 TO vecModulesNotFound.GetCount() - 1 DO
-					s := vecModulesNotFound.GetItem(i);
+					s := vecModulesNotFound.Get(i);
 					IF s # NIL THEN
 						context.out.String(s^); context.out.Ln
 					END
@@ -443,7 +467,7 @@ BEGIN
 END ImportCollector.
 
 ImportCollector.Collect
-	
+
 	-f=ZipLoader.zip
 	-p=Libs/
 	-x=Kernel32;Trace;Machine;Heaps;Modules;Objects;Kernel;KernelLog;Streams;Commands;Files;WinFS;Loader;BootConsole
@@ -463,7 +487,7 @@ ImportCollector.Collect
 	DisplayNull Traps FileTrapWriter FSTools RelativeFileSystem
 	WMOTFonts WMOberonFonts	Clipboard Autostart
   SkinEngine PNGDecoder BMPCodec Tar ~
-  
+
 ImportCollector.Collect
 
 	-p=Bindings/BASS/;Libs/;Components/;Tools/;Demos/;Examples/

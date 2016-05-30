@@ -4,7 +4,7 @@ IMPORT
 	Modules, Commands, Strings, UTF8Strings, Files, Codecs, Streams,
 	XML, Models,	WMComponents, WMStringGrids, WMGrids, WMWindowManager,
 	WMDialogs, WMDropDownLists, WMEditors, WMProperties, WMStandardComponents,
-	WMGraphics, Raster, BASS, MathUtils, Containers, AAGraphics;
+	WMGraphics, Raster, BASS, MathUtils, Vector, AAGraphics;
 
 CONST
 	RADIUS = 5;
@@ -12,46 +12,56 @@ CONST
 
 TYPE
 
-	UidCompItem = POINTER TO RECORD
+	UidCompValue = RECORD(Vector.Value)
 		uid: ARRAY 32 OF CHAR;
 		comp: WMComponents.Component
 	END;
 
-	UidCompVector = OBJECT (Containers.CustomVector)
+	UidCompMap = OBJECT(Vector.Vector)
+	TYPE
+		UidCompValues = POINTER TO ARRAY OF UidCompValue;
+	VAR
+		array: UidCompValues;
 
-		PROCEDURE &New;
+		PROCEDURE &Init;
 		BEGIN
-			NEW(vector, Compare, {Containers.VECTOR_SORTED, Containers.VECTOR_NO_DUPLICATES})
-		END New;
+			New(Vector.INITIAL_SIZE, SIZEOF(UidCompValue),
+				{Vector.SORTED, Vector.NO_DUPLICATES}, Create, Compare)
+		END Init;
 
-		PROCEDURE Compare(first, second: ANY): LONGINT;
+		PROCEDURE Create(nSize: LONGINT; VAR pArray: ANY; VAR adrArray: ADDRESS);
 		BEGIN
-			RETURN UTF8Strings.Compare(first(UidCompItem).uid,
-				second(UidCompItem).uid)
+			NEW(array, nSize);
+			pArray := array; adrArray := ADDRESSOF(array^[0])
+		END Create;
+
+		PROCEDURE Compare(iLeft: LONGINT; VAR right: Vector.Value): LONGINT;
+		BEGIN
+			RETURN UTF8Strings.Compare(
+				array^[iLeft].uid, right(UidCompValue).uid)
 		END Compare;
 
 		PROCEDURE Add(CONST uid: ARRAY OF CHAR; comp: WMComponents.Component);
 		VAR
-			item: UidCompItem;
+			v: UidCompValue;
 		BEGIN
-			NEW(item);
-			COPY(uid, item.uid);
-			item.comp := comp;
-			vector.Add(item)
+			COPY(uid, v.uid);
+			v.comp := comp;
+			AddInternal(v)
 		END Add;
 
 		PROCEDURE Get(CONST uid: ARRAY OF CHAR): WMComponents.Component;
 		VAR
-			item: UidCompItem;
-			i: LONGINT;
+			v: UidCompValue;
+			pos: LONGINT;
 		BEGIN
-			NEW(item);
-			COPY(uid, item.uid);
-			i := vector.IndexOf(item);
-			RETURN vector.GetItem(i)(UidCompItem).comp(WMComponents.Component)
+			COPY(uid, v.uid);
+			pos := IndexOfInternal(v);
+			ASSERT((pos >= 0) & (pos < GetCount()), 101);
+			RETURN array[pos].comp
 		END Get;
 
-	END UidCompVector;
+	END UidCompMap;
 
 	FileName = ARRAY Files.NameLength + 1 OF CHAR;
 
@@ -727,7 +737,7 @@ BEGIN
 		comp := c(WMComponents.Component);
 		sUID := comp.uid.Get();
 		IF (sUID # NIL) & (sUID^ # "") THEN
-			data(UidCompVector).Add(sUID^, comp)
+			data(UidCompMap).Add(sUID^, comp)
 		END
 	END
 END FindComponents;
@@ -735,7 +745,7 @@ END FindComponents;
 PROCEDURE WireComponents(root: WMComponents.VisualComponent; win: Window): BOOLEAN;
 VAR
 	trap: BOOLEAN;
-	components: UidCompVector;
+	components: UidCompMap;
 BEGIN
 	trap := FALSE;
 

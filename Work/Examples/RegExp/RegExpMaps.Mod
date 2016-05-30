@@ -42,17 +42,22 @@ TYPE
 			v.iState := iState;
 			AddInternal(v)
 		END Add;
-
-		PROCEDURE IndexOf*(VAR lstStates: NewContainers.LongintVector): LONGINT;
+		
+		PROCEDURE Contains*(lstStates: NewContainers.LongintVector): BOOLEAN;
 		VAR
 			v: DFAStateNumMapValue;
 		BEGIN
 			v.lstStates := lstStates;
-			RETURN IndexOfInternal(v)
-		END IndexOf;
-
-		PROCEDURE Get*(pos: LONGINT): DFAStateNumMapValue;
+			RETURN IndexOfInternal(v) >= 0
+		END Contains;
+		
+		PROCEDURE Get*(lstStates: NewContainers.LongintVector): DFAStateNumMapValue;
+		VAR
+			v: DFAStateNumMapValue;
+			pos: LONGINT;
 		BEGIN
+			v.lstStates := lstStates;
+			pos := IndexOfInternal(v);
 			ASSERT((pos >= 0) & (pos < GetCount()), 101);
 			RETURN array[pos]
 		END Get;
@@ -116,20 +121,31 @@ TYPE
 			v.iState := iState;
 			AddInternal(v)
 		END Add;
-
-		PROCEDURE IndexOf*(VAR x: Transition): LONGINT;
+		
+		PROCEDURE Contains*(VAR x: Transition): BOOLEAN;
 		VAR
 			v: TransitionMapValue;
 		BEGIN
 			v.trans := x;
-			RETURN IndexOfInternal(v)
-		END IndexOf;
-
-		PROCEDURE Get*(pos: LONGINT): TransitionMapValue;
+			RETURN IndexOfInternal(v) >= 0
+		END Contains;
+		
+		PROCEDURE Get*(VAR x: Transition): TransitionMapValue;
+		VAR
+			v: TransitionMapValue;
+			pos: LONGINT;
 		BEGIN
+			v.trans := x;
+			pos := IndexOfInternal(v);
 			ASSERT((pos >= 0) & (pos < GetCount()), 101);
 			RETURN array[pos]
 		END Get;
+
+		PROCEDURE GetItem*(pos: LONGINT): TransitionMapValue;
+		BEGIN
+			ASSERT((pos >= 0) & (pos < GetCount()), 101);
+			RETURN array[pos]
+		END GetItem;
 
 	END TransitionMap;
 	

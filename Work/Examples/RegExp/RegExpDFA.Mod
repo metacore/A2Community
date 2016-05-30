@@ -49,7 +49,7 @@ TYPE
 			END;
 			context.out.Ln;
 			FOR i := 0 TO mapTransition.GetCount() - 1 DO
-				itemTransitionMap := mapTransition.Get(i);
+				itemTransitionMap := mapTransition.GetItem(i);
 				context.out.String("Trans[");
 				context.out.Int(itemTransitionMap.trans.iState, 0);
 				context.out.String(", '");
@@ -62,7 +62,7 @@ TYPE
 
 		PROCEDURE Simulate*(aInput: ARRAY OF CHAR; iInput: LONGINT; VAR iNext: LONGINT): BOOLEAN;
 		VAR
-			iCurState, i: LONGINT;
+			iCurState: LONGINT;
 			bLoop: BOOLEAN;
 			trans: RegExpMaps.Transition;
 		BEGIN
@@ -70,9 +70,8 @@ TYPE
 			bLoop := TRUE;
 			WHILE (iInput < LEN(aInput)) & (aInput[iInput] # 0X) & bLoop DO
 				trans := RegExpMaps.NewTransition(iCurState, ORD(aInput[iInput]));
-				i := mapTransition.IndexOf(trans);
-				IF i # -1 THEN
-					iCurState := mapTransition.Get(i).iState;
+				IF mapTransition.Contains(trans) THEN
+					iCurState := mapTransition.Get(trans).iState;
 					bLoop := lstFinal.IndexOf(iCurState) = -1;
 					INC(iInput)
 				ELSE

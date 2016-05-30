@@ -65,7 +65,7 @@ IMPORT
 		lstlstMarked, lstlstUnmarked: NewContainers.LongintVectorVector;
 		mapDFAStateNum: RegExpMaps.DFAStateNumMap;
 		lstNFAInitial, lstFirst, lstAState, lstNext: NewContainers.LongintVector;
-		iNewState, iInput, i: LONGINT;
+		iNewState, iInput: LONGINT;
 		
 		PROCEDURE gen_new_state(): LONGINT;
 		BEGIN
@@ -90,9 +90,8 @@ IMPORT
 			lstlstUnmarked.Remove(0);
 			lstlstMarked.Add(lstAState);
 			IF lstAState.IndexOf(nfa.iFinal) # -1 THEN
-				i := mapDFAStateNum.IndexOf(lstAState);
-				IF i # -1 THEN
-					dfa.lstFinal.Add(mapDFAStateNum.Get(i).iState)
+				IF mapDFAStateNum.Contains(lstAState) THEN
+					dfa.lstFinal.Add(mapDFAStateNum.Get(lstAState).iState)
 				END
 			END;
 			FOR iInput := 0 TO nfa.lstInputs.GetCount() - 1 DO
@@ -104,15 +103,13 @@ IMPORT
 					lstlstUnmarked.Add(lstNext);
 					mapDFAStateNum.Add(lstNext, gen_new_state())
 				END;
-				i := mapDFAStateNum.IndexOf(lstAState);
-				IF i # -1 THEN
+				IF mapDFAStateNum.Contains(lstAState) THEN
 					trans := RegExpMaps.NewTransition(
-						mapDFAStateNum.Get(i).iState,
+						mapDFAStateNum.Get(lstAState).iState,
 						nfa.lstInputs.Get(iInput));
-					i := mapDFAStateNum.IndexOf(lstNext);
-					IF (i # -1) & (dfa.mapTransition.IndexOf(trans) = -1) THEN
+					IF mapDFAStateNum.Contains(lstNext) & ~dfa.mapTransition.Contains(trans) THEN
 						dfa.mapTransition.Add(trans,
-							mapDFAStateNum.Get(i).iState)
+							mapDFAStateNum.Get(lstNext).iState)
 					END
 				END
 			END 

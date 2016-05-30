@@ -4,9 +4,78 @@ MODULE NewContainers;
 	PURPOSE "Standard collections based on Vector"; *)
 
 IMPORT
-	Vector, Commands;
+	Vector, Strings, UTF8Strings, Commands;
 	
 TYPE
+
+	(* CHAR vector *)
+
+	CharValue* = RECORD(Vector.Value)
+		value*: CHAR
+	END;
+
+	CharVector* = OBJECT(Vector.Vector)
+	TYPE
+		CharValues = POINTER TO ARRAY OF CharValue;
+	VAR
+		array: CharValues;
+
+		PROCEDURE &Init*(options: SET);
+		BEGIN
+			New(Vector.INITIAL_SIZE, SIZEOF(CharValue), options, Create, Compare)
+		END Init;
+		
+		PROCEDURE Create(nSize: LONGINT; VAR pArray: ANY; VAR adrArray: ADDRESS);
+		BEGIN
+			NEW(array, nSize);
+			pArray := array; adrArray := ADDRESSOF(array^[0])
+		END Create;
+		
+		PROCEDURE Compare(iLeft: LONGINT; VAR right: Vector.Value): LONGINT;
+		BEGIN
+			WITH right: CharValue DO
+				IF array^[iLeft].value < right.value THEN
+					RETURN -1
+				ELSIF array^[iLeft].value > right.value THEN
+					RETURN 1
+				ELSE
+					RETURN 0
+				END
+			END
+		END Compare;
+
+		PROCEDURE Add*(x: CHAR);
+		VAR
+			v: CharValue;
+		BEGIN
+			v.value := x;
+			AddInternal(v)
+		END Add;
+
+		PROCEDURE Insert*(pos: LONGINT; x: CHAR);
+		VAR
+			v: CharValue;
+		BEGIN
+			v.value := x;
+			InsertInternal(pos, v)
+		END Insert;
+
+		PROCEDURE IndexOf*(x: CHAR): LONGINT;
+		VAR
+			v: CharValue;
+		BEGIN
+			v.value := x;
+			RETURN IndexOfInternal(v)
+		END IndexOf;
+
+		PROCEDURE Get*(pos: LONGINT): CHAR;
+		BEGIN
+			ASSERT((pos >= 0) & (pos < GetCount()), 101);
+			RETURN array[pos].value
+		END Get;
+
+	END CharVector;
+
 	(* LONGINT vector *)
 
 	LongintValue* = RECORD(Vector.Value)
@@ -135,23 +204,23 @@ TYPE
 
 	END LongintVectorVector;
 	
-	(* CHAR vector *)
+	(** Vector of Strings *)	
 
-	CharValue* = RECORD(Vector.Value)
-		value*: CHAR
+	StringValue* = RECORD(Vector.Value)
+		value*: Strings.String
 	END;
-
-	CharVector* = OBJECT(Vector.Vector)
+	
+	StringVector* = OBJECT(Vector.Vector)
 	TYPE
-		CharValues = POINTER TO ARRAY OF CharValue;
+		StringValues = POINTER TO ARRAY OF StringValue;
 	VAR
-		array: CharValues;
+		array: StringValues;
 
 		PROCEDURE &Init*(options: SET);
 		BEGIN
-			New(Vector.INITIAL_SIZE, SIZEOF(CharValue), options, Create, Compare)
+			New(Vector.INITIAL_SIZE, SIZEOF(StringValue), options, Create, Compare)
 		END Init;
-		
+
 		PROCEDURE Create(nSize: LONGINT; VAR pArray: ANY; VAR adrArray: ADDRESS);
 		BEGIN
 			NEW(array, nSize);
@@ -160,48 +229,41 @@ TYPE
 		
 		PROCEDURE Compare(iLeft: LONGINT; VAR right: Vector.Value): LONGINT;
 		BEGIN
-			WITH right: CharValue DO
-				IF array^[iLeft].value < right.value THEN
-					RETURN -1
-				ELSIF array^[iLeft].value > right.value THEN
-					RETURN 1
-				ELSE
-					RETURN 0
-				END
-			END
+			RETURN UTF8Strings.Compare(array^[iLeft].value^,
+				right(StringValue).value^)
 		END Compare;
 
-		PROCEDURE Add*(x: CHAR);
+		PROCEDURE Add*(CONST x: ARRAY OF CHAR);
 		VAR
-			v: CharValue;
+			v: StringValue;
 		BEGIN
-			v.value := x;
+			v.value := Strings.NewString(x);
 			AddInternal(v)
 		END Add;
 
-		PROCEDURE Insert*(pos: LONGINT; x: CHAR);
+		PROCEDURE Insert*(pos: LONGINT; CONST x: ARRAY OF CHAR);
 		VAR
-			v: CharValue;
+			v: StringValue;
 		BEGIN
-			v.value := x;
+			v.value := Strings.NewString(x);
 			InsertInternal(pos, v)
 		END Insert;
 
-		PROCEDURE IndexOf*(x: CHAR): LONGINT;
+		PROCEDURE IndexOf*(CONST x: ARRAY OF CHAR): LONGINT;
 		VAR
-			v: CharValue;
+			v: StringValue;
 		BEGIN
-			v.value := x;
+			v.value := Strings.NewString(x);
 			RETURN IndexOfInternal(v)
 		END IndexOf;
 
-		PROCEDURE Get*(pos: LONGINT): CHAR;
+		PROCEDURE Get*(pos: LONGINT): Strings.String;
 		BEGIN
 			ASSERT((pos >= 0) & (pos < GetCount()), 101);
 			RETURN array[pos].value
 		END Get;
 
-	END CharVector;
+	END StringVector;
 
 	PROCEDURE CompareLongintVectors*(first, second: LongintVector): LONGINT;
 	VAR

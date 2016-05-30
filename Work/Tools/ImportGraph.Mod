@@ -2,55 +2,72 @@ MODULE ImportGraph; (** AUTHOR "SAGE"; PURPOSE "Utility for generation of import
 
 IMPORT
 	Commands, Files, Options, Codecs, Streams, Strings, UTF8Strings,
-	Diagnostics, ModuleParser, Containers, Modules, KernelLog;
+	Diagnostics, ModuleParser, Vector, NewContainers, Modules, KernelLog;
 
 CONST
 	DefaultOutputFilename = "ImportGraph.dot";
 
 TYPE
-	ModulesVector = OBJECT (Containers.CustomVector)
-	VAR
-		null: ModuleParser.Module; (* for speedup of Contains procedure *)
 
-		PROCEDURE &New;
+	ModulesValue = RECORD(Vector.Value)
+		module: ModuleParser.Module
+	END;
+
+	ModulesVector = OBJECT (Vector.Vector)
+	TYPE
+		ModulesValues = POINTER TO ARRAY OF ModulesValue;
+	VAR
+		array: ModulesValues;
+
+		(* for speedup of Contains procedure *)
+		null: ModuleParser.Module;
+
+		PROCEDURE &Init;
 		BEGIN
 			NEW(null, NIL);
 			NEW(null.ident);
 			NEW(null.ident.name, 257);
-			NEW(vector, Compare, {Containers.VECTOR_SORTED, Containers.VECTOR_NO_DUPLICATES})
-		END New;
+			New(Vector.INITIAL_SIZE, SIZEOF(ModulesValue),
+				{Vector.SORTED, Vector.NO_DUPLICATES}, Create, Compare)
+		END Init;
 
-		PROCEDURE Compare(first, second: ANY): LONGINT;
+		PROCEDURE Create(nSize: LONGINT; VAR pArray: ANY; VAR adrArray: ADDRESS);
 		BEGIN
-			RETURN UTF8Strings.Compare(first(ModuleParser.Module).ident.name^,
-				second(ModuleParser.Module).ident.name^)
+			NEW(array, nSize);
+			pArray := array; adrArray := ADDRESSOF(array^[0])
+		END Create;
+
+		PROCEDURE Compare(iLeft: LONGINT; VAR right: Vector.Value): LONGINT;
+		BEGIN
+			RETURN UTF8Strings.Compare(array^[iLeft].module.ident.name^,
+				right(ModulesValue).module.ident.name^)
 		END Compare;
 
 		PROCEDURE Add(module: ModuleParser.Module);
+		VAR
+			v: ModulesValue;
 		BEGIN
-			vector.Add(module)
+			v.module := module;
+			AddInternal(v)
 		END Add;
 
 		PROCEDURE Contains(CONST name: ARRAY OF CHAR): BOOLEAN;
+		VAR
+			v: ModulesValue;
 		BEGIN
 			COPY(name, null.ident.name^);
-			RETURN vector.IndexOf(null) >= 0
+			v.module := null;
+			RETURN IndexOfInternal(v) >= 0
 		END Contains;
 
-		PROCEDURE GetItem*(pos: LONGINT): ModuleParser.Module;
-		VAR
-			ptr: ANY;
+		PROCEDURE Get(pos: LONGINT): ModuleParser.Module;
 		BEGIN
-			ptr := vector.GetItem(pos);
-			IF ptr # NIL THEN
-				RETURN ptr(ModuleParser.Module)
-			ELSE
-				RETURN NIL
-			END
-		END GetItem;
+			ASSERT((pos >= 0) & (pos < GetCount()), 101);
+			RETURN array[pos].module
+		END Get;
 
 	END ModulesVector;
-
+	
 PROCEDURE ParseModule(CONST modName: ARRAY OF CHAR): ModuleParser.Module;
 VAR
 	module: ModuleParser.Module;
@@ -73,7 +90,7 @@ BEGIN
 	END
 END ProperModuleInfo;
 
-PROCEDURE ProcessModule(context: Commands.Context; modules: ModulesVector; modulesNotFound: Containers.StringVector; CONST modName: ARRAY OF CHAR);
+PROCEDURE ProcessModule(context: Commands.Context; modules: ModulesVector; modulesNotFound: NewContainers.StringVector; CONST modName: ARRAY OF CHAR);
 VAR
 	module: ModuleParser.Module;
 	import: ModuleParser.Import;
@@ -135,7 +152,7 @@ BEGIN
 	END
 END ActualImports;
 
-PROCEDURE Output(stream: Streams.Writer; modules: ModulesVector; modulesNotFound: Containers.StringVector);
+PROCEDURE Output(stream: Streams.Writer; modules: ModulesVector; modulesNotFound: NewContainers.StringVector);
 
 	PROCEDURE OutputName(n: Strings.String);
 	BEGIN
@@ -162,8 +179,8 @@ VAR
 BEGIN
 	stream.String('strict digraph G{');
 	stream.Ln;
-	FOR i := 0 TO modules.vector.GetCount() - 1 DO
-		m := modules.GetItem(i);
+	FOR i := 0 TO modules.GetCount() - 1 DO
+		m := modules.Get(i);
 		IF m # NIL THEN
 		
 			ActualImports(m.ident.name^);
@@ -189,7 +206,7 @@ BEGIN
 		END
 	END;
 	FOR i := 0 TO modulesNotFound.GetCount() - 1 DO
-		s := modulesNotFound.GetItem(i);
+		s := modulesNotFound.Get(i);
 		IF s # NIL THEN
 			OutputName(s);
 			stream.String(' [shape = plaintext]; ')
@@ -203,7 +220,7 @@ END Output;
 PROCEDURE Generate*(context: Commands.Context); (** [options] moduleName {" " modulename} ~  *)
 VAR
 	modules: ModulesVector;
-	modulesNotFound: Containers.StringVector;
+	modulesNotFound: NewContainers.StringVector;
 	moduleName, outputFilename: Files.FileName;
 	options: Options.Options;
 	stream: Streams.Writer;
@@ -219,7 +236,7 @@ BEGIN
 		IF (stream # NIL) THEN
 
 			NEW(modules);
-			NEW(modulesNotFound, {Containers.VECTOR_SORTED, Containers.VECTOR_NO_DUPLICATES});
+			NEW(modulesNotFound, {Vector.SORTED, Vector.NO_DUPLICATES});
 
 			WHILE context.arg.GetString(moduleName) DO
 				ProcessModule(context, modules, modulesNotFound, moduleName)
