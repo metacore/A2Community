@@ -2748,8 +2748,10 @@ PROCEDURE Open*(context : Commands.Context); (** [Options] {filename['@'position
 VAR
 	window : Window; count, index, temp, position : LONGINT;
 	filename : Filename; format : ARRAY 32 OF CHAR;
-	options: Options.Options;
+	options : Options.Options;
+	openExist : BOOLEAN;
 BEGIN
+	openExist:=FALSE;
 	NEW(options);
 	options.Add("e","external",Options.Flag);
 	options.Add("f", "format", Options.String);
@@ -2764,11 +2766,17 @@ BEGIN
 		WHILE context.arg.GetString(filename) DO
 			position := 0; index := Strings.Find(filename, 0, '@');
 			IF index >= 0 THEN temp := index + 1; Strings.StrToIntPos(filename, position, temp); ASSERT (position # 0); Strings.Truncate(filename, index) END;
-			IF (filename # "")&(~FindOpenedFile(filename)) THEN window.Load(filename, format); window.SetCursorPosition(position); INC(count) END;
+			IF (filename # "")THEN
+				IF FindOpenedFile(filename) THEN openExist:=TRUE
+				ELSE window.Load(filename, format); window.SetCursorPosition(position); INC(count) END;
+			END;
 		END;
-		IF count = 0 THEN window.Load("Untitled.Mod", "AUTO") 
-		ELSIF count<0 THEN
-			window.Close;
+		IF (count = 0) THEN
+			IF openExist THEN 
+				window.Close;
+			ELSE
+				window.Load("Untitled.Mod", "AUTO") 
+			END
 		END;
 	END;
 END Open;
