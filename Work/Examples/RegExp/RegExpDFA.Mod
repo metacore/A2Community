@@ -43,12 +43,12 @@ TYPE
 			context.out.Int(nStates, 0);
 			context.out.Ln;
 			context.out.String("DFA final state(s): ");
-			FOR i := 0 TO lstFinal.GetCount() - 1 DO
+			FOR i := 0 TO lstFinal.Count - 1 DO
 				context.out.Int(lstFinal.Get(i), 0);
 				context.out.Char(' ')
 			END;
 			context.out.Ln;
-			FOR i := 0 TO mapTransition.GetCount() - 1 DO
+			FOR i := 0 TO mapTransition.Count - 1 DO
 				itemTransitionMap := mapTransition.GetItem(i);
 				context.out.String("Trans[");
 				context.out.Int(itemTransitionMap.trans.iState, 0);

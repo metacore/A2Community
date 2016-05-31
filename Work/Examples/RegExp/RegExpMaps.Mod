@@ -16,7 +16,7 @@ TYPE
 	VAR
 		array: DFAStateNumMapValues;
 
-		PROCEDURE &Init*();
+		PROCEDURE &Init*;
 		BEGIN
 			New(Vector.INITIAL_SIZE, SIZEOF(DFAStateNumMapValue),
 				{Vector.SORTED, Vector.NO_DUPLICATES}, Create, Compare)
@@ -58,8 +58,8 @@ TYPE
 		BEGIN
 			v.lstStates := lstStates;
 			pos := IndexOfInternal(v);
-			ASSERT((pos >= 0) & (pos < GetCount()), 101);
-			RETURN array[pos]
+			ASSERT((pos >= 0) & (pos < Count), 101);
+			RETURN array^[pos]
 		END Get;
 
 	END DFAStateNumMap;
@@ -80,7 +80,7 @@ TYPE
 	VAR
 		array: TransitionMapValues;
 
-		PROCEDURE &Init*();
+		PROCEDURE &Init*;
 		BEGIN
 			New(Vector.INITIAL_SIZE, SIZEOF(TransitionMapValue),
 				{Vector.SORTED, Vector.NO_DUPLICATES}, Create, Compare)
@@ -137,14 +137,14 @@ TYPE
 		BEGIN
 			v.trans := x;
 			pos := IndexOfInternal(v);
-			ASSERT((pos >= 0) & (pos < GetCount()), 101);
-			RETURN array[pos]
+			ASSERT((pos >= 0) & (pos < Count), 101);
+			RETURN array^[pos]
 		END Get;
 
 		PROCEDURE GetItem*(pos: LONGINT): TransitionMapValue;
 		BEGIN
-			ASSERT((pos >= 0) & (pos < GetCount()), 101);
-			RETURN array[pos]
+			ASSERT((pos >= 0) & (pos < Count), 101);
+			RETURN array^[pos]
 		END GetItem;
 
 	END TransitionMap;

@@ -19,11 +19,10 @@ CONST
 
 TYPE
 	
-	Table = POINTER TO ARRAY OF ARRAY OF
-		RECORD
-			iType-: SHORTINT;
-			iData-: LONGINT;
-		END;
+	Table = POINTER TO ARRAY OF ARRAY OF RECORD
+		iType-: SHORTINT;
+		iData-: LONGINT;
+	END;
 
 	NFA* = OBJECT
 		VAR
@@ -106,7 +105,7 @@ TYPE
 					aTable[iFrom, iTo] := nfaOther.aTable[iFrom, iTo]
 				END
 			END;
-			FOR i := 0 TO nfaOther.lstInputs.GetCount() - 1 DO
+			FOR i := 0 TO nfaOther.lstInputs.Count - 1 DO
 				IF lstInputs.IndexOf(nfaOther.lstInputs.Get(i)) = -1 THEN
 					lstInputs.Add(nfaOther.lstInputs.Get(i))
 				END
@@ -150,7 +149,7 @@ TYPE
 			context.out.Int(iFinal, 0);
 			context.out.Ln;
 			context.out.String("Inputs: ");
-			FOR i := 0 TO lstInputs.GetCount() - 1 DO
+			FOR i := 0 TO lstInputs.Count - 1 DO
 				context.out.Char("'");
 				context.out.Char(CHR(lstInputs.Get(i)));
 				context.out.String("' ")

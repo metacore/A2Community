@@ -57,7 +57,7 @@ TYPE
 		BEGIN
 			COPY(uid, v.uid);
 			pos := IndexOfInternal(v);
-			ASSERT((pos >= 0) & (pos < GetCount()), 101);
+			ASSERT((pos >= 0) & (pos < Count), 101);
 			RETURN array[pos].comp
 		END Get;
 

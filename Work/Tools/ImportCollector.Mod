@@ -62,7 +62,7 @@ TYPE
 
 		PROCEDURE Get(pos: LONGINT): ModuleParser.Module;
 		BEGIN
-			ASSERT((pos >= 0) & (pos < GetCount()), 101);
+			ASSERT((pos >= 0) & (pos < Count), 101);
 			RETURN array[pos].module
 		END Get;
 
@@ -121,7 +121,7 @@ TYPE
 		BEGIN
 			COPY(key, v.key);
 			pos := IndexOfInternal(v);
-			ASSERT((pos >= 0) & (pos < GetCount()), 101);
+			ASSERT((pos >= 0) & (pos < Count), 101);
 			RETURN array[pos]
 		END Get;
 
@@ -177,14 +177,14 @@ VAR
 	pathName: Files.FileName;
 	i: LONGINT;
 BEGIN
-	IF vecModulesPaths.GetCount() = 0 THEN
+	IF vecModulesPaths.Count = 0 THEN
 		pathName := FindCorrectFilename("", moduleName)
 	ELSE
 		i := 0;
 		REPEAT
 			pathName := FindCorrectFilename(vecModulesPaths.Get(i)^, moduleName);
 			INC(i)
-		UNTIL FileExists(pathName) OR (i > vecModulesPaths.GetCount() - 1)
+		UNTIL FileExists(pathName) OR (i > vecModulesPaths.Count - 1)
 	END;
 	RETURN pathName
 END FindCorrectFilepath;
@@ -304,7 +304,7 @@ BEGIN
 
 	archive := Zip.CreateArchive(sFileName, res);
 	IF (archive # NIL) & (res = Zip.Ok) THEN
-		FOR i := 0 TO vecModules.GetCount() - 1 DO
+		FOR i := 0 TO vecModules.Count - 1 DO
 			m := vecModules.Get(i);
 			IF (m # NIL) & (vecModulesExcludes.IndexOf(m.ident.name^) = -1) THEN
 
@@ -373,7 +373,7 @@ VAR
 BEGIN
 	NEW(vecTemp, {});
 	i := 0;
-	WHILE i < vecList.GetCount() DO
+	WHILE i < vecList.Count DO
 		bRelationResolved := FALSE;
 		s := vecList.Get(i);
 		IF (s # NIL) THEN
@@ -383,7 +383,7 @@ BEGIN
 				Strings.UpperCase(a);
 				IF (a = "REF") & (mapRemember.Contains(sa[1]^)) THEN
 					list := mapRemember.Get(sa[1]^).list;
-					FOR j := 0 TO list.GetCount() - 1 DO
+					FOR j := 0 TO list.Count - 1 DO
 						vecTemp.Add(list.Get(j)^)
 					END
 				END
@@ -391,8 +391,8 @@ BEGIN
 		END;
 		INC(i)
 	END;
-	IF vecTemp.GetCount() > 0 THEN
-		FOR i := 0 TO vecTemp.GetCount() - 1 DO
+	IF vecTemp.Count > 0 THEN
+		FOR i := 0 TO vecTemp.Count - 1 DO
 			vecList.Add(vecTemp.Get(i)^)
 		END
 	END
@@ -444,9 +444,9 @@ BEGIN
 
 		IF Output(outputFilename, remember, vecModules, vecModulesNotFound, vecModulesExcludes) THEN
 			context.out.String("Collected modules written to "); context.out.String(outputFilename); context.out.Ln;
-			IF vecModulesNotFound.GetCount() > 0 THEN
+			IF vecModulesNotFound.Count > 0 THEN
 				context.out.String("Some modules wasn't found: "); context.out.Ln;
-				FOR i := 0 TO vecModulesNotFound.GetCount() - 1 DO
+				FOR i := 0 TO vecModulesNotFound.Count - 1 DO
 					s := vecModulesNotFound.Get(i);
 					IF s # NIL THEN
 						context.out.String(s^); context.out.Ln

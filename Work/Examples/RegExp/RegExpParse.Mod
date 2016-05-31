@@ -389,11 +389,10 @@ Total time:   1.414224E-002
 11111dabbv
 323232dgabbv
 
-Result with NewContainers.Mod and Vector.Mod:
-Time for NFA:   6.171750E-004
-Time for DFA:   8.188722E-003
-Time for simulation:   1.871388E-004
-Total time:   8.993036E-003
+Time for NFA:   6.436874E-004
+Time for DFA:   8.012703E-003
+Time for simulation:   3.137857E-004
+Total time:   8.970176E-003
 2424242caaabbv
 11111dabbv
 323232dgabbv

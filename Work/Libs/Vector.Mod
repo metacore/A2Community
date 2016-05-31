@@ -41,11 +41,11 @@ TYPE
 	(** Abstract Vector object *)
 	Vector* = OBJECT
 	VAR
-		nCount, nSize, nElementSize: LONGINT;
+		Count-, nSize, nElementSize: LONGINT;
 		pArray: ANY;
 		adrArray: ADDRESS;
 
-		grow: OpCreate;
+		create: OpCreate;
 		compare: OpCompare;
 
 		(* Options *)
@@ -53,38 +53,24 @@ TYPE
 
 		nReadLock: LONGINT;
 
-		PROCEDURE &New*(nSize, nElementSize: LONGINT; options: SET; grow: OpCreate; compare: OpCompare);
+		PROCEDURE &New*(nSize, nElementSize: LONGINT; options: SET; create: OpCreate; compare: OpCompare);
 		BEGIN
-			ASSERT(grow # NIL);
+			ASSERT(create # NIL);
 			ASSERT(nElementSize > 0);
 			bSorted := {SORTED} * options # {};
 			bNoDuplicates := {NO_DUPLICATES} * options # {};
 			ASSERT(~bSorted OR (bSorted & (compare # NIL)));
 			SELF.nElementSize := nElementSize;
-			SELF.grow := grow;
+			SELF.create := create;
 			SELF.compare := compare;
 			IF (nSize >= 4) & (nSize <= 65536) THEN
 				SELF.nSize := nSize
 			ELSE
 				SELF.nSize := INITIAL_SIZE
 			END;
-			nCount := 0;
-			grow(SELF.nSize, pArray, adrArray)
+			Count := 0;
+			create(SELF.nSize, pArray, adrArray)
 		END New;
-
-		(** Lock prevents modifications to the list. All calls to Lock
-			must be followed by a call to Unlock. Lock can be nested. *)
-		PROCEDURE Lock*;
-		BEGIN {EXCLUSIVE}
-			INC(nReadLock); ASSERT(nReadLock > 0)
-		END Lock;
-
-		(** Unlock removes one modification lock. All calls to Unlock
-			must be preceeded by a call to Lock. *)
-		PROCEDURE Unlock*;
-		BEGIN {EXCLUSIVE}
-			DEC(nReadLock); ASSERT(nReadLock >= 0)
-		END Unlock;
 		
 		PROCEDURE IndexOfInternal*(VAR x: Value): LONGINT;
 		VAR
@@ -102,49 +88,90 @@ TYPE
 				RETURN FindSequentially(x)
 			END
 		END IndexOfInternal;
-
-		PROCEDURE GetCount*(): LONGINT;
-		BEGIN
-			RETURN nCount
-		END GetCount;
-		
-		PROCEDURE IsEmpty*(): BOOLEAN;
-		BEGIN
-			RETURN nCount = 0
-		END IsEmpty;
 		
 		(** Add an object to the list. Add may block if number of
 			calls to Lock is bigger than the number of calls to Unlock *)
 		PROCEDURE AddInternal*(VAR x: Value);
 		BEGIN {EXCLUSIVE}
 			AWAIT(nReadLock = 0);
-			IF bSorted THEN AddUnlocked(x) ELSE AppendUnlocked(x) END
+			IF bSorted THEN
+				AddUnlocked(x)
+			ELSE
+				(* Append *)
+				IF bNoDuplicates THEN
+					ASSERT(FindSequentially(x) = -1)
+				END;
+				IF Count = nSize THEN
+					Grow
+				END;
+				(* Put x at Count position *)
+				SYSTEM.MOVE(ADDRESSOF(x), adrArray + Count * nElementSize, nElementSize);
+				INC(Count)
+			END
 		END AddInternal;
 
 		PROCEDURE InsertInternal*(pos: LONGINT; VAR x: Value);
+		VAR
+			i: LONGINT;
+			adrSrc: ADDRESS;
 		BEGIN {EXCLUSIVE}
 			AWAIT(nReadLock = 0);
-			ASSERT((pos >= 0) & (pos < nCount), 101);
-			IF bSorted THEN AddUnlocked(x) ELSE InsertUnlocked(pos, x) END
+			ASSERT((pos >= 0) & (pos < Count), 101);
+			IF bSorted THEN
+				AddUnlocked(x)
+			ELSE
+				(* Insert *)
+				IF bNoDuplicates THEN
+					ASSERT(FindSequentially(x) = -1)
+				END;
+				IF Count = nSize THEN
+					Grow
+				END;
+				i := Count - 1;
+				adrSrc := adrArray + i * nElementSize;
+				WHILE i >= pos DO
+					(*array[i + 1] := array[i];*)
+					SYSTEM.MOVE(adrSrc, adrSrc + nElementSize, nElementSize);
+					DEC(adrSrc, nElementSize);
+					DEC(i)
+				END;
+				(* Put x at pos position *)
+				SYSTEM.MOVE(ADDRESSOF(x), adrArray + pos * nElementSize, nElementSize);
+				INC(Count)
+			END
 		END InsertInternal;
 		
 		(** Remove an object from the list. Remove may block if number of calls to Lock is bigger than the number of calls to Unlock *)
 		PROCEDURE Remove*(pos: LONGINT);
+		VAR
+			i: LONGINT;
+			adrSrc: ADDRESS;
 		BEGIN {EXCLUSIVE}
 			AWAIT(nReadLock = 0);
-			ASSERT((pos >= 0) & (pos < nCount), 101);
-			RemoveUnlocked(pos)
+			ASSERT((pos >= 0) & (pos < Count), 101);
+			i := pos;
+			adrSrc := adrArray + (i + 1) * nElementSize;
+			WHILE i < Count - 1 DO
+				(*array[i] := array[i + 1];*)
+				SYSTEM.MOVE(adrSrc, adrSrc - nElementSize, nElementSize);
+				INC(adrSrc, nElementSize);
+				INC(i)
+			END;
+			(*?
+			array[Count - 1] := NIL;
+			*)
+			DEC(Count)
 		END Remove;
 		
 		PROCEDURE Clear*;
 		BEGIN {EXCLUSIVE}
 			AWAIT(nReadLock = 0);
 			(*?
-			FOR i := 0 TO nCount - 1 DO
+			FOR i := 0 TO Count - 1 DO
 				array[i] := NIL
 			END;
 			*)
-			nCount := 0
+			Count := 0
 		END Clear;
 
 		PROCEDURE FindSequentially(VAR x: Value): LONGINT;
@@ -152,7 +179,7 @@ TYPE
 			i: LONGINT;
 		BEGIN
 			i := 0;
-			WHILE i < nCount DO
+			WHILE i < Count DO
 				IF compare(i, x) = 0 THEN
 					RETURN i
 				END;
@@ -161,15 +188,16 @@ TYPE
 			RETURN -1
 		END FindSequentially;
 
+		(* Binary search *)
 		PROCEDURE FindPosition(VAR x: Value; VAR bFound: BOOLEAN): LONGINT;
 		VAR
 			lower, middle, upper: LONGINT;
 			value: LONGINT;
 		BEGIN
 			bFound := FALSE;
-			IF nCount = 0 THEN RETURN 0 END;
+			IF Count = 0 THEN RETURN 0 END;
 			lower := 0;
-			upper := nCount - 1;
+			upper := Count - 1;
 			WHILE lower <= upper DO
 				middle := lower + (upper - lower) DIV 2;
 				value := compare(middle, x);
@@ -189,101 +217,67 @@ TYPE
 			END;
 		END FindPosition;
 
-		PROCEDURE CreateInternal;
+		PROCEDURE Grow;
 		VAR
 			pOld: ANY;
 			adrOld: ADDRESS;
 			nOldSize: LONGINT;
 		BEGIN
-			IF nCount = nSize THEN
+			adrOld := adrArray;
+			nOldSize := nSize;
+			nSize := nSize * 2;
+			
+			(* store pointer to prevent it be collected by GC before recreating an array *)
+			pOld := pArray;
+			create(nSize, pArray, adrArray);
+			
+			SYSTEM.MOVE(adrOld, adrArray, nOldSize * nElementSize)
+		END Grow;
 
-				(* store pointer to prevent it be collected by GC *)
-				pOld := pArray;
-
-				adrOld := adrArray;
-				nOldSize := nSize;
-				nSize := nSize * 2;
-
-				grow(nSize, pArray, adrArray);
-				SYSTEM.MOVE(adrOld, adrArray, nOldSize * nElementSize)
-
-			END
-		END CreateInternal;
-
-		PROCEDURE Expand(pos: LONGINT);
-		VAR
-			i: LONGINT;
-		BEGIN
-			i := nCount - 1;
-			WHILE i >= pos DO
-				(*array[i + 1] := array[i];*)
-				SYSTEM.MOVE(adrArray + i * nElementSize, adrArray + (i + 1) * nElementSize, nElementSize);
-				DEC(i)
-			END
-		END Expand;
-
-		PROCEDURE Collapse(pos: LONGINT);
-		VAR
-			i: LONGINT;
-		BEGIN
-			i := pos;
-			WHILE i < nCount - 1 DO
-				(*array[i] := array[i + 1];*)
-				SYSTEM.MOVE(adrArray + (i + 1) * nElementSize, adrArray + i * nElementSize, nElementSize);
-				INC(i)
-			END
-		END Collapse;
-
-		(** Does the actual Adding without locking (should already
-			have been done by the caller) *)
 		PROCEDURE AddUnlocked(VAR x: Value);
 		VAR
-			pos: LONGINT;
+			pos, i: LONGINT;
 			bFound: BOOLEAN;
+			adrSrc: ADDRESS;
 		BEGIN
 			pos := FindPosition(x, bFound);
 			IF bNoDuplicates THEN
 				ASSERT(~bFound)
 			END;
-			CreateInternal;
-			Expand(pos);
-			(*operations.put(x, pos);*)
+			IF Count = nSize THEN
+				Grow
+			END;
+			i := Count - 1;
+			adrSrc := adrArray + i * nElementSize;
+			WHILE i >= pos DO
+				(*array[i + 1] := array[i];*)
+				SYSTEM.MOVE(adrSrc, adrSrc + nElementSize, nElementSize);
+				DEC(adrSrc, nElementSize);
+				DEC(i)
+			END;
+			(* Put x at pos position *)
 			SYSTEM.MOVE(ADDRESSOF(x), adrArray + pos * nElementSize, nElementSize);
-			INC(nCount)
+			INC(Count)
 		END AddUnlocked;
-
-		PROCEDURE AppendUnlocked(VAR x: Value);
+		
+		PROCEDURE IsEmpty*(): BOOLEAN;
 		BEGIN
-			IF bNoDuplicates THEN
-				ASSERT(FindSequentially(x) = -1)
-			END;
-			CreateInternal;
-			(*operations.put(x, nCount);*)
-			SYSTEM.MOVE(ADDRESSOF(x), adrArray + nCount * nElementSize, nElementSize);
-			INC(nCount)
-		END AppendUnlocked;
+			RETURN Count = 0
+		END IsEmpty;
+		
+		(** Lock prevents modifications to the list. All calls to Lock
+			must be followed by a call to Unlock. Lock can be nested. *)
+		PROCEDURE Lock*;
+		BEGIN {EXCLUSIVE}
+			INC(nReadLock); ASSERT(nReadLock > 0)
+		END Lock;
 
-		PROCEDURE InsertUnlocked(pos: LONGINT; VAR x: Value);
-		BEGIN
-			IF bNoDuplicates THEN
-				ASSERT(FindSequentially(x) = -1)
-			END;
-			CreateInternal;
-			Expand(pos);
-			(*operations.put(x, pos);*)
-			SYSTEM.MOVE(ADDRESSOF(x), adrArray + pos * nElementSize, nElementSize);
-			INC(nCount)
-		END InsertUnlocked;
-
-		(* Does the actual Removing without locking (should already have been done by the caller) *)
-		PROCEDURE RemoveUnlocked(pos: LONGINT);
-		BEGIN
-			Collapse(pos);
-			(*?
-			array[nCount - 1] := NIL;
-			*)
-			DEC(nCount)
-		END RemoveUnlocked;
+		(** Unlock removes one modification lock. All calls to Unlock
+			must be preceeded by a call to Lock. *)
+		PROCEDURE Unlock*;
+		BEGIN {EXCLUSIVE}
+			DEC(nReadLock); ASSERT(nReadLock >= 0)
+		END Unlock;
 
 	END Vector;
 

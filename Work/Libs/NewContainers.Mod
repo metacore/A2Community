@@ -70,8 +70,8 @@ TYPE
 
 		PROCEDURE Get*(pos: LONGINT): CHAR;
 		BEGIN
-			ASSERT((pos >= 0) & (pos < GetCount()), 101);
-			RETURN array[pos].value
+			ASSERT((pos >= 0) & (pos < Count), 101);
+			RETURN array^[pos].value
 		END Get;
 
 	END CharVector;
@@ -120,7 +120,7 @@ TYPE
 			AddInternal(v)
 		END Add;
 
-		PROCEDURE Insert*(pos, x: LONGINT);
+		PROCEDURE Insert*(pos: LONGINT; x: LONGINT);
 		VAR
 			v: LongintValue;
 		BEGIN
@@ -138,8 +138,8 @@ TYPE
 
 		PROCEDURE Get*(pos: LONGINT): LONGINT;
 		BEGIN
-			ASSERT((pos >= 0) & (pos < GetCount()), 101);
-			RETURN array[pos].value
+			ASSERT((pos >= 0) & (pos < Count), 101);
+			RETURN array^[pos].value
 		END Get;
 
 	END LongintVector;
@@ -195,11 +195,11 @@ TYPE
 			v.value := x;
 			RETURN IndexOfInternal(v)
 		END IndexOf;
-
+		
 		PROCEDURE Get*(pos: LONGINT): LongintVector;
 		BEGIN
-			ASSERT((pos >= 0) & (pos < GetCount()), 101);
-			RETURN array[pos].value
+			ASSERT((pos >= 0) & (pos < Count), 101);
+			RETURN array^[pos].value
 		END Get;
 
 	END LongintVectorVector;
@@ -259,21 +259,21 @@ TYPE
 
 		PROCEDURE Get*(pos: LONGINT): Strings.String;
 		BEGIN
-			ASSERT((pos >= 0) & (pos < GetCount()), 101);
-			RETURN array[pos].value
+			ASSERT((pos >= 0) & (pos < Count), 101);
+			RETURN array^[pos].value
 		END Get;
 
 	END StringVector;
 
-	PROCEDURE CompareLongintVectors*(first, second: LongintVector): LONGINT;
+	PROCEDURE CompareLongintVectors*(left, right: LongintVector): LONGINT;
 	VAR
 		n, i, nRes: LONGINT;
 	BEGIN
-		n := MIN(first.GetCount(), second.GetCount());
+		n := MIN(left.Count, right.Count);
 		IF n = 0 THEN
-			IF first.GetCount() > 0 THEN
+			IF left.Count > 0 THEN
 				RETURN 1
-			ELSIF second.GetCount() > 0 THEN
+			ELSIF right.Count > 0 THEN
 				RETURN -1
 			ELSE
 				RETURN 0
@@ -281,9 +281,9 @@ TYPE
 		ELSE
 			i := 0; nRes := 0;
 			WHILE (i < n) & (nRes = 0) DO
-				IF first.Get(i) < second.Get(i) THEN
+				IF left.Get(i) < right.Get(i) THEN
 					nRes := -1
-				ELSIF first.Get(i) > second.Get(i) THEN
+				ELSIF left.Get(i) > right.Get(i) THEN
 					nRes := 1
 				ELSE
 					nRes := 0
@@ -292,9 +292,9 @@ TYPE
 			END;
 			IF nRes # 0 THEN
 				RETURN nRes
-			ELSIF first.GetCount() > n THEN
+			ELSIF left.Count > n THEN
 				RETURN 1
-			ELSIF second.GetCount() > n THEN
+			ELSIF right.Count > n THEN
 				RETURN -1
 			ELSE
 				RETURN 0

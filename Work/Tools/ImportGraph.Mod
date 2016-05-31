@@ -62,7 +62,7 @@ TYPE
 
 		PROCEDURE Get(pos: LONGINT): ModuleParser.Module;
 		BEGIN
-			ASSERT((pos >= 0) & (pos < GetCount()), 101);
+			ASSERT((pos >= 0) & (pos < Count), 101);
 			RETURN array[pos].module
 		END Get;
 
@@ -179,7 +179,7 @@ VAR
 BEGIN
 	stream.String('strict digraph G{');
 	stream.Ln;
-	FOR i := 0 TO modules.GetCount() - 1 DO
+	FOR i := 0 TO modules.Count - 1 DO
 		m := modules.Get(i);
 		IF m # NIL THEN
 		
@@ -205,7 +205,7 @@ BEGIN
 			END
 		END
 	END;
-	FOR i := 0 TO modulesNotFound.GetCount() - 1 DO
+	FOR i := 0 TO modulesNotFound.Count - 1 DO
 		s := modulesNotFound.Get(i);
 		IF s # NIL THEN
 			OutputName(s);

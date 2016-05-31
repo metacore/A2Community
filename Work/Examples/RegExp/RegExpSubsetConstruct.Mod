@@ -19,12 +19,12 @@ IMPORT
 	BEGIN
 		NEW(lstEpsClosure, {Vector.SORTED, Vector.NO_DUPLICATES});
 		NEW(lstUnchecked, {});
-		FOR i := 0 TO lstStates.GetCount() - 1 DO
+		FOR i := 0 TO lstStates.Count - 1 DO
 			lstEpsClosure.Add(lstStates.Get(i));
 			lstUnchecked.Add(lstStates.Get(i))
 		END;
 		WHILE ~lstUnchecked.IsEmpty() DO
-			i := lstUnchecked.GetCount() - 1;
+			i := lstUnchecked.Count - 1;
 			iFrom := lstUnchecked.Get(i);
 			lstUnchecked.Remove(i);
 			FOR iTo := 0 TO nfa.nSize - 1 DO
@@ -45,7 +45,7 @@ IMPORT
  		i, iFrom, iTo: LONGINT;
 	BEGIN
 		NEW(lstResult, {Vector.SORTED, Vector.NO_DUPLICATES});
-		FOR i := 0 TO lstStates.GetCount() - 1 DO
+		FOR i := 0 TO lstStates.Count - 1 DO
 			iFrom := lstStates.Get(i);
 			FOR iTo := 0 TO nfa.nSize - 1 DO
 				IF (nfa.aTable[iFrom, iTo].iType = RegExpNFA.NODE_TYPE_DATA) &
@@ -94,7 +94,7 @@ IMPORT
 					dfa.lstFinal.Add(mapDFAStateNum.Get(lstAState).iState)
 				END
 			END;
-			FOR iInput := 0 TO nfa.lstInputs.GetCount() - 1 DO
+			FOR iInput := 0 TO nfa.lstInputs.Count - 1 DO
 				lstNext := EpsClosure(nfa,
 					Move(nfa, lstAState, nfa.lstInputs.Get(iInput)));
 				IF (lstlstUnmarked.IndexOf(lstNext) = -1) &
@@ -114,7 +114,7 @@ IMPORT
 				END
 			END 
 		END;
-		dfa.nStates := mapDFAStateNum.GetCount();
+		dfa.nStates := mapDFAStateNum.Count;
 		RETURN dfa
 	END SubsetConstruct;
 
