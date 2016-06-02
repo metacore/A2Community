@@ -1,7 +1,7 @@
 MODULE RegExpParse; (** AUTHOR "Yaroslav Romanchenko (SAGE)"; PURPOSE "RegExp parser module"; *)
 
 (*
-// This code is in the public domain - feel free to do anything you 
+// This code is in the public domain - feel free to do anything you
 // wish with it.
 //
 // Eli Bendersky (spur4444@yahoo.com)
@@ -10,9 +10,9 @@ MODULE RegExpParse; (** AUTHOR "Yaroslav Romanchenko (SAGE)"; PURPOSE "RegExp pa
 
 IMPORT
 	Strings, Commands,
-	
+
 	PreciseTimer,
-	
+
 	RegExpNFA, RegExpDFA, RegExpSubsetConstruct;
 
 	(*
@@ -29,7 +29,7 @@ IMPORT
 	         | atom '?'
 	         | atom
 
-	atom   ::= chr 
+	atom   ::= chr
 	         | '(' expr ')'
 
 	char   ::= alphanumeric character
@@ -42,7 +42,7 @@ CONST
 	NODE_TYPE_QUESTION = 3;
 	NODE_TYPE_ALTER		= 4;
 	NODE_TYPE_CONCAT	= 5;
-	
+
 TYPE
 
 	ParseNode = POINTER TO ParseNodeDesc;
@@ -53,18 +53,18 @@ TYPE
 	END;
 
 	String = Strings.String;
-	
+
 	Scanner = OBJECT
 		VAR
 			str: String;
 			iNext: LONGINT;
-		
+
 		PROCEDURE &New(CONST str: ARRAY OF CHAR);
 		BEGIN
 			SELF.str := Preprocess(str);
 			iNext := 0
 		END New;
-		
+
 		PROCEDURE Peek(): CHAR;
 		BEGIN
 			IF iNext < LEN(str^) THEN
@@ -73,7 +73,7 @@ TYPE
 				RETURN 0X
 			END
 		END Peek;
-		
+
 		PROCEDURE Pop(): CHAR;
 		VAR
 			c: CHAR;
@@ -84,7 +84,7 @@ TYPE
 			END;
 			RETURN c
 		END Pop;
-		
+
 		(*PROCEDURE Pos(): LONGINT;
 		BEGIN
 			RETURN iNext
@@ -95,7 +95,7 @@ TYPE
 			RETURN (IsAlphaNumber(c) OR (c = ')') OR (c = '*') OR (c = '?')) &
 				((cNext # 0X) & (cNext # ')') & (cNext # '|') & (cNext # '*') & (cNext # '?'))
 		END NeedConcat;
-		
+
 		(* Generates concatenation chars ('.') where appropriate *)
 		PROCEDURE Preprocess(CONST strIn: ARRAY OF CHAR): String;
 		VAR
@@ -124,20 +124,20 @@ TYPE
 			END;
 			RETURN strOut
 		END Preprocess;
-		
+
 	END Scanner;
-	
+
 VAR
 	scanner: Scanner;
-	
+
 	strInput: String;
-	
+
 	PROCEDURE IsAlphaNumber(c: CHAR): BOOLEAN;
 	BEGIN
 		RETURN ~((c = '*') OR (c = '(') OR (c = ')') OR
 			(c = '|') OR (c = '?'))
 	END IsAlphaNumber;
-	
+
 	PROCEDURE NewParseNode(iType: SHORTINT; iData: LONGINT; left, right: ParseNode): ParseNode;
 	VAR
 		node: ParseNode;
@@ -149,7 +149,7 @@ VAR
 		node.right := right;
 		RETURN node
 	END NewParseNode;
-	
+
 	(*
 	char   ::= alphanumeric character
 	*)
@@ -161,13 +161,13 @@ VAR
 		IF IsAlphaNumber(c) THEN
 			RETURN NewParseNode(NODE_TYPE_CHAR, ORD(scanner.Pop()), NIL, NIL)
 		END;
-		(*     cerr 	<< "Parse error: expected alphanumeric, got " 
-			<<  my_scanner().peek() << " at #" << my_scanner().get_pos() << endl; *)				
+		(*     cerr 	<< "Parse error: expected alphanumeric, got "
+			<<  my_scanner().peek() << " at #" << my_scanner().get_pos() << endl; *)
 		HALT(100)
 	END Chr;
-	
+
 	(*
-	atom   ::= chr 
+	atom   ::= chr
 	         | '(' expr ')'
 	*)
 	PROCEDURE Atom(): ParseNode;
@@ -179,7 +179,7 @@ VAR
 			c := scanner.Pop();
 			atom := Expr();
 			IF scanner.Pop() # ')' THEN
-				(* Parse error: expected ')' *)				
+				(* Parse error: expected ')' *)
 				HALT(100)
 			END
 		ELSE
@@ -187,7 +187,7 @@ VAR
 		END;
 		RETURN atom
 	END Atom;
-	
+
 	(*
 	rep    ::= atom '*'
 	         | atom '?'
@@ -209,7 +209,7 @@ VAR
 			RETURN left
 		END
 	END Rep;
-	
+
 	(*
 	concat ::= rep . concat
 	         | rep
@@ -294,29 +294,29 @@ VAR
 		nfa: RegExpNFA.NFA;
 		dfa: RegExpDFA.DFA;
 		iInput, iNext, iTry: LONGINT;
-		
+
 		t, tNFA, tDFA, tSim: HUGEINT;
-		
+
 	BEGIN
 		context.out.Ln;
-		
+
 		NEW(scanner,'(1|2|3|4)*(c|d|e|f)?(a|b|g|h)*(c|d|e|f)?abbv');
 		tree := Expr();
-		
+
 		(* NFA *)
 		t := PreciseTimer.GetTicks();
 		FOR iTry := 0 TO TRIES_NFA - 1 DO
 			nfa := TreeToNFA(tree)
 		END;
 		tNFA := PreciseTimer.GetTicks() - t;
-		
+
 		(* Construct DFA *)
 		t := PreciseTimer.GetTicks();
 		FOR iTry := 0 TO TRIES_DFA - 1 DO
 			dfa := RegExpSubsetConstruct.SubsetConstruct(nfa)
 		END;
 		tDFA := PreciseTimer.GetTicks() - t;
-		
+
 		(* Simulation with input string *)
 		t := PreciseTimer.GetTicks();
 		FOR iTry := 0 TO TRIES_SIM - 1 DO
@@ -332,7 +332,7 @@ VAR
 			END
 		END;
 		tSim := PreciseTimer.GetTicks() - t;
-		
+
 		context.out.String("Time for NFA: ");
 		context.out.Float(PreciseTimer.GetTime(tNFA) / TRIES_NFA, 15);
 		context.out.Ln;
@@ -349,12 +349,12 @@ VAR
 		context.out.Ln;
 		(* DFA stats *)
 		(*context.out.String(scanner.str^);
-		context.out.Ln;		
+		context.out.Ln;
 		PrintTree(context, tree, 0);
 		nfa.Show(context);
 		dfa.Show(context);
 		context.out.Ln;*)
-		
+
 		(* Simulation with input string *)
 		iInput := 0;
 		WHILE (iInput < LEN(strInput^)) & (strInput^[iInput] # 0X) DO
@@ -368,9 +368,9 @@ VAR
 				INC(iInput)
 			END
 		END;
-		
+
 	END Test;
-	
+
 BEGIN
 
 	strInput :=

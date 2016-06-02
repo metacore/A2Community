@@ -27,7 +27,7 @@ TYPE
 		PROCEDURE &Init;
 		BEGIN
 			New(Vector.INITIAL_SIZE, SIZEOF(UidCompValue),
-				{Vector.SORTED, Vector.NO_DUPLICATES}, Create, Compare)
+				{Vector.SORTED}, Create, Compare, NIL)
 		END Init;
 
 		PROCEDURE Create(nSize: LONGINT; VAR pArray: ANY; VAR adrArray: ADDRESS);

@@ -1,7 +1,7 @@
 MODULE RegExpSubsetConstruct; (** AUTHOR "Yaroslav Romanchenko (SAGE)"; PURPOSE "Subset construction algorithm implementation"; *)
 
 (*
-// This code is in the public domain - feel free to do anything you 
+// This code is in the public domain - feel free to do anything you
 // wish with it.
 //
 // Eli Bendersky (spur4444@yahoo.com)
@@ -17,12 +17,15 @@ IMPORT
 		lstEpsClosure, lstUnchecked: NewContainers.LongintVector;
 		i, iFrom, iTo: LONGINT;
 	BEGIN
-		NEW(lstEpsClosure, {Vector.SORTED, Vector.NO_DUPLICATES});
+		NEW(lstEpsClosure, {Vector.SORTABLE});
 		NEW(lstUnchecked, {});
 		FOR i := 0 TO lstStates.Count - 1 DO
 			lstEpsClosure.Add(lstStates.Get(i));
 			lstUnchecked.Add(lstStates.Get(i))
 		END;
+
+		lstEpsClosure.SetSorted(TRUE);
+
 		WHILE ~lstUnchecked.IsEmpty() DO
 			i := lstUnchecked.Count - 1;
 			iFrom := lstUnchecked.Get(i);
@@ -38,13 +41,13 @@ IMPORT
 		END;
 		RETURN lstEpsClosure
 	END EpsClosure;
-	
+
 	PROCEDURE Move*(nfa: RegExpNFA.NFA; lstStates: NewContainers.LongintVector; iData: LONGINT): NewContainers.LongintVector;
 	VAR
 		lstResult: NewContainers.LongintVector;
  		i, iFrom, iTo: LONGINT;
 	BEGIN
-		NEW(lstResult, {Vector.SORTED, Vector.NO_DUPLICATES});
+		NEW(lstResult, {Vector.SORTABLE});
 		FOR i := 0 TO lstStates.Count - 1 DO
 			iFrom := lstStates.Get(i);
 			FOR iTo := 0 TO nfa.nSize - 1 DO
@@ -55,6 +58,9 @@ IMPORT
 				END
 			END
 		END;
+
+		lstResult.SetSorted(TRUE);
+
 		RETURN lstResult
 	END Move;
 
@@ -66,18 +72,18 @@ IMPORT
 		mapDFAStateNum: RegExpMaps.DFAStateNumMap;
 		lstNFAInitial, lstFirst, lstAState, lstNext: NewContainers.LongintVector;
 		iNewState, iInput: LONGINT;
-		
+
 		PROCEDURE gen_new_state(): LONGINT;
 		BEGIN
 			INC(iNewState);
 			RETURN iNewState
 		END gen_new_state;
-		
+
 	BEGIN
 		NEW(dfa);
 		NEW(lstNFAInitial, {});
-		NEW(lstlstMarked, {Vector.SORTED, Vector.NO_DUPLICATES});
-		NEW(lstlstUnmarked, {Vector.SORTED, Vector.NO_DUPLICATES});
+		NEW(lstlstMarked, {Vector.SORTED});
+		NEW(lstlstUnmarked, {Vector.SORTED});
 		NEW(mapDFAStateNum);
 		iNewState := 0;
 		lstNFAInitial.Add(nfa.iInitial);
@@ -112,9 +118,12 @@ IMPORT
 							mapDFAStateNum.Get(lstNext).iState)
 					END
 				END
-			END 
+			END
 		END;
 		dfa.nStates := mapDFAStateNum.Count;
+
+		dfa.lstFinal.SetSorted(TRUE);
+
 		RETURN dfa
 	END SubsetConstruct;
 

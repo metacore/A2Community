@@ -2,9 +2,9 @@ MODULE RegExpMaps; (** AUTHOR "Yaroslav Romanchenko (SAGE)"; PURPOSE "Map contai
 
 IMPORT
 	Vector, NewContainers;
-	
+
 TYPE
-	
+
 	DFAStateNumMapValue* = RECORD(Vector.Value)
 		lstStates: NewContainers.LongintVector;
 		iState-: LONGINT;
@@ -19,7 +19,7 @@ TYPE
 		PROCEDURE &Init*;
 		BEGIN
 			New(Vector.INITIAL_SIZE, SIZEOF(DFAStateNumMapValue),
-				{Vector.SORTED, Vector.NO_DUPLICATES}, Create, Compare)
+				{Vector.SORTED}, Create, Compare, NIL)
 		END Init;
 
 		PROCEDURE Create(nSize: LONGINT; VAR pArray: ANY; VAR adrArray: ADDRESS);
@@ -27,7 +27,7 @@ TYPE
 			NEW(array, nSize);
 			pArray := array; adrArray := ADDRESSOF(array^[0])
 		END Create;
-		
+
 		PROCEDURE Compare(iLeft: LONGINT; VAR right: Vector.Value): LONGINT;
 		BEGIN
 			RETURN NewContainers.CompareLongintVectors(
@@ -42,7 +42,7 @@ TYPE
 			v.iState := iState;
 			AddInternal(v)
 		END Add;
-		
+
 		PROCEDURE Contains*(lstStates: NewContainers.LongintVector): BOOLEAN;
 		VAR
 			v: DFAStateNumMapValue;
@@ -50,7 +50,7 @@ TYPE
 			v.lstStates := lstStates;
 			RETURN IndexOfInternal(v) >= 0
 		END Contains;
-		
+
 		PROCEDURE Get*(lstStates: NewContainers.LongintVector): DFAStateNumMapValue;
 		VAR
 			v: DFAStateNumMapValue;
@@ -63,17 +63,17 @@ TYPE
 		END Get;
 
 	END DFAStateNumMap;
-	
+
 	Transition* = RECORD
 		iState-: LONGINT;
 		iData-: LONGINT;
 	END;
-	
+
 	TransitionMapValue* = RECORD(Vector.Value)
 		trans-: Transition;
 		iState-: LONGINT;
 	END;
-	
+
 	TransitionMap* = OBJECT(Vector.Vector)
 	TYPE
 		TransitionMapValues = POINTER TO ARRAY OF TransitionMapValue;
@@ -83,7 +83,7 @@ TYPE
 		PROCEDURE &Init*;
 		BEGIN
 			New(Vector.INITIAL_SIZE, SIZEOF(TransitionMapValue),
-				{Vector.SORTED, Vector.NO_DUPLICATES}, Create, Compare)
+				{Vector.SORTED}, Create, Compare, NIL)
 		END Init;
 
 		PROCEDURE Create(nSize: LONGINT; VAR pArray: ANY; VAR adrArray: ADDRESS);
@@ -91,7 +91,7 @@ TYPE
 			NEW(array, nSize);
 			pArray := array; adrArray := ADDRESSOF(array^[0])
 		END Create;
-		
+
 		PROCEDURE Compare(iLeft: LONGINT; VAR right: Vector.Value): LONGINT;
 		VAR
 			itemLeft, itemRight: TransitionMapValue;
@@ -121,7 +121,7 @@ TYPE
 			v.iState := iState;
 			AddInternal(v)
 		END Add;
-		
+
 		PROCEDURE Contains*(VAR x: Transition): BOOLEAN;
 		VAR
 			v: TransitionMapValue;
@@ -129,7 +129,7 @@ TYPE
 			v.trans := x;
 			RETURN IndexOfInternal(v) >= 0
 		END Contains;
-		
+
 		PROCEDURE Get*(VAR x: Transition): TransitionMapValue;
 		VAR
 			v: TransitionMapValue;
@@ -148,7 +148,7 @@ TYPE
 		END GetItem;
 
 	END TransitionMap;
-	
+
 	PROCEDURE NewTransition*(iState, iData: LONGINT): Transition;
 	VAR
 		x: Transition;
@@ -157,6 +157,6 @@ TYPE
 		x.iData := iData;
 		RETURN x
 	END NewTransition;
-	
+
 END RegExpMaps.
 

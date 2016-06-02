@@ -5,7 +5,7 @@ MODULE NewContainers;
 
 IMPORT
 	Vector, Strings, UTF8Strings, Commands;
-	
+
 TYPE
 
 	(* CHAR vector *)
@@ -22,16 +22,16 @@ TYPE
 
 		PROCEDURE &Init*(options: SET);
 		BEGIN
-			New(Vector.INITIAL_SIZE, SIZEOF(CharValue), options, Create, Compare)
+			New(Vector.INITIAL_SIZE, SIZEOF(CharValue), options, Create, CompareRef, CompareIdx)
 		END Init;
-		
+
 		PROCEDURE Create(nSize: LONGINT; VAR pArray: ANY; VAR adrArray: ADDRESS);
 		BEGIN
 			NEW(array, nSize);
 			pArray := array; adrArray := ADDRESSOF(array^[0])
 		END Create;
-		
-		PROCEDURE Compare(iLeft: LONGINT; VAR right: Vector.Value): LONGINT;
+
+		PROCEDURE CompareRef(iLeft: LONGINT; VAR right: Vector.Value): LONGINT;
 		BEGIN
 			WITH right: CharValue DO
 				IF array^[iLeft].value < right.value THEN
@@ -42,7 +42,18 @@ TYPE
 					RETURN 0
 				END
 			END
-		END Compare;
+		END CompareRef;
+
+		PROCEDURE CompareIdx(iLeft, iRight: LONGINT): LONGINT;
+		BEGIN
+			IF array^[iLeft].value < array^[iRight].value THEN
+				RETURN -1
+			ELSIF array^[iLeft].value > array^[iRight].value THEN
+				RETURN 1
+			ELSE
+				RETURN 0
+			END
+		END CompareIdx;
 
 		PROCEDURE Add*(x: CHAR);
 		VAR
@@ -90,7 +101,7 @@ TYPE
 
 		PROCEDURE &Init*(options: SET);
 		BEGIN
-			New(Vector.INITIAL_SIZE, SIZEOF(LongintValue), options, Create, Compare)
+			New(Vector.INITIAL_SIZE, SIZEOF(LongintValue), options, Create, CompareRef, CompareIdx)
 		END Init;
 
 		PROCEDURE Create(nSize: LONGINT; VAR pArray: ANY; VAR adrArray: ADDRESS);
@@ -98,8 +109,8 @@ TYPE
 			NEW(array, nSize);
 			pArray := array; adrArray := ADDRESSOF(array^[0])
 		END Create;
-		
-		PROCEDURE Compare(iLeft: LONGINT; VAR right: Vector.Value): LONGINT;
+
+		PROCEDURE CompareRef(iLeft: LONGINT; VAR right: Vector.Value): LONGINT;
 		BEGIN
 			WITH right: LongintValue DO
 				IF array^[iLeft].value < right.value THEN
@@ -110,7 +121,18 @@ TYPE
 					RETURN 0
 				END
 			END
-		END Compare;
+		END CompareRef;
+
+		PROCEDURE CompareIdx(iLeft, iRight: LONGINT): LONGINT;
+		BEGIN
+			IF array^[iLeft].value < array^[iRight].value THEN
+				RETURN -1
+			ELSIF array^[iLeft].value > array^[iRight].value THEN
+				RETURN 1
+			ELSE
+				RETURN 0
+			END
+		END CompareIdx;
 
 		PROCEDURE Add*(x: LONGINT);
 		VAR
@@ -143,8 +165,8 @@ TYPE
 		END Get;
 
 	END LongintVector;
-	
-	(** Vector of LONGINT vectors *)	
+
+	(** Vector of LONGINT vectors *)
 
 	LongintVectorValue* = RECORD(Vector.Value)
 		value*: LongintVector
@@ -158,7 +180,7 @@ TYPE
 
 		PROCEDURE &Init*(options: SET);
 		BEGIN
-			New(Vector.INITIAL_SIZE, SIZEOF(LongintVectorValue), options, Create, Compare)
+			New(Vector.INITIAL_SIZE, SIZEOF(LongintVectorValue), options, Create, CompareRef, CompareIdx)
 		END Init;
 
 		PROCEDURE Create(nSize: LONGINT; VAR pArray: ANY; VAR adrArray: ADDRESS);
@@ -166,11 +188,16 @@ TYPE
 			NEW(array, nSize);
 			pArray := array; adrArray := ADDRESSOF(array^[0])
 		END Create;
-		
-		PROCEDURE Compare(iLeft: LONGINT; VAR right: Vector.Value): LONGINT;
+
+		PROCEDURE CompareRef(iLeft: LONGINT; VAR right: Vector.Value): LONGINT;
 		BEGIN
 			RETURN CompareLongintVectors(array^[iLeft].value, right(LongintVectorValue).value)
-		END Compare;
+		END CompareRef;
+
+		PROCEDURE CompareIdx(iLeft, iRight: LONGINT): LONGINT;
+		BEGIN
+			RETURN CompareLongintVectors(array^[iLeft].value, array^[iRight].value)
+		END CompareIdx;
 
 		PROCEDURE Add*(VAR x: LongintVector);
 		VAR
@@ -195,7 +222,7 @@ TYPE
 			v.value := x;
 			RETURN IndexOfInternal(v)
 		END IndexOf;
-		
+
 		PROCEDURE Get*(pos: LONGINT): LongintVector;
 		BEGIN
 			ASSERT((pos >= 0) & (pos < Count), 101);
@@ -203,13 +230,13 @@ TYPE
 		END Get;
 
 	END LongintVectorVector;
-	
-	(** Vector of Strings *)	
+
+	(** Vector of Strings *)
 
 	StringValue* = RECORD(Vector.Value)
 		value*: Strings.String
 	END;
-	
+
 	StringVector* = OBJECT(Vector.Vector)
 	TYPE
 		StringValues = POINTER TO ARRAY OF StringValue;
@@ -218,7 +245,7 @@ TYPE
 
 		PROCEDURE &Init*(options: SET);
 		BEGIN
-			New(Vector.INITIAL_SIZE, SIZEOF(StringValue), options, Create, Compare)
+			New(Vector.INITIAL_SIZE, SIZEOF(StringValue), options, Create, CompareRef, CompareIdx)
 		END Init;
 
 		PROCEDURE Create(nSize: LONGINT; VAR pArray: ANY; VAR adrArray: ADDRESS);
@@ -226,12 +253,17 @@ TYPE
 			NEW(array, nSize);
 			pArray := array; adrArray := ADDRESSOF(array^[0])
 		END Create;
-		
-		PROCEDURE Compare(iLeft: LONGINT; VAR right: Vector.Value): LONGINT;
+
+		PROCEDURE CompareRef(iLeft: LONGINT; VAR right: Vector.Value): LONGINT;
 		BEGIN
 			RETURN UTF8Strings.Compare(array^[iLeft].value^,
 				right(StringValue).value^)
-		END Compare;
+		END CompareRef;
+
+		PROCEDURE CompareIdx(iLeft, iRight: LONGINT): LONGINT;
+		BEGIN
+			RETURN UTF8Strings.Compare(array^[iLeft].value^, array^[iRight].value^)
+		END CompareIdx;
 
 		PROCEDURE Add*(CONST x: ARRAY OF CHAR);
 		VAR
@@ -311,10 +343,12 @@ TYPE
 
 		context.out.Ln;
 
-		NEW(vLong, {});
-		FOR i := 0 TO 25 DO
-			vLong.Add(i)
+		NEW(vLong, {Vector.SORTABLE});
+		FOR i := 0 TO 249999 DO
+			vLong.Add(249999 - i)
 		END;
+
+		vLong.SetSorted(TRUE);
 
 		vLong.Remove(vLong.IndexOf(2));
 		vLong.Remove(vLong.IndexOf(4));
@@ -336,10 +370,12 @@ TYPE
 
 		context.out.Ln;
 
-		NEW(vChar, {Vector.SORTED, Vector.NO_DUPLICATES});
+		NEW(vChar, {Vector.SORTABLE});
 		FOR i := 0 TO 25 DO
 			vChar.Add(CHR(i + 61H))
 		END;
+
+		vChar.SetSorted(TRUE);
 
 		vChar.Remove(vChar.IndexOf('b'));
 		vChar.Remove(vChar.IndexOf('d'));
@@ -358,7 +394,7 @@ TYPE
 			END;
 			context.out.Ln
 		END
-		
+
 	END Test;
 
 BEGIN

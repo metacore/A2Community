@@ -2,7 +2,7 @@ MODULE RegExpNFA; (** AUTHOR "Yaroslav Romanchenko (SAGE)"; PURPOSE "Nondetermin
 	Thompson's construction algorithm implementation"; *)
 
 (*
-// This code is in the public domain - feel free to do anything you 
+// This code is in the public domain - feel free to do anything you
 // wish with it.
 //
 // Eli Bendersky (spur4444@yahoo.com)
@@ -18,7 +18,7 @@ CONST
 	NODE_TYPE_DATA* = 1;
 
 TYPE
-	
+
 	Table = POINTER TO ARRAY OF ARRAY OF RECORD
 		iType-: SHORTINT;
 		iData-: LONGINT;
@@ -29,7 +29,7 @@ TYPE
 			aTable-: Table;
 			nSize-, iInitial-, iFinal-: LONGINT;
 			lstInputs-: NewContainers.LongintVector;
-	
+
 		PROCEDURE &New*(nSize: LONGINT; iInitial, iFinal: LONGINT);
 		VAR
 			iFrom, iTo: LONGINT;
@@ -37,7 +37,7 @@ TYPE
 			SELF.nSize := nSize;
 			SELF.iInitial := iInitial;
 			SELF.iFinal := iFinal;
-			NEW(lstInputs, {Vector.SORTED, Vector.NO_DUPLICATES});
+			NEW(lstInputs, {Vector.SORTED});
 			NEW(aTable, nSize, nSize);
 			FOR iFrom := 0 TO nSize - 1 DO
 				FOR iTo := 0 TO nSize - 1 DO
@@ -50,9 +50,9 @@ TYPE
 		BEGIN
 			RETURN (iState >= 0) & (iState < nSize)
 		END IsLegalState;
-		
+
 		PROCEDURE AddTrans(iFrom, iTo: LONGINT; iType: SHORTINT; iData: LONGINT);
-		BEGIN 
+		BEGIN
 			ASSERT(IsLegalState(iFrom));
 			ASSERT(IsLegalState(iTo));
 			aTable[iFrom, iTo].iType := iType;
@@ -61,7 +61,7 @@ TYPE
 				lstInputs.Add(iData)
 			END
 		END AddTrans;
-		
+
 		PROCEDURE ShiftStates(iShift: LONGINT);
 		VAR
 			nNewSize, iFrom, iTo: LONGINT;
@@ -131,7 +131,7 @@ TYPE
 			nSize := nNewSize;
 			aTable := aNewTable
 		END AppendEmptyState;
-		
+
 		PROCEDURE Show*(context: Commands.Context);
 		VAR
 			iFrom, iTo, i: LONGINT;
@@ -180,7 +180,7 @@ TYPE
 	END NFA;
 
 	(* NFA building functions
-	Using Thompson Construction, build NFAs from basic inputs or 
+	Using Thompson Construction, build NFAs from basic inputs or
 	compositions of other NFAs. *)
 
 	(* Builds a basic, single input NFA *)
@@ -192,14 +192,14 @@ TYPE
 		nfaBasic.AddTrans(0, 1, iType, iData);
 		RETURN nfaBasic
 	END BuildNFABasic;
-	
+
 	(* Builds an alternation of nfa1 and nfa2 (nfa1|nfa2) *)
 	PROCEDURE BuildNFAAlter*(nfa1, nfa2: NFA): NFA;
 	VAR
 		nfaNew: NFA;
 	BEGIN
 		(* How this is done: the new nfa must contain all the states in
-		nfa1 and nfa2, plus a new initial and final states. 
+		nfa1 and nfa2, plus a new initial and final states.
 		First will come the new initial state, then nfa1's states, then
 		nfa2's states, then the new final state	*)
 		(* make room for the new initial state *)
@@ -220,16 +220,16 @@ TYPE
 		(* Set new final state *)
 		nfaNew.iFinal := nfaNew.nSize - 1;
 		nfaNew.AddTrans(nfa1.iFinal, nfaNew.iFinal, NODE_TYPE_EPS, 0);
-		nfaNew.AddTrans(nfa2.iFinal, nfaNew.iFinal, NODE_TYPE_EPS, 0);	
+		nfaNew.AddTrans(nfa2.iFinal, nfaNew.iFinal, NODE_TYPE_EPS, 0);
 		RETURN nfaNew
 	END BuildNFAAlter;
-	
+
 	(* Builds a concatenation of nfa1 and nfa2 (nfa1nfa2) *)
 	PROCEDURE BuildNFAConcat*(nfa1, nfa2: NFA): NFA;
 	VAR
 		nfaNew: NFA;
 	BEGIN
-		(* How this is done: First will come nfa1, then nfa2 (its 
+		(* How this is done: First will come nfa1, then nfa2 (its
 		initial state replaced with nfa1's final state) 	*)
 		nfa2.ShiftStates(nfa1.nSize - 1);
 		(* create a new nfa and initialize it with (the shifted) nfa2 *)
@@ -245,7 +245,7 @@ TYPE
 		nfaNew.iInitial := nfa1.iInitial;
 		RETURN nfaNew
 	END BuildNFAConcat;
-	
+
 	(* Builds a star (kleene closure) of nfa (nfa* ) *)
 	PROCEDURE BuildNFAStar*(nfa: NFA): NFA;
 	BEGIN

@@ -28,7 +28,7 @@ TYPE
 			NEW(null.ident);
 			NEW(null.ident.name, 257);
 			New(Vector.INITIAL_SIZE, SIZEOF(ModulesValue),
-				{Vector.SORTED, Vector.NO_DUPLICATES}, Create, Compare)
+				{Vector.SORTED}, Create, Compare, NIL)
 		END Init;
 
 		PROCEDURE Create(nSize: LONGINT; VAR pArray: ANY; VAR adrArray: ADDRESS);

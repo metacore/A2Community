@@ -1,7 +1,7 @@
 MODULE RegExpDFA; (** AUTHOR "Yaroslav Romanchenko (SAGE)"; PURPOSE "Deterministic Finite Automaton (DFA) class"; *)
 
 (*
-// This code is in the public domain - feel free to do anything you 
+// This code is in the public domain - feel free to do anything you
 // wish with it.
 //
 // Eli Bendersky (spur4444@yahoo.com)
@@ -10,26 +10,26 @@ MODULE RegExpDFA; (** AUTHOR "Yaroslav Romanchenko (SAGE)"; PURPOSE "Determinist
 
 IMPORT
 	Commands,
-	
+
 	Vector, NewContainers,
-	
+
 	RegExpMaps;
 
 TYPE
 
 	DFA* = OBJECT
-		VAR
-			(** transition map, list of final states and the start state *)
-			mapTransition-: RegExpMaps.TransitionMap;
-			iInitial*, nStates*: LONGINT;
-			lstFinal-: NewContainers.LongintVector;
-			
+	VAR
+		(** transition map, list of final states and the start state *)
+		mapTransition-: RegExpMaps.TransitionMap;
+		iInitial*, nStates*: LONGINT;
+		lstFinal-: NewContainers.LongintVector;
+
 		PROCEDURE &New*;
 		BEGIN
 			NEW(mapTransition);
-			NEW(lstFinal, {Vector.SORTED, Vector.NO_DUPLICATES})
+			NEW(lstFinal, {Vector.SORTABLE})
 		END New;
-		
+
 		PROCEDURE Show*(context: Commands.Context);
 		VAR
 			i: LONGINT;
@@ -81,7 +81,7 @@ TYPE
 			iNext := iInput;
 			RETURN lstFinal.IndexOf(iCurState) # -1
 		END Simulate;
-				
+
 	END DFA;
-	
+
 END RegExpDFA.
