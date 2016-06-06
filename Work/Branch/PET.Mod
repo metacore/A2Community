@@ -2279,8 +2279,9 @@ TYPE
 		VAR found : BOOLEAN; i : LONGINT;
 		BEGIN
 			(* close current tab, warn user if not saved *)
-			IF (currentPage = NIL) OR (currentPage.modified) THEN
-				i:=WMDialogs.Confirmation(WindowTitle, "Save changes?");
+			IF currentPage = NIL THEN RETURN END;
+			IF currentPage.modified THEN
+				i:=WMDialogs.Confirmation(currentPage.filename, "Save changes?");
 				IF i = WMDialogs.ResYes THEN
 					StoreHandler(SELF, NIL);
 				ELSIF i = WMDialogs.ResNo THEN
@@ -2371,10 +2372,21 @@ TYPE
 		PROCEDURE Close;
 		VAR page : LONGINT;
 		BEGIN
-			Close^;
 			FOR page := 0 TO LEN(pages)-1 DO
-				IF pages[page] # NIL THEN pages[page].Finalize; END;
+				IF pages[page] # NIL THEN 
+					IF pages[page].modified &(pages[page].filename # "") THEN
+						manager.SetFocus(SELF);manager.ToFront(SELF);
+						SelectTab(page);
+						pages[page].Invalidate;
+						tabs.Invalidate;
+					  IF (WMDialogs.Confirmation(pages[page].filename, "Save changes?") = WMDialogs.ResYes) THEN
+							Store(pages[page].filename, pages[page].codecFormat);
+						END;
+					END;
+					pages[page].Finalize; 
+				END;
 			END;
+			Close^;
 			IF projectTextModified THEN
 				StoreText(projectTextFilename, projectText);
 			END;
