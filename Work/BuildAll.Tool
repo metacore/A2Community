@@ -15,6 +15,7 @@ and add this to Configuration.XML:
 Compiler.Compile -b=AMD --objectFile=Generic --newObjectFile
 		--mergeSections --symbolFileExtension=.SymW --objectFileExtension=.GofW
 
+	Branch/WMTextView.Mod
 	Branch/PETTrees.Mod
 	Branch/PET.Mod ~
 
