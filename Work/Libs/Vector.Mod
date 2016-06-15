@@ -34,6 +34,9 @@ CONST
 		Vector with SORTABLE option, add all the data and only then sort data by
 		calling SetSorted(TRUE), instead of making Vector with SORTED option *)
 	SORTABLE* = 2;
+	
+	(* Supports IndexOf operation (compareRef shouldn't be NIL!) *)
+	INDEX* = 3;
 
 	(* Initial size of dynamic array *)
 	INITIAL_SIZE* = 4;
@@ -67,7 +70,7 @@ TYPE
 		compareRef: OpCompareRef;
 
 		(* Options *)
-		bSorted, bNoDuplicates, bSortable: BOOLEAN;
+		bSorted, bNoDuplicates, bSortable, bIndex: BOOLEAN;
 
 		nReadLock: LONGINT;
 
@@ -82,8 +85,10 @@ TYPE
 			bSorted := {SORTED} * options # {};
 			bNoDuplicates := {NO_DUPLICATES} * options # {};
 			bSortable := {SORTABLE} * options # {};
+			bIndex := {INDEX} * options # {};
 			ASSERT(~bSorted OR (bSorted & (compareRef # NIL)));
 			ASSERT(~bSortable OR (bSortable & (compareRef # NIL) & (compareIdx # NIL)));
+			ASSERT(~bIndex OR (bIndex & (compareRef # NIL)));
 			SELF.nElementSize := nElementSize;
 			SELF.create := create;
 			SELF.compareIdx := compareIdx;
@@ -136,13 +141,16 @@ TYPE
 
 		(** Add an object to the list. Add may block if number of
 			calls to Lock is bigger than the number of calls to Unlock *)
-		PROCEDURE AddInternal*(VAR x: Value);
+		PROCEDURE AddInternal*(VAR x: Value): LONGINT;
+		VAR
+			pos: LONGINT;
 		BEGIN {EXCLUSIVE}
 			AWAIT(nReadLock = 0);
 			IF bSorted THEN
-				AddUnlocked(x)
+				(* Only Addition is possible. Just Add into sorted array *)
+				pos := AddUnlocked(x)
 			ELSE
-				(* Append *)
+				(* Append to unsorted array *)
 				IF bNoDuplicates THEN
 					ASSERT(FindSequentially(x) = -1)
 				END;
@@ -151,21 +159,24 @@ TYPE
 				END;
 				(* Put x at Count position *)
 				SYSTEM.MOVE(ADDRESSOF(x), adrArray + Count * nElementSize, nElementSize);
+				pos := Count;
 				INC(Count)
-			END
+			END;
+			RETURN pos
 		END AddInternal;
 
 		PROCEDURE InsertInternal*(pos: LONGINT; VAR x: Value);
 		VAR
-			i: LONGINT;
+			i, posDummy: LONGINT;
 			adrSrc: ADDRESS;
 		BEGIN {EXCLUSIVE}
 			AWAIT(nReadLock = 0);
 			ASSERT((pos >= 0) & (pos < Count), 101);
 			IF bSorted THEN
-				AddUnlocked(x)
+				(* Only Addition is possible. Just Add into sorted array *)
+				posDummy := AddUnlocked(x)
 			ELSE
-				(* Insert *)
+				(* Insert to unsorted array *)
 				IF bNoDuplicates THEN
 					ASSERT(FindSequentially(x) = -1)
 				END;
@@ -398,7 +409,7 @@ TYPE
 			SYSTEM.MOVE(adrOld, adrArray, nOldSize * nElementSize)
 		END Grow;
 
-		PROCEDURE AddUnlocked(VAR x: Value);
+		PROCEDURE AddUnlocked(VAR x: Value): LONGINT;
 		VAR
 			pos, i: LONGINT;
 			bFound: BOOLEAN;
@@ -421,7 +432,8 @@ TYPE
 			END;
 			(* Put x at pos position *)
 			SYSTEM.MOVE(ADDRESSOF(x), adrArray + pos * nElementSize, nElementSize);
-			INC(Count)
+			INC(Count);
+			RETURN pos
 		END AddUnlocked;
 
 		PROCEDURE IsEmpty*(): BOOLEAN;

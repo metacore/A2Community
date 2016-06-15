@@ -41,7 +41,7 @@ Compiler.Compile -b=AMD --objectFile=Generic --newObjectFile
 
 	Libs/MathUtils.Mod
 	Libs/Win32.PreciseTimer.Mod
-	Libs/ZipLoader.Mod
+
 
 	(* deprecated *)
 	Libs/Containers.Mod ~
@@ -93,6 +93,9 @@ Compiler.Compile -b=AMD --objectFile=Generic --newObjectFile
 
 	Demos/WMAStar.Mod
 	Demos/WMAStarSet.Mod
+	Demos/VisualContainer/VCTypes.Mod
+	Demos/VisualContainer/VCObjects.Mod
+	Demos/VisualContainer/WMVC.Mod
 	Demos/WMBass3DTest.Mod
 	Demos/WMBassDSPTest.Mod
 	Demos/WMColorLines.Mod

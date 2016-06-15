@@ -45,10 +45,11 @@ TYPE
 		PROCEDURE Add(CONST uid: ARRAY OF CHAR; comp: WMComponents.Component);
 		VAR
 			v: UidCompValue;
+			posDummy: LONGINT;
 		BEGIN
 			COPY(uid, v.uid);
 			v.comp := comp;
-			AddInternal(v)
+			posDummy := AddInternal(v)
 		END Add;
 
 		PROCEDURE Get(CONST uid: ARRAY OF CHAR): WMComponents.Component;

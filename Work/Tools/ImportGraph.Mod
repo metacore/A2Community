@@ -46,9 +46,10 @@ TYPE
 		PROCEDURE Add(module: ModuleParser.Module);
 		VAR
 			v: ModulesValue;
+			posDummy: LONGINT;
 		BEGIN
 			v.module := module;
-			AddInternal(v)
+			posDummy := AddInternal(v)
 		END Add;
 
 		PROCEDURE Contains(CONST name: ARRAY OF CHAR): BOOLEAN;
@@ -96,6 +97,7 @@ VAR
 	import: ModuleParser.Import;
 	name: Strings.String;
 	info: ModuleParser.InfoItem;
+	posDummy: LONGINT;
 BEGIN
 	name := Strings.NewString(modName);
 	IF Strings.EndsWith(".Mod", name^) THEN
@@ -106,7 +108,7 @@ BEGIN
 	END;
 	module := ParseModule(name^);
 	IF module = NIL THEN
-		modulesNotFound.Add(name^);
+		posDummy := modulesNotFound.Add(name^);
 		RETURN
 	END;
 	modules.Add(module);

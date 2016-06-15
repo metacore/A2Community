@@ -46,9 +46,10 @@ TYPE
 		PROCEDURE Add(module: ModuleParser.Module);
 		VAR
 			v: ModulesValue;
+			posDummy: LONGINT
 		BEGIN
 			v.module := module;
-			AddInternal(v)
+			posDummy := AddInternal(v)
 		END Add;
 
 		PROCEDURE Contains(CONST name: ARRAY OF CHAR): BOOLEAN;
@@ -100,10 +101,11 @@ TYPE
 		PROCEDURE Add(CONST key: ARRAY OF CHAR; list: NewContainers.StringVector);
 		VAR
 			v: RememberMapValue;
+			posDummy: LONGINT;
 		BEGIN
 			COPY(key, v.key);
 			v.list := list;
-			AddInternal(v)
+			posDummy := AddInternal(v)
 		END Add;
 		
 		PROCEDURE Contains(CONST key: ARRAY OF CHAR): BOOLEAN;
@@ -214,6 +216,7 @@ VAR
 	import: ModuleParser.Import;
 	name: Strings.String;
 	info: ModuleParser.InfoItem;
+	posDummy: LONGINT;
 BEGIN
 	name := Strings.NewString(modName);
 	IF Strings.EndsWith(".Mod", name^) THEN
@@ -224,7 +227,7 @@ BEGIN
 	END;
 	module := ParseModule(name^);
 	IF module = NIL THEN
-		vecModulesNotFound.Add(name^);
+		posDummy := vecModulesNotFound.Add(name^);
 		RETURN
 	END;
 	vecModules.Add(module);
@@ -277,7 +280,7 @@ VAR
 	i: LONGINT;
 	m: ModuleParser.Module;
 	archive: Zip.Archive;
-	res: LONGINT;
+	res, posDummy: LONGINT;
 	outputFilename: Files.FileName;
 	listRemember: NewContainers.StringVector;
 	item: RememberMapValue;
@@ -319,10 +322,10 @@ BEGIN
 
 				IF res = Zip.Ok THEN
 					IF listRemember # NIL THEN
-						listRemember.Add(m.ident.name^)
+						posDummy := listRemember.Add(m.ident.name^)
 					END
 				ELSIF vecModulesNotFound.IndexOf(m.ident.name^) = -1 THEN
-					vecModulesNotFound.Add(m.ident.name^)
+					posDummy := vecModulesNotFound.Add(m.ident.name^)
 				END
 			END
 		END;
@@ -334,7 +337,7 @@ END Output;
 
 PROCEDURE ParseSemicolonList(CONST list: ARRAY OF CHAR; vecList: NewContainers.StringVector);
 VAR
-	j, k: LONGINT;
+	j, k, posDummy: LONGINT;
 	part: Files.FileName;
 
 	PROCEDURE AddPart;
@@ -342,7 +345,7 @@ VAR
 		IF k > 0 THEN
 			part[k] := 0X;
 			IF (part # "") & (vecList.IndexOf(part) = -1) THEN
-				vecList.Add(part)
+				posDummy := vecList.Add(part)
 			END;
 			k := 0
 		END
@@ -364,7 +367,7 @@ END ParseSemicolonList;
 (* Try to find references to remembered lists inside excludes *)
 PROCEDURE ResolveExcludes(vecList: NewContainers.StringVector);
 VAR
-	i, j: LONGINT;
+	i, j, posDummy: LONGINT;
 	s: Strings.String;
 	sa: Strings.StringArray;
 	a: ARRAY 8 OF CHAR;
@@ -384,7 +387,7 @@ BEGIN
 				IF (a = "REF") & (mapRemember.Contains(sa[1]^)) THEN
 					list := mapRemember.Get(sa[1]^).list;
 					FOR j := 0 TO list.Count - 1 DO
-						vecTemp.Add(list.Get(j)^)
+						posDummy := vecTemp.Add(list.Get(j)^)
 					END
 				END
 			END
@@ -393,7 +396,7 @@ BEGIN
 	END;
 	IF vecTemp.Count > 0 THEN
 		FOR i := 0 TO vecTemp.Count - 1 DO
-			vecList.Add(vecTemp.Get(i)^)
+			posDummy := vecList.Add(vecTemp.Get(i)^)
 		END
 	END
 END ResolveExcludes;
@@ -407,7 +410,7 @@ VAR
 	moduleName, outputFilename: Files.FileName;
 	paths, excludes, remember: ARRAY 1024 OF CHAR;
 	options: Options.Options;
-	i: LONGINT;
+	i, posDummy: LONGINT;
 	s: Strings.String;
 	bDummy: BOOLEAN;
 BEGIN
@@ -421,7 +424,7 @@ BEGIN
 			COPY(DefaultOutputFilename, outputFilename)
 		END;
 		NEW(vecModulesPaths, {Vector.SORTED, Vector.NO_DUPLICATES});
-		vecModulesPaths.Add("");
+		posDummy := vecModulesPaths.Add("");
 		IF options.GetString("paths", paths) THEN
 			ParseSemicolonList(paths, vecModulesPaths)
 		END;

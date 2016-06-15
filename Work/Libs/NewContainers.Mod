@@ -55,12 +55,12 @@ TYPE
 			END
 		END CompareIdx;
 
-		PROCEDURE Add*(x: CHAR);
+		PROCEDURE Add*(x: CHAR): LONGINT;
 		VAR
 			v: CharValue;
 		BEGIN
 			v.value := x;
-			AddInternal(v)
+			RETURN AddInternal(v)
 		END Add;
 
 		PROCEDURE Insert*(pos: LONGINT; x: CHAR);
@@ -134,12 +134,12 @@ TYPE
 			END
 		END CompareIdx;
 
-		PROCEDURE Add*(x: LONGINT);
+		PROCEDURE Add*(x: LONGINT): LONGINT;
 		VAR
 			v: LongintValue;
 		BEGIN
 			v.value := x;
-			AddInternal(v)
+			RETURN AddInternal(v)
 		END Add;
 
 		PROCEDURE Insert*(pos: LONGINT; x: LONGINT);
@@ -199,12 +199,12 @@ TYPE
 			RETURN CompareLongintVectors(array^[iLeft].value, array^[iRight].value)
 		END CompareIdx;
 
-		PROCEDURE Add*(VAR x: LongintVector);
+		PROCEDURE Add*(VAR x: LongintVector): LONGINT;
 		VAR
 			v: LongintVectorValue;
 		BEGIN
 			v.value := x;
-			AddInternal(v)
+			RETURN AddInternal(v)
 		END Add;
 
 		PROCEDURE Insert*(pos: LONGINT; VAR x: LongintVector);
@@ -265,12 +265,12 @@ TYPE
 			RETURN UTF8Strings.Compare(array^[iLeft].value^, array^[iRight].value^)
 		END CompareIdx;
 
-		PROCEDURE Add*(CONST x: ARRAY OF CHAR);
+		PROCEDURE Add*(CONST x: ARRAY OF CHAR): LONGINT;
 		VAR
 			v: StringValue;
 		BEGIN
 			v.value := Strings.NewString(x);
-			AddInternal(v)
+			RETURN AddInternal(v)
 		END Add;
 
 		PROCEDURE Insert*(pos: LONGINT; CONST x: ARRAY OF CHAR);
@@ -338,14 +338,14 @@ TYPE
 	VAR
 		vLong: LongintVector;
 		vChar: CharVector;
-		i, j: LONGINT;
+		i, j, posDummy: LONGINT;
 	BEGIN
 
 		context.out.Ln;
 
 		NEW(vLong, {Vector.SORTABLE});
 		FOR i := 0 TO 249999 DO
-			vLong.Add(249999 - i)
+			posDummy := vLong.Add(249999 - i)
 		END;
 
 		vLong.SetSorted(TRUE);
@@ -372,7 +372,7 @@ TYPE
 
 		NEW(vChar, {Vector.SORTABLE});
 		FOR i := 0 TO 25 DO
-			vChar.Add(CHR(i + 61H))
+			posDummy := vChar.Add(CHR(i + 61H))
 		END;
 
 		vChar.SetSorted(TRUE);

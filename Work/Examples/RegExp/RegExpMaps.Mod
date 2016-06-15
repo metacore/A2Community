@@ -36,11 +36,12 @@ TYPE
 
 		PROCEDURE Add*(VAR lstStates: NewContainers.LongintVector; iState: LONGINT);
 		VAR
+			posDummy: LONGINT;
 			v: DFAStateNumMapValue;
 		BEGIN
 			v.lstStates := lstStates;
 			v.iState := iState;
-			AddInternal(v)
+			posDummy := AddInternal(v)
 		END Add;
 
 		PROCEDURE Contains*(lstStates: NewContainers.LongintVector): BOOLEAN;
@@ -115,11 +116,12 @@ TYPE
 
 		PROCEDURE Add*(VAR trans: Transition; iState: LONGINT);
 		VAR
+			posDummy: LONGINT;
 			v: TransitionMapValue;
 		BEGIN
 			v.trans := trans;
 			v.iState := iState;
-			AddInternal(v)
+			posDummy := AddInternal(v)
 		END Add;
 
 		PROCEDURE Contains*(VAR x: Transition): BOOLEAN;

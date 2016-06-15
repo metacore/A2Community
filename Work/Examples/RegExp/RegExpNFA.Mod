@@ -52,13 +52,15 @@ TYPE
 		END IsLegalState;
 
 		PROCEDURE AddTrans(iFrom, iTo: LONGINT; iType: SHORTINT; iData: LONGINT);
+		VAR
+			posDummy: LONGINT;
 		BEGIN
 			ASSERT(IsLegalState(iFrom));
 			ASSERT(IsLegalState(iTo));
 			aTable[iFrom, iTo].iType := iType;
 			aTable[iFrom, iTo].iData := iData;
 			IF (iType = NODE_TYPE_DATA) & (lstInputs.IndexOf(iData) = -1) THEN
-				lstInputs.Add(iData)
+				posDummy := lstInputs.Add(iData)
 			END
 		END AddTrans;
 
@@ -97,6 +99,7 @@ TYPE
 
 		PROCEDURE FillStates(nfaOther: NFA);
 		VAR
+			posDummy: LONGINT;
 			iFrom, iTo, i: LONGINT;
 		BEGIN
 			ASSERT(nfaOther.nSize <= nSize);
@@ -107,7 +110,7 @@ TYPE
 			END;
 			FOR i := 0 TO nfaOther.lstInputs.Count - 1 DO
 				IF lstInputs.IndexOf(nfaOther.lstInputs.Get(i)) = -1 THEN
-					lstInputs.Add(nfaOther.lstInputs.Get(i))
+					posDummy := lstInputs.Add(nfaOther.lstInputs.Get(i))
 				END
 			END
 		END FillStates;
