@@ -12,8 +12,7 @@ and add this to Configuration.XML:
 
 *** A2 sources improvements and small modifications ("Branch") ***
 
-Compiler.Compile -b=AMD --objectFile=Generic --newObjectFile
-		--mergeSections --symbolFileExtension=.SymW --objectFileExtension=.GofW
+Compiler.Compile -p=Win32G
 
 	Branch/WMTextView.Mod
 	Branch/PETTrees.Mod
@@ -21,17 +20,15 @@ Compiler.Compile -b=AMD --objectFile=Generic --newObjectFile
 
 *** Bindings ***
 
-Compiler.Compile -b=AMD --objectFile=Generic --newObjectFile
-		--mergeSections --symbolFileExtension=.SymW --objectFileExtension=.GofW
+Compiler.Compile -p=Win32G
 
 	Bindings/BASS/I386.BASScpu.Mod
 	Bindings/BASS/Win32.BASS.Mod
 	Bindings/Win32.Pipe.Mod ~
 
 *** Libraries ***
-
-Compiler.Compile -b=AMD --objectFile=Generic --newObjectFile
-		--mergeSections --symbolFileExtension=.SymW --objectFileExtension=.GofW
+		
+Compiler.Compile -p=Win32G
 
 	Libs/AAGraphics.Mod
 	Libs/CanvasTools.Mod
@@ -48,8 +45,7 @@ Compiler.Compile -b=AMD --objectFile=Generic --newObjectFile
 
 *** Components ***
 
-Compiler.Compile -b=AMD --objectFile=Generic --newObjectFile
-		--mergeSections --symbolFileExtension=.SymW --objectFileExtension=.GofW
+Compiler.Compile -p=Win32G
 
 	Components/WMChart.Mod
 	Components/WMComboBox.Mod
@@ -59,15 +55,13 @@ Compiler.Compile -b=AMD --objectFile=Generic --newObjectFile
 
 *** Dialogs ***
 
-Compiler.Compile -b=AMD --objectFile=Generic --newObjectFile
-		--mergeSections --symbolFileExtension=.SymW --objectFileExtension=.GofW
+Compiler.Compile -p=Win32G
 
 	Dialogs/WMColorPicker.Mod ~
 
 *** Examples ***
 
-Compiler.Compile -b=AMD --objectFile=Generic --newObjectFile
-		--mergeSections --symbolFileExtension=.SymW --objectFileExtension=.GofW
+Compiler.Compile -p=Win32G
 
 	Examples/RegExp/RegExpNFA.Mod
 	Examples/RegExp/RegExpMaps.Mod
@@ -79,8 +73,7 @@ Compiler.Compile -b=AMD --objectFile=Generic --newObjectFile
 
 *** Tools ***
 
-Compiler.Compile -b=AMD --objectFile=Generic --newObjectFile
-		--mergeSections --symbolFileExtension=.SymW --objectFileExtension=.GofW
+Compiler.Compile -p=Win32G
 
 	Tools/ImportCollector.Mod
 	Tools/ImportGraph.Mod
@@ -88,8 +81,7 @@ Compiler.Compile -b=AMD --objectFile=Generic --newObjectFile
 
 *** Demos ***
 
-Compiler.Compile -b=AMD --objectFile=Generic --newObjectFile
-		--mergeSections --symbolFileExtension=.SymW --objectFileExtension=.GofW
+Compiler.Compile -p=Win32G
 
 	Demos/WMAStar.Mod
 	Demos/WMAStarSet.Mod
