@@ -6,7 +6,7 @@ VERSION 1.1
 *)
 IMPORT 
 	SYSTEM,
-	KernelLog, WMComponents, Commands,
+	KernelLog, WMComponents, Commands, Options,
 	Modules,WM := WMWindowManager, 
 	WMGraphics, WMRectangles, Strings,
 	WMStandardComponents,
@@ -880,20 +880,31 @@ VAR
 
 (** Standard multiple windows controlled by number, non-restorable. *)
 PROCEDURE Open* (context : Commands.Context); (** [Options] {filename['@'position]} ~ *)
-VAR winstance : Window;
-	filename : ARRAY 256 OF CHAR;
-
+VAR
+	winstance: Window;
+	options: Options.Options;
+	moduleName, fileName, msg: ARRAY 257 OF CHAR;
+	module: Modules.Module;
+	res: LONGINT;
 BEGIN
-	NEW (winstance);
-	
+	NEW(winstance);
+	NEW(options);
+	options.Add("f", "file", Options.String);
+	options.Add("m", "module", Options.String);
+	IF options.Parse(context.arg, context.out) THEN
+		IF options.GetString("file", fileName) THEN
+			IF fileName # "" THEN winstance.Load(fileName) END
+		ELSIF options.GetString("module", moduleName) THEN
+			module := Modules.ThisModule(moduleName, res, msg);
+			IF res # Modules.Ok THEN
+				context.out.String(msg); context.out.Ln; RETURN
+			END;
+			winstance.memPanel.SetLimit(ADDRESSOF(module.refs[0]), LEN(module.refs));
+			winstance.memPanel.SetAdrViewMode(TRUE)
+		END
+	END;
 (*	winstance.DisableUpdate;
 	winstance.EnableUpdate;*)
-	WHILE context.arg.GetString(filename) DO
-		Strings.Trim(filename,' ');
-		KernelLog.String("filename= "); KernelLog.String(filename);  KernelLog.Ln;
-		IF  filename # "" THEN winstance.Load(filename);  END
-	END;
-
 END Open;
 
 PROCEDURE IncCount;	(* E *)
@@ -925,9 +936,15 @@ BEGIN
 	manager := WM.GetDefaultManager();
 
 	Modules.InstallTermHandler(Cleanup)
-END WMHexEditor.Open~
+END WMHexEditor.
 
-SystemTools.Free  WMHexEditor~
+WMHexEditor.Open -f=WMHexEditor.GofW ~
+WMHexEditor.Open -m=WMHexEditor ~
+
+SystemTools.Free WMHexEditor~
+
+
+
 
 WMDebugger.Open  WMHexEditor.Mod~
 
@@ -941,4 +958,3 @@ WMHexEditor.Open~
 
 FSTools.CloseFiles A2.exe ~
 WMKeyCode.Open ~
-WMHexEditor.Open rugby.wav ~
