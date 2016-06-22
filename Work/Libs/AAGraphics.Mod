@@ -648,38 +648,67 @@ VAR
 		PROCEDURE boxBlurH(VAR scl, tcl:ARRAY OF BYTE);
 		VAR
 			iarr:REAL;
-			i, j, ti, fv, li, lv, ri, val:LONGINT;
+			i, j, k, ti, fv, li, lv, ri, val:LONGINT;
 		BEGIN
 			iarr := 1 / (r+r+1);
 			FOR i:=0 TO h-1 DO
-				ti := i*w; li := ti; ri := ti+r;
-				fv := ORD(scl[ti*4+chanel]); lv := ORD(scl[(ti+w-1)*4+chanel]); val := (r+1)*fv;
-				FOR  j:=0 TO r-1 DO INC(val, ORD(scl[(ti+j)*4+chanel])); END;
-				FOR  j:=0  TO r DO  INC(val, ORD(scl[ri*4+chanel]) - fv);INC(ri);tcl[ti*4+chanel] := ENTIER(val*iarr+0.5);INC(ti); END;
-				FOR  j:=r+1 TO w-r-1 DO  INC(val, ORD(scl[ri*4+chanel]) - ORD(scl[li*4+chanel]));INC(li); INC(ri);  tcl[ti*4+chanel] := ENTIER(val*iarr+0.5);INC(ti); END;
-				FOR  j:=w-r TO w-1   DO  INC(val, lv - ORD(scl[li*4+chanel]));INC(li);   tcl[ti*4+chanel] := ENTIER(val*iarr+0.5); INC(ti); END;
+				ti := i*(w*4)+chanel; li := ti; ri := ti+r*4;
+				fv := ORD(scl[ti]); lv := ORD(scl[ti+w-4]); val := (r+1)*fv;
+
+k:=0;		FOR  j:=0 TO r-1 DO INC(val, ORD(scl[ti+k])); INC(k,4) END;
+
+				FOR  j:=0  TO r DO  
+					INC(val, ORD(scl[ri]) - fv);INC(ri, 4);
+					tcl[ti] := ENTIER(val*iarr+0.5);INC(ti, 4); 
+				END;
+
+				FOR  j:=r+1 TO w-r-1 DO  
+					INC(val, ORD(scl[ri]) - ORD(scl[li])); INC(li, 4); INC(ri, 4);  
+					tcl[ti] := ENTIER(val*iarr+0.5); INC(ti, 4);
+				END;
+				
+				FOR  j:=w-r TO w-1   DO  
+					INC(val, lv - ORD(scl[li]));INC(li, 4);   
+					tcl[ti] := ENTIER(val*iarr+0.5); INC(ti, 4); 
+				END;
 			END
 		END boxBlurH;
 		PROCEDURE boxBlurT(VAR scl, tcl:ARRAY OF BYTE);
 		VAR
 			iarr:REAL;
-			i, j, ti, fv, li, lv, ri, val:LONGINT;
+			w4, i, j, ti, fv, li, lv, ri, val:LONGINT;
 		BEGIN
 			iarr := 1 / (r+r+1);
+			w4:=w*4;
 			FOR i:=0 TO w-1 DO
-				ti := i; li := ti; ri := ti+r*w;
-				fv := ORD(scl[ti*4+chanel]); lv := ORD(scl[(ti+w*(h-1))*4+chanel]); val := (r+1)*fv;
-	 			FOR j:=0 TO r-1 DO INC(val,ORD(scl[(ti+j*w)*4+chanel]));END;
-				FOR j:=0 TO r DO INC(val, ORD(scl[ri*4+chanel]) - fv); tcl[ti*4+chanel] := CHR(ENTIER(val*iarr+0.5));  INC(ri,w); INC(ti, w); END;
-				FOR j:=r+1 TO h-r-1 DO INC(val, ORD(scl[ri*4+chanel]) - ORD(scl[li*4+chanel]));  tcl[ti*4+chanel] := CHR(ENTIER(val*iarr+0.5));  INC(li, w); INC(ri, w); INC(ti, w); END;
-				FOR j:=h-r TO h-1 DO INC(val, lv - ORD(scl[li*4+chanel]));  tcl[ti*4+chanel] := CHR(ENTIER(val*iarr+0.5));  INC(li,w); INC(ti, w); END;
+				ti := i*4+chanel; li := ti; ri := ti+r*w4;
+				fv := ORD(scl[ti]); lv := ORD(scl[(ti+w4*(h-1))]); val := (r+1)*fv;
+	 			FOR j:=0 TO r-1 DO INC(val,ORD(scl[ti+j*w4]));END;
+
+				FOR j:=0 TO r DO
+					INC(val, ORD(scl[ri]) - fv); 
+					tcl[ti] := CHR(ENTIER(val*iarr+0.5));  
+					INC(ri,w4); INC(ti, w4); 
+				END;
+				
+				FOR j:=r+1 TO h-r-1 DO 
+					INC(val, ORD(scl[ri]) - ORD(scl[li]));  
+					tcl[ti] := CHR(ENTIER(val*iarr+0.5));  
+					INC(li, w4); INC(ri, w4); INC(ti, w4); 
+				END;
+
+				FOR j:=h-r TO h-1 DO
+					INC(val, lv - ORD(scl[li]));
+					tcl[ti] := CHR(ENTIER(val*iarr+0.5));
+					INC(li,w4); INC(ti, w4); 
+				END;
 	    END;
 		END boxBlurT;
 
 	BEGIN
-		i:=0;
+		i:=chanel;
 		WHILE i<LEN(scl) DO
-			tcl[i+chanel] := scl[i+chanel];
+			tcl[i] := scl[i];
 			INC(i,4)
 		END;
 		boxBlurH(tcl, scl);
@@ -703,6 +732,8 @@ BEGIN
     END;
 END BoxBlur;
 
+
+
+
+
 END AAGraphics.
-
-
