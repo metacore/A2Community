@@ -618,7 +618,7 @@ CODE
 	ADD	ESP, 4
 END Div;
 
-PROCEDURE BoxBlur*(img:WMGraphics.Image; r:LONGINT; chan:SET);
+PROCEDURE BoxBlur*(img:Raster.Image; r:LONGINT; chan:SET);
 (*based on http://blog.ivank.net/fastest-gaussian-blur.html*)
 TYPE
 	BYTE = SYSTEM.BYTE;
