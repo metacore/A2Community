@@ -649,23 +649,15 @@ VAR
 		VAR
 			iarr:REAL;
 			i, j, ti, fv, li, lv, ri, val:LONGINT;
-			PROCEDURE -inc(VAR i:LONGINT):LONGINT;
-			VAR
-				result:LONGINT; 
-			BEGIN
-				result:=i;
-				INC(i);
-				RETURN result;
-			END inc;
 		BEGIN
 			iarr := 1 / (r+r+1);
 			FOR i:=0 TO h-1 DO
 				ti := i*w; li := ti; ri := ti+r;
 				fv := ORD(scl[ti*4+chanel]); lv := ORD(scl[(ti+w-1)*4+chanel]); val := (r+1)*fv;
 				FOR  j:=0 TO r-1 DO INC(val, ORD(scl[(ti+j)*4+chanel])); END;
-				FOR  j:=0  TO r DO  INC(val, ORD(scl[inc(ri)*4+chanel]) - fv);tcl[inc(ti)*4+chanel] := ENTIER(val*iarr+0.5); END;
-				FOR  j:=r+1 TO w-r-1 DO  INC(val, ORD(scl[inc(ri)*4+chanel]) - ORD(scl[inc(li)*4+chanel]));   tcl[inc(ti)*4+chanel] := ENTIER(val*iarr+0.5); END;
-				FOR  j:=w-r TO w-1   DO  INC(val, lv - ORD(scl[inc(li)*4+chanel]));   tcl[inc(ti)*4+chanel] := ENTIER(val*iarr+0.5); END;
+				FOR  j:=0  TO r DO  INC(val, ORD(scl[ri*4+chanel]) - fv);INC(ri);tcl[ti*4+chanel] := ENTIER(val*iarr+0.5);INC(ti); END;
+				FOR  j:=r+1 TO w-r-1 DO  INC(val, ORD(scl[ri*4+chanel]) - ORD(scl[li*4+chanel]));INC(li); INC(ri);  tcl[ti*4+chanel] := ENTIER(val*iarr+0.5);INC(ti); END;
+				FOR  j:=w-r TO w-1   DO  INC(val, lv - ORD(scl[li*4+chanel]));INC(li);   tcl[ti*4+chanel] := ENTIER(val*iarr+0.5); INC(ti); END;
 			END
 		END boxBlurH;
 		PROCEDURE boxBlurT(VAR scl, tcl:ARRAY OF BYTE);
