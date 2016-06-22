@@ -1,6 +1,6 @@
 MODULE AAGraphics;	(** AUTHOR "BohdanT"; PURPOSE "Anti-aliasing drawing of graphics primitives"; *)
 
-IMPORT SYSTEM, WMGraphics,  WMRectangles, 	Raster, 	WMGraphicUtilities, Math, KernelLog, Strings;
+IMPORT SYSTEM, WMGraphics,  WMRectangles, 	Raster, 	WMGraphicUtilities, Math;
 
 
 (*Fast Antialiased Circle*)
@@ -575,7 +575,6 @@ VAR
 	angleStep:REAL;
 	angle, endAngle:REAL;
 	i, j : LONGINT;
-				str : ARRAY 32 OF CHAR;
 
 BEGIN
 	steps:=64;
@@ -618,6 +617,99 @@ CODE
 	DB 	0F7H, 3CH, 24H ;	(*IDIV	[ESP+b]*)
 	ADD	ESP, 4
 END Div;
+
+PROCEDURE BoxBlur*(img:WMGraphics.Image; r:LONGINT; chan:SET);
+(*based on http://blog.ivank.net/fastest-gaussian-blur.html*)
+TYPE
+	BYTE = SYSTEM.BYTE;
+VAR
+	bxs:POINTER TO ARRAY OF LONGINT;
+	tcl:POINTER TO ARRAY OF CHAR;
+	chanel:LONGINT;
+	w, h :LONGINT;
+	
+	PROCEDURE boxesForGauss(sigma, n:LONGINT);  (*standard deviation, number of boxes*)
+	VAR
+		wIdeal, mIdeal : REAL;
+		wl, wu, i, m :LONGINT;
+	BEGIN
+		wIdeal := Math.sqrt((12*sigma*sigma/n)+1);  (* Ideal averaging filter width *)
+		wl := ENTIER(wIdeal); IF (wl MOD 2)=0 THEN DEC(wl) END;
+		wu := wl+2;
+		mIdeal := (12*sigma*sigma - n*wl*wl - 4*n*wl - 3*n)/(-4*wl - 4);
+		m := ENTIER(mIdeal+0.5);
+		NEW(bxs,n);
+		FOR i:=0 TO m-1 DO bxs[i]:=wl; END;
+		FOR i:=m TO n-1 DO bxs[i]:=wu; END;
+	END boxesForGauss;
+	PROCEDURE boxBlur(VAR scl, tcl:ARRAY OF BYTE; w, h, r:LONGINT);
+	VAR
+		i:LONGINT;
+		PROCEDURE boxBlurH(VAR scl, tcl:ARRAY OF BYTE);
+		VAR
+			iarr:REAL;
+			i, j, ti, fv, li, lv, ri, val:LONGINT;
+			PROCEDURE -inc(VAR i:LONGINT):LONGINT;
+			VAR
+				result:LONGINT; 
+			BEGIN
+				result:=i;
+				INC(i);
+				RETURN result;
+			END inc;
+		BEGIN
+			iarr := 1 / (r+r+1);
+			FOR i:=0 TO h-1 DO
+				ti := i*w; li := ti; ri := ti+r;
+				fv := ORD(scl[ti*4+chanel]); lv := ORD(scl[(ti+w-1)*4+chanel]); val := (r+1)*fv;
+				FOR  j:=0 TO r-1 DO INC(val, ORD(scl[(ti+j)*4+chanel])); END;
+				FOR  j:=0  TO r DO  INC(val, ORD(scl[inc(ri)*4+chanel]) - fv);tcl[inc(ti)*4+chanel] := ENTIER(val*iarr+0.5); END;
+				FOR  j:=r+1 TO w-r-1 DO  INC(val, ORD(scl[inc(ri)*4+chanel]) - ORD(scl[inc(li)*4+chanel]));   tcl[inc(ti)*4+chanel] := ENTIER(val*iarr+0.5); END;
+				FOR  j:=w-r TO w-1   DO  INC(val, lv - ORD(scl[inc(li)*4+chanel]));   tcl[inc(ti)*4+chanel] := ENTIER(val*iarr+0.5); END;
+			END
+		END boxBlurH;
+		PROCEDURE boxBlurT(VAR scl, tcl:ARRAY OF BYTE);
+		VAR
+			iarr:REAL;
+			i, j, ti, fv, li, lv, ri, val:LONGINT;
+		BEGIN
+			iarr := 1 / (r+r+1);
+			FOR i:=0 TO w-1 DO
+				ti := i; li := ti; ri := ti+r*w;
+				fv := ORD(scl[ti*4+chanel]); lv := ORD(scl[(ti+w*(h-1))*4+chanel]); val := (r+1)*fv;
+	 			FOR j:=0 TO r-1 DO INC(val,ORD(scl[(ti+j*w)*4+chanel]));END;
+				FOR j:=0 TO r DO INC(val, ORD(scl[ri*4+chanel]) - fv); tcl[ti*4+chanel] := CHR(ENTIER(val*iarr+0.5));  INC(ri,w); INC(ti, w); END;
+				FOR j:=r+1 TO h-r-1 DO INC(val, ORD(scl[ri*4+chanel]) - ORD(scl[li*4+chanel]));  tcl[ti*4+chanel] := CHR(ENTIER(val*iarr+0.5));  INC(li, w); INC(ri, w); INC(ti, w); END;
+				FOR j:=h-r TO h-1 DO INC(val, lv - ORD(scl[li*4+chanel]));  tcl[ti*4+chanel] := CHR(ENTIER(val*iarr+0.5));  INC(li,w); INC(ti, w); END;
+	    END;
+		END boxBlurT;
+
+	BEGIN
+		i:=0;
+		WHILE i<LEN(scl) DO
+			tcl[i+chanel] := scl[i+chanel];
+			INC(i,4)
+		END;
+		boxBlurH(tcl, scl);
+		boxBlurT(scl, tcl);
+	END boxBlur;
+
+VAR
+ i:LONGINT;
+BEGIN
+		NEW(tcl,LEN(img.mem^));
+		w:=img.width;
+		h:=img.height;
+		boxesForGauss(r, 3);
+		FOR i:=0 TO 3 DO
+			IF i IN chan THEN
+				chanel:=i;
+				boxBlur(img.mem^, tcl^, w, h, (bxs[0]-1) DIV 2);
+				boxBlur(tcl^, img.mem^, w, h, (bxs[1]-1) DIV 2);
+				boxBlur(img.mem^, tcl^, w, h, (bxs[2]-1) DIV 2);
+	    END;
+    END;
+END BoxBlur;
 
 END AAGraphics.
 
