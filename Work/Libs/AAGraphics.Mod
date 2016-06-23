@@ -819,7 +819,6 @@ TYPE
 			r, g, b, a : LONGINT;
 			rmode: Raster.Mode;
 		BEGIN
-			KernelLog.String("FillFlat= "); KernelLog.Ln; 
 			WMGraphics.ColorToRGBA(color,r,g,b,a);
 			Raster.InitMode(rmode,Raster.srcOverDst); (* use ModeSrcOverDst in all cases *)
 
@@ -838,16 +837,16 @@ TYPE
 
 						a:=255*ABS(esp) DIV dt;
 						Raster.SetRGBA(p,r,g,b, a);
-						Raster.Put(img, sp-1, i, p, rmode);
+						Raster.Put(img, sp-1+dx, i+dy, p, rmode);
 						Raster.SetRGBA(p,r,g,b, 255-a);
-						Raster.Put(img, sp, i, p, rmode);
+						Raster.Put(img, sp+dx, i+dy, p, rmode);
 						
 
 						a:=255*ABS(fillHeap[cur].err) DIV fillHeap[cur].dt;
-						Raster.SetRGBA(p,r,g,b, a);
-						Raster.Put(img, fillHeap[cur].pos, i, p, rmode);
-(*						Raster.SetRGBA(p,r,g,b, 255-a);
-						Raster.Put(img, fillHeap[cur].pos+1, i, p, rmode);*)
+(*						Raster.SetRGBA(p,r,g,b, a);
+						Raster.Put(img, fillHeap[cur].pos+dx, i+dy, p, rmode);*)
+						Raster.SetRGBA(p,r,g,b, 255-a);
+						Raster.Put(img, fillHeap[cur].pos+dx, i+dy, p, rmode);
 						
 					END;
 					cur := fillHeap[cur].next
