@@ -1,6 +1,6 @@
 MODULE AAGraphics;	(** AUTHOR "BohdanT"; PURPOSE "Anti-aliasing drawing of graphics primitives"; *)
 
-IMPORT SYSTEM, WMGraphics,  WMRectangles, 	Raster, 	WMGraphicUtilities, Math;
+IMPORT SYSTEM, WMGraphics,  WMRectangles, 	Raster, 	WMGraphicUtilities, Math, KernelLog;
 
 
 (*Fast Antialiased Circle*)
@@ -733,7 +733,141 @@ BEGIN
 END BoxBlur;
 
 
+TYPE
+	FillPosEntry = RECORD pos, err, dt, next : LONGINT END;
+	FillHeap = POINTER TO ARRAY OF FillPosEntry;
 
+	Canvas* = OBJECT(WMGraphics.BufferCanvas)
+	VAR
+		(* filling *)
+		fillHeap : FillHeap;
+		heapSize, topHeap : LONGINT;
+		height : LONGINT;
+		edges : POINTER TO ARRAY OF LONGINT;
+
+		PROCEDURE &New*(img : Raster.Image);
+		BEGIN
+			(* filling *)
+			height := img.height; NEW(edges, height);
+
+			New^(img);
+		END New;
+
+		 PROCEDURE ClearHeap;
+		 VAR i : LONGINT;
+		 BEGIN
+			topHeap := 0;
+			FOR i := 0 TO height - 1 DO edges[i] := 0 END;
+			IF fillHeap = NIL THEN NEW(fillHeap, 1024); heapSize := 1024 END
+		 END ClearHeap;
+
+		 PROCEDURE NewFillPos(pos, err, dt : LONGINT) : LONGINT;
+		 VAR newHeap : FillHeap;
+			i : LONGINT;
+		 BEGIN
+			INC(topHeap);
+			IF topHeap >= heapSize THEN (* grow heap *)
+				NEW(newHeap, heapSize * 2);
+				FOR i := 0 TO heapSize - 1 DO newHeap[i] := fillHeap[i] END;
+				heapSize := heapSize * 2;
+				fillHeap := newHeap
+			END;
+			fillHeap[topHeap].pos := pos;
+			fillHeap[topHeap].err := err;
+			fillHeap[topHeap].dt := dt;
+			fillHeap[topHeap].next := 0;
+			RETURN topHeap
+		 END NewFillPos;
+
+		 PROCEDURE AddIntersection(y, pos, err, dt : LONGINT);
+		 VAR new, cur : LONGINT;
+		 BEGIN
+			IF (y < 0) OR (y >= height) THEN RETURN END;
+			new := NewFillPos(pos, err, dt);
+			IF edges[y] = 0 THEN edges[y] := new
+			ELSE
+				cur := edges[y];
+				IF fillHeap[cur].pos > pos THEN
+					fillHeap[new].next := cur;
+					edges[y] := new
+				ELSE
+					WHILE (fillHeap[cur].next # 0) & (fillHeap[fillHeap[cur].next].pos < pos) DO cur := fillHeap[cur].next END;
+					fillHeap[new].next := fillHeap[cur].next;
+					fillHeap[cur].next := new
+				END;
+			END;
+		 END AddIntersection;
+
+		PROCEDURE AddLine(x0, y0, x1, y1 : LONGINT);
+		VAR t, xi, xf, mi, mf, dt2 : LONGINT ;
+		BEGIN
+			IF (y0 = y1) THEN RETURN END;
+			IF y0 > y1 THEN t := y0; y0 := y1; y1 := t; t := x0; x0 := x1; x1 := t END;
+			xi := x0; xf :=	y0 - y1; mi := (x1 - x0) DIV (y1 - y0); mf := 2 * ( (x1 - x0) MOD (y1 - y0)); dt2 := 2 * (y1 - y0);
+			FOR t := y0 TO y1 - 1 DO
+				AddIntersection(t, xi, xf, dt2);
+				INC(xi, mi); INC(xf, mf);
+				IF xf > 0 THEN INC(xi); DEC(xf, dt2) END
+			END
+		END AddLine;
+
+		PROCEDURE FillFlat(color : WMGraphics.Color; mode : LONGINT);
+		VAR i, sp, esp, dt, cur : LONGINT;
+		in : BOOLEAN;
+		VAR
+			p : Raster.Pixel;
+			r, g, b, a : LONGINT;
+			rmode: Raster.Mode;
+		BEGIN
+			KernelLog.String("FillFlat= "); KernelLog.Ln; 
+			WMGraphics.ColorToRGBA(color,r,g,b,a);
+			Raster.InitMode(rmode,Raster.srcOverDst); (* use ModeSrcOverDst in all cases *)
+
+
+			FOR i := 0 TO height - 1 DO
+				cur := edges[i];
+				in := FALSE;
+				WHILE cur # 0 DO
+					in := ~in;
+					IF in THEN 
+						sp := fillHeap[cur].pos;
+						esp := fillHeap[cur].err;
+						dt := fillHeap[cur].dt;
+					ELSE 
+						Fill(WMRectangles.MakeRect(sp, i, fillHeap[cur].pos, i + 1), color, mode);
+
+						a:=255*ABS(esp) DIV dt;
+						Raster.SetRGBA(p,r,g,b, a);
+						Raster.Put(img, sp-1, i, p, rmode);
+						Raster.SetRGBA(p,r,g,b, 255-a);
+						Raster.Put(img, sp, i, p, rmode);
+						
+
+						a:=255*ABS(fillHeap[cur].err) DIV fillHeap[cur].dt;
+						Raster.SetRGBA(p,r,g,b, a);
+						Raster.Put(img, fillHeap[cur].pos, i, p, rmode);
+(*						Raster.SetRGBA(p,r,g,b, 255-a);
+						Raster.Put(img, fillHeap[cur].pos+1, i, p, rmode);*)
+						
+					END;
+					cur := fillHeap[cur].next
+				END
+			END
+		END FillFlat;
+		(* Polygon filling *)
+		(** fill a polygon given by points *)
+		PROCEDURE FillPolygonFlat*(CONST points : ARRAY OF WMGraphics.Point2d; nofPoints : LONGINT; color : WMGraphics.Color; mode : LONGINT);
+		VAR i : LONGINT;
+		BEGIN
+			IF nofPoints < 3 THEN RETURN END;
+			ASSERT(nofPoints <= LEN(points));
+			ClearHeap;
+			FOR i := 1 TO nofPoints - 1 DO AddLine(points[i - 1].x, points[i - 1].y, points[i].x, points[i].y) END;
+			AddLine(points[nofPoints - 1].x, points[nofPoints - 1].y, points[0].x, points[0].y);
+			FillFlat(color, mode)
+		END FillPolygonFlat;
+
+	END Canvas;
 
 
 END AAGraphics.
