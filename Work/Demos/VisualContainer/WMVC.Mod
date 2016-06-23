@@ -605,13 +605,21 @@ VAR
 		root: WMComponents.VisualComponent;
 		x, y: LONGINT;
 		manager: WMWindowManager.WindowManager;
+		
+		PROCEDURE RaiseError(CONST msg: ARRAY OF CHAR);
+		BEGIN
+			HALT(105)
+		END RaiseError;
 
 	BEGIN
 		IF window = NIL THEN
 			context := ctx;
 
 			xml := WMComponents.Load("WMVC.zip://WMVC.xml");
-			IF (xml # NIL) & (xml IS WMComponents.VisualComponent) THEN
+			IF xml = NIL THEN
+				RaiseError("Resources file not found.");
+				RETURN NIL
+			ELSIF xml IS WMComponents.VisualComponent THEN
 
 				root := xml(WMComponents.VisualComponent);
 
@@ -639,8 +647,11 @@ VAR
 				manager.SetFocus(window);
 
 				RETURN window
-
-		  END
+			ELSE
+				RETURN NIL
+			END
+		ELSE
+			RETURN NIL
 		END
 	END WindowGenerator;
 
