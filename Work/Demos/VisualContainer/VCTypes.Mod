@@ -5,7 +5,7 @@ MODULE VCTypes;
 
 IMPORT
 	Math, WMComponents, WMRectangles, WMGraphics,
-	Vector;
+	Vector, KernelLog;
 
 TYPE
 	FloatPoint* = RECORD(Vector.Value)
@@ -236,6 +236,15 @@ TYPE
 		END DrawText;
 
 		PROCEDURE DrawPolygon*(pPts: PFloatPoints; LineWidth: REAL; closed: BOOLEAN);
+		
+		
+		
+		(*!
+		
+		Gfx.DefOutline(c(Canvas).gfxContext);
+		
+		*)
+		
 
 			(* Put one point to left list and 2 points to right list *)
 			PROCEDURE PutSpecial(pL, pR: Points; VAR iL, iR: LONGINT; bReverseDir: BOOLEAN);
@@ -388,6 +397,10 @@ TYPE
 
 			(* AAGraphics.PolyLine(FCanvas(WMGraphics.BufferCanvas).img, FCanvas.dx, FCanvas.dy, pPolyLeft^, iLeft, TRUE, color); *)
 			FCanvas.FillPolygonFlat(pPolyLeft^, iLeft, color, mode);
+			
+			(*FOR i := 0 TO iLeft - 1 DO
+				KernelLog.String("p["); KernelLog.Int(i, 0); KernelLog.String("] := "); KernelLog.Int(pPolyLeft^[i], 0);
+			END*)
 
 		END DrawPolygon;
 

@@ -9,7 +9,7 @@ IMPORT
 	WMDialogs, WMRectangles, WMGraphics, WMWindowManager,
 	XML, WMProperties, WMEvents, WMComponents, WMStandardComponents,
 	WMScrollableComponents, WMEditors, WMDropDownLists,
-	Vector, VCTypes, VCObjects;
+	AAGraphics, Vector, VCTypes, VCObjects;
 
 TYPE
 
@@ -272,6 +272,9 @@ TYPE
 			i: LONGINT;
 			logicalCanvas: VCTypes.LogicalCanvas;
 		BEGIN
+			IF ~(canvas IS AAGraphics.Canvas) THEN
+				RETURN
+			END;
 			NEW(logicalCanvas, canvas, SELF);
 			canvas.Fill(WMRectangles.MakeRect(0, 0, bounds.GetWidth(), bounds.GetHeight()), LONGINT(0FFFFBBFFH), WMGraphics.ModeCopy);
 			IF logicalCanvas # NIL THEN
@@ -614,6 +617,9 @@ VAR
 
 				(* Window setup *)
 				NEW(window, root.bounds.GetWidth(), root.bounds.GetHeight(), FALSE);
+				
+				window.SetCanvasGenerator(AAGraphics.GenCanvas);
+				
 				window.SetContent(root);
 				IF ~WireComponents(root, window) THEN
 					context.out.String("Form resource corrupted"); context.out.Ln;

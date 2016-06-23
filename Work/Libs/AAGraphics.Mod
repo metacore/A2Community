@@ -868,6 +868,10 @@ TYPE
 		END FillPolygonFlat;
 
 	END Canvas;
-
+	
+PROCEDURE GenCanvas*(img: Raster.Image): WMGraphics.BufferCanvas;
+VAR c: Canvas;
+BEGIN NEW(c,img); RETURN c
+END GenCanvas;
 
 END AAGraphics.
