@@ -572,7 +572,7 @@ BEGIN
 		dy := ABS(y1-y0); IF y0 < y1 THEN sy := 1 ELSE sy := -1; END;
 		e2 := Math.sqrt(dx*dx+dy*dy);                            (* length *)
 
-(*   IF  (th <= 1) OR (e2 = 0) THEN AALine(img, x0,y0, x1,y1, color); RETURN END;        (* assert *)*)
+   IF  (th <= 1) OR (e2 = 0) THEN AALine(img, x0,y0, x1,y1, color); RETURN END;        (* assert *)
    dx := dx*255/e2; dy := dy*255/e2; 
    th := 255*(th-1);               (* scale values *)
 
