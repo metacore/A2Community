@@ -1,6 +1,6 @@
 MODULE AAGraphics;	(** AUTHOR "BohdanT"; PURPOSE "Anti-aliasing drawing of graphics primitives"; *)
 
-IMPORT SYSTEM, WMGraphics,  WMRectangles, 	Raster, 	WMGraphicUtilities, Math, KernelLog;
+IMPORT SYSTEM, WMGraphics,  WMRectangles, Raster, 	WMGraphicUtilities, Math, Strings;
 
 
 (*Fast Antialiased Circle*)
@@ -502,7 +502,7 @@ END RoundRectFlat;
 
 (* draw a anti-aliased line *)
 (** draw a line within the current clipping rectangle *)
-PROCEDURE Line*(img:Raster.Image; x0, y0, x1, y1 : LONGINT; color : LONGINT);
+PROCEDURE AALine*(img:Raster.Image; x0, y0, x1, y1 : LONGINT; color : LONGINT);
 VAR t, xi, mi, xf, mf, dt2 : LONGINT;
 VAR
 	p : Raster.Pixel;
@@ -550,64 +550,90 @@ BEGIN
 			END
 		END
 	END
-END Line;
+END AALine;
+
+
+PROCEDURE AALineW*(img:Raster.Image; x0, y0, x1, y1:LONGINT; color:LONGINT;th:REAL);
+(* plot an anti-aliased line of width th pixel *)
+VAR
+	err, dx, dy:REAL;
+	sx, sy : LONGINT;
+	e2:REAL;
+
+	p, p1 : Raster.Pixel;
+	r, g, b, a : LONGINT;
+	rmode: Raster.Mode;
+BEGIN
+	WMGraphics.ColorToRGBA(color,r,g,b,a);
+	Raster.InitMode(rmode,Raster.srcOverDst); (* use ModeSrcOverDst in all cases *)
+	Raster.SetRGBA(p,r,g,b, a);
+	
+		dx := ABS(x1-x0); IF x0 < x1 THEN sx :=1 ELSE sx :=-1; END;
+		dy := ABS(y1-y0); IF y0 < y1 THEN sy := 1 ELSE sy := -1; END;
+		e2 := Math.sqrt(dx*dx+dy*dy);                            (* length *)
+
+(*   IF  (th <= 1) OR (e2 = 0) THEN AALine(img, x0,y0, x1,y1, color); RETURN END;        (* assert *)*)
+   dx := dx*255/e2; dy := dy*255/e2; 
+   th := 255*(th-1);               (* scale values *)
+
+   IF (dx < dy) THEN                                               (* steep line *)
+      x1 := ENTIER((e2+th/2)/dy+0.5);                          (* start offset *)
+      err := x1*dy-th/2;                  (* shift error value to offset width *)
+      x0 := x0-x1*sx;
+
+      WHILE y0 # y1 DO
+				x1 := x0;
+				Raster.SetRGBA(p1,r,g,b,255- ENTIER(err));
+				Raster.Put(img, x1, y0, p1, rmode);(* aliasing pre-pixel *)
+
+				e2 := dy-err-th;
+				WHILE	e2+dy < 255 DO
+					INC(x1, sx);
+					Raster.Put(img, x1, y0, p, rmode);(* pixel on the line *)
+					e2:=e2+dy
+				END;
+				Raster.SetRGBA(p1,r,g,b,255- ENTIER(e2));
+				Raster.Put(img, x1+sx, y0, p1, rmode);(* aliasing post-pixel *)
+         err:=err+ dx;                                                 (* y-step *)
+         IF  err > 255 THEN err:=err- dy; INC(x0, sx) END;                    (* x-step *) 
+         INC(y0, sy);
+      END;
+   ELSE                                                      (* flat line *)
+			y1 := ENTIER((e2+th/2)/dx+0.5);                          (* start offset *)
+			err := y1*dx-th/2;                  (* shift error value to offset width *)
+			y0 := y0-y1*sy;
+			WHILE x0 # x1 DO 
+				y1 := y0;
+				Raster.SetRGBA(p1,r,g,b, 255-ENTIER(err));
+				Raster.Put(img, x0, y1, p1, rmode);(* aliasing pre-pixel *)
+
+				e2 := dx-err-th;
+				WHILE e2+dx < 255 DO  
+					INC(y1, sy);
+					Raster.Put(img, x0, y1, p, rmode);(* pixel on the line *)
+					e2:= e2+dx;
+				END;
+				Raster.SetRGBA(p1,r,g,b, 255-ENTIER(e2));
+				Raster.Put(img, x0, y1+sy, p1, rmode);(* aliasing post-pixel *)
+				err :=err + dy;                                                 (* x-step *) 
+				IF err > 255 THEN err:=err-dx; INC(y0, sy); END;                    (* y-step *)
+				INC(x0, sx);
+			END;
+   END;
+END AALineW;
+
 
 PROCEDURE PolyLine*(img:Raster.Image; CONST points : ARRAY OF WMGraphics.Point2d; nofPoints : LONGINT; closed : BOOLEAN;	color : LONGINT);
 VAR i : LONGINT;
 BEGIN
 	FOR i := 1 TO nofPoints - 1 DO
-		Line(img, points[i-1].x, points[i-1].y, points[i].x, points[i].y, color)
+		AALine(img, points[i-1].x, points[i-1].y, points[i].x, points[i].y, color)
 	END;
 	IF closed THEN
-		Line(img, points[nofPoints-1].x, points[nofPoints-1].y, points[0].x, points[0].y, color)
+		AALine(img, points[nofPoints-1].x, points[nofPoints-1].y, points[0].x, points[0].y, color)
 	END
 END PolyLine;
 
-(* The DrawSolidArc function takes standard arc drawing
- arguments but the "radius" has been split into 2 different
- variables, "innerRadius" and "outerRadius".*)
- VAR
-	p:ARRAY 200 OF WMGraphics.Point2d;
-PROCEDURE DrawArcFlat* (c:WMGraphics.Canvas; centerX, centerY, innerRadius, outerRadius:LONGINT; startAngle, arcAngle : REAL; color : LONGINT);
-VAR
-    (* How much to rotate for each point along the arc.*)
-	steps:LONGINT;
-	angleStep:REAL;
-	angle, endAngle:REAL;
-	i, j : LONGINT;
-
-BEGIN
-	steps:=64;
-	 angleStep:=arcAngle/steps;
-    (* Find the coordinates of the first point on the inner arc.*)
-	p[0].x := ENTIER(centerX + Math.cos(startAngle) * innerRadius+0.5);
-	p[0].y := ENTIER(centerY + Math.sin(startAngle) * innerRadius+0.5);
-
-	(* Draw all of the other points along the inner arc.*)
-	j := 1;
-	FOR i:=1 TO steps DO
-		angle := (startAngle + i * angleStep);
-(*		KernelLog.String(' i = '); KernelLog.Int(i, 0);  KernelLog.String(' angle = '); Strings.FloatToStr(angle, 4, 10, 0, str); KernelLog.String(str);KernelLog.Ln;*)
-		p[i].x :=  ENTIER(centerX + Math.cos(angle) * innerRadius+0.5);
-		p[i].y :=  ENTIER(centerY + Math.sin(angle) * innerRadius+0.5);
-		INC(j);
-	END;
-	(*Determine the ending angle of the arc so you can
-	rotate around the outer arc in the opposite direction.*)
-	endAngle := startAngle + arcAngle;
-
-    (*Start drawing all points on the outer arc.*)
-    FOR i:=0 TO steps DO
-		(* To go the opposite direction, we subtract rather than add.*)
-		angle := (endAngle - i * angleStep);
-(*		KernelLog.String(' i = '); KernelLog.Int(j+i, 0);  KernelLog.String(' angle = '); Strings.FloatToStr(angle, 4, 10, 0, str); KernelLog.String(str);KernelLog.Ln;*)
-		p[j+i].x :=  ENTIER(centerX + Math.cos(angle) * outerRadius+0.5);
-		p[j+i].y :=  ENTIER(centerY + Math.sin(angle) * outerRadius+0.5);
-		
-	END;
-
-	c.FillPolygonFlat(p, steps*2+2, color, WMGraphics.ModeCopy);
-END DrawArcFlat;
 		
 (*!!!b/a for the speed*)
 PROCEDURE -Div(a,b:LONGINT):LONGINT;
@@ -744,11 +770,26 @@ TYPE
 		heapSize, topHeap : LONGINT;
 		height : LONGINT;
 		edges : POINTER TO ARRAY OF LONGINT;
+		lineWidth-: REAL; (** line width in pixels *)
+
+		(**	Set line width in pixels		*)
+
+		PROCEDURE SetLineWidth*(w: REAL);
+		BEGIN
+			IF w < 0.5 THEN w := 0.5; END;
+			lineWidth := w;
+		END SetLineWidth;
+
+		PROCEDURE Line*(x0, y0, x1, y1: LONGINT; lineColor: WMGraphics.Color; mode: LONGINT);
+		BEGIN
+				AALineW(img, x0+dx, y0+dx, x1+dx, y1+dx, lineColor, lineWidth);
+		END Line;
 
 		PROCEDURE &New*(img : Raster.Image);
 		BEGIN
 			(* filling *)
 			height := img.height; NEW(edges, height);
+			generator := Strings.NewString("AAGraphics.GenCanvas");
 
 			New^(img);
 		END New;
@@ -800,12 +841,27 @@ TYPE
 
 		PROCEDURE AddLine(x0, y0, x1, y1 : LONGINT);
 		VAR t, xi, xf, mi, mf, dt2 : LONGINT ;
+				p : Raster.Pixel;
+				r, g, b, a : LONGINT;
+				rmode: Raster.Mode;
+	
 		BEGIN
+	WMGraphics.ColorToRGBA(color,r,g,b,a);
+	Raster.InitMode(rmode,Raster.srcOverDst); (* use ModeSrcOverDst in all cases *)
+	Raster.SetRGBA(p,r,g,b, a);
+
 			IF (y0 = y1) THEN RETURN END;
 			IF y0 > y1 THEN t := y0; y0 := y1; y1 := t; t := x0; x0 := x1; x1 := t END;
 			xi := x0; xf :=	y0 - y1; mi := (x1 - x0) DIV (y1 - y0); mf := 2 * ( (x1 - x0) MOD (y1 - y0)); dt2 := 2 * (y1 - y0);
 			FOR t := y0 TO y1 - 1 DO
 				AddIntersection(t, xi, xf, dt2);
+
+				a:=255*ABS(xf) DIV dt2;
+				Raster.SetRGBA(p,r,g,b, a);
+				Raster.Put(img, xi+dx, t+dy, p, rmode);
+				Raster.SetRGBA(p,r,g,b, 255-a);
+				Raster.Put(img, xi+1+dx, t+dy, p, rmode);
+
 				INC(xi, mi); INC(xf, mf);
 				IF xf > 0 THEN INC(xi); DEC(xf, dt2) END
 			END
@@ -858,6 +914,7 @@ TYPE
 		PROCEDURE FillPolygonFlat*(CONST points : ARRAY OF WMGraphics.Point2d; nofPoints : LONGINT; color : WMGraphics.Color; mode : LONGINT);
 		VAR i : LONGINT;
 		BEGIN
+			SELF.color:=color;
 			IF nofPoints < 3 THEN RETURN END;
 			ASSERT(nofPoints <= LEN(points));
 			ClearHeap;
@@ -865,7 +922,51 @@ TYPE
 			AddLine(points[nofPoints - 1].x, points[nofPoints - 1].y, points[0].x, points[0].y);
 			FillFlat(color, mode)
 		END FillPolygonFlat;
+(* The DrawSolidArc function takes standard arc drawing
+ arguments but the "radius" has been split into 2 different
+ variables, "innerRadius" and "outerRadius".*)
+ VAR
+	p:ARRAY 200 OF WMGraphics.Point2d;
+		PROCEDURE DrawArcFlat* (centerX, centerY, innerRadius, outerRadius:LONGINT; startAngle, arcAngle : REAL; color : LONGINT);
+		VAR
+		    (* How much to rotate for each point along the arc.*)
+			steps:LONGINT;
+			angleStep:REAL;
+			angle, endAngle:REAL;
+			i, j : LONGINT;
 
+		BEGIN
+			steps:=64;
+			 angleStep:=arcAngle/steps;
+		    (* Find the coordinates of the first point on the inner arc.*)
+			p[0].x := ENTIER(centerX + Math.cos(startAngle) * innerRadius+0.5);
+			p[0].y := ENTIER(centerY + Math.sin(startAngle) * innerRadius+0.5);
+
+			(* Draw all of the other points along the inner arc.*)
+			j := 1;
+			FOR i:=1 TO steps DO
+				angle := (startAngle + i * angleStep);
+		(*		KernelLog.String(' i = '); KernelLog.Int(i, 0);  KernelLog.String(' angle = '); Strings.FloatToStr(angle, 4, 10, 0, str); KernelLog.String(str);KernelLog.Ln;*)
+				p[i].x :=  ENTIER(centerX + Math.cos(angle) * innerRadius+0.5);
+				p[i].y :=  ENTIER(centerY + Math.sin(angle) * innerRadius+0.5);
+				INC(j);
+			END;
+			(*Determine the ending angle of the arc so you can
+			rotate around the outer arc in the opposite direction.*)
+			endAngle := startAngle + arcAngle;
+
+		    (*Start drawing all points on the outer arc.*)
+		    FOR i:=0 TO steps DO
+				(* To go the opposite direction, we subtract rather than add.*)
+				angle := (endAngle - i * angleStep);
+		(*		KernelLog.String(' i = '); KernelLog.Int(j+i, 0);  KernelLog.String(' angle = '); Strings.FloatToStr(angle, 4, 10, 0, str); KernelLog.String(str);KernelLog.Ln;*)
+				p[j+i].x :=  ENTIER(centerX + Math.cos(angle) * outerRadius+0.5);
+				p[j+i].y :=  ENTIER(centerY + Math.sin(angle) * outerRadius+0.5);
+				
+			END;
+
+			FillPolygonFlat(p, steps*2+2, color, WMGraphics.ModeCopy);
+		END DrawArcFlat;
 	END Canvas;
 	
 PROCEDURE GenCanvas*(img: Raster.Image): WMGraphics.BufferCanvas;
