@@ -1,6 +1,6 @@
 MODULE AAGraphics;	(** AUTHOR "BohdanT"; PURPOSE "Anti-aliasing drawing of graphics primitives"; *)
 
-IMPORT SYSTEM, WMGraphics,  WMRectangles, Raster, 	WMGraphicUtilities, Math, Strings;
+IMPORT SYSTEM, WMGraphics,  WMRectangles, Raster, 	WMGraphicUtilities, Math, Strings, KernelLog;
 
 
 (*Fast Antialiased Circle*)
@@ -572,7 +572,7 @@ BEGIN
 		dy := ABS(y1-y0); IF y0 < y1 THEN sy := 1 ELSE sy := -1; END;
 		e2 := Math.sqrt(dx*dx+dy*dy);                            (* length *)
 
-   IF  (th <= 1) OR (e2 = 0) THEN AALine(img, x0,y0, x1,y1, color); RETURN END;        (* assert *)
+(*   IF  (th <= 1) OR (e2 = 0) THEN AALine(img, x0,y0, x1,y1, color); RETURN END;        (* assert *)*)
    dx := dx*255/e2; dy := dy*255/e2; 
    th := 255*(th-1);               (* scale values *)
 
@@ -782,7 +782,7 @@ TYPE
 
 		PROCEDURE Line*(x0, y0, x1, y1: LONGINT; lineColor: WMGraphics.Color; mode: LONGINT);
 		BEGIN
-				AALineW(img, x0+dx, y0+dy, x1+dx, y1+dy, lineColor, lineWidth);
+				AALineW(img, x0+dx, y0+dx, x1+dx, y1+dx, lineColor, lineWidth);
 		END Line;
 
 		PROCEDURE &New*(img : Raster.Image);
@@ -856,12 +856,12 @@ TYPE
 			FOR t := y0 TO y1 - 1 DO
 				AddIntersection(t, xi, xf, dt2);
 
-				a:=255*ABS(xf) DIV dt2;
+(*				a:=255*ABS(xf) DIV dt2;
 				Raster.SetRGBA(p,r,g,b, a);
 				Raster.Put(img, xi+dx, t+dy, p, rmode);
 				Raster.SetRGBA(p,r,g,b, 255-a);
 				Raster.Put(img, xi+1+dx, t+dy, p, rmode);
-
+*)
 				INC(xi, mi); INC(xf, mf);
 				IF xf > 0 THEN INC(xi); DEC(xf, dt2) END
 			END
@@ -874,11 +874,38 @@ TYPE
 			p : Raster.Pixel;
 			r, g, b, a : LONGINT;
 			rmode: Raster.Mode;
+			x0,x1:LONGINT;
+			k,l:LONGINT;
+			PROCEDURE Interpolate(from,to:LONGINT;dir:LONGINT):BOOLEAN;
+			VAR
+				x:LONGINT;
+			BEGIN
+				l:=ABS(from-to);
+				IF l<2 THEN RETURN FALSE; END;
+				x:=from;
+				IF from<to THEN
+					FOR k:=0 TO l DO
+						a:=255-255*(k) DIV (l);
+						Raster.SetRGBA(p,r,g,b, a);
+						Raster.Put(img, x, i-1, p, rmode);
+						INC(x,dir);
+					END
+				ELSE
+					FOR k:=0 TO l DO
+						a:=255*(k) DIV (l);
+						Raster.SetRGBA(p,r,g,b, a);
+						Raster.Put(img, x, i, p, rmode);
+						INC(x,-dir);
+					END
+				END;
+				RETURN TRUE;
+			END Interpolate;
+			
 		BEGIN
 			WMGraphics.ColorToRGBA(color,r,g,b,a);
 			Raster.InitMode(rmode,Raster.srcOverDst); (* use ModeSrcOverDst in all cases *)
 
-
+			x0:=-1;x1:=-1;
 			FOR i := 0 TO height - 1 DO
 				cur := edges[i];
 				in := FALSE;
@@ -890,19 +917,24 @@ TYPE
 						dt := fillHeap[cur].dt;
 					ELSE 
 						Fill(WMRectangles.MakeRect(sp, i, fillHeap[cur].pos, i + 1), color, mode);
-
-						a:=255*ABS(esp) DIV dt;
-						Raster.SetRGBA(p,r,g,b, a);
-						Raster.Put(img, sp-1+dx, i+dy, p, rmode);
-						Raster.SetRGBA(p,r,g,b, 255-a);
-						Raster.Put(img, sp+dx, i+dy, p, rmode);
+						IF x1#-1 THEN
+							IF ~Interpolate(x1,fillHeap[cur].pos,1) THEN
+								a:=255*ABS(fillHeap[cur].err) DIV fillHeap[cur].dt;
+		(*						Raster.SetRGBA(p,r,g,b, a);
+								Raster.Put(img, fillHeap[cur].pos+dx, i+dy, p, rmode);*)
+								Raster.SetRGBA(p,r,g,b, 255-a);
+								Raster.Put(img, fillHeap[cur].pos+dx, i+dy, p, rmode);
+							END;
+							IF ~Interpolate(x0,sp,-1) THEN
+								a:=255*ABS(esp) DIV dt;
+								Raster.SetRGBA(p,r,g,b, a);
+								Raster.Put(img, sp-1+dx, i+dy, p, rmode);
+								Raster.SetRGBA(p,r,g,b, 255-a);
+								Raster.Put(img, sp+dx, i+dy, p, rmode);
+							END;
+						END;
+						x0:=sp;x1:=fillHeap[cur].pos;
 						
-
-						a:=255*ABS(fillHeap[cur].err) DIV fillHeap[cur].dt;
-(*						Raster.SetRGBA(p,r,g,b, a);
-						Raster.Put(img, fillHeap[cur].pos+dx, i+dy, p, rmode);*)
-						Raster.SetRGBA(p,r,g,b, 255-a);
-						Raster.Put(img, fillHeap[cur].pos+dx, i+dy, p, rmode);
 						
 					END;
 					cur := fillHeap[cur].next
