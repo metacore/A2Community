@@ -1,9 +1,9 @@
 MODULE AAGraphics;	(** AUTHOR "BohdanT"; PURPOSE "Anti-aliasing drawing of graphics primitives"; *)
 
-IMPORT SYSTEM, WMGraphics,  WMRectangles, Raster, 	WMGraphicUtilities, Math, Strings, KernelLog;
+IMPORT SYSTEM, WMGraphics,  WMRectangles, Raster, 	WMGraphicUtilities, Math, Strings;
 
 
-(*Fast Antialiased Circle*)
+(**Fast Antialiased Circle*)
 PROCEDURE Circle*(img: Raster.Image;CX, CY, R,cl : LONGINT);
 
 VAR  X, Y: LONGINT;
@@ -48,14 +48,16 @@ BEGIN
 			INC(RadiusError, XChange);
 			INC(XChange,2);
 		END;
-      END;
+	END;
+(*!TODO:fixed artifact*)
 (*  	Raster.SetRGBA(p2,r,g,b,127);
-	Raster.Put(img, CX-X-1, CY+Y, p2, rmode);      (*fixed artifact*)
+	Raster.Put(img, CX-X-1, CY+Y, p2, rmode);      
 	Raster.Put(img, CX+X+1, CY+Y, p2, rmode);      
 	Raster.Put(img, CX-X-1, CY-Y, p2, rmode);      
 	Raster.Put(img, CX+X+1, CY-Y, p2, rmode);      *)
 END Circle;
-(*Fast Antialiased Disk*)
+
+(**Fast Antialiased Disk*)
 PROCEDURE AADisk*(img : Raster.Image; CX, CY, R,cl : LONGINT);
 
 VAR  
@@ -104,9 +106,6 @@ BEGIN
 	Raster.Put(img, CX-Y, CY-X, p1, rmode); Raster.Put(img, CX-Y, CY-X-dx, p2, rmode);
 	Raster.Put(img, CX+Y, CY-X, p1, rmode); Raster.Put(img, CX+Y, CY-X-dx, p2, rmode);
 	Raster.Fill(img, CX-Y, CY-X, CX+Y+1, CY-X+1, p0, rmode);
-
-(*	KernelLog.String("a= "); KernelLog.Int(a, 0);KernelLog.String(" dX= "); KernelLog.Int(XChange, 0);   KernelLog.String(" REr= "); KernelLog.Int(RadiusError, 0);KernelLog.Ln;*)
-
          INC(Y);
          INC(RadiusError, YChange);
          
@@ -117,7 +116,7 @@ BEGIN
                INC(XChange,2);
         END;
       END;
-    	Raster.Put(img, CX-X-1, CY+Y, p2, rmode);      (*fixed artifact*)
+	Raster.Put(img, CX-X-1, CY+Y, p2, rmode);      (*fixed artifact*)
 	Raster.Put(img, CX+X+1, CY+Y, p2, rmode);      
 	Raster.Put(img, CX-X-1, CY-Y, p2, rmode);      
 	Raster.Put(img, CX+X+1, CY-Y, p2, rmode);      
@@ -570,56 +569,56 @@ BEGIN
 	
 		dx := ABS(x1-x0); IF x0 < x1 THEN sx :=1 ELSE sx :=-1; END;
 		dy := ABS(y1-y0); IF y0 < y1 THEN sy := 1 ELSE sy := -1; END;
-		e2 := Math.sqrt(dx*dx+dy*dy);                            (* length *)
+		e2 := Math.sqrt(dx*dx+dy*dy);(* length *)
 
-(*   IF  (th <= 1) OR (e2 = 0) THEN AALine(img, x0,y0, x1,y1, color); RETURN END;        (* assert *)*)
-   dx := dx*255/e2; dy := dy*255/e2; 
-   th := 255*(th-1);               (* scale values *)
+	IF  (th <= 1) OR (e2 = 0) THEN AALine(img, x0,y0, x1,y1, color); RETURN END;
+	dx := dx*255/e2; dy := dy*255/e2; 
+	th := 255*(th-1);(* scale values *)
 
-   IF (dx < dy) THEN                                               (* steep line *)
-      x1 := ENTIER((e2+th/2)/dy+0.5);                          (* start offset *)
-      err := x1*dy-th/2;                  (* shift error value to offset width *)
-      x0 := x0-x1*sx;
+	IF (dx < dy) THEN(* steep line *)
+		x1 := ENTIER((e2+th/2)/dy+0.5);(* start offset *)
+		err := x1*dy-th/2;(* shift error value to offset width *)
+		x0 := x0-x1*sx;
 
-      WHILE y0 # y1 DO
-				x1 := x0;
-				Raster.SetRGBA(p1,r,g,b,255- ENTIER(err));
-				Raster.Put(img, x1, y0, p1, rmode);(* aliasing pre-pixel *)
+		WHILE y0 # y1 DO
+			x1 := x0;
+			Raster.SetRGBA(p1,r,g,b,255- ENTIER(err));
+			Raster.Put(img, x1, y0, p1, rmode);(* aliasing pre-pixel *)
 
-				e2 := dy-err-th;
-				WHILE	e2+dy < 255 DO
-					INC(x1, sx);
-					Raster.Put(img, x1, y0, p, rmode);(* pixel on the line *)
-					e2:=e2+dy
-				END;
-				Raster.SetRGBA(p1,r,g,b,255- ENTIER(e2));
-				Raster.Put(img, x1+sx, y0, p1, rmode);(* aliasing post-pixel *)
-         err:=err+ dx;                                                 (* y-step *)
-         IF  err > 255 THEN err:=err- dy; INC(x0, sx) END;                    (* x-step *) 
-         INC(y0, sy);
-      END;
-   ELSE                                                      (* flat line *)
-			y1 := ENTIER((e2+th/2)/dx+0.5);                          (* start offset *)
-			err := y1*dx-th/2;                  (* shift error value to offset width *)
-			y0 := y0-y1*sy;
-			WHILE x0 # x1 DO 
-				y1 := y0;
-				Raster.SetRGBA(p1,r,g,b, 255-ENTIER(err));
-				Raster.Put(img, x0, y1, p1, rmode);(* aliasing pre-pixel *)
-
-				e2 := dx-err-th;
-				WHILE e2+dx < 255 DO  
-					INC(y1, sy);
-					Raster.Put(img, x0, y1, p, rmode);(* pixel on the line *)
-					e2:= e2+dx;
-				END;
-				Raster.SetRGBA(p1,r,g,b, 255-ENTIER(e2));
-				Raster.Put(img, x0, y1+sy, p1, rmode);(* aliasing post-pixel *)
-				err :=err + dy;                                                 (* x-step *) 
-				IF err > 255 THEN err:=err-dx; INC(y0, sy); END;                    (* y-step *)
-				INC(x0, sx);
+			e2 := dy-err-th;
+			WHILE	e2+dy < 255 DO
+				INC(x1, sx);
+				Raster.Put(img, x1, y0, p, rmode);(* pixel on the line *)
+				e2:=e2+dy
 			END;
-   END;
+			Raster.SetRGBA(p1,r,g,b,255- ENTIER(e2));
+			Raster.Put(img, x1+sx, y0, p1, rmode);(* aliasing post-pixel *)
+			err:=err+ dx;(* y-step *)
+			IF  err > 255 THEN err:=err- dy; INC(x0, sx) END;(* x-step *) 
+			INC(y0, sy);
+		END;
+	ELSE(* flat line *)
+		y1 := ENTIER((e2+th/2)/dx+0.5);(* start offset *)
+		err := y1*dx-th/2;(* shift error value to offset width *)
+		y0 := y0-y1*sy;
+		WHILE x0 # x1 DO 
+			y1 := y0;
+			Raster.SetRGBA(p1,r,g,b, 255-ENTIER(err));
+			Raster.Put(img, x0, y1, p1, rmode);(* aliasing pre-pixel *)
+
+			e2 := dx-err-th;
+			WHILE e2+dx < 255 DO  
+				INC(y1, sy);
+				Raster.Put(img, x0, y1, p, rmode);(* pixel on the line *)
+				e2:= e2+dx;
+			END;
+			Raster.SetRGBA(p1,r,g,b, 255-ENTIER(e2));
+			Raster.Put(img, x0, y1+sy, p1, rmode);(* aliasing post-pixel *)
+			err :=err + dy;(* x-step *) 
+			IF err > 255 THEN err:=err-dx; INC(y0, sy); END;(* y-step *)
+			INC(x0, sx);
+		END;
+	END;
 END AALineW;
 
 
@@ -867,6 +866,7 @@ TYPE
 			END
 		END AddLine;
 
+		(*!TODO: work of anti-aliasing is bad, need optimizing*)
 		PROCEDURE FillFlat(color : WMGraphics.Color; mode : LONGINT);
 		VAR i, sp, esp, dt, cur : LONGINT;
 		in : BOOLEAN;
@@ -884,7 +884,7 @@ TYPE
 				IF l<3 THEN RETURN TRUE; END;
 				x:=from;
 				IF (from<to)=(dir=1) THEN
-					FOR k:=0 TO l DO
+					FOR k:=1 TO l DO
 						a:=255-255*(k) DIV (l);
 						Raster.SetRGBA(p,r,b,g, a);
 						Raster.Put(img, x+dx, i-1+dy, p, rmode);
@@ -892,10 +892,10 @@ TYPE
 					END;
 					RETURN TRUE;
 				ELSE
-					FOR k:=0 TO l DO
+					FOR k:=0 TO l-1 DO
 						a:=255*(k) DIV (l);
 						Raster.SetRGBA(p,r,g,b, a);
-						Raster.Put(img, x+dx, i+dy, p, rmode);
+						Raster.Put(img, x+dx-dir, i+dy, p, rmode);
 						x:=x-dir;
 					END
 				END;
@@ -919,19 +919,20 @@ TYPE
 					ELSE 
 						Fill(WMRectangles.MakeRect(sp, i, fillHeap[cur].pos, i + 1), color, mode);
 						IF (y0#-1)&(y0#i) THEN
-							IF Interpolate(x1,fillHeap[cur].pos,1) THEN
-									a:=255*ABS(fillHeap[cur].err) DIV fillHeap[cur].dt;
-									Raster.SetRGBA(p,r,g,b, 255-a);
-									Raster.Put(img, fillHeap[cur].pos+dx, i+dy, p, rmode);
-									Raster.SetRGBA(p,r,g,b, a);
-									Raster.Put(img, fillHeap[cur].pos+dx-1, i+dy, p, rmode);
-							END;
 							IF Interpolate(x0,sp,-1) THEN
-								a:=255*ABS(esp) DIV dt;
-								Raster.SetRGBA(p,r,g,b, a);
-								Raster.Put(img, sp-1+dx, i+dy, p, rmode);
-								Raster.SetRGBA(p,r,g,b, 255-a);
-								Raster.Put(img, sp+dx, i+dy, p, rmode);
+										a:=255*ABS(esp) DIV dt;
+										Raster.SetRGBA(p,r,g,b, a);
+										Raster.Put(img, sp-1+dx, i+dy, p, rmode);
+(*										Raster.SetRGBA(p,r,g,b, a);
+										Raster.Put(img, sp+dx, i+dy-1, p, rmode);*)
+							END;
+						
+							IF Interpolate(x1,fillHeap[cur].pos,1) THEN
+										a:=255*ABS(fillHeap[cur].err) DIV fillHeap[cur].dt;
+										Raster.SetRGBA(p,r,g,b, 255-a);
+										Raster.Put(img, fillHeap[cur].pos+dx, i+dy, p, rmode);
+										Raster.SetRGBA(p,r,g,b, a);
+										Raster.Put(img, fillHeap[cur].pos+dx-1, i+dy, p, rmode);
 							END;
 						END;
 						IF y0#i THEN
