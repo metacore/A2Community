@@ -5,7 +5,7 @@ MODULE VCTypes;
 
 IMPORT
 	Math, WMComponents, WMRectangles, WMGraphics,
-	Vector, KernelLog;
+	Vector;
 
 TYPE
 	FloatPoint* = RECORD(Vector.Value)
@@ -124,8 +124,9 @@ TYPE
 			p3.y := p2.y;
 			p4.x := p3.x;
 			p4.y := p1.y;
+			FCanvas.Fill(WMRectangles.MakeRect(p1.x - 1, p1.y - 1, p3.x + 1, p3.y + 1), WMGraphics.Black, mode);
 			FCanvas.Fill(WMRectangles.MakeRect(p1.x, p1.y, p3.x, p3.y), WMGraphics.White, mode);
-			FCanvas.PolyLine([p1, p2, p3, p4], 4, TRUE, color, mode);
+			(*FCanvas.PolyLine([p1, p2, p3, p4], 4, TRUE, color, mode);*)
 		END DrawVertex;
 
 		(* Line's perpendicular vector *)
@@ -146,6 +147,11 @@ TYPE
 			FConvertIntf.LogToScreenPt(X1, Y1, fp1.X, fp1.Y);
 			FConvertIntf.LogToScreenPt(X2, Y2, fp2.X, fp2.Y);
 
+(*			fW := FConvertIntf.LogToScreen(LineWidth);
+			FCanvas.SetLineWidth(ENTIER(fW + 0.5));
+			FCanvas.Line(ENTIER(fp1.X + 0.5), ENTIER(fp1.Y + 0.5),
+				ENTIER(fp2.X + 0.5), ENTIER(fp2.Y + 0.5), color, mode);  *)
+			
 			(* Half LineWidth *)
 			fW := 0.5 * FConvertIntf.LogToScreen(LineWidth);
 
@@ -236,15 +242,6 @@ TYPE
 		END DrawText;
 
 		PROCEDURE DrawPolygon*(pPts: PFloatPoints; LineWidth: REAL; closed: BOOLEAN);
-		
-		
-		
-		(*!
-		
-		Gfx.DefOutline(c(Canvas).gfxContext);
-		
-		*)
-		
 
 			(* Put one point to left list and 2 points to right list *)
 			PROCEDURE PutSpecial(pL, pR: Points; VAR iL, iR: LONGINT; bReverseDir: BOOLEAN);
@@ -385,8 +382,6 @@ TYPE
 				END
 			END;
 			
-			(*TRACE(LEN(pPts^), iLeft, iRight);*)
-
 			(* Sum up result *)
 			i := iRight - 1;
 			WHILE i >= 0 DO
@@ -395,13 +390,8 @@ TYPE
 				DEC(i)
 			END;
 
-			(* AAGraphics.PolyLine(FCanvas(WMGraphics.BufferCanvas).img, FCanvas.dx, FCanvas.dy, pPolyLeft^, iLeft, TRUE, color); *)
-			FCanvas.FillPolygonFlat(pPolyLeft^, iLeft, color, mode);
+			FCanvas.FillPolygonFlat(pPolyLeft^, iLeft, color, mode)
 			
-			(*FOR i := 0 TO iLeft - 1 DO
-				KernelLog.String("p["); KernelLog.Int(i, 0); KernelLog.String("] := "); KernelLog.Int(pPolyLeft^[i], 0);
-			END*)
-
 		END DrawPolygon;
 
 	END LogicalCanvas;
