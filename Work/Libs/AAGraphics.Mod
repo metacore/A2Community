@@ -881,12 +881,12 @@ TYPE
 				x:LONGINT;
 			BEGIN
 				l:=ABS(from-to);
-				IF l<2 THEN RETURN TRUE; END;
+				IF l<3 THEN RETURN TRUE; END;
 				x:=from;
 				IF (from<to)=(dir=1) THEN
 					FOR k:=0 TO l DO
 						a:=255-255*(k) DIV (l);
-						Raster.SetRGBA(p,r,g,b, a);
+						Raster.SetRGBA(p,r,b,g, a);
 						Raster.Put(img, x+dx, i-1+dy, p, rmode);
 						x:=x+dir;
 					END;
@@ -899,7 +899,7 @@ TYPE
 						x:=x-dir;
 					END
 				END;
-				RETURN TRUE;
+				RETURN FALSE;
 			END Interpolate;
 			
 		BEGIN
@@ -920,11 +920,11 @@ TYPE
 						Fill(WMRectangles.MakeRect(sp, i, fillHeap[cur].pos, i + 1), color, mode);
 						IF (y0#-1)&(y0#i) THEN
 							IF Interpolate(x1,fillHeap[cur].pos,1) THEN
-								a:=255*ABS(fillHeap[cur].err) DIV fillHeap[cur].dt;
-(*								Raster.SetRGBA(p,r,g,b, a);
-								Raster.Put(img, fillHeap[cur].pos+dx, i+dy, p, rmode);*)
-								Raster.SetRGBA(p,r,g,b, 255-a);
-								Raster.Put(img, fillHeap[cur].pos+dx, i+dy, p, rmode);
+									a:=255*ABS(fillHeap[cur].err) DIV fillHeap[cur].dt;
+									Raster.SetRGBA(p,r,g,b, 255-a);
+									Raster.Put(img, fillHeap[cur].pos+dx, i+dy, p, rmode);
+									Raster.SetRGBA(p,r,g,b, a);
+									Raster.Put(img, fillHeap[cur].pos+dx-1, i+dy, p, rmode);
 							END;
 							IF Interpolate(x0,sp,-1) THEN
 								a:=255*ABS(esp) DIV dt;
