@@ -921,8 +921,8 @@ TYPE
 						IF (y0#-1)&(y0#i) THEN
 							IF Interpolate(x1,fillHeap[cur].pos,1) THEN
 								a:=255*ABS(fillHeap[cur].err) DIV fillHeap[cur].dt;
-								Raster.SetRGBA(p,r,g,b, a);
-								Raster.Put(img, fillHeap[cur].pos+dx, i+dy, p, rmode);
+(*								Raster.SetRGBA(p,r,g,b, a);
+								Raster.Put(img, fillHeap[cur].pos+dx, i+dy, p, rmode);*)
 								Raster.SetRGBA(p,r,g,b, 255-a);
 								Raster.Put(img, fillHeap[cur].pos+dx, i+dy, p, rmode);
 							END;
@@ -935,7 +935,7 @@ TYPE
 							END;
 						END;
 						IF y0#i THEN
-								x0:=sp;x1:=fillHeap[cur].pos;
+													x0:=sp;x1:=fillHeap[cur].pos;
 						END;
 						y0:=i;
 
