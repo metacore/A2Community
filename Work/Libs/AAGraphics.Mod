@@ -874,28 +874,29 @@ TYPE
 			p : Raster.Pixel;
 			r, g, b, a : LONGINT;
 			rmode: Raster.Mode;
-			x0,x1:LONGINT;
+			x0,x1,y0:LONGINT;
 			k,l:LONGINT;
 			PROCEDURE Interpolate(from,to:LONGINT;dir:LONGINT):BOOLEAN;
 			VAR
 				x:LONGINT;
 			BEGIN
 				l:=ABS(from-to);
-				IF l<2 THEN RETURN FALSE; END;
+				IF l<2 THEN RETURN TRUE; END;
 				x:=from;
-				IF from<to THEN
+				IF (from<to)=(dir=1) THEN
 					FOR k:=0 TO l DO
 						a:=255-255*(k) DIV (l);
 						Raster.SetRGBA(p,r,g,b, a);
-						Raster.Put(img, x, i-1, p, rmode);
-						INC(x,dir);
-					END
+						Raster.Put(img, x+dx, i-1+dy, p, rmode);
+						x:=x+dir;
+					END;
+					RETURN TRUE;
 				ELSE
 					FOR k:=0 TO l DO
 						a:=255*(k) DIV (l);
 						Raster.SetRGBA(p,r,g,b, a);
-						Raster.Put(img, x, i, p, rmode);
-						INC(x,-dir);
+						Raster.Put(img, x+dx, i+dy, p, rmode);
+						x:=x-dir;
 					END
 				END;
 				RETURN TRUE;
@@ -905,7 +906,7 @@ TYPE
 			WMGraphics.ColorToRGBA(color,r,g,b,a);
 			Raster.InitMode(rmode,Raster.srcOverDst); (* use ModeSrcOverDst in all cases *)
 
-			x0:=-1;x1:=-1;
+			x0:=-1;x1:=-1;y0:=-1;
 			FOR i := 0 TO height - 1 DO
 				cur := edges[i];
 				in := FALSE;
@@ -917,15 +918,15 @@ TYPE
 						dt := fillHeap[cur].dt;
 					ELSE 
 						Fill(WMRectangles.MakeRect(sp, i, fillHeap[cur].pos, i + 1), color, mode);
-						IF x1#-1 THEN
-							IF ~Interpolate(x1,fillHeap[cur].pos,1) THEN
+						IF (y0#-1)&(y0#i) THEN
+							IF Interpolate(x1,fillHeap[cur].pos,1) THEN
 								a:=255*ABS(fillHeap[cur].err) DIV fillHeap[cur].dt;
-		(*						Raster.SetRGBA(p,r,g,b, a);
-								Raster.Put(img, fillHeap[cur].pos+dx, i+dy, p, rmode);*)
+								Raster.SetRGBA(p,r,g,b, a);
+								Raster.Put(img, fillHeap[cur].pos+dx, i+dy, p, rmode);
 								Raster.SetRGBA(p,r,g,b, 255-a);
 								Raster.Put(img, fillHeap[cur].pos+dx, i+dy, p, rmode);
 							END;
-							IF ~Interpolate(x0,sp,-1) THEN
+							IF Interpolate(x0,sp,-1) THEN
 								a:=255*ABS(esp) DIV dt;
 								Raster.SetRGBA(p,r,g,b, a);
 								Raster.Put(img, sp-1+dx, i+dy, p, rmode);
@@ -933,9 +934,11 @@ TYPE
 								Raster.Put(img, sp+dx, i+dy, p, rmode);
 							END;
 						END;
-						x0:=sp;x1:=fillHeap[cur].pos;
-						
-						
+						IF y0#i THEN
+								x0:=sp;x1:=fillHeap[cur].pos;
+						END;
+						y0:=i;
+
 					END;
 					cur := fillHeap[cur].next
 				END
