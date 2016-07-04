@@ -781,7 +781,7 @@ TYPE
 
 		PROCEDURE Line*(x0, y0, x1, y1: LONGINT; lineColor: WMGraphics.Color; mode: LONGINT);
 		BEGIN
-				AALineW(img, x0+dx, y0+dx, x1+dx, y1+dx, lineColor, lineWidth);
+				AALineW(img, x0+dx, y0+dy, x1+dx, y1+dy, lineColor, lineWidth);
 		END Line;
 
 		PROCEDURE &New*(img : Raster.Image);
