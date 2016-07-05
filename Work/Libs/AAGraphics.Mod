@@ -1,6 +1,6 @@
 MODULE AAGraphics;	(** AUTHOR "BohdanT"; PURPOSE "Anti-aliasing drawing of graphics primitives"; *)
 
-IMPORT SYSTEM, WMGraphics,  WMRectangles, Raster, 	WMGraphicUtilities, Math, Strings;
+IMPORT SYSTEM, WMGraphics,  WMRectangles, Raster, 	WMGraphicUtilities, Math, Strings, KernelLog;
 
 
 (**Fast Antialiased Circle*)
@@ -759,7 +759,7 @@ END BoxBlur;
 
 
 TYPE
-	FillPosEntry = RECORD pos, err, dt, next : LONGINT END;
+	FillPosEntry = RECORD pos,  next : LONGINT END;
 	FillHeap = POINTER TO ARRAY OF FillPosEntry;
 
 	Canvas* = OBJECT(WMGraphics.BufferCanvas)
@@ -781,7 +781,7 @@ TYPE
 
 		PROCEDURE Line*(x0, y0, x1, y1: LONGINT; lineColor: WMGraphics.Color; mode: LONGINT);
 		BEGIN
-				AALineW(img, x0+dx, y0+dx, x1+dx, y1+dx, lineColor, lineWidth);
+				AALineW(img, x0+dx, y0+dy, x1+dx, y1+dy, lineColor, lineWidth);
 		END Line;
 
 		PROCEDURE &New*(img : Raster.Image);
@@ -801,7 +801,7 @@ TYPE
 			IF fillHeap = NIL THEN NEW(fillHeap, 1024); heapSize := 1024 END
 		 END ClearHeap;
 
-		 PROCEDURE NewFillPos(pos, err, dt : LONGINT) : LONGINT;
+		 PROCEDURE NewFillPos(pos : LONGINT) : LONGINT;
 		 VAR newHeap : FillHeap;
 			i : LONGINT;
 		 BEGIN
@@ -813,17 +813,15 @@ TYPE
 				fillHeap := newHeap
 			END;
 			fillHeap[topHeap].pos := pos;
-			fillHeap[topHeap].err := err;
-			fillHeap[topHeap].dt := dt;
 			fillHeap[topHeap].next := 0;
 			RETURN topHeap
 		 END NewFillPos;
 
-		 PROCEDURE AddIntersection(y, pos, err, dt : LONGINT);
+		 PROCEDURE AddIntersection(y, pos : LONGINT);
 		 VAR new, cur : LONGINT;
 		 BEGIN
 			IF (y < 0) OR (y >= height) THEN RETURN END;
-			new := NewFillPos(pos, err, dt);
+			new := NewFillPos(pos);
 			IF edges[y] = 0 THEN edges[y] := new
 			ELSE
 				cur := edges[y];
@@ -837,109 +835,140 @@ TYPE
 				END;
 			END;
 		 END AddIntersection;
-
-		PROCEDURE AddLine(x0, y0, x1, y1 : LONGINT);
-		VAR t, xi, xf, mi, mf, dt2 : LONGINT ;
-				p : Raster.Pixel;
-				r, g, b, a : LONGINT;
-				rmode: Raster.Mode;
-	
+(*
+		PROCEDURE AddLine*(x0, y0, x1, y1 : LONGINT);
+		VAR t, xi, xf, mi, mf, dt2	: LONGINT ;
 		BEGIN
-	WMGraphics.ColorToRGBA(color,r,g,b,a);
-	Raster.InitMode(rmode,Raster.srcOverDst); (* use ModeSrcOverDst in all cases *)
-	Raster.SetRGBA(p,r,g,b, a);
+		KernelLog.String("****SSLine***** "); 
+		KernelLog.String(" x0= "); KernelLog.Int(x0, 4); 
+		KernelLog.String(" y0= "); KernelLog.Int(y0, 4); 
+		KernelLog.String(" x1= "); KernelLog.Int(x1, 4); 
+		KernelLog.String(" y1= "); KernelLog.Int(y1, 4); 
+		KernelLog.Ln; 
 
 			IF (y0 = y1) THEN RETURN END;
 			IF y0 > y1 THEN t := y0; y0 := y1; y1 := t; t := x0; x0 := x1; x1 := t END;
 			xi := x0; xf :=	y0 - y1; mi := (x1 - x0) DIV (y1 - y0); mf := 2 * ( (x1 - x0) MOD (y1 - y0)); dt2 := 2 * (y1 - y0);
 			FOR t := y0 TO y1 - 1 DO
-				AddIntersection(t, xi, xf, dt2);
+				AddIntersection(t, xi);
+				KernelLog.String("y= "); KernelLog.Int(t, 4); 	KernelLog.String(" x= "); KernelLog.Int(xi, 4); 		KernelLog.Ln;
 
-(*				a:=255*ABS(xf) DIV dt2;
-				Raster.SetRGBA(p,r,g,b, a);
-				Raster.Put(img, xi+dx, t+dy, p, rmode);
-				Raster.SetRGBA(p,r,g,b, 255-a);
-				Raster.Put(img, xi+1+dx, t+dy, p, rmode);
-*)
 				INC(xi, mi); INC(xf, mf);
 				IF xf > 0 THEN INC(xi); DEC(xf, dt2) END
 			END
 		END AddLine;
-
-		(*!TODO: work of anti-aliasing is bad, need optimizing*)
-		PROCEDURE FillFlat(color : WMGraphics.Color; mode : LONGINT);
-		VAR i, sp, esp, dt, cur : LONGINT;
-		in : BOOLEAN;
+( *)
+		PROCEDURE AddLine*(x0, y0, x1, y1 : LONGINT);
+		VAR t, xi, mi, xf, mf, dt2 : LONGINT;
 		VAR
-			p : Raster.Pixel;
+			p,p1 : Raster.Pixel;
 			r, g, b, a : LONGINT;
 			rmode: Raster.Mode;
-			x0,x1,y0:LONGINT;
-			k,l:LONGINT;
-			PROCEDURE Interpolate(from,to:LONGINT;dir:LONGINT):BOOLEAN;
-			VAR
-				x:LONGINT;
-			BEGIN
-				l:=ABS(from-to);
-				IF l<3 THEN RETURN TRUE; END;
-				x:=from;
-				IF (from<to)=(dir=1) THEN
-					FOR k:=1 TO l DO
-						a:=255-255*(k) DIV (l);
-						Raster.SetRGBA(p,r,b,g, a);
-						Raster.Put(img, x+dx, i-1+dy, p, rmode);
-						x:=x+dir;
-					END;
-					RETURN TRUE;
-				ELSE
-					FOR k:=0 TO l-1 DO
-						a:=255*(k) DIV (l);
-						Raster.SetRGBA(p,r,g,b, a);
-						Raster.Put(img, x+dx-dir, i+dy, p, rmode);
-						x:=x-dir;
-					END
-				END;
-				RETURN FALSE;
-			END Interpolate;
-			
+			i:LONGINT;
+			oy:LONGINT;
+			ys,fl:LONGINT;
 		BEGIN
+(*		KernelLog.String("****AALine***** "); 
+		KernelLog.String(" x0= "); KernelLog.Int(x0, 4); 
+		KernelLog.String(" y0= "); KernelLog.Int(y0, 4); 
+		KernelLog.String(" x1= "); KernelLog.Int(x1, 4); 
+		KernelLog.String(" y1= "); KernelLog.Int(y1, 4); 
+		KernelLog.Ln; *)
 			WMGraphics.ColorToRGBA(color,r,g,b,a);
 			Raster.InitMode(rmode,Raster.srcOverDst); (* use ModeSrcOverDst in all cases *)
+			Raster.SetRGBA(p,r,g,b, a);
+	IF y0 = y1 THEN (* horizontal case *)
+		Raster.SetRGBA(p,r,g,b, 127);
+		Raster.SetRGBA(p1,r,g,b, 255);
+		FOR t := x0-1 TO x1 DO
+				Raster.Put(img, t+dx, y0-1+dy, p, rmode);
+				Raster.Put(img, t+dx, y0+dy, p1, rmode);
+				Raster.Put(img, t+dx, y0+1+dy, p, rmode);
+		END;
 
-			x0:=-1;x1:=-1;y0:=-1;
+		RETURN;
+	ELSIF x0 = x1 THEN (* vertical case *)
+		IF y0 > y1 THEN t := y0; y0 := y1; y1 := t END;
+		Raster.SetRGBA(p,r,g,b, 127);
+		FOR t := y0 TO y1-1 DO
+				AddIntersection(t, x0);
+				Raster.Put(img, x0-1+dx, t+dy, p, rmode);
+				Raster.Put(img, x0+dx, t+dy, p, rmode);
+		END;
+	ELSE (* general case *)
+
+				IF ABS(y1 - y0) > ABS(x1 - x0) THEN
+					IF y0 > y1 THEN t := y0; y0 := y1; y1 := t; t := x0; x0 := x1; x1 := t END;
+					xi := x0; xf :=	y0 - y1; mi := (x1 - x0) DIV (y1 - y0); mf := 2 * ( (x1 - x0) MOD (y1 - y0)); dt2 := 2 * (y1 - y0);
+					FOR t := y0 TO y1-1 DO
+						a:=255*ABS(xf) DIV dt2;
+						Raster.SetRGBA(p,r,g,b, a);
+						Raster.Put(img, xi-1+dx, t+dy, p, rmode);
+						Raster.SetRGBA(p,r,g,b, 255-a);
+						Raster.Put(img, xi+dx, t+dy, p, rmode);
+						AddIntersection(t, xi);
+(*						KernelLog.String("y= "); KernelLog.Int(t, 4); 	KernelLog.String(" x= "); KernelLog.Int(xi, 4); 		KernelLog.Ln;*)
+						INC(xi, mi); INC(xf, mf);
+						IF xf > 0 THEN INC(xi); DEC(xf, dt2); END
+					END
+				ELSE
+					IF x0 > x1 THEN t := y0; y0 := y1; y1 := t; t := x0; x0 := x1; x1 := t END;
+					xi := y0; xf :=	x0 - x1; mi := (y1 - y0) DIV (x1 - x0); mf := 2 * ( (y1 - y0) MOD (x1 - x0)); dt2 := 2 * (x1 - x0);
+					oy:=xi-1;
+					
+					IF y0>y1 THEN ys:=y0 
+									ELSE ys:=y1 END;
+					
+					FOR t := x0 TO x1 DO
+						IF (xi#oy)&(xi#ys) THEN 
+(*							KernelLog.String("y= "); KernelLog.Int(xi, 4); 	KernelLog.String(" x= "); KernelLog.Int(t, 4); 		KernelLog.Ln;*)
+							AddIntersection(xi,t);
+						END;
+						oy:=xi;
+				IF (TRUE) THEN
+						a:=255*ABS(xf) DIV dt2;
+				IF mi<0 THEN 
+						Raster.SetRGBA(p,r,g,b, 255-a);
+						Raster.Put(img, t+dx, xi+dy, p, rmode);
+
+(*						Raster.SetRGBA(p,r,g,b, 255);
+						Raster.Put(img, t+dx-1, xi+dy, p, rmode);
+*)
+						Raster.SetRGBA(p,r,g,b, a);
+						Raster.Put(img, t+dx, xi-1+dy, p, rmode);
+
+				ELSE
+(*						Raster.SetRGBA(p,r,g,b, 255);
+						Raster.Put(img, t+dx-1, xi+dy, p, rmode);
+*)
+						Raster.SetRGBA(p,r,g,b, a);
+						Raster.Put(img, t+dx, xi+dy, p, rmode);
+
+						Raster.SetRGBA(p,r,g,b,255- a);
+						Raster.Put(img, t+dx, xi+1+dy, p, rmode);
+				END;
+				END;
+						INC(xi, mi); INC(xf, mf);
+						IF xf > 0 THEN 
+							INC(xi); DEC(xf, dt2); 
+						END;
+
+					END
+				END
+			END		END AddLine;
+			
+		(*!TODO: work of anti-aliasing is bad, need optimizing*)
+		PROCEDURE FillFlat(color : WMGraphics.Color; mode : LONGINT);
+		VAR i, sp, cur : LONGINT;
+		in : BOOLEAN;
+		BEGIN
 			FOR i := 0 TO height - 1 DO
 				cur := edges[i];
 				in := FALSE;
 				WHILE cur # 0 DO
 					in := ~in;
-					IF in THEN 
-						sp := fillHeap[cur].pos;
-						esp := fillHeap[cur].err;
-						dt := fillHeap[cur].dt;
-					ELSE 
-						Fill(WMRectangles.MakeRect(sp, i, fillHeap[cur].pos, i + 1), color, mode);
-						IF (y0#-1)&(y0#i) THEN
-							IF Interpolate(x0,sp,-1) THEN
-										a:=255*ABS(esp) DIV dt;
-										Raster.SetRGBA(p,r,g,b, a);
-										Raster.Put(img, sp-1+dx, i+dy, p, rmode);
-(*										Raster.SetRGBA(p,r,g,b, a);
-										Raster.Put(img, sp+dx, i+dy-1, p, rmode);*)
-							END;
-						
-							IF Interpolate(x1,fillHeap[cur].pos,1) THEN
-										a:=255*ABS(fillHeap[cur].err) DIV fillHeap[cur].dt;
-										Raster.SetRGBA(p,r,g,b, 255-a);
-										Raster.Put(img, fillHeap[cur].pos+dx, i+dy, p, rmode);
-										Raster.SetRGBA(p,r,g,b, a);
-										Raster.Put(img, fillHeap[cur].pos+dx-1, i+dy, p, rmode);
-							END;
-						END;
-						IF y0#i THEN
-													x0:=sp;x1:=fillHeap[cur].pos;
-						END;
-						y0:=i;
-
+					IF in THEN sp := fillHeap[cur].pos
+					ELSE Fill(WMRectangles.MakeRect(sp, i, fillHeap[cur].pos, i + 1), color, mode)
 					END;
 					cur := fillHeap[cur].next
 				END
