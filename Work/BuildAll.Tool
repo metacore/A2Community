@@ -27,18 +27,16 @@ Compiler.Compile -p=Win32G
 	Bindings/Win32.Pipe.Mod ~
 
 *** Libraries ***
-		
+
 Compiler.Compile -p=Win32G
 
 	Libs/AAGraphics.Mod
 	Libs/CanvasTools.Mod
 
-	Libs/Vector.Mod
-	Libs/NewContainers.Mod
-
 	Libs/MathUtils.Mod
 	Libs/Win32.PreciseTimer.Mod
 
+	Libs/Generics.Mod
 
 	(* deprecated *)
 	Libs/Containers.Mod ~

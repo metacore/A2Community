@@ -11,7 +11,7 @@ MODULE RegExpDFA; (** AUTHOR "Yaroslav Romanchenko (SAGE)"; PURPOSE "Determinist
 IMPORT
 	Commands,
 
-	Vector, NewContainers,
+	Generics,
 
 	RegExpMaps;
 
@@ -22,18 +22,18 @@ TYPE
 		(** transition map, list of final states and the start state *)
 		mapTransition-: RegExpMaps.TransitionMap;
 		iInitial*, nStates*: LONGINT;
-		lstFinal-: NewContainers.LongintVector;
+		lstFinal-: Generics.LongintVector;
 
 		PROCEDURE &New*;
 		BEGIN
 			NEW(mapTransition);
-			NEW(lstFinal, {Vector.SORTABLE})
+			NEW(lstFinal, {})
 		END New;
 
 		PROCEDURE Show*(context: Commands.Context);
 		VAR
 			i: LONGINT;
-			itemTransitionMap: RegExpMaps.TransitionMapValue;
+			itemTransitionMap: RegExpMaps.TransitionMapItem;
 		BEGIN
 			context.out.Ln;
 			context.out.String("DFA start state: ");
@@ -43,13 +43,13 @@ TYPE
 			context.out.Int(nStates, 0);
 			context.out.Ln;
 			context.out.String("DFA final state(s): ");
-			FOR i := 0 TO lstFinal.Count - 1 DO
+			FOR i := 0 TO lstFinal.Count() - 1 DO
 				context.out.Int(lstFinal.Get(i), 0);
 				context.out.Char(' ')
 			END;
 			context.out.Ln;
-			FOR i := 0 TO mapTransition.Count - 1 DO
-				itemTransitionMap := mapTransition.GetItem(i);
+			mapTransition.Iterator().Reset;
+			WHILE mapTransition.Iterator().GetNext(itemTransitionMap) DO
 				context.out.String("Trans[");
 				context.out.Int(itemTransitionMap.trans.iState, 0);
 				context.out.String(", '");

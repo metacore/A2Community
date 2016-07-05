@@ -5,10 +5,10 @@ MODULE VCTypes;
 
 IMPORT
 	Math, WMComponents, WMRectangles, WMGraphics,
-	Vector;
+	Generics;
 
 TYPE
-	FloatPoint* = RECORD(Vector.Value)
+	FloatPoint* = RECORD(Generics.Item)
 		X*, Y*: REAL
 	END;
 
@@ -16,51 +16,54 @@ TYPE
 
 	PFloatPoints* = POINTER TO FloatPoints;
 
-	FloatPointVector* = OBJECT(Vector.Vector)
+	FloatPointVector* = OBJECT(Generics.Vector)
 	VAR
 		array: PFloatPoints;
 
-		PROCEDURE &Init*;
+		PROCEDURE &New*;
 		BEGIN
-			New(Vector.INITIAL_SIZE, SIZEOF(FloatPoint), {}, Create, NIL, NIL)
-		END Init;
+			Init(SIZEOF(FloatPoint), ArrayGen, NIL, NIL, NIL, {})
+		END New;
 
-		PROCEDURE Create(nSize: LONGINT; VAR pArray: ANY; VAR adrArray: ADDRESS);
+		PROCEDURE ArrayGen(iArraySize: LONGINT; VAR pArray: ANY; VAR addrArray: ADDRESS);
 		BEGIN
-			NEW(array, nSize);
-			pArray := array; adrArray := ADDRESSOF(array^[0])
-		END Create;
+			NEW(array, iArraySize); pArray := array; addrArray := ADDRESSOF(array^[0])
+		END ArrayGen;
 
 		PROCEDURE Add*(X, Y: REAL);
 		VAR
-			v: FloatPoint;
+			item: FloatPoint;
 			posDummy: LONGINT;
 		BEGIN
-			v.X := X;
-			v.Y := Y;
-			posDummy := AddInternal(v)
+			item.X := X;
+			item.Y := Y;
+			posDummy := AddInternal(item)
 		END Add;
 
 		PROCEDURE Insert*(pos: LONGINT; X, Y: REAL);
 		VAR
-			v: FloatPoint;
+			item: FloatPoint;
 		BEGIN
-			v.X := X;
-			v.Y := Y;
-			InsertInternal(pos, v)
+			item.X := X;
+			item.Y := Y;
+			InsertInternal(pos, item)
 		END Insert;
 
 		PROCEDURE Set*(pos: LONGINT; X, Y: REAL);
+		VAR
+			item: FloatPoint;
 		BEGIN
-			ASSERT((pos >= 0) & (pos < Count), 101);
-			array^[pos].X := X;
-			array^[pos].Y := Y
+			item.X := X;
+			item.Y := Y;
+			SetInternal(pos, item)
 		END Set;
 
 		PROCEDURE Get*(pos: LONGINT): FloatPoint;
+		VAR
+			item: FloatPoint;
 		BEGIN
-			ASSERT((pos >= 0) & (pos < Count), 101);
-			RETURN array^[pos]
+			GetInternal(pos, item);
+			RETURN item
 		END Get;
 
 	END FloatPointVector;

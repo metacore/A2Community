@@ -1,66 +1,63 @@
 MODULE RegExpMaps; (** AUTHOR "Yaroslav Romanchenko (SAGE)"; PURPOSE "Map container classes for use in RegExp engine"; *)
 
 IMPORT
-	Vector, NewContainers;
+	Generics;
 
 TYPE
 
-	DFAStateNumMapValue* = RECORD(Vector.Value)
-		lstStates: NewContainers.LongintVector;
-		iState-: LONGINT;
+	DFAStateNumMapItem* = RECORD(Generics.TreeItem)
+		lstStates: Generics.LongintVector;
+		iState-: LONGINT
 	END;
 
-	DFAStateNumMap* = OBJECT(Vector.Vector)
-	TYPE
-		DFAStateNumMapValues = POINTER TO ARRAY OF DFAStateNumMapValue;
+	DFAStateNumMap* = OBJECT(Generics.Tree)
 	VAR
-		array: DFAStateNumMapValues;
+		array: POINTER TO ARRAY OF DFAStateNumMapItem;
 
-		PROCEDURE &Init*;
-		BEGIN
-			New(Vector.INITIAL_SIZE, SIZEOF(DFAStateNumMapValue),
-				{Vector.SORTED}, Create, Compare, NIL)
-		END Init;
-
-		PROCEDURE Create(nSize: LONGINT; VAR pArray: ANY; VAR adrArray: ADDRESS);
-		BEGIN
-			NEW(array, nSize);
-			pArray := array; adrArray := ADDRESSOF(array^[0])
-		END Create;
-
-		PROCEDURE Compare(iLeft: LONGINT; VAR right: Vector.Value): LONGINT;
-		BEGIN
-			RETURN NewContainers.CompareLongintVectors(
-				array^[iLeft].lstStates, right(DFAStateNumMapValue).lstStates)
-		END Compare;
-
-		PROCEDURE Add*(VAR lstStates: NewContainers.LongintVector; iState: LONGINT);
+		PROCEDURE &New*;
 		VAR
-			posDummy: LONGINT;
-			v: DFAStateNumMapValue;
+			pCompA, pCompB: POINTER TO DFAStateNumMapItem;
 		BEGIN
-			v.lstStates := lstStates;
-			v.iState := iState;
-			posDummy := AddInternal(v)
-		END Add;
+			NEW(pCompA);
+			NEW(pCompB);
+			Init(SIZEOF(DFAStateNumMapItem), ArrayGen, pCompA, pCompB, Less)
+		END New;
 
-		PROCEDURE Contains*(lstStates: NewContainers.LongintVector): BOOLEAN;
-		VAR
-			v: DFAStateNumMapValue;
+		PROCEDURE ArrayGen(iArraySize: LONGINT; VAR pArray: ANY; VAR addrArray: ADDRESS);
 		BEGIN
-			v.lstStates := lstStates;
-			RETURN IndexOfInternal(v) >= 0
+			NEW(array, iArraySize); pArray := array; addrArray := ADDRESSOF(array^[0])
+		END ArrayGen;
+
+		PROCEDURE Less(pA, pB: Generics.PItem): BOOLEAN;
+		BEGIN
+			RETURN Generics.CompareLongintVectors(pA^(DFAStateNumMapItem).lstStates,
+				pB^(DFAStateNumMapItem).lstStates) < 0
+		END Less;
+
+		PROCEDURE Insert*(lstStates: Generics.LongintVector; iState: LONGINT);
+		VAR
+			item: DFAStateNumMapItem;
+		BEGIN
+			item.lstStates := lstStates;
+			item.iState := iState;
+			InsertInternal(item)
+		END Insert;
+
+		PROCEDURE Contains*(lstStates: Generics.LongintVector): BOOLEAN;
+		VAR
+			item: DFAStateNumMapItem;
+		BEGIN
+			item.lstStates := lstStates;
+			RETURN ContainsInternal(item)
 		END Contains;
 
-		PROCEDURE Get*(lstStates: NewContainers.LongintVector): DFAStateNumMapValue;
+		PROCEDURE Get*(lstStates: Generics.LongintVector): DFAStateNumMapItem;
 		VAR
-			v: DFAStateNumMapValue;
-			pos: LONGINT;
+			item: DFAStateNumMapItem;
 		BEGIN
-			v.lstStates := lstStates;
-			pos := IndexOfInternal(v);
-			ASSERT((pos >= 0) & (pos < Count), 101);
-			RETURN array^[pos]
+			item.lstStates := lstStates;
+			GetInternal(item);
+			RETURN item
 		END Get;
 
 	END DFAStateNumMap;
@@ -70,30 +67,37 @@ TYPE
 		iData-: LONGINT;
 	END;
 
-	TransitionMapValue* = RECORD(Vector.Value)
+	TransitionMapItem* = RECORD(Generics.TreeItem)
 		trans-: Transition;
 		iState-: LONGINT;
 	END;
 
-	TransitionMap* = OBJECT(Vector.Vector)
-	TYPE
-		TransitionMapValues = POINTER TO ARRAY OF TransitionMapValue;
+	TransitionMap* = OBJECT(Generics.Tree)
 	VAR
-		array: TransitionMapValues;
+		array: POINTER TO ARRAY OF TransitionMapItem;
 
-		PROCEDURE &Init*;
+		PROCEDURE &New*;
+		VAR
+			pCompA, pCompB: POINTER TO TransitionMapItem;
 		BEGIN
-			New(Vector.INITIAL_SIZE, SIZEOF(TransitionMapValue),
-				{Vector.SORTED}, Create, Compare, NIL)
-		END Init;
+			NEW(pCompA);
+			NEW(pCompB);
+			Init(SIZEOF(TransitionMapItem), ArrayGen, pCompA, pCompB, Less)
+		END New;
 
-		PROCEDURE Create(nSize: LONGINT; VAR pArray: ANY; VAR adrArray: ADDRESS);
+		PROCEDURE ArrayGen(iArraySize: LONGINT; VAR pArray: ANY; VAR addrArray: ADDRESS);
 		BEGIN
-			NEW(array, nSize);
-			pArray := array; adrArray := ADDRESSOF(array^[0])
-		END Create;
+			NEW(array, iArraySize); pArray := array; addrArray := ADDRESSOF(array^[0])
+		END ArrayGen;
+		
+		PROCEDURE Less(pA, pB: Generics.PItem): BOOLEAN;
+		BEGIN
+			RETURN (pA^(TransitionMapItem).trans.iState < pB^(TransitionMapItem).trans.iState) OR
+				((pA^(TransitionMapItem).trans.iState = pB^(TransitionMapItem).trans.iState) &
+					(pA^(TransitionMapItem).trans.iData < pB^(TransitionMapItem).trans.iData))
+		END Less;
 
-		PROCEDURE Compare(iLeft: LONGINT; VAR right: Vector.Value): LONGINT;
+		(*PROCEDURE Compare(iLeft: LONGINT; VAR right: Vector.Value): LONGINT;
 		VAR
 			itemLeft, itemRight: TransitionMapValue;
 		BEGIN
@@ -112,42 +116,33 @@ TYPE
 					RETURN 0
 				END
 			END
-		END Compare;
+		END Compare;*)
 
-		PROCEDURE Add*(VAR trans: Transition; iState: LONGINT);
+		PROCEDURE Insert*(VAR trans: Transition; iState: LONGINT);
 		VAR
-			posDummy: LONGINT;
-			v: TransitionMapValue;
+			item: TransitionMapItem;
 		BEGIN
-			v.trans := trans;
-			v.iState := iState;
-			posDummy := AddInternal(v)
-		END Add;
+			item.trans := trans;
+			item.iState := iState;
+			InsertInternal(item)
+		END Insert;
 
-		PROCEDURE Contains*(VAR x: Transition): BOOLEAN;
+		PROCEDURE Contains*(VAR trans: Transition): BOOLEAN;
 		VAR
-			v: TransitionMapValue;
+			item: TransitionMapItem;
 		BEGIN
-			v.trans := x;
-			RETURN IndexOfInternal(v) >= 0
+			item.trans := trans;
+			RETURN ContainsInternal(item)
 		END Contains;
 
-		PROCEDURE Get*(VAR x: Transition): TransitionMapValue;
+		PROCEDURE Get*(VAR trans: Transition): TransitionMapItem;
 		VAR
-			v: TransitionMapValue;
-			pos: LONGINT;
+			item: TransitionMapItem;
 		BEGIN
-			v.trans := x;
-			pos := IndexOfInternal(v);
-			ASSERT((pos >= 0) & (pos < Count), 101);
-			RETURN array^[pos]
+			item.trans := trans;
+			GetInternal(item);
+			RETURN item
 		END Get;
-
-		PROCEDURE GetItem*(pos: LONGINT): TransitionMapValue;
-		BEGIN
-			ASSERT((pos >= 0) & (pos < Count), 101);
-			RETURN array^[pos]
-		END GetItem;
 
 	END TransitionMap;
 

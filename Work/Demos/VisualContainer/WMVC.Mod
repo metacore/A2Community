@@ -5,11 +5,11 @@ MODULE WMVC;
 	of Yuri Spektor http://delphikingdom.ru/asp/viewitem.asp?catalogid=1344 "; *)
 
 IMPORT
-	SYSTEM, Modules, Commands, Strings, UTF8Strings,
+	SYSTEM, Modules, Commands, Strings,
 	WMDialogs, WMRectangles, WMGraphics, WMWindowManager,
 	XML, WMProperties, WMEvents, WMComponents, WMStandardComponents,
 	WMScrollableComponents, WMEditors, WMDropDownLists,
-	AAGraphics, Vector, VCTypes, VCObjects;
+	AAGraphics, Generics, VCTypes, VCObjects;
 
 TYPE
 
@@ -122,14 +122,14 @@ TYPE
 			cmdHitTest: VCObjects.CommandHitTest;
 		BEGIN
 			res := -1;
-			IF vObjects.Count = 0 THEN
+			IF vObjects.Count() = 0 THEN
 				RETURN res
 			END;
 			cmdHitTest.ConvertIntf := SELF;
 			cmdHitTest.Params.Pos.x := X;
 			cmdHitTest.Params.Pos.y := Y;
 			cmdHitTest.Params.Tolerance := 3;
-			i := vObjects.Count - 1;
+			i := vObjects.Count() - 1;
 			REPEAT
 				vObjects.Get(i).HandleCommand(cmdHitTest);
 				IF cmdHitTest.Hit.Type # VCObjects.HT.OUTSIDE THEN
@@ -278,9 +278,9 @@ TYPE
 			NEW(logicalCanvas, canvas, SELF);
 			canvas.Fill(WMRectangles.MakeRect(0, 0, bounds.GetWidth(), bounds.GetHeight()), LONGINT(0FFFFBBFFH), WMGraphics.ModeCopy);
 			IF logicalCanvas # NIL THEN
-				logicalCanvas.SetColor(WMGraphics.Black);
-				logicalCanvas.DrawRect(0, 0, SHORT(logicalWidth.Get()) - 0.1, SHORT(logicalHeight.Get()) - 0.1, 0.01);
-				FOR i := 0 TO vObjects.Count - 1 DO
+				(*logicalCanvas.SetColor(WMGraphics.Black);
+				logicalCanvas.DrawRect(0, 0, SHORT(logicalWidth.Get()) - 0.1, SHORT(logicalHeight.Get()) - 0.1, 0.01);*)
+				FOR i := 0 TO vObjects.Count() - 1 DO
 					IF i = selected THEN
 						logicalCanvas.SetColor(WMGraphics.Green)
 					ELSE
@@ -292,58 +292,6 @@ TYPE
 		END DrawBackground;
 
 	END VisualContainer;
-
-	UidCompValue = RECORD(Vector.Value)
-		uid: ARRAY 32 OF CHAR;
-		comp: WMComponents.Component
-	END;
-
-	UidCompMap = OBJECT(Vector.Vector)
-	TYPE
-		UidCompValues = POINTER TO ARRAY OF UidCompValue;
-	VAR
-		array: UidCompValues;
-
-		PROCEDURE &Init;
-		BEGIN
-			New(Vector.INITIAL_SIZE, SIZEOF(UidCompValue),
-				{Vector.SORTED}, Create, Compare, NIL)
-		END Init;
-
-		PROCEDURE Create(nSize: LONGINT; VAR pArray: ANY; VAR adrArray: ADDRESS);
-		BEGIN
-			NEW(array, nSize);
-			pArray := array; adrArray := ADDRESSOF(array^[0])
-		END Create;
-
-		PROCEDURE Compare(iLeft: LONGINT; VAR right: Vector.Value): LONGINT;
-		BEGIN
-			RETURN UTF8Strings.Compare(
-				array^[iLeft].uid, right(UidCompValue).uid)
-		END Compare;
-
-		PROCEDURE Add(CONST uid: ARRAY OF CHAR; comp: WMComponents.Component);
-		VAR
-			v: UidCompValue;
-			posDummy: LONGINT;
-		BEGIN
-			COPY(uid, v.uid);
-			v.comp := comp;
-			posDummy := AddInternal(v)
-		END Add;
-
-		PROCEDURE Get(CONST uid: ARRAY OF CHAR): WMComponents.Component;
-		VAR
-			v: UidCompValue;
-			pos: LONGINT;
-		BEGIN
-			COPY(uid, v.uid);
-			pos := IndexOfInternal(v);
-			ASSERT((pos >= 0) & (pos < Count), 101);
-			RETURN array[pos].comp
-		END Get;
-
-	END UidCompMap;
 
 	Window = OBJECT(WMComponents.FormWindow)
 	VAR
@@ -559,7 +507,7 @@ VAR
 			comp := c(WMComponents.Component);
 			sUID := comp.uid.Get();
 			IF (sUID # NIL) & (sUID^ # "") THEN
-				data(UidCompMap).Add(sUID^, comp)
+				data(Generics.ObjectMap).Insert(sUID, comp)
 			END
 		END
 	END FindComponents;
@@ -567,31 +515,31 @@ VAR
 	PROCEDURE WireComponents(root: WMComponents.VisualComponent; win: Window): BOOLEAN;
 	VAR
 		trap: BOOLEAN;
-		components: UidCompMap;
+		components: Generics.ObjectMap;
 	BEGIN
 		trap := FALSE;
 
 		NEW(components);
 		root.Traverse(FindComponents, components);
+		
+		window.pnlToolbar := components.GetAOC("pnlToolbar")(WMStandardComponents.Panel);
 
-		window.pnlToolbar := components.Get("pnlToolbar")(WMStandardComponents.Panel);
+		window.btnSelect := components.GetAOC("btnSelect")(WMStandardComponents.Button);
+		window.btnLine := components.GetAOC("btnLine")(WMStandardComponents.Button);
+		window.btnPoly := components.GetAOC("btnPoly")(WMStandardComponents.Button);
+		window.btnBeginEnd := components.GetAOC("btnBeginEnd")(WMStandardComponents.Button);
+		window.btnInOut := components.GetAOC("btnInOut")(WMStandardComponents.Button);
+		window.btnAction := components.GetAOC("btnAction")(WMStandardComponents.Button);
+		window.btnCondition := components.GetAOC("btnCondition")(WMStandardComponents.Button);
+		window.btnSub := components.GetAOC("btnSub")(WMStandardComponents.Button);
+		window.btnText := components.GetAOC("btnText")(WMStandardComponents.Button);
 
-		window.btnSelect := components.Get("btnSelect")(WMStandardComponents.Button);
-		window.btnLine := components.Get("btnLine")(WMStandardComponents.Button);
-		window.btnPoly := components.Get("btnPoly")(WMStandardComponents.Button);
-		window.btnBeginEnd := components.Get("btnBeginEnd")(WMStandardComponents.Button);
-		window.btnInOut := components.Get("btnInOut")(WMStandardComponents.Button);
-		window.btnAction := components.Get("btnAction")(WMStandardComponents.Button);
-		window.btnCondition := components.Get("btnCondition")(WMStandardComponents.Button);
-		window.btnSub := components.Get("btnSub")(WMStandardComponents.Button);
-		window.btnText := components.Get("btnText")(WMStandardComponents.Button);
+		window.fldText := components.GetAOC("fldText")(WMEditors.TextField);
 
-		window.fldText := components.Get("fldText")(WMEditors.TextField);
+		window.ddlScale := components.GetAOC("ddlScale")(WMDropDownLists.DropDownList);
 
-		window.ddlScale := components.Get("ddlScale")(WMDropDownLists.DropDownList);
-
-		window.boxEditor := components.Get("boxEditor")(WMScrollableComponents.ScrollableContainer);
-		window.VisCont := components.Get("VisCont")(VisualContainer);
+		window.boxEditor := components.GetAOC("boxEditor")(WMScrollableComponents.ScrollableContainer);
+		window.VisCont := components.GetAOC("VisCont")(VisualContainer);
 
 	FINALLY
 
@@ -729,6 +677,6 @@ BEGIN
 END WMVC.
 
 WMVC.Open ~
-SystemTools.Free WMVC VCObjects VCTypes ~
+SystemTools.Free WMVC VCObjects VCTypes Generics ~
 
 

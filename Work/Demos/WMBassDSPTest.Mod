@@ -1,9 +1,9 @@
 MODULE WMBassDSPTest; (** AUTHOR "SAGE"; PURPOSE "BASS 2.4 A2 OS Wrapper - BASS simple DSP Test"; *)
 
 IMPORT
-	SYSTEM, Math, Modules, Commands, Strings, UTF8Strings, Files, Codecs, Streams,
+	SYSTEM, Math, Modules, Commands, Strings, Files, Codecs, Streams,
 	XML, WMComponents, WMWindowManager, WMDialogs, WMStandardComponents,
-	BASS, MathUtils, Vector;
+	BASS, MathUtils, Generics;
 
 CONST
 	ECHBUFLEN = 1200;	(* buffer length *)
@@ -12,58 +12,6 @@ CONST
 TYPE
 	DWORD = LONGINT;
 	HDSP = LONGINT;
-
-	UidCompValue = RECORD(Vector.Value)
-		uid: ARRAY 32 OF CHAR;
-		comp: WMComponents.Component
-	END;
-
-	UidCompMap = OBJECT(Vector.Vector)
-	TYPE
-		UidCompValues = POINTER TO ARRAY OF UidCompValue;
-	VAR
-		array: UidCompValues;
-
-		PROCEDURE &Init;
-		BEGIN
-			New(Vector.INITIAL_SIZE, SIZEOF(UidCompValue),
-				{Vector.SORTED}, Create, Compare, NIL)
-		END Init;
-
-		PROCEDURE Create(nSize: LONGINT; VAR pArray: ANY; VAR adrArray: ADDRESS);
-		BEGIN
-			NEW(array, nSize);
-			pArray := array; adrArray := ADDRESSOF(array^[0])
-		END Create;
-
-		PROCEDURE Compare(iLeft: LONGINT; VAR right: Vector.Value): LONGINT;
-		BEGIN
-			RETURN UTF8Strings.Compare(
-				array^[iLeft].uid, right(UidCompValue).uid)
-		END Compare;
-
-		PROCEDURE Add(CONST uid: ARRAY OF CHAR; comp: WMComponents.Component);
-		VAR
-			v: UidCompValue;
-			posDummy: LONGINT;
-		BEGIN
-			COPY(uid, v.uid);
-			v.comp := comp;
-			posDummy := AddInternal(v)
-		END Add;
-
-		PROCEDURE Get(CONST uid: ARRAY OF CHAR): WMComponents.Component;
-		VAR
-			v: UidCompValue;
-			pos: LONGINT;
-		BEGIN
-			COPY(uid, v.uid);
-			pos := IndexOfInternal(v);
-			ASSERT((pos >= 0) & (pos < Count), 101);
-			RETURN array[pos].comp
-		END Get;
-
-	END UidCompMap;
 
 	FileName = ARRAY Files.NameLength + 1 OF CHAR;
 
@@ -401,7 +349,7 @@ BEGIN
 		comp := c(WMComponents.Component);
 		sUID := comp.uid.Get();
 		IF (sUID # NIL) & (sUID^ # "") THEN
-			data(UidCompMap).Add(sUID^, comp)
+			data(Generics.ObjectMap).Insert(sUID, comp)
 		END
 	END
 END FindComponents;
@@ -409,17 +357,17 @@ END FindComponents;
 PROCEDURE WireComponents(root: WMComponents.VisualComponent; win: Window): BOOLEAN;
 VAR
 	trap: BOOLEAN;
-	components: UidCompMap;
+	components: Generics.ObjectMap;
 BEGIN
 	trap := FALSE;
 
 	NEW(components);
 	root.Traverse(FindComponents, components);
 
-	win.btnOpen := components.Get("btnOpen")(WMStandardComponents.Button);
-	win.chbRotate := components.Get("chbRotate")(WMStandardComponents.Checkbox);
-	win.chbEcho := components.Get("chbEcho")(WMStandardComponents.Checkbox);
-	win.chbFlanger := components.Get("chbFlanger")(WMStandardComponents.Checkbox);
+	win.btnOpen := components.GetAOC("btnOpen")(WMStandardComponents.Button);
+	win.chbRotate := components.GetAOC("chbRotate")(WMStandardComponents.Checkbox);
+	win.chbEcho := components.GetAOC("chbEcho")(WMStandardComponents.Checkbox);
+	win.chbFlanger := components.GetAOC("chbFlanger")(WMStandardComponents.Checkbox);
 
 FINALLY
 

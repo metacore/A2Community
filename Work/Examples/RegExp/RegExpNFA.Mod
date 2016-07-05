@@ -10,7 +10,7 @@ MODULE RegExpNFA; (** AUTHOR "Yaroslav Romanchenko (SAGE)"; PURPOSE "Nondetermin
 *)
 
 IMPORT
-	Commands, Vector, NewContainers;
+	Commands, Generics;
 
 CONST
 	NODE_TYPE_NONE* = 0;
@@ -28,7 +28,7 @@ TYPE
 		VAR
 			aTable-: Table;
 			nSize-, iInitial-, iFinal-: LONGINT;
-			lstInputs-: NewContainers.LongintVector;
+			lstInputs-: Generics.LongintVector;
 
 		PROCEDURE &New*(nSize: LONGINT; iInitial, iFinal: LONGINT);
 		VAR
@@ -37,7 +37,7 @@ TYPE
 			SELF.nSize := nSize;
 			SELF.iInitial := iInitial;
 			SELF.iFinal := iFinal;
-			NEW(lstInputs, {Vector.SORTED});
+			NEW(lstInputs, {lstInputs.SORTED});
 			NEW(aTable, nSize, nSize);
 			FOR iFrom := 0 TO nSize - 1 DO
 				FOR iTo := 0 TO nSize - 1 DO
@@ -108,7 +108,7 @@ TYPE
 					aTable[iFrom, iTo] := nfaOther.aTable[iFrom, iTo]
 				END
 			END;
-			FOR i := 0 TO nfaOther.lstInputs.Count - 1 DO
+			FOR i := 0 TO nfaOther.lstInputs.Count() - 1 DO
 				IF lstInputs.IndexOf(nfaOther.lstInputs.Get(i)) = -1 THEN
 					posDummy := lstInputs.Add(nfaOther.lstInputs.Get(i))
 				END
@@ -152,7 +152,7 @@ TYPE
 			context.out.Int(iFinal, 0);
 			context.out.Ln;
 			context.out.String("Inputs: ");
-			FOR i := 0 TO lstInputs.Count - 1 DO
+			FOR i := 0 TO lstInputs.Count() - 1 DO
 				context.out.Char("'");
 				context.out.Char(CHR(lstInputs.Get(i)));
 				context.out.String("' ")

@@ -2,72 +2,65 @@ MODULE ImportGraph; (** AUTHOR "SAGE"; PURPOSE "Utility for generation of import
 
 IMPORT
 	Commands, Files, Options, Codecs, Streams, Strings, UTF8Strings,
-	Diagnostics, ModuleParser, Vector, NewContainers, Modules, KernelLog;
+	Diagnostics, ModuleParser, Generics, Modules, KernelLog;
 
 CONST
 	DefaultOutputFilename = "ImportGraph.dot";
 
 TYPE
 
-	ModulesValue = RECORD(Vector.Value)
+	ModulesItem = RECORD(Generics.TreeItem)
 		module: ModuleParser.Module
 	END;
 
-	ModulesVector = OBJECT (Vector.Vector)
-	TYPE
-		ModulesValues = POINTER TO ARRAY OF ModulesValue;
+	ModulesSet = OBJECT(Generics.Tree)
 	VAR
-		array: ModulesValues;
-
+		array: POINTER TO ARRAY OF ModulesItem;
+		
 		(* for speedup of Contains procedure *)
 		null: ModuleParser.Module;
-
-		PROCEDURE &Init;
+		
+		PROCEDURE &New*;
+		VAR
+			pCompA, pCompB: POINTER TO ModulesItem;
 		BEGIN
+			NEW(pCompA);
+			NEW(pCompB);
 			NEW(null, NIL);
 			NEW(null.ident);
 			NEW(null.ident.name, 257);
-			New(Vector.INITIAL_SIZE, SIZEOF(ModulesValue),
-				{Vector.SORTED}, Create, Compare, NIL)
-		END Init;
-
-		PROCEDURE Create(nSize: LONGINT; VAR pArray: ANY; VAR adrArray: ADDRESS);
+			Init(SIZEOF(ModulesItem), ArrayGen, pCompA, pCompB, Compare)
+		END New;
+		
+		PROCEDURE ArrayGen(iArraySize: LONGINT; VAR pArray: ANY; VAR addrArray: ADDRESS);
 		BEGIN
-			NEW(array, nSize);
-			pArray := array; adrArray := ADDRESSOF(array^[0])
-		END Create;
+			NEW(array, iArraySize); pArray := array; addrArray := ADDRESSOF(array^[0])
+		END ArrayGen;
 
-		PROCEDURE Compare(iLeft: LONGINT; VAR right: Vector.Value): LONGINT;
+		PROCEDURE Compare(pA, pB: Generics.PItem): BOOLEAN;
 		BEGIN
-			RETURN UTF8Strings.Compare(array^[iLeft].module.ident.name^,
-				right(ModulesValue).module.ident.name^)
+			RETURN UTF8Strings.Compare(pA^(ModulesItem).module.ident.name^,
+				pB^(ModulesItem).module.ident.name^) < 0
 		END Compare;
-
-		PROCEDURE Add(module: ModuleParser.Module);
+		
+		PROCEDURE Insert*(module: ModuleParser.Module);
 		VAR
-			v: ModulesValue;
-			posDummy: LONGINT;
+			item: ModulesItem;
 		BEGIN
-			v.module := module;
-			posDummy := AddInternal(v)
-		END Add;
-
-		PROCEDURE Contains(CONST name: ARRAY OF CHAR): BOOLEAN;
+			item.module := module;
+			InsertInternal(item)
+		END Insert;
+		
+		PROCEDURE Contains*(key: Strings.String): BOOLEAN;
 		VAR
-			v: ModulesValue;
+			item: ModulesItem;
 		BEGIN
-			COPY(name, null.ident.name^);
-			v.module := null;
-			RETURN IndexOfInternal(v) >= 0
+			item.module := null;
+			COPY(key^, item.module.ident.name^);
+			RETURN ContainsInternal(item)
 		END Contains;
 
-		PROCEDURE Get(pos: LONGINT): ModuleParser.Module;
-		BEGIN
-			ASSERT((pos >= 0) & (pos < Count), 101);
-			RETURN array[pos].module
-		END Get;
-
-	END ModulesVector;
+	END ModulesSet;
 	
 PROCEDURE ParseModule(CONST modName: ARRAY OF CHAR): ModuleParser.Module;
 VAR
@@ -91,34 +84,33 @@ BEGIN
 	END
 END ProperModuleInfo;
 
-PROCEDURE ProcessModule(context: Commands.Context; modules: ModulesVector; modulesNotFound: NewContainers.StringVector; CONST modName: ARRAY OF CHAR);
+PROCEDURE ProcessModule(context: Commands.Context; modules: ModulesSet; setModulesNotFound: Generics.StringSet; CONST modName: ARRAY OF CHAR);
 VAR
 	module: ModuleParser.Module;
 	import: ModuleParser.Import;
 	name: Strings.String;
 	info: ModuleParser.InfoItem;
-	posDummy: LONGINT;
 BEGIN
 	name := Strings.NewString(modName);
 	IF Strings.EndsWith(".Mod", name^) THEN
 		name^[Strings.Length(name^) - 4] := 0X
 	END;
-	IF modules.Contains(name^) OR (modulesNotFound.IndexOf(name^) >= 0) THEN
+	IF modules.Contains(name) OR setModulesNotFound.Contains(name) THEN
 		RETURN
 	END;
 	module := ParseModule(name^);
 	IF module = NIL THEN
-		posDummy := modulesNotFound.Add(name^);
+		setModulesNotFound.Insert(name);
 		RETURN
 	END;
-	modules.Add(module);
+	modules.Insert(module);
 	context.out.String("Added "); context.out.String(module.ident.name^);
 	context.out.Ln; context.out.Update;
 	import := module.importList;
 	WHILE import # NIL DO
 		info := ProperModuleInfo(import);
-		IF (info # NIL) & ~modules.Contains(info.name^) THEN
-			ProcessModule(context, modules, modulesNotFound, info.name^)
+		IF (info # NIL) & ~modules.Contains(info.name) THEN
+			ProcessModule(context, modules, setModulesNotFound, info.name^)
 		END;
 		IF import.next # NIL THEN
 			import := import.next(ModuleParser.Import)
@@ -154,7 +146,7 @@ BEGIN
 	END
 END ActualImports;
 
-PROCEDURE Output(stream: Streams.Writer; modules: ModulesVector; modulesNotFound: NewContainers.StringVector);
+PROCEDURE Output(stream: Streams.Writer; modules: ModulesSet; setModulesNotFound: Generics.StringSet);
 
 	PROCEDURE OutputName(n: Strings.String);
 	BEGIN
@@ -172,47 +164,40 @@ PROCEDURE Output(stream: Streams.Writer; modules: ModulesVector; modulesNotFound
 	END OutputLink;
 
 VAR
-	i: LONGINT;
-	m: ModuleParser.Module;
+	item: ModulesItem;
+	itemSet: Generics.StringSetItem;
 	import: ModuleParser.Import;
-	s: Strings.String;
 	info: ModuleParser.InfoItem;
 
 BEGIN
 	stream.String('strict digraph G{');
 	stream.Ln;
-	FOR i := 0 TO modules.Count - 1 DO
-		m := modules.Get(i);
-		IF m # NIL THEN
-		
-			ActualImports(m.ident.name^);
-			
-			OutputName(m.ident.name);
-			IF m.FindImport("SYSTEM") # NIL THEN
-				stream.String(' [fontcolor = red]; ')
-			ELSE
-				stream.String('; ')
+	modules.Iterator().Reset;
+	WHILE modules.Iterator().GetNext(item) DO
+		ActualImports(item.module.ident.name^);
+		OutputName(item.module.ident.name);
+		IF item.module.FindImport("SYSTEM") # NIL THEN
+			stream.String(' [fontcolor = red]; ')
+		ELSE
+			stream.String('; ')
+		END;
+		import := item.module.importList;
+		WHILE import # NIL DO
+			info := ProperModuleInfo(import);
+			IF info # NIL THEN
+				OutputLink(item.module.ident.name, info.name)
 			END;
-			import := m.importList;
-			WHILE import # NIL DO
-				info := ProperModuleInfo(import);
-				IF info # NIL THEN
-					OutputLink(m.ident.name, info.name)
-				END;
-				IF import.next # NIL THEN
-					import := import.next(ModuleParser.Import)
-				ELSE
-					import := NIL
-				END
+			IF import.next # NIL THEN
+				import := import.next(ModuleParser.Import)
+			ELSE
+				import := NIL
 			END
 		END
 	END;
-	FOR i := 0 TO modulesNotFound.Count - 1 DO
-		s := modulesNotFound.Get(i);
-		IF s # NIL THEN
-			OutputName(s);
-			stream.String(' [shape = plaintext]; ')
-		END
+	setModulesNotFound.Iterator().Reset;
+	WHILE modules.Iterator().GetNext(itemSet) DO
+		OutputName(itemSet.key);
+		stream.String(' [shape = plaintext]; ')
 	END;
 	stream.String('}');
 	stream.Ln;
@@ -221,8 +206,8 @@ END Output;
 
 PROCEDURE Generate*(context: Commands.Context); (** [options] moduleName {" " modulename} ~  *)
 VAR
-	modules: ModulesVector;
-	modulesNotFound: NewContainers.StringVector;
+	modules: ModulesSet;
+	setModulesNotFound: Generics.StringSet;
 	moduleName, outputFilename: Files.FileName;
 	options: Options.Options;
 	stream: Streams.Writer;
@@ -238,13 +223,13 @@ BEGIN
 		IF (stream # NIL) THEN
 
 			NEW(modules);
-			NEW(modulesNotFound, {Vector.SORTED, Vector.NO_DUPLICATES});
+			NEW(setModulesNotFound);
 
 			WHILE context.arg.GetString(moduleName) DO
-				ProcessModule(context, modules, modulesNotFound, moduleName)
+				ProcessModule(context, modules, setModulesNotFound, moduleName)
 			END;
 
-			Output(stream, modules, modulesNotFound);
+			Output(stream, modules, setModulesNotFound);
 
 			context.out.String("Graph description written to "); context.out.String(outputFilename); context.out.Ln;
 		ELSE

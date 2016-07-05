@@ -5,7 +5,7 @@ MODULE VCObjects;
 
 IMPORT
 	Strings, Math, WMEvents, WMComponents,
-	Vector, VCTypes;
+	Generics, VCTypes;
 
 TYPE
 
@@ -208,7 +208,7 @@ TYPE
 
 		PROCEDURE GetBasePointsCount(): LONGINT;
 		BEGIN
-			RETURN FBasePoints.Count
+			RETURN FBasePoints.Count()
 		END GetBasePointsCount;
 
 		PROCEDURE GetBasePoint(Index: LONGINT): VCTypes.FloatPoint;
@@ -266,45 +266,40 @@ TYPE
 
 	VisualObjectGen* = PROCEDURE {DELEGATE} (): BaseVisualObject;
 
-	BaseVisualObjectValue = RECORD(Vector.Value)
+	VisualObjectItem = RECORD(Generics.Item)
 		value: BaseVisualObject
 	END;
 
-	VisualObjectVector* = OBJECT(Vector.Vector)
+	VisualObjectVector* = OBJECT(Generics.Vector)
 	VAR
-		array: POINTER TO ARRAY OF BaseVisualObjectValue;
+		array: POINTER TO ARRAY OF VisualObjectItem;
 
-		PROCEDURE &Init*;
+		PROCEDURE &New*;
+		VAR
+			pCompA, pCompB: POINTER TO VisualObjectItem;
 		BEGIN
-			New(Vector.INITIAL_SIZE, SIZEOF(BaseVisualObjectValue), {Vector.INDEX}, Create, CompareRef, NIL)
-		END Init;
-
-		PROCEDURE Create(nSize: LONGINT; VAR pArray: ANY; VAR adrArray: ADDRESS);
+			NEW(pCompA);
+			NEW(pCompB);
+			Init(SIZEOF(VisualObjectItem), ArrayGen, pCompA, pCompB, Compare, {})
+		END New;
+		
+		PROCEDURE ArrayGen(iArraySize: LONGINT; VAR pArray: ANY; VAR addrArray: ADDRESS);
 		BEGIN
-			NEW(array, nSize);
-			pArray := array; adrArray := ADDRESSOF(array^[0])
-		END Create;
+			NEW(array, iArraySize); pArray := array; addrArray := ADDRESSOF(array^[0])
+		END ArrayGen;
 
-		PROCEDURE CompareRef(iLeft: LONGINT; VAR right: Vector.Value): LONGINT;
+		PROCEDURE Compare(pA, pB: Generics.PItem): BOOLEAN;
 		VAR
 			adrLeft, adrRight: ADDRESS;
 		BEGIN
-			WITH right: BaseVisualObjectValue DO
-				adrLeft := array^[iLeft].value;
-				adrRight := right.value;
-				IF adrLeft < adrRight THEN
-					RETURN -1
-				ELSIF adrLeft > adrRight THEN
-					RETURN 1
-				ELSE
-					RETURN 0
-				END
-			END
-		END CompareRef;
+			adrLeft := pA^(VisualObjectItem).value;
+			adrRight := pB^(VisualObjectItem).value;
+			RETURN adrLeft < adrRight
+		END Compare;
 
 		PROCEDURE Add*(o: BaseVisualObject): LONGINT;
 		VAR
-			v: BaseVisualObjectValue;
+			v: VisualObjectItem;
 		BEGIN
 			v.value := o;
 			RETURN AddInternal(v)
@@ -312,16 +307,18 @@ TYPE
 
 		PROCEDURE IndexOf*(o: BaseVisualObject): LONGINT;
 		VAR
-			v: BaseVisualObjectValue;
+			v: VisualObjectItem;
 		BEGIN
 			v.value := o;
 			RETURN IndexOfInternal(v)
 		END IndexOf;
 
 		PROCEDURE Get*(pos: LONGINT): BaseVisualObject;
+		VAR
+			item: VisualObjectItem;
 		BEGIN
-			ASSERT((pos >= 0) & (pos < Count), 101);
-			RETURN array^[pos].value
+			GetInternal(pos, item);
+			RETURN item.value
 		END Get;
 
 	END VisualObjectVector;

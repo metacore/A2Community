@@ -4,7 +4,7 @@ IMPORT
 
 	SYSTEM, Modules, Commands, Raster, WMWindowManager,
 	WMDialogs, WMGraphics, WMRectangles, Strings,
-	Containers;
+	Generics;
 	
 CONST
 
@@ -60,101 +60,119 @@ TYPE
 		bOpen: BOOLEAN;
 	END;
 	
+	NodeItem = RECORD(Generics.Item)
+		value: Node
+	END;
+	
 	(** Binary node's heap. F cost used as a key *)
-	NodeFHeap = OBJECT(Containers.CustomHeap)
-			
-		PROCEDURE &New;
-		BEGIN
-			NEW(heap, Compare)
-		END New;
-		
-		PROCEDURE Compare(first, second: ANY): LONGINT;
+	NodeFHeap = OBJECT(Generics.Heap)
+	VAR
+		array: POINTER TO ARRAY OF NodeItem;
+
+		PROCEDURE &New*;
 		VAR
-			nFirst, nSecond: LONGINT;
+			pCompA, pCompB: POINTER TO NodeItem;
 		BEGIN
-			nFirst := first(Node).F;
-			nSecond := second(Node).F;
-			IF nFirst < nSecond THEN
-				RETURN -1
-			ELSIF nFirst > nSecond THEN
-				RETURN 1
-			ELSE
-				RETURN 0
-			END
-		END Compare;
+			NEW(pCompA);
+			NEW(pCompB);
+			Init(SIZEOF(NodeItem), ArrayGen, pCompA, pCompB, Less)
+		END New;
+
+		PROCEDURE ArrayGen(iArraySize: LONGINT; VAR pArray: ANY; VAR addrArray: ADDRESS);
+		BEGIN
+			NEW(array, iArraySize); pArray := array; addrArray := ADDRESSOF(array^[0])
+		END ArrayGen;
 		
-		PROCEDURE Add(x: Node);
+		PROCEDURE Less(pA, pB: Generics.PItem): BOOLEAN;
 		BEGIN
-			heap.Add(x)
+			RETURN pA^(NodeItem).value.F < pB^(NodeItem).value.F
+		END Less;
+		
+		PROCEDURE Add(node: Node);
+		VAR
+			item: NodeItem;
+		BEGIN
+			item.value := node;
+			AddInternal(item)
 		END Add;
 		
-		PROCEDURE Update(x: Node);
+		PROCEDURE Update(node: Node);
+		VAR
+			item: NodeItem;
 		BEGIN
-			heap.Update(x)
+			item.value := node;
+			UpdateInternal(item)
 		END Update;
 		
-		PROCEDURE Remove(): Node;
+		PROCEDURE Remove(VAR node: Node): BOOLEAN;
 		VAR
-			x: ANY;
+			item: NodeItem;
 		BEGIN
-			x := heap.Remove();
-			IF x # NIL THEN
-				RETURN x(Node)
+			IF RemoveInternal(item) THEN
+				node := item.value;
+				RETURN TRUE
 			ELSE
-				RETURN NIL
+				RETURN FALSE
 			END
 		END Remove;
-	
-		PROCEDURE GetCount(): LONGINT;
-		BEGIN
-			RETURN heap.GetCount()
-		END GetCount;
 		
 	END NodeFHeap;
 	
+	NodeTreeItem = RECORD(Generics.TreeItem)
+		key: Node
+	END;
+	
 	(** Node's map. (X, Y) pair used as a key *)
-	NodeXYMap = OBJECT(Containers.CustomVector)
-			
-		PROCEDURE &New;
-		BEGIN
-			NEW(vector, Compare, {Containers.VECTOR_SORTED , Containers.VECTOR_NO_DUPLICATES})
-		END New;
-		
-		PROCEDURE Compare(first, second: ANY): LONGINT;
+	NodeXYMap = OBJECT(Generics.Tree)
+	VAR
+		array: POINTER TO ARRAY OF NodeTreeItem;
+
+		PROCEDURE &New*;
 		VAR
-			nodeFirst, nodeSecond: Node;
+			pCompA, pCompB: POINTER TO NodeTreeItem;
 		BEGIN
-			nodeFirst := first(Node);
-			nodeSecond := second(Node);
-			IF nodeFirst.p.x < nodeSecond.p.x THEN
-				RETURN -1
-			ELSIF nodeFirst.p.x > nodeSecond.p.x THEN
-				RETURN 1
-			ELSE
-				IF nodeFirst.p.y < nodeSecond.p.y THEN
-					RETURN -1
-				ELSIF nodeFirst.p.y > nodeSecond.p.y THEN
-					RETURN 1
-				ELSE
-					RETURN 0
-				END
-			END
-		END Compare;
+			NEW(pCompA);
+			NEW(pCompB);
+			Init(SIZEOF(NodeTreeItem), ArrayGen, pCompA, pCompB, Less)
+		END New;
+
+		PROCEDURE ArrayGen(iArraySize: LONGINT; VAR pArray: ANY; VAR addrArray: ADDRESS);
+		BEGIN
+			NEW(array, iArraySize); pArray := array; addrArray := ADDRESSOF(array^[0])
+		END ArrayGen;
 		
-		PROCEDURE Add(x: Node);
+		PROCEDURE Less(pA, pB: Generics.PItem): BOOLEAN;
 		BEGIN
-			vector.Add(x)
-		END Add;
+			(* Lexicographical coordinates ordering *)
+			RETURN (pA^(NodeTreeItem).key.p.x < pB^(NodeTreeItem).key.p.x) OR
+				((pA^(NodeTreeItem).key.p.x = pB^(NodeTreeItem).key.p.x) &
+					(pA^(NodeTreeItem).key.p.y < pB^(NodeTreeItem).key.p.y))
+		END Less;
+		
+		PROCEDURE Insert(node: Node);
+		VAR
+			item: NodeTreeItem;
+		BEGIN
+			item.key := node;
+			InsertInternal(item)
+		END Insert;
+		
+		PROCEDURE Contains(node: Node): BOOLEAN;
+		VAR
+			item: NodeTreeItem;
+		BEGIN
+			item.key := node;
+			RETURN ContainsInternal(item)
+		END Contains;
 			
-		PROCEDURE IndexOf(x: Node): LONGINT;
+		PROCEDURE Get(node: Node): Node;
+		VAR
+			item: NodeTreeItem;
 		BEGIN
-			RETURN vector.IndexOf(x)
-		END IndexOf;
-		
-		PROCEDURE GetItem(i: LONGINT): Node;
-		BEGIN
-			RETURN vector.GetItem(i)(Node)
-		END GetItem;
+			item.key := node;
+			GetInternal(item);
+			RETURN item.key
+		END Get;
 			
 	END NodeXYMap;
 	
@@ -303,7 +321,7 @@ VAR
 	
 	PROCEDURE AddAdjacentNodes(heapOpen: NodeFHeap; mapXY: NodeXYMap; node: Node; ptStop: PointDesc);
 	VAR
-		dx, dy, x, y, i, G: LONGINT;
+		dx, dy, x, y, G: LONGINT;
 		nodeNew, nodeTmp: Node;
 		
 		PROCEDURE NoCorner(): BOOLEAN;
@@ -327,12 +345,11 @@ VAR
 						(MAP[y, x] = 0) & NoCorner()
 					THEN
 						nodeNew := NewNode(node, dx, dy, ptStop);
-						i := mapXY.IndexOf(nodeNew);
-						IF i = -1 THEN
+						IF ~mapXY.Contains(nodeNew) THEN
 							heapOpen.Add(nodeNew);
-							mapXY.Add(nodeNew)
+							mapXY.Insert(nodeNew)
 						ELSE
-							nodeTmp := mapXY.GetItem(i);
+							nodeTmp := mapXY.Get(nodeNew);
 							(* Figure out G cost *)
 							IF (ABS(node.p.x - x) # 0) &
 								(ABS(node.p.y - y) # 0)
@@ -371,7 +388,7 @@ VAR
 		node, nodeStart: Node;
 		heapOpen: NodeFHeap;
 		mapXY: NodeXYMap;
-		iStop, nRes, x, y: LONGINT;
+		nRes, x, y: LONGINT;
 	BEGIN
 	
 		nodeStart := NewNode(NIL, ptStart.x, ptStart.y, ptStop);
@@ -380,25 +397,31 @@ VAR
 		NEW(heapOpen);
 		NEW(mapXY);
 
-		mapXY.Add(nodeStart);
+		mapXY.Insert(nodeStart);
 		heapOpen.Add(nodeStart);
 		REPEAT
-			node := heapOpen.Remove();
-			IF node # NIL THEN
+			IF heapOpen.Remove(node) THEN
 				node.bOpen := FALSE;
 				AddAdjacentNodes(heapOpen, mapXY, node, ptStop)
 			END;
-			iStop := mapXY.IndexOf(nodeStop)
-		UNTIL ((iStop >= 0) & ~mapXY.GetItem(iStop).bOpen) OR
-			(heapOpen.GetCount() = 0);
+			(*iStop := mapXY.IndexOf(nodeStop)*)
+			IF mapXY.Contains(nodeStop) THEN
+				nodeStop := mapXY.Get(nodeStop)
+			END
+		UNTIL ~nodeStop.bOpen OR
+			(heapOpen.Count() = 0);
 		
-		IF heapOpen.GetCount() = 0 THEN
+		IF heapOpen.Count() = 0 THEN
 			DialogPos(x, y, instance, 350, 100);
 			nRes := WMDialogs.MessageXY(WMDialogs.TError, x, y, A_STAR,
 			  "There is no path!", {WMDialogs.ResOk})
 		ELSE
-			nodeStart := mapXY.GetItem(mapXY.IndexOf(nodeStart));
-			nodeStop := mapXY.GetItem(iStop);
+			(*nodeStart := mapXY.GetItem(mapXY.IndexOf(nodeStart));
+			nodeStop := mapXY.GetItem(iStop);*)
+			
+			(*nodeStart := mapXY.Get(nodeStart);*)
+			(*nodeStop := mapXY.Get(nodeStop);*)
+			
 			(*KernelLog.String("H: ");
 			KernelLog.Int(nodeStart.H, 0);
 			KernelLog.Ln;
@@ -530,6 +553,6 @@ BEGIN
 END WMAStar.
 
 WMAStar.Open ~
-SystemTools.Free WMAStar Containers ~
+SystemTools.Free WMAStar Generics ~
 
 

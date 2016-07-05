@@ -9,17 +9,17 @@ MODULE RegExpSubsetConstruct; (** AUTHOR "Yaroslav Romanchenko (SAGE)"; PURPOSE 
 *)
 
 IMPORT
-	Vector, NewContainers,
+	Generics,
 	RegExpMaps, RegExpNFA, RegExpDFA;
 
-	PROCEDURE EpsClosure*(nfa: RegExpNFA.NFA; lstStates: NewContainers.LongintVector): NewContainers.LongintVector;
+	PROCEDURE EpsClosure*(nfa: RegExpNFA.NFA; lstStates: Generics.LongintVector): Generics.LongintVector;
 	VAR
-		lstEpsClosure, lstUnchecked: NewContainers.LongintVector;
+		lstEpsClosure, lstUnchecked: Generics.LongintVector;
 		i, iFrom, iTo, posDummy: LONGINT;
 	BEGIN
-		NEW(lstEpsClosure, {Vector.SORTABLE});
+		NEW(lstEpsClosure, {});
 		NEW(lstUnchecked, {});
-		FOR i := 0 TO lstStates.Count - 1 DO
+		FOR i := 0 TO lstStates.Count() - 1 DO
 			posDummy := lstEpsClosure.Add(lstStates.Get(i));
 			posDummy := lstUnchecked.Add(lstStates.Get(i))
 		END;
@@ -27,7 +27,7 @@ IMPORT
 		lstEpsClosure.SetSorted(TRUE);
 
 		WHILE ~lstUnchecked.IsEmpty() DO
-			i := lstUnchecked.Count - 1;
+			i := lstUnchecked.Count() - 1;
 			iFrom := lstUnchecked.Get(i);
 			lstUnchecked.Remove(i);
 			FOR iTo := 0 TO nfa.nSize - 1 DO
@@ -42,13 +42,13 @@ IMPORT
 		RETURN lstEpsClosure
 	END EpsClosure;
 
-	PROCEDURE Move*(nfa: RegExpNFA.NFA; lstStates: NewContainers.LongintVector; iData: LONGINT): NewContainers.LongintVector;
+	PROCEDURE Move*(nfa: RegExpNFA.NFA; lstStates: Generics.LongintVector; iData: LONGINT): Generics.LongintVector;
 	VAR
-		lstResult: NewContainers.LongintVector;
+		lstResult: Generics.LongintVector;
  		i, iFrom, iTo, posDummy: LONGINT;
 	BEGIN
-		NEW(lstResult, {Vector.SORTABLE});
-		FOR i := 0 TO lstStates.Count - 1 DO
+		NEW(lstResult, {});
+		FOR i := 0 TO lstStates.Count() - 1 DO
 			iFrom := lstStates.Get(i);
 			FOR iTo := 0 TO nfa.nSize - 1 DO
 				IF (nfa.aTable[iFrom, iTo].iType = RegExpNFA.NODE_TYPE_DATA) &
@@ -68,9 +68,9 @@ IMPORT
 	VAR
 		dfa: RegExpDFA.DFA;
 		trans: RegExpMaps.Transition;
-		lstlstMarked, lstlstUnmarked: NewContainers.LongintVectorVector;
+		lstlstMarked, lstlstUnmarked: Generics.LongintVectorVector;
 		mapDFAStateNum: RegExpMaps.DFAStateNumMap;
-		lstNFAInitial, lstFirst, lstAState, lstNext: NewContainers.LongintVector;
+		lstNFAInitial, lstFirst, lstAState, lstNext: Generics.LongintVector;
 		iNewState, iInput, posDummy: LONGINT;
 
 		PROCEDURE gen_new_state(): LONGINT;
@@ -82,15 +82,15 @@ IMPORT
 	BEGIN
 		NEW(dfa);
 		NEW(lstNFAInitial, {});
-		NEW(lstlstMarked, {Vector.SORTED});
-		NEW(lstlstUnmarked, {Vector.SORTED});
+		NEW(lstlstMarked, {lstlstMarked.SORTED});
+		NEW(lstlstUnmarked, {lstlstUnmarked.SORTED});
 		NEW(mapDFAStateNum);
 		iNewState := 0;
 		posDummy := lstNFAInitial.Add(nfa.iInitial);
 		lstFirst := EpsClosure(nfa, lstNFAInitial);
 		posDummy := lstlstUnmarked.Add(lstFirst);
 		dfa.iInitial := gen_new_state();
-		mapDFAStateNum.Add(lstFirst, dfa.iInitial);
+		mapDFAStateNum.Insert(lstFirst, dfa.iInitial);
 		WHILE ~lstlstUnmarked.IsEmpty() DO
 			lstAState := lstlstUnmarked.Get(0);
 			lstlstUnmarked.Remove(0);
@@ -100,27 +100,27 @@ IMPORT
 					posDummy := dfa.lstFinal.Add(mapDFAStateNum.Get(lstAState).iState)
 				END
 			END;
-			FOR iInput := 0 TO nfa.lstInputs.Count - 1 DO
+			FOR iInput := 0 TO nfa.lstInputs.Count() - 1 DO
 				lstNext := EpsClosure(nfa,
 					Move(nfa, lstAState, nfa.lstInputs.Get(iInput)));
-				IF (lstlstUnmarked.IndexOf(lstNext) = -1) &
-					(lstlstMarked.IndexOf(lstNext) = -1)
+				IF ((lstlstUnmarked.IndexOf(lstNext) = -1) &
+					(lstlstMarked.IndexOf(lstNext) = -1))
 				THEN
 					posDummy := lstlstUnmarked.Add(lstNext);
-					mapDFAStateNum.Add(lstNext, gen_new_state())
+					mapDFAStateNum.Insert(lstNext, gen_new_state())
 				END;
 				IF mapDFAStateNum.Contains(lstAState) THEN
 					trans := RegExpMaps.NewTransition(
 						mapDFAStateNum.Get(lstAState).iState,
 						nfa.lstInputs.Get(iInput));
 					IF mapDFAStateNum.Contains(lstNext) & ~dfa.mapTransition.Contains(trans) THEN
-						dfa.mapTransition.Add(trans,
+						dfa.mapTransition.Insert(trans,
 							mapDFAStateNum.Get(lstNext).iState)
 					END
 				END
 			END
 		END;
-		dfa.nStates := mapDFAStateNum.Count;
+		dfa.nStates := mapDFAStateNum.Count();
 
 		dfa.lstFinal.SetSorted(TRUE);
 

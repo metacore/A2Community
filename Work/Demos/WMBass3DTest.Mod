@@ -1,69 +1,16 @@
 MODULE WMBass3DTest; (** AUTHOR "SAGE"; PURPOSE "BASS 2.4 A2 OS Wrapper - BASS 3D Test"; *)
 
 IMPORT
-	Modules, Commands, Strings, UTF8Strings, Files, Codecs, Streams,
+	Modules, Commands, Strings, Files, Codecs, Streams,
 	XML, Models,	WMComponents, WMStringGrids, WMGrids, WMWindowManager,
 	WMDialogs, WMDropDownLists, WMEditors, WMProperties, WMStandardComponents,
-	WMGraphics, Raster, BASS, MathUtils, Vector, AAGraphics;
+	WMGraphics, Raster, BASS, MathUtils, Generics, AAGraphics;
 
 CONST
 	RADIUS = 5;
   MAXDIST = 50; (* maximum distance of the channels (m) *)
 
 TYPE
-
-	UidCompValue = RECORD(Vector.Value)
-		uid: ARRAY 32 OF CHAR;
-		comp: WMComponents.Component
-	END;
-
-	UidCompMap = OBJECT(Vector.Vector)
-	TYPE
-		UidCompValues = POINTER TO ARRAY OF UidCompValue;
-	VAR
-		array: UidCompValues;
-
-		PROCEDURE &Init;
-		BEGIN
-			New(Vector.INITIAL_SIZE, SIZEOF(UidCompValue),
-				{Vector.SORTED}, Create, Compare, NIL)
-		END Init;
-
-		PROCEDURE Create(nSize: LONGINT; VAR pArray: ANY; VAR adrArray: ADDRESS);
-		BEGIN
-			NEW(array, nSize);
-			pArray := array; adrArray := ADDRESSOF(array^[0])
-		END Create;
-
-		PROCEDURE Compare(iLeft: LONGINT; VAR right: Vector.Value): LONGINT;
-		BEGIN
-			RETURN UTF8Strings.Compare(
-				array^[iLeft].uid, right(UidCompValue).uid)
-		END Compare;
-
-		PROCEDURE Add(CONST uid: ARRAY OF CHAR; comp: WMComponents.Component);
-		VAR
-			v: UidCompValue;
-			posDummy: LONGINT;
-		BEGIN
-			COPY(uid, v.uid);
-			v.comp := comp;
-			posDummy := AddInternal(v)
-		END Add;
-
-		PROCEDURE Get(CONST uid: ARRAY OF CHAR): WMComponents.Component;
-		VAR
-			v: UidCompValue;
-			pos: LONGINT;
-		BEGIN
-			COPY(uid, v.uid);
-			pos := IndexOfInternal(v);
-			ASSERT((pos >= 0) & (pos < Count), 101);
-			RETURN array[pos].comp
-		END Get;
-
-	END UidCompMap;
-
 	FileName = ARRAY Files.NameLength + 1 OF CHAR;
 
 	Source = POINTER TO RECORD
@@ -738,7 +685,7 @@ BEGIN
 		comp := c(WMComponents.Component);
 		sUID := comp.uid.Get();
 		IF (sUID # NIL) & (sUID^ # "") THEN
-			data(UidCompMap).Add(sUID^, comp)
+			data(Generics.ObjectMap).Insert(sUID, comp)
 		END
 	END
 END FindComponents;
@@ -746,26 +693,26 @@ END FindComponents;
 PROCEDURE WireComponents(root: WMComponents.VisualComponent; win: Window): BOOLEAN;
 VAR
 	trap: BOOLEAN;
-	components: UidCompMap;
+	components: Generics.ObjectMap;
 BEGIN
 	trap := FALSE;
 
 	NEW(components);
 	root.Traverse(FindComponents, components);
 
-	win.ddlEAXEnv := components.Get("ddlEAXEnv")(WMDropDownLists.DropDownList);
-	win.fldMovementX := components.Get("fldX")(WMEditors.TextField);
-	win.fldMovementZ := components.Get("fldZ")(WMEditors.TextField);
-	win.grChannels := components.Get("grChannels")(WMStringGrids.StringGrid);
-	win.slDoppler := components.Get("slDoppler")(WMStandardComponents.Slider);
-	win.slRollOff := components.Get("slRollOff")(WMStandardComponents.Slider);
-	win.btnChannelsAdd := components.Get("btnAdd")(WMStandardComponents.Button);
-	win.btnChannelsRemove := components.Get("btnRemove")(WMStandardComponents.Button);
-	win.btnChannelsPlay := components.Get("btnPlay")(WMStandardComponents.Button);
-	win.btnChannelsStop := components.Get("btnStop")(WMStandardComponents.Button);
-	win.btnMovementReset := components.Get("btnReset")(WMStandardComponents.Button);
-	win.timPeriod := components.Get("timPeriod")(WMStandardComponents.Timer);
-	win.pnlSourcesImage := components.Get("pnlImage")(WMStandardComponents.ImagePanel);
+	win.ddlEAXEnv := components.GetAOC("ddlEAXEnv")(WMDropDownLists.DropDownList);
+	win.fldMovementX := components.GetAOC("fldX")(WMEditors.TextField);
+	win.fldMovementZ := components.GetAOC("fldZ")(WMEditors.TextField);
+	win.grChannels := components.GetAOC("grChannels")(WMStringGrids.StringGrid);
+	win.slDoppler := components.GetAOC("slDoppler")(WMStandardComponents.Slider);
+	win.slRollOff := components.GetAOC("slRollOff")(WMStandardComponents.Slider);
+	win.btnChannelsAdd := components.GetAOC("btnAdd")(WMStandardComponents.Button);
+	win.btnChannelsRemove := components.GetAOC("btnRemove")(WMStandardComponents.Button);
+	win.btnChannelsPlay := components.GetAOC("btnPlay")(WMStandardComponents.Button);
+	win.btnChannelsStop := components.GetAOC("btnStop")(WMStandardComponents.Button);
+	win.btnMovementReset := components.GetAOC("btnReset")(WMStandardComponents.Button);
+	win.timPeriod := components.GetAOC("timPeriod")(WMStandardComponents.Timer);
+	win.pnlSourcesImage := components.GetAOC("pnlImage")(WMStandardComponents.ImagePanel);
 
 FINALLY
 
