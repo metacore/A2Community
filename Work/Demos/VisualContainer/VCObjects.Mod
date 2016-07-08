@@ -282,7 +282,7 @@ TYPE
 			NEW(pCompB);
 			Init(SIZEOF(VisualObjectItem), ArrayGen, pCompA, pCompB, Compare, {})
 		END New;
-		
+
 		PROCEDURE ArrayGen(iArraySize: LONGINT; VAR pArray: ANY; VAR addrArray: ADDRESS);
 		BEGIN
 			NEW(array, iArraySize); pArray := array; addrArray := ADDRESSOF(array^[0])
@@ -344,7 +344,7 @@ TYPE
 				Change
 			END
 		END SetText;
-		
+
 		PROCEDURE GetText*(VAR Value: ARRAY OF CHAR);
 		BEGIN
 			IF FText # NIL THEN

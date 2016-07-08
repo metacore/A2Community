@@ -5,7 +5,7 @@ MODULE VCPoly;
 
 IMPORT
 	Math, VCTypes;
-	
+
 TYPE
 	PolylineConverter* = OBJECT
 	TYPE
@@ -16,11 +16,19 @@ TYPE
 			Left buffer also finally accumulates total polygon *)
 		pPolyLeft, pPolyRight: VCTypes.PPoints2f;
 		iLeft, iRight: LONGINT;
-		
+
 		(* Reusable buffer for triangles *)
 		pTriangles2f: VCTypes.PTriangles2f;
 		iTri, iLeftPrev, iRightPrev: LONGINT;
-		
+
+		(* Line's perpendicular vector *)
+		PROCEDURE LinePerp(CONST fp1, fp2: VCTypes.Point2f; VAR vPerp: VCTypes.Point2f);
+		BEGIN
+			vPerp.x := -(fp2.y - fp1.y);
+			vPerp.y := fp2.x - fp1.x;
+			normalize(vPerp)
+		END LinePerp;
+
 		(* TrianglesUpdateHandler used when building a thriangles.
 			Special cases should be handled in special way for them *)
 		PROCEDURE TrianglesUpdate;
@@ -59,46 +67,45 @@ TYPE
 				INC(iRightPrev)
 			END
 		END TrianglesUpdate;
-		
-		(* Line's perpendicular vector *)
-		PROCEDURE LinePerp(CONST fp1, fp2: VCTypes.Point2f; VAR vPerp: VCTypes.Point2f);
-		BEGIN
-			vPerp.x := -(fp2.y - fp1.y);
-			vPerp.y := fp2.x - fp1.x;
-			normalize(vPerp)
-		END LinePerp;
-		
+
 		PROCEDURE ToPolygonInternal(pPts: VCTypes.PPoints2f; fLineWidth: REAL; bClosed: BOOLEAN; hTrianglesUpdate: TrianglesUpdateHandler): BOOLEAN;
-		
+
 			(* Put one point to left list and 2 points to right list *)
 			PROCEDURE PutSpecial(pL, pR: VCTypes.PPoints2f; VAR iL, iR: LONGINT; bReverseDir: BOOLEAN);
 			VAR
 				vPerp: VCTypes.Point2f;
 				fCosAlpha: REAL;
 			BEGIN
-				
-				Point2fSet(pL[iL], pPts[i].x + vNode.x, pPts[i].y + vNode.y);
+
+				pL[iL].x := pPts[i].x + vNode.x;
+				pL[iL].y := pPts[i].y + vNode.y;
 				INC(iL);
 
 				(* Make perpendicular to vNode and find cos alpha to one of the lines perpendicular *)
-				Point2fSet(vPerp, -vNode.y, vNode.x);
+				vPerp.x := -vNode.y;
+				vPerp.y := vNode.x;
 				normalize(vPerp);
 				fCosAlpha := cosAlpha(vLine1Perp, vPerp);
 
-				Point2fSet(vPerp, vPerp.x * fW / fCosAlpha, vPerp.y * fW / fCosAlpha);
+				vPerp.x := vPerp.x * fW / fCosAlpha;
+				vPerp.y := vPerp.y * fW / fCosAlpha;
 
 				IF bReverseDir THEN
-					Point2fSet(pR[iR], pPts[i].x - vPerp.x, pPts[i].y - vPerp.y);
+					pR[iR].x := pPts[i].x - vPerp.x;
+					pR[iR].y := pPts[i].y - vPerp.y;
 					INC(iR);
-					Point2fSet(pR[iR], pPts[i].x + vPerp.x, pPts[i].y + vPerp.y);
+					pR[iR].x := pPts[i].x + vPerp.x;
+					pR[iR].y := pPts[i].y + vPerp.y;
 					INC(iR)
 				ELSE
-					Point2fSet(pR[iR], pPts[i].x + vPerp.x, pPts[i].y + vPerp.y);
+					pR[iR].x := pPts[i].x + vPerp.x;
+					pR[iR].y := pPts[i].y + vPerp.y;
 					INC(iR);
-					Point2fSet(pR[iR], pPts[i].x - vPerp.x, pPts[i].y - vPerp.y);
+					pR[iR].x := pPts[i].x - vPerp.x;
+					pR[iR].y := pPts[i].y - vPerp.y;
 					INC(iR)
 				END;
-				
+
 				IF hTrianglesUpdate # NIL THEN
 					hTrianglesUpdate
 				END
@@ -161,25 +168,30 @@ TYPE
 					fCosHalfAlpha := cosAlpha(vLine1Perp, vNode);
 					(* Because we measure angle between perpendiculars
 						the logic of finding a special case is inverted *)
-					IF fCosHalfAlpha >= 0.5 (*fHalfSqrt2*) THEN
+					IF fCosHalfAlpha >= 0.5 THEN
 						(* If fCosHalfAlpha >= 0.5 than Half Alpha is less than or equal 60 degrees *)
 						bSimpleJoint := bClosed;
-						Point2fSet(vNode, vNode.x / fCosHalfAlpha, vNode.y / fCosHalfAlpha)
+						vNode.x := vNode.x / fCosHalfAlpha;
+						vNode.y := vNode.y / fCosHalfAlpha
 					ELSE (* Half Alpha is higher than 60 degrees *)
 						bSpecialCase := TRUE;
-						Point2fSet(vNode, vNode.x * fW / fCosHalfAlpha, vNode.y * fW / fCosHalfAlpha);
+						vNode.x := vNode.x * fW / fCosHalfAlpha;
+						vNode.y := vNode.y * fW / fCosHalfAlpha;
 						IF bClosed THEN
 							vJoint := vNode
 						END;
 						(* Is vNode inside corner or outside. Let's find its cos alpha to one of corner's lines *)
 						IF bClosed & (i = 0) THEN
-							Point2fSet(vLine, pPts[LEN(pPts^) - 1].x - pPts[i].x, pPts[LEN(pPts^) - 1].y - pPts[i].y)
+							vLine.x := pPts[LEN(pPts^) - 1].x - pPts[i].x;
+							vLine.y := pPts[LEN(pPts^) - 1].y - pPts[i].y
 						ELSE
-							Point2fSet(vLine, pPts[i - 1].x - pPts[i].x, pPts[i - 1].y - pPts[i].y)
+							vLine.x := pPts[i - 1].x - pPts[i].x;
+							vLine.y := pPts[i - 1].y - pPts[i].y
 						END;
 						fCosAlphaToCorner := cosAlpha(vLine, vNode);
 						IF fCosAlphaToCorner < 0 THEN (* Outside. Negate vNode *)
-							Point2fSet(vNode, -vNode.x, -vNode.y);
+							vNode.x := -vNode.x;
+							vNode.y := -vNode.y;
 							(* Put 2 points to left list and one point to right list *)
 							PutSpecial(pPolyRight, pPolyLeft, iRight, iLeft, FALSE)
 						ELSE (* Put one point to left list and 2 points to right list *)
@@ -188,10 +200,13 @@ TYPE
 					END
 				END;
 				IF ~bSpecialCase THEN
-					Point2fSet(vNode, vNode.x * fW, vNode.y * fW);
-					Point2fSet(pPolyLeft[iLeft], pPts[i].x + vNode.x, pPts[i].y + vNode.y);
+					vNode.x := vNode.x * fW;
+					vNode.y := vNode.y * fW;
+					pPolyLeft[iLeft].x := pPts[i].x + vNode.x;
+					pPolyLeft[iLeft].y := pPts[i].y + vNode.y;
 					INC(iLeft);
-					Point2fSet(pPolyRight[iRight], pPts[i].x - vNode.x, pPts[i].y - vNode.y);
+					pPolyRight[iRight].x := pPts[i].x - vNode.x;
+					pPolyRight[iRight].y := pPts[i].y - vNode.y;
 					INC(iRight)
 				END
 			END;
@@ -204,20 +219,21 @@ TYPE
 				ELSE
 					pPolyLeft[iLeft] := pPolyLeft[0];
 					INC(iLeft);
-					Point2fSet(pPolyRight[iRight], pPts[0].x - vJoint.x, pPts[0].y - vJoint.y);
+					pPolyRight[iRight].x := pPts[0].x - vJoint.x;
+					pPolyRight[iRight].y := pPts[0].y - vJoint.y;
 					INC(iRight)
 				END
 			END;
-			
+
 			(* called for finishing triangles *)
 			IF hTrianglesUpdate # NIL THEN
 				hTrianglesUpdate
 			END;
 
 			RETURN TRUE
-			
+
 		END ToPolygonInternal;
-		
+
 		PROCEDURE ToPolygonF*(pPtsIn: VCTypes.PPoints2f; VAR pPtsOut: VCTypes.PPoints2f; VAR nPtsOut: LONGINT; fLineWidth: REAL; bClosed: BOOLEAN): BOOLEAN;
 		VAR
 			i: LONGINT;
@@ -237,7 +253,7 @@ TYPE
 				RETURN FALSE
 			END
 		END ToPolygonF;
-		
+
 		PROCEDURE ToPolygonI*(pPtsIn: VCTypes.PPoints2f; VAR pPtsOut: VCTypes.PPoints2i; fLineWidth: REAL; bClosed: BOOLEAN): BOOLEAN;
 		VAR
 			i: LONGINT;
@@ -260,7 +276,7 @@ TYPE
 				RETURN FALSE
 			END
 		END ToPolygonI;
-		
+
 		PROCEDURE ToTrianglesF*(pPtsIn: VCTypes.PPoints2f; VAR pTriOut: VCTypes.PTriangles2f; VAR nTriOut: LONGINT; fLineWidth: REAL; bClosed: BOOLEAN): BOOLEAN;
 		BEGIN
 			iTri := 0;
@@ -277,14 +293,8 @@ TYPE
 				RETURN FALSE
 			END
 		END ToTrianglesF;
-		
-	END PolylineConverter;	
-	
-	PROCEDURE Point2fSet(VAR fp: VCTypes.Point2f; x, y: REAL);
-	BEGIN
-		fp.x := x;
-		fp.y := y
-	END Point2fSet;
+
+	END PolylineConverter;
 
 	PROCEDURE normalize(VAR v: VCTypes.Point2f);
 	VAR

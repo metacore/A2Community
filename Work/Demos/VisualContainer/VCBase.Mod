@@ -87,7 +87,7 @@ TYPE
 
 		color: LONGINT;
 		mode: LONGINT;
-		
+
 		polyConverter: VCPoly.PolylineConverter;
 
 		PROCEDURE &New*(Canvas: WMGraphics.Canvas; ConvertIntf: VisualContainerBase);
@@ -144,7 +144,7 @@ TYPE
 			FCanvas.SetLineWidth(ENTIER(fW + 0.5));
 			FCanvas.Line(ENTIER(fp1.x + 0.5), ENTIER(fp1.y + 0.5),
 				ENTIER(fp2.x + 0.5), ENTIER(fp2.y + 0.5), color, mode);  *)
-			
+
 			(* Half LineWidth *)
 			fW := 0.5 * FConvertIntf.LogToScreen(LineWidth);
 
@@ -240,11 +240,11 @@ TYPE
 			pTriangles2f: VCTypes.PTriangles2f;
 			tri: ARRAY 3 OF VCTypes.Point2i;
 		BEGIN
-		
+
 			FOR i := 0 TO LEN(pPts^) - 1 DO
 				FConvertIntf.LogToScreenPt(pPts[i].x, pPts[i].y, pPts[i].x, pPts[i].y)
 			END;
-		
+
 			(*IF polyConverter.ToPolygonI(pPts, pPtsOut, FConvertIntf.LogToScreen(fLineWidth), bClosed) THEN
 				FCanvas.FillPolygonFlat(pPtsOut^, LEN(pPtsOut^), color, mode)
 			END*)
@@ -257,7 +257,7 @@ TYPE
 					FCanvas.PolyLine(tri, 3, TRUE, color, mode)
 				END;
 			END
-			
+
 		END DrawPolygon;
 
 	END LogicalCanvas;

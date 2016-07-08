@@ -344,7 +344,7 @@ TYPE
 
 			VisCont.pObjectGen := NIL;
 			VisCont.onObjectSelect.Add(ObjectOnSelect);
-			
+
 			fldText.onChanged.Add(TextOnChanged)
 
 		END FormInit;
@@ -433,7 +433,7 @@ TYPE
 				ddlScale.Release
 			END
 		END ScaleOnSelect;
-		
+
 		PROCEDURE ObjectOnSelect(sender, par: ANY);
 		VAR
 			Index: LONGINT;
@@ -460,7 +460,7 @@ TYPE
 				END
 			END
 		END ObjectOnSelect;
-		
+
 		PROCEDURE TextOnChanged(sender, par: ANY);
 		VAR
 			Index: LONGINT;
@@ -521,7 +521,7 @@ VAR
 
 		NEW(components);
 		root.Traverse(FindComponents, components);
-		
+
 		window.pnlToolbar := components.GetAOC("pnlToolbar")(WMStandardComponents.Panel);
 
 		window.btnSelect := components.GetAOC("btnSelect")(WMStandardComponents.Button);
@@ -553,7 +553,7 @@ VAR
 		root: WMComponents.VisualComponent;
 		x, y: LONGINT;
 		manager: WMWindowManager.WindowManager;
-		
+
 		PROCEDURE RaiseError(CONST msg: ARRAY OF CHAR);
 		BEGIN
 			HALT(105)
@@ -573,9 +573,9 @@ VAR
 
 				(* Window setup *)
 				NEW(window, root.bounds.GetWidth(), root.bounds.GetHeight(), FALSE);
-				
+
 				window.SetCanvasGenerator(AAGraphics.GenCanvas);
-				
+
 				window.SetContent(root);
 				IF ~WireComponents(root, window) THEN
 					context.out.String("Form resource corrupted"); context.out.Ln;
