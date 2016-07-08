@@ -9,11 +9,11 @@ IMPORT
 	WMDialogs, WMRectangles, WMGraphics, WMWindowManager,
 	XML, WMProperties, WMEvents, WMComponents, WMStandardComponents,
 	WMScrollableComponents, WMEditors, WMDropDownLists,
-	AAGraphics, Generics, VCTypes, VCObjects;
+	AAGraphics, Generics, VCTypes, VCBase, VCObjects;
 
 TYPE
 
-	VisualContainer* = OBJECT(VCTypes.VisualContainerBase)
+	VisualContainer* = OBJECT(VCBase.VisualContainerBase)
 	VAR
 		vObjects: VCObjects.VisualObjectVector;
 		pObjectGen: VCObjects.VisualObjectGen;
@@ -165,7 +165,7 @@ TYPE
 		PROCEDURE PointerDown(x, y : LONGINT; keys : SET);
 		VAR
 			Index: LONGINT;
-			Pos: VCTypes.FloatPoint;
+			Pos: VCTypes.Point2f;
 			HitTest: VCObjects.HitTest;
 			cmdBeginDrag: VCObjects.CommandBeginDrag;
 			cmdConstructPoint: VCObjects.CommandConstructPoint;
@@ -173,7 +173,7 @@ TYPE
 		BEGIN
 			IF keys = {0} THEN
 				(* Left mouse button *)
-				ScreenToLogPt(x, y, Pos.X, Pos.Y);
+				ScreenToLogPt(x, y, Pos.x, Pos.y);
 				IF pObjectGen = NIL THEN
 					Index := FindObject(x, y, HitTest);
 					SetSelected(Index);
@@ -219,7 +219,7 @@ TYPE
 		PROCEDURE PointerMove(x, y : LONGINT; keys : SET);
 		VAR
 			Index: LONGINT;
-			Pos: VCTypes.FloatPoint;
+			Pos: VCTypes.Point2f;
 			HitTest: VCObjects.HitTest;
 			cmdGetCursor: VCObjects.CommandGetCursor;
 			cmdProcessConstruct: VCObjects.CommandProcessConstruct;
@@ -244,7 +244,7 @@ TYPE
 					END;
 				END;
 			END;
-			ScreenToLogPt(x, y, Pos.X, Pos.Y);
+			ScreenToLogPt(x, y, Pos.x, Pos.y);
 			IF bConstructing THEN
 				cmdProcessConstruct.Pos := Pos;
 				oCurrentObject.HandleCommand(cmdProcessConstruct);
@@ -270,7 +270,7 @@ TYPE
 		PROCEDURE DrawBackground(canvas: WMGraphics.Canvas);
 		VAR
 			i: LONGINT;
-			logicalCanvas: VCTypes.LogicalCanvas;
+			logicalCanvas: VCBase.LogicalCanvas;
 		BEGIN
 			IF ~(canvas IS AAGraphics.Canvas) THEN
 				RETURN
@@ -677,6 +677,6 @@ BEGIN
 END WMVC.
 
 WMVC.Open ~
-SystemTools.Free WMVC VCObjects VCTypes Generics ~
+SystemTools.Free WMVC VCObjects VCBase VCTypes Generics ~
 
 

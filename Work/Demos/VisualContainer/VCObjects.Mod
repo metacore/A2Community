@@ -5,7 +5,7 @@ MODULE VCObjects;
 
 IMPORT
 	Strings, Math, WMEvents, WMComponents,
-	Generics, VCTypes;
+	Generics, VCTypes, VCBase;
 
 TYPE
 
@@ -31,7 +31,7 @@ TYPE
 	END;
 
 	HitTestParams* = RECORD
-		Pos*: VCTypes.Point;
+		Pos*: VCTypes.Point2i;
 		Tolerance*: LONGINT;
 	END;
 
@@ -40,24 +40,24 @@ TYPE
 
 	CommandBeginDrag* = RECORD(Command)
 		Hit*: HitTest;
-		StartPos*: VCTypes.FloatPoint;
+		StartPos*: VCTypes.Point2f;
 	END;
 
 	CommandEndDrag* = RECORD(Command)
 	END;
 
 	CommandDrag* = RECORD(Command)
-		NewPos*: VCTypes.FloatPoint;
+		NewPos*: VCTypes.Point2f;
 	END;
 
 	CommandVertexMove = RECORD(Command)
 		Index: LONGINT;
-		NewPos: VCTypes.FloatPoint;
+		NewPos: VCTypes.Point2f;
 	END;
 
 	CommandSideMove = RECORD(Command)
 		Index: LONGINT;
-		NewPos: VCTypes.FloatPoint;
+		NewPos: VCTypes.Point2f;
 	END;
 
 	CommandMove = RECORD(Command)
@@ -66,7 +66,7 @@ TYPE
 	END;
 
 	CommandHitTest* = RECORD(Command)
-		ConvertIntf*: VCTypes.VisualContainerBase;
+		ConvertIntf*: VCBase.VisualContainerBase;
 		Params*: HitTestParams;
 		Hit*: HitTest;
 	END;
@@ -77,12 +77,12 @@ TYPE
 	END;
 
 	CommandConstructPoint* = RECORD(Command)
-		Pos*: VCTypes.FloatPoint;
+		Pos*: VCTypes.Point2f;
 		Result*: BOOLEAN
 	END;
 
 	CommandProcessConstruct* = RECORD(Command)
-		Pos*: VCTypes.FloatPoint;
+		Pos*: VCTypes.Point2f;
 	END;
 
 	CommandStopConstruct* = RECORD(Command)
@@ -91,20 +91,20 @@ TYPE
 
 	CommandVControl = RECORD(Command)
 		Hit: HitTest;
-		Pos: VCTypes.FloatPoint;
+		Pos: VCTypes.Point2f;
 	END;
 
 	BaseVisualObject* = OBJECT(WMComponents.Component)
 	VAR
 
-		FBasePoints: VCTypes.FloatPointVector;
+		FBasePoints: VCBase.Point2fVector;
 
 		onChange-: WMEvents.EventSource;
 
 		FLockCount: LONGINT;
 		FDragging: BOOLEAN;
 		FDragHitTest: HitTest;
-		FDragStartPos: VCTypes.FloatPoint;
+		FDragStartPos: VCTypes.Point2f;
 
 		PROCEDURE &Init;
 		BEGIN
@@ -121,7 +121,7 @@ TYPE
 		PROCEDURE HandleCommand*(VAR command: Command);
 		VAR
 			i: LONGINT;
-			pos: VCTypes.FloatPoint;
+			pos: VCTypes.Point2f;
 			cmdMove: CommandMove;
 			cmdVertexMove: CommandVertexMove;
 			cmdSideMove: CommandSideMove;
@@ -137,8 +137,8 @@ TYPE
 					IF FDragging THEN
 						CASE FDragHitTest.Type OF
 							HT.INSIDE:
-								cmdMove.DeltaX := command.NewPos.X - FDragStartPos.X;
-								cmdMove.DeltaY := command.NewPos.Y - FDragStartPos.Y;
+								cmdMove.DeltaX := command.NewPos.x - FDragStartPos.x;
+								cmdMove.DeltaY := command.NewPos.y - FDragStartPos.y;
 								FDragStartPos := command.NewPos;
 								HandleCommand(cmdMove)
 						|	HT.VERTEX:
@@ -164,13 +164,13 @@ TYPE
 					BeginUpdate;
 					FOR i := 0 TO GetBasePointsCount() - 1 DO
 						pos := GetBasePoint(i);
-						SetBasePoint(i, pos.X + command.DeltaX, pos.Y + command.DeltaY)
+						SetBasePoint(i, pos.x + command.DeltaX, pos.y + command.DeltaY)
 					END;
 					EndUpdate
 				END
 			ELSIF command IS CommandVertexMove THEN
 				WITH command: CommandVertexMove DO
-					SetVertex(command.Index, command.NewPos.X, command.NewPos.Y)
+					SetVertex(command.Index, command.NewPos.x, command.NewPos.y)
 				END
 			END
 		END HandleCommand;
@@ -211,17 +211,17 @@ TYPE
 			RETURN FBasePoints.Count()
 		END GetBasePointsCount;
 
-		PROCEDURE GetBasePoint(Index: LONGINT): VCTypes.FloatPoint;
+		PROCEDURE GetBasePoint(Index: LONGINT): VCTypes.Point2f;
 		BEGIN
 			RETURN FBasePoints.Get(Index)
 		END GetBasePoint;
 
 		PROCEDURE SetBasePoint(Index: LONGINT; X, Y: REAL);
 		VAR
-			item: VCTypes.FloatPoint;
+			item: VCTypes.Point2f;
 		BEGIN
 			item := FBasePoints.Get(Index);
-			IF (item.X # X) OR (item.Y # Y) THEN
+			IF (item.x # X) OR (item.y # Y) THEN
 				FBasePoints.Set(Index, X, Y);
 				Change
 			END
@@ -230,7 +230,7 @@ TYPE
 		PROCEDURE GetVerticesCount(): LONGINT;
 		END GetVerticesCount;
 
-		PROCEDURE GetVertex(Index: LONGINT): VCTypes.FloatPoint;
+		PROCEDURE GetVertex(Index: LONGINT): VCTypes.Point2f;
 		END GetVertex;
 
 		PROCEDURE SetVertex(Index: LONGINT; X, Y: REAL);
@@ -250,14 +250,14 @@ TYPE
 			END
 		END EndUpdate;
 
-		PROCEDURE Draw*(Canvas: VCTypes.LogicalCanvas);
+		PROCEDURE Draw*(Canvas: VCBase.LogicalCanvas);
 		VAR
 			i: LONGINT;
-			vertex: VCTypes.FloatPoint;
+			vertex: VCTypes.Point2f;
 		BEGIN
 			FOR i := 0 TO GetVerticesCount() - 1 DO
 				vertex := GetVertex(i);
-				Canvas.DrawVertex(vertex.X, vertex.Y)
+				Canvas.DrawVertex(vertex.x, vertex.y)
 			END
 		END Draw;
 
@@ -358,7 +358,7 @@ TYPE
 		VAR
 			sX1f, sY1f, sX2f, sY2f: REAL;
 			sX1, sY1, sX2, sY2: LONGINT;
-			Point, fp0, fp1: VCTypes.FloatPoint;
+			Point, fp0, fp1: VCTypes.Point2f;
 		BEGIN
 			IF command IS CommandConstructPoint THEN
 				WITH command: CommandConstructPoint DO
@@ -369,12 +369,12 @@ TYPE
 					CASE FCurrentPoint OF
 						0:
 						BeginUpdate;
-						SetBasePoint(0, command.Pos.X, command.Pos.Y);
-						SetBasePoint(1, command.Pos.X, command.Pos.Y);
+						SetBasePoint(0, command.Pos.x, command.Pos.y);
+						SetBasePoint(1, command.Pos.x, command.Pos.y);
 						EndUpdate;
 						command.Result := TRUE
 					|	1:
-						SetBasePoint(1, command.Pos.X, command.Pos.Y);
+						SetBasePoint(1, command.Pos.x, command.Pos.y);
 						FConstructing := FALSE;
 						command.Result := FALSE
 					ELSE
@@ -405,8 +405,8 @@ TYPE
 				WITH command: CommandHitTest DO
 					fp0 := GetBasePoint(0);
 					fp1 := GetBasePoint(1);
-					command.ConvertIntf.LogToScreenPt(fp0.X, fp0.Y, sX1f, sY1f);
-					command.ConvertIntf.LogToScreenPt(fp1.X, fp1.Y, sX2f, sY2f);
+					command.ConvertIntf.LogToScreenPt(fp0.x, fp0.y, sX1f, sY1f);
+					command.ConvertIntf.LogToScreenPt(fp1.x, fp1.y, sX2f, sY2f);
 					sX1 := round(sX1f); sY1 := round(sY1f);
 					sX2 := round(sX2f); sY2 := round(sY2f);
 					command.Hit.Type := HT.OUTSIDE;
@@ -460,8 +460,8 @@ TYPE
 				WITH command: CommandProcessConstruct DO
 					IF FConstructing THEN
 						CASE FCurrentPoint OF
-							0: SetVertex(0, command.Pos.X, command.Pos.Y);
-						|	1: SetVertex(2, command.Pos.X, command.Pos.Y)
+							0: SetVertex(0, command.Pos.x, command.Pos.y);
+						|	1: SetVertex(2, command.Pos.x, command.Pos.y)
 						ELSE
 						END
 					END
@@ -471,20 +471,20 @@ TYPE
 					CASE command.Index OF
 						0:
 								Point := GetVertex(0);
-								Point.X := command.NewPos.X;
-								SetVertex(0, Point.X, Point.Y)
+								Point.x := command.NewPos.x;
+								SetVertex(0, Point.x, Point.y)
 					|	1:
 								Point := GetVertex(0);
-								Point.Y := command.NewPos.Y;
-								SetVertex(0, Point.X, Point.Y)
+								Point.y := command.NewPos.y;
+								SetVertex(0, Point.x, Point.y)
 					|	2:
 								Point := GetVertex(2);
-								Point.X := command.NewPos.X;
-								SetVertex(2, Point.X, Point.Y)
+								Point.x := command.NewPos.x;
+								SetVertex(2, Point.x, Point.y)
 					|	3:
 								Point := GetVertex(2);
-								Point.Y := command.NewPos.Y;
-								SetVertex(2, Point.X, Point.Y)
+								Point.y := command.NewPos.y;
+								SetVertex(2, Point.x, Point.y)
 					ELSE
 					END
 				END
@@ -504,20 +504,20 @@ TYPE
 			RETURN 4
 		END GetVerticesCount;
 
-		PROCEDURE GetVertex(Index: LONGINT): VCTypes.FloatPoint;
+		PROCEDURE GetVertex(Index: LONGINT): VCTypes.Point2f;
 		VAR
-			fp: VCTypes.FloatPoint;
+			fp: VCTypes.Point2f;
 		BEGIN
 			CASE Index OF
 				0: RETURN GetBasePoint(0)
 			|	1:
-				fp.X := GetBasePoint(1).X;
-				fp.Y := GetBasePoint(0).Y;
+				fp.x := GetBasePoint(1).x;
+				fp.y := GetBasePoint(0).y;
 				RETURN fp
 			|	2: RETURN GetBasePoint(1)
 			|	3:
-				fp.X := GetBasePoint(0).X;
-				fp.Y := GetBasePoint(1).Y;
+				fp.x := GetBasePoint(0).x;
+				fp.y := GetBasePoint(1).y;
 				RETURN fp
 			ELSE
 			END
@@ -525,28 +525,28 @@ TYPE
 
 		PROCEDURE SetVertex(Index: LONGINT; X, Y: REAL);
 		VAR
-			fp0, fp1: VCTypes.FloatPoint;
+			fp0, fp1: VCTypes.Point2f;
 		BEGIN
 			fp0 := GetBasePoint(0);
 			fp1 := GetBasePoint(1);
 			CASE Index OF
 				0:
-					SetBasePoint(0, MIN(X, fp1.X), MIN(Y, fp1.Y))
+					SetBasePoint(0, MIN(X, fp1.x), MIN(Y, fp1.y))
 			|	1:
-					SetBasePoint(1, MAX(X, fp0.X), fp1.Y);
-					SetBasePoint(0, fp0.X, MIN(Y, fp1.Y))
+					SetBasePoint(1, MAX(X, fp0.x), fp1.y);
+					SetBasePoint(0, fp0.x, MIN(Y, fp1.y))
 			|	2:
-					SetBasePoint(1, MAX(X, fp0.X), MAX(Y, fp0.Y))
+					SetBasePoint(1, MAX(X, fp0.x), MAX(Y, fp0.y))
 			|	3:
-					SetBasePoint(0, MIN(X, fp1.X), fp0.Y);
-					SetBasePoint(1, fp1.X, MAX(Y, fp0.Y))
+					SetBasePoint(0, MIN(X, fp1.x), fp0.y);
+					SetBasePoint(1, fp1.x, MAX(Y, fp0.y))
 			ELSE
 			END
 		END SetVertex;
 
 		PROCEDURE IsBadRect(): BOOLEAN;
 		VAR
-			v00, v0, v1, v2, v3: VCTypes.FloatPoint;
+			v00, v0, v1, v2, v3: VCTypes.Point2f;
 		BEGIN
 
 			v0 := GetVertex(0); v00 := v0;
@@ -554,22 +554,22 @@ TYPE
 			v2 := GetVertex(2);
 			v3 := GetVertex(3);
 
-			v0.X := v1.X - v0.X;
-			v0.Y := v1.Y - v0.Y;
+			v0.x := v1.x - v0.x;
+			v0.y := v1.y - v0.y;
 
-			v1.X := v2.X - v1.X;
-			v1.Y := v2.Y - v1.Y;
+			v1.x := v2.x - v1.x;
+			v1.y := v2.y - v1.y;
 
-			v2.X := v3.X - v2.X;
-			v2.Y := v3.Y - v2.Y;
+			v2.x := v3.x - v2.x;
+			v2.y := v3.y - v2.y;
 
-			v3.X := v00.X - v3.X;
-			v3.Y := v00.Y - v3.Y;
+			v3.x := v00.x - v3.x;
+			v3.y := v00.y - v3.y;
 
-			RETURN (ABS(v0.X * v0.X + v0.Y * v0.Y) < 0.1) OR
-				(ABS(v1.X * v1.X + v1.Y * v1.Y) < 0.1) OR
-				(ABS(v2.X * v2.X + v2.Y * v2.Y) < 0.1) OR
-				(ABS(v3.X * v3.X + v3.Y * v3.Y) < 0.1)
+			RETURN (ABS(v0.x * v0.x + v0.y * v0.y) < 0.1) OR
+				(ABS(v1.x * v1.x + v1.y * v1.y) < 0.1) OR
+				(ABS(v2.x * v2.x + v2.y * v2.y) < 0.1) OR
+				(ABS(v3.x * v3.x + v3.y * v3.y) < 0.1)
 		END IsBadRect;
 
 		(*property Text: ARRAY OF CHAR read FText write SetText;*)
@@ -586,7 +586,7 @@ TYPE
 			sX1f, sY1f, sX2f, sY2f: REAL;
 			sX1, sY1, sX2, sY2: LONGINT;
 			D: REAL;
-			vertex1, vertex2: VCTypes.FloatPoint;
+			vertex1, vertex2: VCTypes.Point2f;
 		BEGIN
 			IF command IS CommandConstructPoint THEN
 				WITH command: CommandConstructPoint DO
@@ -595,7 +595,7 @@ TYPE
 						BeginUpdate;
 						ClearBasePoints;
 						FCurrentPoint := 0;
-						AddBasePoint(command.Pos.X, command.Pos.Y);
+						AddBasePoint(command.Pos.x, command.Pos.y);
 						EndUpdate
 					END;
 					command.Result := NotNeedToStopConstruct(FCurrentPoint + 1);
@@ -603,7 +603,7 @@ TYPE
 						FConstructing := FALSE;
 						RETURN
 					END;
-					AddBasePoint(command.Pos.X, command.Pos.Y);
+					AddBasePoint(command.Pos.x, command.Pos.y);
 					INC(FCurrentPoint)
 				END
 			ELSIF command IS CommandGetCursor THEN
@@ -620,7 +620,7 @@ TYPE
 					i := GetVerticesCount() - 1;
 					WHILE i >= 0 DO
 						vertex1 := GetVertex(i);
-						command.ConvertIntf.LogToScreenPt(vertex1.X, vertex1.Y, sX1f, sY1f);
+						command.ConvertIntf.LogToScreenPt(vertex1.x, vertex1.y, sX1f, sY1f);
 						sX1 := round(sX1f); sY1 := round(sY1f);
 						IF (ABS(command.Params.Pos.x - sX1) <= command.Params.Tolerance) &
 							(ABS(command.Params.Pos.y - sY1) <= command.Params.Tolerance)
@@ -635,8 +635,8 @@ TYPE
 					WHILE i >= 1 DO
 						vertex1 := GetVertex(i);
 						vertex2 := GetVertex(i - 1);
-						command.ConvertIntf.LogToScreenPt(vertex1.X, vertex1.Y, sX1f, sY1f);
-						command.ConvertIntf.LogToScreenPt(vertex2.X, vertex2.Y, sX2f, sY2f);
+						command.ConvertIntf.LogToScreenPt(vertex1.x, vertex1.y, sX1f, sY1f);
+						command.ConvertIntf.LogToScreenPt(vertex2.x, vertex2.y, sX2f, sY2f);
 						sX1 := round(sX1f); sY1 := round(sY1f);
 						sX2 := round(sX2f); sY2 := round(sY2f);
 						D := LineDistance(command.Params.Pos.x, command.Params.Pos.y,
@@ -652,7 +652,7 @@ TYPE
 			ELSIF command IS CommandProcessConstruct THEN
 				WITH command: CommandProcessConstruct DO
 					IF FConstructing THEN
-						SetBasePoint(FCurrentPoint, command.Pos.X, command.Pos.Y)
+						SetBasePoint(FCurrentPoint, command.Pos.x, command.Pos.y)
 					END
 				END
 			ELSIF command IS CommandStopConstruct THEN
@@ -676,7 +676,7 @@ TYPE
 			RETURN GetBasePointsCount()
 		END GetVerticesCount;
 
-		PROCEDURE GetVertex(Index: LONGINT): VCTypes.FloatPoint;
+		PROCEDURE GetVertex(Index: LONGINT): VCTypes.Point2f;
 		BEGIN
 			RETURN GetBasePoint(Index)
 		END GetVertex;
@@ -689,10 +689,10 @@ TYPE
 		PROCEDURE NotNeedToStopConstruct(Count: LONGINT): BOOLEAN;
 		END NotNeedToStopConstruct;
 
-		PROCEDURE Draw(canvas: VCTypes.LogicalCanvas);
+		PROCEDURE Draw(canvas: VCBase.LogicalCanvas);
 		VAR
 			i: LONGINT;
-			pPts: VCTypes.PFloatPoints;
+			pPts: VCTypes.PPoints2f;
 		BEGIN
 			NEW(pPts, GetVerticesCount());
 			FOR i := 0 TO GetVerticesCount() - 1 DO
@@ -721,7 +721,7 @@ TYPE
 				WITH command: CommandVControl DO
 					CASE command.Hit.Type OF
 						HT.INSIDE:
-							InsertBasePoint(command.Hit.Index + 1, command.Pos.X, command.Pos.Y);
+							InsertBasePoint(command.Hit.Index + 1, command.Pos.x, command.Pos.y);
 					|	HT.VERTEX:
 							IF GetVerticesCount() > 2 THEN
 								DeleteBasePoint(command.Hit.Index)
@@ -743,9 +743,9 @@ TYPE
 
 	BeginEndBlock = OBJECT(RectVisualObject)
 
-		PROCEDURE Draw(canvas: VCTypes.LogicalCanvas);
+		PROCEDURE Draw(canvas: VCBase.LogicalCanvas);
 		VAR
-			fp0, fp1: VCTypes.FloatPoint;
+			fp0, fp1: VCTypes.Point2f;
 		BEGIN
 			IF IsBadRect() THEN
 				Draw^(canvas);
@@ -753,8 +753,8 @@ TYPE
 			END;
 			fp0 := GetBasePoint(0);
 			fp1 := GetBasePoint(1);
-			canvas.DrawRoundRect(fp0.X, fp0.Y, fp1.X, fp1.Y, 0.5);
-			canvas.DrawText(fp0.X, fp0.Y, fp1.X, fp1.Y, 5, FText^);
+			canvas.DrawRoundRect(fp0.x, fp0.y, fp1.x, fp1.y, 0.5);
+			canvas.DrawText(fp0.x, fp0.y, fp1.x, fp1.y, 5, FText^);
 			Draw^(canvas)
 		END Draw;
 
@@ -762,7 +762,7 @@ TYPE
 
 	InputOutputBlock = OBJECT(RectVisualObject)
 	VAR
-		pPts: VCTypes.PFloatPoints;
+		pPts: VCTypes.PPoints2f;
 
 		PROCEDURE &Init;
 		BEGIN
@@ -770,9 +770,9 @@ TYPE
 			NEW(pPts, 4)
 		END Init;
 
-		PROCEDURE Draw(canvas: VCTypes.LogicalCanvas);
+		PROCEDURE Draw(canvas: VCBase.LogicalCanvas);
 		VAR
-			fp0, fp1: VCTypes.FloatPoint;
+			fp0, fp1: VCTypes.Point2f;
 		BEGIN
 			IF IsBadRect() THEN
 				Draw^(canvas);
@@ -782,12 +782,12 @@ TYPE
 			pPts[1] := GetVertex(1);
 			pPts[2] := GetVertex(2);
 			pPts[3] := GetVertex(3);
-			pPts[0].X := pPts[0].X + (pPts[1].X - pPts[0].X) / 6;
-			pPts[2].X := pPts[2].X - (pPts[2].X - pPts[3].X) / 6;
+			pPts[0].x := pPts[0].x + (pPts[1].x - pPts[0].x) / 6;
+			pPts[2].x := pPts[2].x - (pPts[2].x - pPts[3].x) / 6;
 			canvas.DrawPolygon(pPts, 0.5, TRUE);
 			fp0 := GetBasePoint(0);
 			fp1 := GetBasePoint(1);
-			canvas.DrawText(fp0.X, fp0.Y, fp1.X, fp1.Y, 5, FText^);
+			canvas.DrawText(fp0.x, fp0.y, fp1.x, fp1.y, 5, FText^);
 			Draw^(canvas)
 		END Draw;
 
@@ -795,9 +795,9 @@ TYPE
 
 	ActionBlock = OBJECT(RectVisualObject)
 
-		PROCEDURE Draw(canvas: VCTypes.LogicalCanvas);
+		PROCEDURE Draw(canvas: VCBase.LogicalCanvas);
 		VAR
-			fp0, fp1: VCTypes.FloatPoint;
+			fp0, fp1: VCTypes.Point2f;
 		BEGIN
 			IF IsBadRect() THEN
 				Draw^(canvas);
@@ -806,9 +806,9 @@ TYPE
 			fp0 := GetBasePoint(0);
 			fp1 := GetBasePoint(1);
 
-			canvas.DrawRect(fp0.X, fp0.Y, fp1.X, fp1.Y, 0.5);
+			canvas.DrawRect(fp0.x, fp0.y, fp1.x, fp1.y, 0.5);
 
-			canvas.DrawText(fp0.X, fp0.Y, fp1.X, fp1.Y, 5, FText^);
+			canvas.DrawText(fp0.x, fp0.y, fp1.x, fp1.y, 5, FText^);
 			Draw^(canvas)
 		END Draw;
 
@@ -816,7 +816,7 @@ TYPE
 
 	ConditionBlock = OBJECT(RectVisualObject)
 	VAR
-		pPts: VCTypes.PFloatPoints;
+		pPts: VCTypes.PPoints2f;
 
 		PROCEDURE &Init;
 		BEGIN
@@ -824,10 +824,10 @@ TYPE
 			NEW(pPts, 4)
 		END Init;
 
-		PROCEDURE Draw(canvas: VCTypes.LogicalCanvas);
+		PROCEDURE Draw(canvas: VCBase.LogicalCanvas);
 		VAR
 			f0X, f1Y: REAL;
-			fp0, fp1: VCTypes.FloatPoint;
+			fp0, fp1: VCTypes.Point2f;
 		BEGIN
 
 			IF IsBadRect() THEN
@@ -840,19 +840,19 @@ TYPE
 			pPts[2] := GetVertex(2);
 			pPts[3] := GetVertex(3);
 
-			f0X := pPts[0].X;
-			f1Y := pPts[1].Y;
-			pPts[0].X := f0X + (pPts[1].X - f0X) / 2;
-			pPts[1].Y := f1Y + (pPts[2].Y - f1Y) / 2;
-			pPts[2].X := f0X + (pPts[1].X - f0X) / 2;
-			pPts[3].Y := f1Y + (pPts[2].Y - f1Y) / 2;
+			f0X := pPts[0].x;
+			f1Y := pPts[1].y;
+			pPts[0].x := f0X + (pPts[1].x - f0X) / 2;
+			pPts[1].y := f1Y + (pPts[2].y - f1Y) / 2;
+			pPts[2].x := f0X + (pPts[1].x - f0X) / 2;
+			pPts[3].y := f1Y + (pPts[2].y - f1Y) / 2;
 
 			canvas.DrawPolygon(pPts, 0.5, TRUE);
 
 			fp0 := GetBasePoint(0);
 			fp1 := GetBasePoint(1);
 
-			canvas.DrawText(fp0.X, fp0.Y, fp1.X, fp1.Y, 5, FText^);
+			canvas.DrawText(fp0.x, fp0.y, fp1.x, fp1.y, 5, FText^);
 			Draw^(canvas)
 		END Draw;
 
@@ -860,9 +860,9 @@ TYPE
 
 	SubBlock = OBJECT(RectVisualObject)
 
-		PROCEDURE Draw(canvas: VCTypes.LogicalCanvas);
+		PROCEDURE Draw(canvas: VCBase.LogicalCanvas);
 		VAR
-			fp0, fp1: VCTypes.FloatPoint;
+			fp0, fp1: VCTypes.Point2f;
 		BEGIN
 			IF IsBadRect() THEN
 				Draw^(canvas);
@@ -870,12 +870,12 @@ TYPE
 			END;
 			fp0 := GetBasePoint(0);
 			fp1 := GetBasePoint(1);
-			canvas.DrawRect(fp0.X, fp0.Y, fp1.X, fp1.Y, 0.5);
-			canvas.DrawLine(fp0.X + (fp1.X - fp0.X) / 10, fp0.Y,
-				fp0.X + (fp1.X - fp0.X) / 10, fp1.Y, 0.5);
-			canvas.DrawLine(fp1.X - (fp1.X - fp0.X) / 10, fp0.Y,
-				fp1.X - (fp1.X - fp0.X) / 10, fp1.Y, 0.5);
-			canvas.DrawText(fp0.X, fp0.Y, fp1.X, fp1.Y, 5, FText^);
+			canvas.DrawRect(fp0.x, fp0.y, fp1.x, fp1.y, 0.5);
+			canvas.DrawLine(fp0.x + (fp1.x - fp0.x) / 10, fp0.y,
+				fp0.x + (fp1.x - fp0.x) / 10, fp1.y, 0.5);
+			canvas.DrawLine(fp1.x - (fp1.x - fp0.x) / 10, fp0.y,
+				fp1.x - (fp1.x - fp0.x) / 10, fp1.y, 0.5);
+			canvas.DrawText(fp0.x, fp0.y, fp1.x, fp1.y, 5, FText^);
 			Draw^(canvas)
 		END Draw;
 
@@ -883,13 +883,13 @@ TYPE
 
 	TextBlock = OBJECT(RectVisualObject)
 
-		PROCEDURE Draw(Canvas: VCTypes.LogicalCanvas);
+		PROCEDURE Draw(Canvas: VCBase.LogicalCanvas);
 		VAR
-			fp0, fp1: VCTypes.FloatPoint;
+			fp0, fp1: VCTypes.Point2f;
 		BEGIN
 			fp0 := GetBasePoint(0);
 			fp1 := GetBasePoint(1);
-			Canvas.DrawText(fp0.X, fp0.Y, fp1.X, fp1.Y, 5, FText^);
+			Canvas.DrawText(fp0.x, fp0.y, fp1.x, fp1.y, 5, FText^);
 			Draw^(Canvas)
 		END Draw;
 
