@@ -2,6 +2,40 @@ MODULE AAGraphics;	(** AUTHOR "BohdanT"; PURPOSE "Anti-aliasing drawing of graph
 
 IMPORT SYSTEM, WMGraphics,  WMRectangles, Raster, 	WMGraphicUtilities, Math, Strings, KernelLog;
 
+TYPE
+	AlphaTbl = ARRAY 256 OF Raster.Pixel;
+
+PROCEDURE CreateAlphaTbl(color:LONGINT;VAR alf:AlphaTbl);
+VAR
+	i:LONGINT;
+	r,g,b,a:LONGINT;
+	rxi,rxf,rmi,rmf, rdt2:LONGINT;
+	gxi,gxf,gmi,gmf, gdt2:LONGINT;
+	bxi,bxf,bmi,bmf, bdt2:LONGINT;
+BEGIN
+	WMGraphics.ColorToRGBA(color,r,g,b,a);
+(*!TODO: 	take into account the alpha of incoming color*)
+	rxi := 0; rxf := - 255; rmi := r DIV 255; rmf := 2 * ( r MOD 255 ); rdt2 := 2 * 255;
+	gxi := 0; gxf := - 255; gmi := g DIV 255; gmf := 2 * ( g MOD 255 ); gdt2 := 2 * 255;
+	bxi := 0; bxf := - 255; bmi := b DIV 255; bmf := 2 * ( b MOD 255 ); bdt2 := 2 * 255;
+
+	FOR i:=0 TO 255 DO
+		alf[i,2]:=CHR(rxi);
+		alf[i,1]:=CHR(gxi);
+		alf[i,0]:=CHR(bxi);
+		alf[i,3]:=CHR(i);
+
+				INC(rxi, rmi); INC(rxf, rmf);
+				IF rxf > 0 THEN INC(rxi); DEC(rxf, rdt2) END;
+
+				INC(gxi, gmi); INC(gxf, gmf);
+				IF gxf > 0 THEN INC(gxi); DEC(gxf, gdt2) END;
+
+				INC(bxi, bmi); INC(bxf, bmf);
+				IF bxf > 0 THEN INC(bxi); DEC(bxf, bdt2) END;
+	END;
+END CreateAlphaTbl;
+
 
 (**Fast Antialiased Circle*)
 PROCEDURE Circle*(img: Raster.Image;CX, CY, R,cl : LONGINT);
