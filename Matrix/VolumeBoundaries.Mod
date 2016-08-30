@@ -183,6 +183,7 @@ TYPE
 			HALT(GridNotFound);				
 		END PressureBoundariesPDT;
 		
+		
 		PROCEDURE SoluteBoundaries*(VAR field: Volume); (* avoid presence of solute to outside a channel. TO DO: do not suppress, but bring the material diffused outside inwards again, to avoid loss. *)
 		VAR
 			i,j,k,N0,N1,N2: LONGINT;
@@ -203,11 +204,7 @@ TYPE
 							END;
 						END;
 					END;
-					
-					(*
-					field[..N0 DIV 3, .., 0 ]:=1;field[N0 DIV 3+1.., .., 0 ]:=0;  (*inlet condition*)
-					*)
-					(*to do: outlet condition: = black hole ?*)
+					(*!to do: outlet condition: = black hole ?*)
 					DirichletBC(field, volumes[k].outside, 0);  (* set field to zero outside the domain *)	
 					ZeroBoundaryGradient(field); (* by establishing a zero solute gradient accross the wall, contents will not diffuse out *)
 					RETURN;
@@ -216,6 +213,33 @@ TYPE
 			HALT(GridNotFound);									
 		END SoluteBoundaries;
 		
+		PROCEDURE SoluteBoundaries0*(VAR field: Volume); (* along Z for initialization *)
+		VAR
+			i,j,k,N0,N1,N2: LONGINT;
+		BEGIN
+			N0 := LEN(field,0);
+			N1 := LEN(field,1);
+			N2 := LEN(field,2);					
+			FOR k:=0 TO LEN(volumes,0)-1 DO
+				IF (N0 = volumes[k].N0) & (N1 = volumes[k].N1) & (N2 = volumes[k].N2) THEN
+					index := k;
+					FOR i:=0 TO LEN(field, 0)-1 DO
+						FOR j:=0 TO LEN(field,1)-1 DO
+							IF dyeInlet(LEN(field,0), LEN(field,1), i,j) THEN 
+								field[i,j, .. ]:=1; (*inlet condition*)
+							ELSE
+								field[i,j, .. ]:=0; 
+							END;
+						END;
+					END;
+					DirichletBC(field, volumes[k].outside, 0);  (* set field to zero outside the domain *)	
+					ZeroBoundaryGradient(field); (* by establishing a zero solute gradient accross the wall, contents will not diffuse out *)
+					RETURN;
+				END;
+			END;		
+			HALT(GridNotFound);									
+		END SoluteBoundaries0;
+
 			
 	PROCEDURE CountElements*(CONST field: Volume):LONGINT; (* avoid presence of solute to outside a channel. TO DO: do not suppress, but bring the material diffused outside inwards again, to avoid loss. *)
 		VAR
