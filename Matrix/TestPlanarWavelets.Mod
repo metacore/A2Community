@@ -64,7 +64,6 @@ BEGIN
 		NEW(raw,w,h);
 		MatrixUtilities.ReadInt8(r, raw);
 		data:=raw[..,..];
-		(*NEW(result,w,h);*)
 		
 		NEW(analyzer, Wavelets.Haar, Wavelets.undefined, data); 
 		analyzer.Analyze;
@@ -105,15 +104,35 @@ BEGIN
 		NEW(raw,w,h);
 		MatrixUtilities.ReadInt8(r, raw);
 		data:=raw[..,..];
-		(*NEW(result,w,h);*)
-		
 		NEW(analyzer, Wavelets.Haar, Wavelets.undefined, data); 
 		analyzer.AnalyzeMultiscale(3);
-		result:=analyzer.data;
-		NEW(window, result, "result"); window.AddWindow;
+		NEW(window, analyzer.data, "result"); window.AddWindow;
 	END;
 END Do4;
 
+PROCEDURE Do5*(context:Commands.Context);
+VAR 
+	raw: ARRAY [?] OF INTEGER;
+	data,result,result1,result2,result3: PlanarWavelets.Matrix;
+	analyzer: PlanarWavelets.Analyzer;
+	window: WMMatrix.Window;
+	filename: Files.FileName;
+	w,h: LONGINT;
+	f:Files.File; r:Files.Reader;
+BEGIN
+	IF context.arg.GetString(filename) & context.arg.GetInteger(h, FALSE) & context.arg.GetInteger(w,FALSE) THEN
+		f:=Files.Old(filename); 
+		IF f#NIL THEN 
+			Files.OpenReader(r,f,0);
+			NEW(raw,w,h);
+			MatrixUtilities.ReadInt8(r, raw);
+			data:=raw[..,..];
+			NEW(analyzer, Wavelets.Haar, Wavelets.undefined, data); 
+			analyzer.AnalyzePacket(3);
+			NEW(window, analyzer.data, "result"); window.AddWindow;
+		END;
+	END;
+END Do5;
 
 END TestPlanarWavelets.
 
@@ -122,5 +141,7 @@ TestPlanarWavelets.Do1 ~
 TestPlanarWavelets.Do2~
 TestPlanarWavelets.Do3 E:/Manuscripts/Polymers/Kegang_13Sept2016/Kegang_CM200KV_14102016/Kegang_CM200KV_14102016/PIP17_HSA_200KV_015.8bit.raw 4096 4096~
 TestPlanarWavelets.Do4 E:/Manuscripts/Polymers/Kegang_13Sept2016/Kegang_CM200KV_14102016/Kegang_CM200KV_14102016/PIP17_HSA_200KV_015.8bit.raw 4096 4096~
+TestPlanarWavelets.Do5 E:/Manuscripts/Polymers/Kegang_13Sept2016/Kegang_CM200KV_14102016/Kegang_CM200KV_14102016/PIP17_HSA_200KV_015.8bit.raw 4096 4096~
+
 
 SystemTools.FreeDownTo MatrixBase Wavelets~

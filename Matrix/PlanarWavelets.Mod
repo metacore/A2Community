@@ -17,6 +17,7 @@ TYPE Analyzer*= OBJECT
 		(*choose wavelet family; need to choose compatible boundary conditions - see Wavelets.Mod*)
 	PROCEDURE &Init*(waveletType, boundary: LONGINT; CONST data: Matrix);
 	BEGIN
+		IF LEN(data)#LEN(SELF.data) THEN NEW(SELF.data, LEN(data)) END;
 		SELF.data:=data; (*copy*)
 		SELF.waveletType:=waveletType;
 		SELF.boundary:=boundary;
@@ -44,13 +45,36 @@ TYPE Analyzer*= OBJECT
 	BEGIN
 		Analyze;
 		IF levels>1 THEN
-			NEW(child, waveletType, boundary, data[..(LEN(data,0)+1)DIV 2, ..(LEN(data,1)+1) DIV 2]);
+			NEW(child, waveletType, boundary, data[..(LEN(data,0)+1)DIV 2-1, ..(LEN(data,1)+1) DIV 2-1]);
 			child.AnalyzeMultiscale(levels-1);
-			data[..(LEN(data,0)+1)DIV 2, ..(LEN(data,1)+1) DIV 2]:=child.data;
+			data[..(LEN(data,0)+1)DIV 2-1, ..(LEN(data,1)+1) DIV 2-1]:=child.data;
 		END;
 	END AnalyzeMultiscale;
 	
-	PROCEDURE AnalyzePacket*(levels:LONGINT);(*!? questionable implementation of hierarch ?*)
+	PROCEDURE AnalyzePacket*(levels:LONGINT);
+	VAR i:LONGINT;
+	BEGIN
+		Analyze;
+		IF levels>1 THEN
+			NEW(child, waveletType, boundary, data[..(LEN(data,0)+1)DIV 2-1, ..(LEN(data,1)+1) DIV 2-1]);
+			child.AnalyzePacket(levels-1);
+			data[..(LEN(data,0)+1)DIV 2-1, ..(LEN(data,1)+1) DIV 2-1]:=child.data;
+			
+			child.Init(waveletType, boundary, data[(LEN(data,0)+1)DIV 2.., ..(LEN(data,1)+1) DIV 2-1]);
+			child.AnalyzePacket(levels-1);
+			data[(LEN(data,0)+1)DIV 2.., ..(LEN(data,1)+1) DIV 2-1]:=child.data;
+			
+			child.Init(waveletType, boundary, data[..(LEN(data,0)+1)DIV 2-1, (LEN(data,1)+1) DIV 2..]);
+			child.AnalyzePacket(levels-1);
+			data[(LEN(data,0)+1)DIV 2.., ..(LEN(data,1)+1) DIV 2-1]:=child.data;
+			
+			child.Init(waveletType, boundary, data[(LEN(data,0)+1)DIV 2.., (LEN(data,1)+1) DIV 2..]);
+			child.AnalyzePacket(levels-1);
+			data[(LEN(data,0)+1)DIV 2.., ..(LEN(data,1)+1) DIV 2-1]:=child.data;
+		END;
+	END AnalyzePacket;
+	
+	(*PROCEDURE AnalyzePacket*(levels:LONGINT);(*!? questionable implementation of hierarch ?*)
 	VAR i:LONGINT;
 	BEGIN
 		Analyze;
@@ -59,12 +83,14 @@ TYPE Analyzer*= OBJECT
 			child.AnalyzeMultiscale(levels-1);
 			data[..LEN(data,0)-1, ..LEN(data,1)-1]:=child.data;
 		END;
-	END AnalyzePacket;
+	END AnalyzePacket;*)
 	
 	END Analyzer;
 
 	
 
 END PlanarWavelets.
+
+
 
 
