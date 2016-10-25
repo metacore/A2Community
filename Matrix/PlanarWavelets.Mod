@@ -74,17 +74,7 @@ TYPE Analyzer*= OBJECT
 		END;
 	END AnalyzePacket;
 	
-	(*PROCEDURE AnalyzePacket*(levels:LONGINT);(*!? questionable implementation of hierarch ?*)
-	VAR i:LONGINT;
-	BEGIN
-		Analyze;
-		IF levels>1 THEN
-			NEW(child, waveletType, boundary, data[..LEN(data,0)-1, ..LEN(data,1)-1]);
-			child.AnalyzeMultiscale(levels-1);
-			data[..LEN(data,0)-1, ..LEN(data,1)-1]:=child.data;
-		END;
-	END AnalyzePacket;*)
-	
+
 	END Analyzer;
 
 	
