@@ -11,13 +11,28 @@ BEGIN
 	NEW(data,256,256);
 	data[100..110,150..160]:=1;
 	NEW(result,256,256);
-	NEW(analyzer, Wavelets.Haar, Wavelets.undefined, data); 
-	context.out.Int(analyzer.wavelet.defaultBoundary,0); context.out.Ln; context.out.Update;
+	NEW(analyzer, Wavelets.Haar, Wavelets.default, data); 
 	analyzer.Analyze;
 	result:=analyzer.data;
 	NEW(window, data, "data"); window.AddWindow;
 	NEW(window, result, "result"); window.AddWindow;
 END Do;
+
+PROCEDURE Do1*(context:Commands.Context);
+VAR data,result: PlanarWavelets.Matrix;
+	analyzer: PlanarWavelets.Analyzer;
+	window: WMMatrix.Window;
+BEGIN
+	NEW(data,256,256);
+	data[100..110,150..160]:=1;
+	NEW(result,256,256);
+	NEW(analyzer, Wavelets.Haar, Wavelets.default, data); 
+	analyzer.AnalyzeMultiscale(3);
+	result:=analyzer.data;
+	NEW(window, data, "data"); window.AddWindow;
+	NEW(window, result, "result"); window.AddWindow;
+END Do1;
+
 
 PROCEDURE Do2*(context:Commands.Context);
 VAR data,result: PlanarWavelets.Matrix;
@@ -27,8 +42,7 @@ BEGIN
 	NEW(data,256,256);
 	data[100..110,150..160]:=1;
 	NEW(result,256,256);
-	NEW(analyzer, Wavelets.Haar, Wavelets.undefined, data); 
-	context.out.Int(analyzer.wavelet.defaultBoundary,0); context.out.Ln; context.out.Update;
+	NEW(analyzer, Wavelets.Haar, Wavelets.default, data); 
 	analyzer.Analyze;
 	result:=analyzer.data;
 	NEW(window, data, "data"); window.AddWindow;
@@ -76,10 +90,37 @@ BEGIN
 	END;
 END Do3;
 
+PROCEDURE Do4*(context:Commands.Context);
+VAR 
+	raw: ARRAY [?] OF INTEGER;
+	data,result,result1,result2,result3: PlanarWavelets.Matrix;
+	analyzer: PlanarWavelets.Analyzer;
+	window: WMMatrix.Window;
+	filename: Files.FileName;
+	w,h: LONGINT;
+	f:Files.File; r:Files.Reader;
+BEGIN
+	IF context.arg.GetString(filename) & context.arg.GetInteger(h, FALSE) & context.arg.GetInteger(w,FALSE) THEN
+		f:=Files.Old(filename); Files.OpenReader(r,f,0);
+		NEW(raw,w,h);
+		MatrixUtilities.ReadInt8(r, raw);
+		data:=raw[..,..];
+		(*NEW(result,w,h);*)
+		
+		NEW(analyzer, Wavelets.Haar, Wavelets.undefined, data); 
+		analyzer.AnalyzeMultiscale(3);
+		result:=analyzer.data;
+		NEW(window, result, "result"); window.AddWindow;
+	END;
+END Do4;
+
 
 END TestPlanarWavelets.
 
 TestPlanarWavelets.Do ~
+TestPlanarWavelets.Do1 ~
 TestPlanarWavelets.Do2~
 TestPlanarWavelets.Do3 E:/Manuscripts/Polymers/Kegang_13Sept2016/Kegang_CM200KV_14102016/Kegang_CM200KV_14102016/PIP17_HSA_200KV_015.8bit.raw 4096 4096~
+TestPlanarWavelets.Do4 E:/Manuscripts/Polymers/Kegang_13Sept2016/Kegang_CM200KV_14102016/Kegang_CM200KV_14102016/PIP17_HSA_200KV_015.8bit.raw 4096 4096~
+
 SystemTools.FreeDownTo MatrixBase Wavelets~
