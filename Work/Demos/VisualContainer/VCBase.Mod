@@ -5,7 +5,11 @@ MODULE VCBase;
 
 IMPORT
 	Math, WMComponents, WMRectangles, WMGraphics,
-	Generics, VCTypes, VCPoly;
+	Generics, VCTypes, VCPoly
+
+	(*, FloatAA*)
+	
+	;
 
 TYPE
 	Point2fItem* = RECORD(Generics.Item)
@@ -250,11 +254,21 @@ TYPE
 			END*)
 			IF polyConverter.ToTrianglesF(pPts, pTriangles2f, n, FConvertIntf.LogToScreen(fLineWidth), bClosed) THEN
 				FOR i := 0 TO n - 1 DO
+					(*FloatAA.LineDDAFull(FCanvas(WMGraphics.BufferCanvas).img,
+						pTriangles2f[i][0].x, pTriangles2f[i][0].y,
+						pTriangles2f[i][1].x, pTriangles2f[i][1].y, color);
+					FloatAA.LineDDAFull(FCanvas(WMGraphics.BufferCanvas).img,
+						pTriangles2f[i][1].x, pTriangles2f[i][1].y,
+						pTriangles2f[i][2].x, pTriangles2f[i][2].y, color);
+					FloatAA.LineDDAFull(FCanvas(WMGraphics.BufferCanvas).img,
+						pTriangles2f[i][2].x, pTriangles2f[i][2].y,
+						pTriangles2f[i][0].x, pTriangles2f[i][0].y, color);*)
 					FOR j := 0 TO 2 DO
 						tri[j].x := ENTIER(pTriangles2f[i][j].x + 0.5);
 						tri[j].y := ENTIER(pTriangles2f[i][j].y + 0.5)
 					END;
-					FCanvas.PolyLine(tri, 3, TRUE, color, mode)
+					(*FCanvas.PolyLine(tri, 3, TRUE, color, mode)*)
+					FCanvas.FillPolygonFlat(tri, 3, color, mode)
 				END;
 			END
 

@@ -347,12 +347,12 @@ TYPE
 VAR
 	frm: Form;
 
-PROCEDURE "+" (CONST a1, a2: Chars): String;
+OPERATOR "+" (CONST a1, a2: Chars): String;
 BEGIN
 	RETURN Strings.ConcatToNew(a1, a2)
 END "+";
 
-PROCEDURE "+" (s: String; CONST a: ARRAY OF CHAR): String;
+OPERATOR "+" (s: String; CONST a: ARRAY OF CHAR): String;
 BEGIN
 	RETURN Strings.ConcatToNew(s^, a)
 END "+";
