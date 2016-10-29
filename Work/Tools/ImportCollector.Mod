@@ -401,11 +401,11 @@ ImportCollector.Collect
 ImportCollector.Collect
 
 	-f=Obj.Zip
-	-p=Bindings/BASS/;Libs/;Components/;Tools/;Demos/
+	-p=Bindings/BASS/;Libs/;Components/;Tools/;Demos/;Examples/
 	-x=ref:ZipLoaderList;Kernel32;Trace;Machine;Heaps;Modules;Objects;Kernel;KernelLog;Streams;Commands;Files;WinFS;Loader;BootConsole
 
 	WinStarter WMBass3DTest WMBassDSPTest WMRaycaster
-	WMRaycasterMaze WMAStar WMFM WMColorLines
+	WMRaycasterMaze WMAStar WMFM WMColorLines WMAAGraphicsExample
 
 	DisplayNull Traps FileTrapWriter FSTools RelativeFileSystem
 	WMOTFonts WMOberonFonts	Clipboard Autostart

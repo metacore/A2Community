@@ -84,6 +84,8 @@ Compiler.Compile -p=Win32G
 	Demos/WMAStar.Mod
 	Demos/WMAStarSet.Mod
 	Demos/VisualContainer/VCTypes.Mod
+	Demos/VisualContainer/VCPoly.Mod
+	Demos/VisualContainer/VCBase.Mod
 	Demos/VisualContainer/VCObjects.Mod
 	Demos/VisualContainer/WMVC.Mod
 	Demos/WMBass3DTest.Mod
