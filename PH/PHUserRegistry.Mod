@@ -12,7 +12,7 @@ CONST MD5Size=33;
 
 TYPE 
 	User*=POINTER TO RECORD (PHRegistries.Item);
-		realm*: ARRAY 16 OF CHAR; (* delimits access of this user on server; user can have another login/access to another real *)
+		realm*: ARRAY 16 OF CHAR; (* delimits access of this user on server; user can have another login/access to another realm *)
 		hash-: ARRAY MD5Size OF CHAR;
 	END;
 
