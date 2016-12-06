@@ -26,6 +26,9 @@ TYPE Monitor*= OBJECT
 		handlePacket: DatagramHandler;
 		filter: Filter;
 		interface: IP.Interface;
+		id:LONGINT;
+		err:LONGINT;
+		src,dst:LONGINT;
 		
 		(* interface=NIL implies currently default interface, but should include all interfaces *)
 		PROCEDURE &Init*(interface: IP.Interface; datagramHandler:DatagramHandler; filter:Filter; out, error:Streams.Writer);
@@ -58,9 +61,11 @@ TYPE Monitor*= OBJECT
 			dest.sinAddr:=adr.ipv4Adr;
 			WSock32.bind(socket,dest, SIZEOF(WSock32.sockaddrIn));
 			
+			(* tell interface to receive all packet types*)
 			cmd:=1;
 			WSock32.WSAIoctl(socket, WSock32.SIORcvAll, cmd, SIZEOF(LONGINT), resStr, 0, nRead,0, 0); 
 			alive:=TRUE;
+			id:=nInterfaces; INC(nInterfaces);
 		END Init;
 		
 		PROCEDURE Finalize( ptr: ANY );
@@ -82,6 +87,13 @@ TYPE Monitor*= OBJECT
 			IF len#WSock32.SocketError THEN 
 				IF (filter=NIL) OR filter(interface, buffer, len) THEN
 					handlePacket(interface, buffer, len);
+					(*
+					src:= Network.GetNet4(buffer, 0);
+					dst:= Network.GetNet4(buffer, 4);
+					Network.PutNet4(buffer,0,dst);
+					Network.PutNet4(buffer,4,src); 
+					err := WSock32.send( socket, buffer[0], len, {} )
+					*)
 				END;
 			ELSE 
 				IF error#NIL THEN error.String("?"); error.Update; END;
@@ -89,15 +101,19 @@ TYPE Monitor*= OBJECT
 		END;
 	END Monitor;
 
+
 VAR 
 	monitor:Monitor;
 	pool*: Kernel.FinalizedCollection;
 	log:Streams.Writer;
+	nInterfaces:LONGINT;
 	
 (*default datagram handler*)
 PROCEDURE DefaultHandler(interface: IP.Interface; CONST datagram: ARRAY OF CHAR; readLen:LONGINT); (*! not thread safe yet*)
 CONST IdentifyInterface=TRUE;
-VAR src,dst,str: ARRAY 16 OF CHAR; version, ipHeadLen, protocol, length:LONGINT;
+VAR 
+	src,dst,str: ARRAY 16 OF CHAR; 
+	version, ipHeadLen, protocol, length:LONGINT;
 BEGIN
 	IF ORD(datagram[0]) DIV 16 # IP.IPv4 THEN HALT(200) END; (*Not yet implemented*)
 	protocol:=ORD(datagram[9]);
@@ -147,12 +163,16 @@ BEGIN
 	Strings.IntToStr(ORD(datagram[pos+3]),s0); Strings.Append(s,s0) 
 END IpToStr;
 
-PROCEDURE Start*(context:Commands.Context);
+PROCEDURE 	Start*(context:Commands.Context);
+VAR interface: IP.Interface
 BEGIN
 	IF TRUE THEN
-		NEW(monitor, IP.default, DefaultHandler, NIL, context.out, context.error);
-	ELSIF IP.default.next#NIL THEN (*parallel readout not yet thread safe*)
-		NEW(monitor, IP.default.next, DefaultHandler, NIL, context.out, context.error);
+		NEW(monitor, IP.default, DefaultHandler, NIL, context.out, context.out);
+	END;
+	interface:=IP.default.next;
+	WHILE TRUE & (interface#NIL) DO (*parallel readout not yet thread safe*)
+		NEW(monitor, interface, DefaultHandler, NIL, context.error, context.error);
+		interface:=interface.next;
 	END;
 	log:=context.out;
 END Start;
