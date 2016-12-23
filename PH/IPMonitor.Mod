@@ -1,4 +1,5 @@
 MODULE IPMonitor; (** AUTHOR "Patrick Hunziker"; PURPOSE "simple network sniffer"; *)
+(* may require running A2 as administrator for certain tasks*)
 
 IMPORT WSock32, Streams, Commands,IP, Modules, Network, Strings, Kernel;
 
@@ -42,11 +43,11 @@ TYPE Monitor*= OBJECT
 			SELF.out:=out;
 			trace:=Trace;
 
-			socket:=WSock32.socket(WSock32.AFINet, WSock32.SockRaw, WSock32.IPProtoIP);
+			socket:=WSock32.socket(WSock32.AFINet, WSock32.SockRaw, WSock32.IPProtoIP);(*low-level access. requires administrator privileges in newer Windows versions*)
 			IF (socket#WSock32.InvalidSocket ) THEN 
 				pool.Add( SELF, SELF.Finalize )
 			ELSE
-				IF error#NIL THEN error.String("socket=NIL"); error.Ln; error.Update; HALT(200) END;
+				IF error#NIL THEN error.String("socket=NIL"); error.Ln; error.Update; END;
 				RETURN 
 			END;
 			
@@ -149,7 +150,7 @@ BEGIN
 						(*sequence number*) log.Int(Network.GetNet4(datagram, ipHeadLen+4),12);
 		| 17: (*UDP);*) log.Int(Network.GetNet2(datagram,ipHeadLen),6);log.String("=>");log.Int(Network.GetNet2(datagram,ipHeadLen+2),6); log.Char(Tab); 
 						(*packet size*) log.Int(Network.GetNet2(datagram,ipHeadLen+4),8);
-	ELSE 
+	ELSE log.Int(protocol,0); 
 	END;
 	log.Ln; log.Update;
 END DefaultHandler;
