@@ -1,7 +1,7 @@
 MODULE PlanarNorms; (** AUTHOR "Patrick Hunziker"; PURPOSE "Norms in planar data"; *)
 (* see also MatrixNorms.Mod *)
 
-IMPORT PlanarBase, PlanarMath, PlanarNabla, PMath, MathL, Commands; 
+IMPORT PlanarBase, PlanarMath, PlanarNabla, PMath, MathL, Commands, KernelLog; 
 
 TYPE 
 	Datatype=PlanarBase.Datatype;
@@ -20,10 +20,13 @@ END TotalVariation;
 
 (** sinus to noise ratio for images = 10 log (...) *)
 PROCEDURE SNR*(CONST test, reference:Plane):Datatype;
-VAR dividend, divisor: Datatype;
+VAR dividend, divisor: Datatype; tmp: Plane;
 BEGIN
-	dividend:=SUM(reference .* reference);
-	divisor:=SUM(PlanarMath.Sqr( reference-test));
+	(*dividend:=SUM(reference .* reference);*)
+	dividend:=reference +* reference;
+	(*divisor:=SUM(PlanarMath.Sqr( reference-test));*)
+	tmp:=reference-test;
+	divisor:= tmp+*tmp;
 	RETURN 10*PMath.log (SHORT(dividend/divisor))
 END SNR;
 (* ??
