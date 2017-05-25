@@ -10,11 +10,24 @@ TYPE
 	Plane=PlanarBase.TwoD;
 	ComplexPlane=ARRAY [*,*] OF Complex;
 
+PROCEDURE Power*(CONST p:Plane):Datatype;
+BEGIN
+	RETURN p+*p
+END Power;
+
+PROCEDURE PowerComplex*(CONST p:ComplexPlane):Datatype;
+VAR tmp:Plane;
+BEGIN
+	tmp:=ABS(p);
+	RETURN tmp+*tmp
+END PowerComplex;
+
 PROCEDURE TotalVariation*(CONST p:Plane; sampling:LONGINT): Datatype; (* to do: optimize *)
 BEGIN
 	RETURN SUM(PlanarMath.Sqrt(PlanarMath.Sqr(PlanarNabla.dx(p,sampling)) 
 									+ PlanarMath.Sqr(PlanarNabla.dy(p,sampling))))
 END TotalVariation;
+
 
 (** SNR, PSNR, RMSE, MAE for images, see http://bigwww.epfl.ch/sage/soft/snr/	*)
 
@@ -29,17 +42,18 @@ BEGIN
 	divisor:= tmp+*tmp;
 	RETURN 10*PMath.log (SHORT(dividend/divisor))
 END SNR;
-(* ??
-PROCEDURE SNRComplex*(CONST test, reference:ComplexPlane):Datatype; (*!????*)
-VAR dividend, divisor: Datatype; tmp, tmp1: Plane;
+
+PROCEDURE SNRComplex*(CONST test, reference:ComplexPlane):Datatype; (* see http://mathworld.wolfram.com/AveragePower.htm and http://bigwww.epfl.ch/sage/soft/snr/ *)
+VAR dividend, divisor: Datatype; tmp: Plane; tmpC: ComplexPlane;
 BEGIN
-	tmp:=ABS(reference .* reference);
-	dividend:=SUM(ABS(tmp)); (*!????*)
-	tmp1:=ABS(reference-test);
-	divisor:=SUM(tmp1.*tmp1);
+	tmp:=ABS(reference);
+	dividend:=tmp+*tmp;
+	tmpC:=reference-test;
+	tmp:=ABS(tmpC);
+	divisor:=tmp+*tmp;
 	RETURN 10*PMath.log (SHORT(dividend/divisor))
 END SNRComplex;
-*)
+
 
 (** peak sinus to noise ratio for images = 10 log (...) *)
 PROCEDURE PSNR*(CONST test, reference:Plane):Datatype;
