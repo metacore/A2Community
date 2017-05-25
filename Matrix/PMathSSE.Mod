@@ -596,16 +596,16 @@ BEGIN
 	FOR j:=1 TO i-1 DO	y:=nil(0) END;
 	t1:=Kernel.GetTicks();
 	
-	FOR j:=1 TO i-1 DO	k:=ENTIER(x); (* y:=logistic(0)*)	END;
+	FOR j:=1 TO i-1 DO	(*k:=ENTIER(x);*)  y:=tanh(0)	END;
 	t2:=Kernel.GetTicks();
 	
-	FOR j:=1 TO i-1 DO	k:=Truncate(x); (* y:=PMath.tanh(0)*) END;
+	FOR j:=1 TO i-1 DO	(*k:=Truncate(x);*)  y:=PMath.tanh(0) END;
 	t3:=Kernel.GetTicks();
 	
-	FOR j:=1 TO i-1 DO	k:=Truncate0(x); (* y:=tanhFast(0)*) END;
+	FOR j:=1 TO i-1 DO	(*k:=Truncate0(x);*)  y:=tanhFast(0) END;
 	t4:=Kernel.GetTicks();
 	
-	FOR j:=1 TO i-1 DO	k:=Truncate1(x); (*y:=EvalSpline(0, TanhCoeff[0]) *) END;
+	FOR j:=1 TO i-1 DO	(*k:=Truncate1(x);*) y:=EvalSpline(0, TanhCoeff[0])  END;
 	t5:=Kernel.GetTicks();
 	
 	FOR i:=-10 TO 10 DO
