@@ -609,7 +609,9 @@ BEGIN
 	t5:=Kernel.GetTicks();
 	
 	FOR i:=-10 TO 10 DO
-		context.out.Float(i/2,14); context.out.Float(PMath.logistic(i/2),24); context.out.Float(logistic(i/2),24);context.out.Float(logistic(i/2)-PMath.logistic(i/2),24);   context.out.Ln;	
+		(*context.out.Float(i/2,14); context.out.Float(PMath.logistic(i/2),24); context.out.Float(logistic(i/2),24);context.out.Float(logistic(i/2)-PMath.logistic(i/2),24);   context.out.Ln;	*)
+		context.out.Float(i/2,14); context.out.Float(tanh(i/2),24); context.out.Float(PMath.tanh(i/2),24);context.out.Float(tanhFast(i/2),24);context.out.Float(tanhFast(i/2)-PMath.tanh(i/2),24); context.out.Float(tanh(i/2)-PMath.tanh(i/2),24);   context.out.Ln;	
+
 	END;
 	
 	context.out.Int(t1-t0,6); 
