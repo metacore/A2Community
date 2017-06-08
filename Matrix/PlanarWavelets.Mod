@@ -3,6 +3,7 @@ MODULE PlanarWavelets; (** AUTHOR "Patrick Hunziker"; PURPOSE "2D wavelet decomp
 IMPORT Wavelets;
 
 TYPE Datatype*=Wavelets.Datatype;
+	Tensor*=ARRAY [?] OF Datatype;
 	Matrix*=ARRAY [*,*] OF Datatype;
 	Line*=ARRAY [*] OF Datatype;
 
@@ -36,7 +37,7 @@ TYPE Analyzer*= OBJECT
 		END;
 		FOR i:=0 TO LEN(data,1)-1 DO
 			conv.Analyze(data[..,i], resY);
-			data[..,i]:=resY; (*could do in-place ?*)
+			data[..,i]:=resY; (* could do in-place ? *)
 		END;
 	END Analyze;
 	
@@ -66,21 +67,19 @@ TYPE Analyzer*= OBJECT
 			
 			child.Init(waveletType, boundary, data[..(LEN(data,0)+1)DIV 2-1, (LEN(data,1)+1) DIV 2..]);
 			child.AnalyzePacket(levels-1);
-			data[(LEN(data,0)+1)DIV 2.., ..(LEN(data,1)+1) DIV 2-1]:=child.data;
+			data[..(LEN(data,0)+1)DIV 2-1, (LEN(data,1)+1) DIV 2..]:=child.data;
 			
 			child.Init(waveletType, boundary, data[(LEN(data,0)+1)DIV 2.., (LEN(data,1)+1) DIV 2..]);
 			child.AnalyzePacket(levels-1);
-			data[(LEN(data,0)+1)DIV 2.., ..(LEN(data,1)+1) DIV 2-1]:=child.data;
+			data[(LEN(data,0)+1)DIV 2.., (LEN(data,1)+1) DIV 2..]:=child.data;
 		END;
+
 	END AnalyzePacket;
 	
-
 	END Analyzer;
-
-	
 
 END PlanarWavelets.
 
 
 
-
+SystemTools.FreeDownTo PlanarWavelets ~
