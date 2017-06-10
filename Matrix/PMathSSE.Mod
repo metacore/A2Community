@@ -677,10 +677,21 @@ BEGIN
 	END;
 END Do4;
 
+PROCEDURE TestTanh*(context:Commands.Context);
+VAR x:LONGREAL; i:LONGINT;
+BEGIN
+	FOR i:=-200 TO 200-1 DO
+		context.out.Float(tanh(i/20),20); context.out.Ln; context.out.Update;
+	END;
+END TestTanh;
+
+
 END PMathSSE.
 
 PMathSSE.Do  10000000~
 PMathSSE.Do2 10000000~
 PMathSSE.Do4~
+
+PMathSSE.TestTanh ~
 
 SystemTools.FreeDownTo PMathSSE ~
