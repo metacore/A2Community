@@ -18,15 +18,30 @@ TYPE Analyzer*= OBJECT
 		(*choose wavelet family; need to choose compatible boundary conditions - see Wavelets.Mod*)
 	PROCEDURE &Init*(waveletType, boundary: LONGINT; CONST data: Matrix);
 	BEGIN
-		IF LEN(data)#LEN(SELF.data) THEN NEW(SELF.data, LEN(data)) END;
-		SELF.data:=data; (*copy*)
+		
 		SELF.waveletType:=waveletType;
 		SELF.boundary:=boundary;
 		NEW(wavelet, waveletType);
 		NEW(conv, wavelet, boundary);
-		NEW(lineY, LEN(data,0)); NEW(resY, LEN(data,0)); 
-		NEW(lineX, LEN(data,1)); NEW(resX, LEN(data,1)); 
+		(*IF LEN(data,0)*LEN(data,1)>0 THEN
+			IF LEN(data)#LEN(SELF.data) THEN NEW(SELF.data, LEN(data)) END;
+			SELF.data:=data; (*copy*)
+			NEW(lineY, LEN(data,0)); NEW(resY, LEN(data,0)); 
+			NEW(lineX, LEN(data,1)); NEW(resX, LEN(data,1)); 
+		END;*)
+		SetData(data);
 	END Init;
+	
+	PROCEDURE SetData*(CONST data: Matrix);
+	BEGIN
+		IF LEN(data,0)*LEN(data,1)>0 THEN
+			IF LEN(data)#LEN(SELF.data) THEN NEW(SELF.data, LEN(data)) END;
+			SELF.data:=data; (*copy*)
+			NEW(lineY, LEN(data,0)); NEW(resY, LEN(data,0)); 
+			NEW(lineX, LEN(data,1)); NEW(resX, LEN(data,1)); 
+		END;
+	END SetData;
+	
 	
 	PROCEDURE Analyze*;
 	VAR i:LONGINT;
