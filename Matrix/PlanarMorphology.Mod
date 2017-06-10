@@ -19,7 +19,7 @@ VAR rand:Random.Generator;
 (**
 Number of nonzero elements in volume
 *)	
-PROCEDURE NNZ(s: BinaryPlane): LONGINT;
+PROCEDURE NNZ(CONST s: BinaryPlane): LONGINT;
 VAR
 	k0,k1,n: LONGINT;
 BEGIN

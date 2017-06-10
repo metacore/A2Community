@@ -27,7 +27,7 @@ VAR rand: Random.Generator;
 (**
 Number of nonzero elements in volume
 *)	
-PROCEDURE NNZ(s: BinaryVolume): LONGINT;
+PROCEDURE NNZ(CONST s: BinaryVolume): LONGINT;
 VAR
 	k0,k1,k2,n: LONGINT;
 BEGIN
@@ -45,7 +45,7 @@ BEGIN
 END NNZ;
 
 (* replace by generic ALL(x,y,op) as soon as the compiler supports it*)
-PROCEDURE All2(CONST x: ARRAY [?] OF MatrixBase.Datatype; y: ARRAY [?] OF BOOLEAN; func: PROCEDURE{DELEGATE}(v: MatrixBase.Datatype; w:BOOLEAN): MatrixBase.Datatype): ARRAY [?] OF MatrixBase.Datatype;
+PROCEDURE All2(CONST x: ARRAY [?] OF MatrixBase.Datatype; CONST y: ARRAY [?] OF BOOLEAN; func: PROCEDURE{DELEGATE}(v: MatrixBase.Datatype; w:BOOLEAN): MatrixBase.Datatype): ARRAY [?] OF MatrixBase.Datatype;
 VAR i: LONGINT;
 BEGIN
 	IF DIM(x) = 1 THEN (* last level of recursion *)
