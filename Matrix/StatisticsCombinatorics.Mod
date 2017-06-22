@@ -2,27 +2,42 @@ MODULE StatisticsCombinatorics; (** AUTHOR "Patrick Hunziker 2017"; PURPOSE "Lib
 
 IMPORT Random (*, Commands, MatrixUtilities*);
 
+(*Fisher Yates Algorithm: Random Permutation*)
 PROCEDURE Permutation*(N:LONGINT): ARRAY[*] OF LONGINT;
-VAR i,n:LONGINT; series: ARRAY [*] OF LONGINT;
+VAR i, n:LONGINT; series: ARRAY [*] OF LONGINT; 
 BEGIN
 	IF LEN(RESULT,0)#N THEN NEW(RESULT,N) END;
 	IF LEN(series,0)#N THEN NEW(series,N) END;
 	FOR i:=0 TO N-1 DO series[i]:=i END;
-	FOR i:=N TO 1 BY -1 DO
-		n:=sequence.Dice(i);
-		RESULT[i-1]:=series[n];
-		IF n#i-1 THEN series[n]:=series[i-1] END;
+	FOR i:=N-1 TO 1 BY -1 DO
+		n:=sequence.Dice(i+1);
+		RESULT[i]:=series[n];
+		series[n]:=series[i];
 	END;
 	RETURN RESULT
 END Permutation;
 
-VAR sequence: Random.Sequence;
+(*in-place random permutation*)
+PROCEDURE Permute*(VAR A: ARRAY[*] OF LONGINT);
+VAR i,j, n:LONGINT;
+BEGIN
+	FOR i:=LEN(A,0)-1 TO 1 BY -1 DO
+		n:=sequence.Dice(i+1);
+		j:=A[i];
+		A[i]:=A[n];
+		A[n]:=j;
+	END;
+END Permute;
 
-(*PROCEDURE Test*(context:Commands.Context);
+VAR sequence: Random.Sequence;
+(*
+PROCEDURE Test*(context:Commands.Context);
 VAR n:LONGINT; p:ARRAY [*] OF LONGINT;
 BEGIN
 	IF context.arg.GetInteger(n,FALSE) THEN
 	p:=Permutation(n);
+	MatrixUtilities.Out(p);
+	Permute(p);
 	MatrixUtilities.Out(p);
 	END;
 END Test;*)
