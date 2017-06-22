@@ -162,14 +162,14 @@ PROCEDURE Kurtosis*(CONST X : Vector) : Datatype;
 		RETURN (x2 +* x2) / (variance*variance) / LEN(X,0) - 3;
 	END Kurtosis;
 	
-(**transform to mean=0, SD=1 *)
 PROCEDURE Normalize*(CONST a: Array):Array;
 VAR N:LONGINT; sd: Datatype;
 BEGIN
 	N:=Count(a);
 	RESULT:=a-SUM(a)/N;
-	sd:=MathL.sqrt( a+*a / N);
+	sd:=MathL.sqrt( RESULT+*RESULT / N);
 	RESULT:= 1/sd * RESULT;
+	RETURN RESULT
 END Normalize;
 
 PROCEDURE NormalizeColumns*(VAR A:Matrix); (*normalizing to mean=0 and SD=1*)
@@ -194,6 +194,7 @@ BEGIN
 	meanVector := (onesR * A)/LEN(A,0);
 	A:=A - onesR ** meanVector;
 END ZeroMeanColumns;
+
 (*! to do: move the following proc's  to higher level modules - may not be basic statistics  *)
 (** SoftMax  of a data vector = Normalized exponential; SUM=1.0
  y[i] = softmax(x[i]) = exp(x[i])/sum(exp(x)) *)
@@ -215,7 +216,7 @@ PROCEDURE logistic(X : Datatype) : Datatype;  (* logistic function as nonlinear 
 (**
 Normalize input such that input mean(x)=0, input SD(x)=1, then bring to [0..1] using SoftMax sigmoid transform 
  y[i] = softmax(x[i]) = exp(x[i])/sum(exp(x)) *)
-PROCEDURE SoftMaxNormalize*(VAR x: ARRAY[?] OF Datatype):ARRAY [?] OF Datatype;
+PROCEDURE SoftMaxNormalize*(CONST x: ARRAY[?] OF Datatype):ARRAY [?] OF Datatype;
 	BEGIN
 		RESULT:=Normalize(x);
 		RESULT :=All1(RESULT, logistic);
@@ -262,10 +263,24 @@ BEGIN
 	MatrixUtilities.OutVector([Median(v)])
 END TestMedian;
 
+PROCEDURE TestSoftMax*;
+VAR v,v1:Vector; 
+BEGIN
+	v:=[0, 1, 2, 3, 4,3,2,3,4,5];
+	v1:=Normalize(v);
+	MatrixUtilities.OutVector([StandardDeviation(v1)]);
+	MatrixUtilities.OutVector([Mean(v1)]);
+	v1:=SoftMaxNormalize(v);
+	MatrixUtilities.OutVector(v1);
+	MatrixUtilities.OutVector([Median(v1)]);
+	MatrixUtilities.OutVector([Mean(v1)]);
+	MatrixUtilities.OutVector([StandardDeviation(v1)])
+END TestSoftMax;
 
 END StatisticsBase.
 
 StatisticsBase.TestSort ~
 StatisticsBase.TestMedian ~
+StatisticsBase.TestSoftMax ~
 
 SystemTools.FreeDownTo StatisticsBase ~
