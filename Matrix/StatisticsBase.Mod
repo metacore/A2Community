@@ -214,13 +214,13 @@ PROCEDURE SoftMax*(VAR x: ARRAY[?] OF Datatype):ARRAY [?] OF Datatype;
 		RETURN RESULT
 END SoftMax;
 
-PROCEDURE logistic(X : Datatype) : Datatype;  (* logistic function as nonlinear element for unit response *)
+PROCEDURE Logistic*(X : Datatype) : Datatype;  (* logistic function as nonlinear element for unit response *)
 	BEGIN 
 		IF X >= 18.3684002848 (*expNegligibleL*) THEN RETURN 1
 		ELSIF (-X) > 18.3684002848 (*expNegligibleL*) THEN RETURN 0
 		ELSE RETURN 1 / (1 + MathL.exp( -X ));  
 		END;  		
-	END logistic;
+	END Logistic;
 
 (**
 Normalize input such that input mean(x)=0, input SD(x)=1, then bring to [0..1] using SoftMax sigmoid transform 
@@ -228,7 +228,7 @@ Normalize input such that input mean(x)=0, input SD(x)=1, then bring to [0..1] u
 PROCEDURE SoftMaxNormalize*(CONST x: ARRAY[?] OF Datatype):ARRAY [?] OF Datatype;
 	BEGIN
 		RESULT:=Normalize(x);
-		RESULT :=ALL(RESULT, logistic);
+		RESULT :=ALL(RESULT, Logistic);
 		RETURN RESULT
 END SoftMaxNormalize;
 (*
