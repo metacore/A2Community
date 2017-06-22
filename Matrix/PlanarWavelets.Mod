@@ -23,22 +23,18 @@ TYPE Analyzer*= OBJECT
 		SELF.boundary:=boundary;
 		NEW(wavelet, waveletType);
 		NEW(conv, wavelet, boundary);
-		(*IF LEN(data,0)*LEN(data,1)>0 THEN
-			IF LEN(data)#LEN(SELF.data) THEN NEW(SELF.data, LEN(data)) END;
-			SELF.data:=data; (*copy*)
-			NEW(lineY, LEN(data,0)); NEW(resY, LEN(data,0)); 
-			NEW(lineX, LEN(data,1)); NEW(resX, LEN(data,1)); 
-		END;*)
 		SetData(data);
 	END Init;
 	
 	PROCEDURE SetData*(CONST data: Matrix);
 	BEGIN
-		IF LEN(data,0)*LEN(data,1)>0 THEN
-			IF LEN(data)#LEN(SELF.data) THEN NEW(SELF.data, LEN(data)) END;
-			SELF.data:=data; (*copy*)
-			NEW(lineY, LEN(data,0)); NEW(resY, LEN(data,0)); 
-			NEW(lineX, LEN(data,1)); NEW(resX, LEN(data,1)); 
+		IF LEN(data)>0 THEN
+			IF LEN(data)#LEN(SELF.data) THEN 
+				NEW(SELF.data, LEN(data));
+				NEW(lineY, LEN(data,0)); NEW(resY, LEN(data,0)); 
+				NEW(lineX, LEN(data,1)); NEW(resX, LEN(data,1)); 
+			END;
+			SELF.data:=data; (*!copy. could do in-place ?*)
 		END;
 	END SetData;
 	
@@ -72,7 +68,7 @@ TYPE Analyzer*= OBJECT
 	BEGIN
 		Analyze;
 		IF levels>1 THEN
-			NEW(child, waveletType, boundary, data[..(LEN(data,0)+1)DIV 2-1, ..(LEN(data,1)+1) DIV 2-1]);
+			NEW(child, waveletType, boundary, data[..(LEN(data,0)+1)DIV 2-1, ..(LEN(data,1)+1) DIV 2-1]); (*! should use child.SetData for efficiency*)
 			child.AnalyzePacket(levels-1);
 			data[..(LEN(data,0)+1)DIV 2-1, ..(LEN(data,1)+1) DIV 2-1]:=child.data;
 			
