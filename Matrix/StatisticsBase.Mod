@@ -8,7 +8,7 @@ TYPE
 	Datatype*=MatrixBase.Datatype;
 	Array*=ARRAY[?] OF Datatype;
 
-(* to be replaced by generic ALL operator *)
+(* to be replaced by generic ALL operator *)(*
 PROCEDURE All1(CONST m: ARRAY [?] OF Datatype; op: PROCEDURE(x:Datatype):Datatype):ARRAY [?] OF Datatype;
 	VAR i:LONGINT;
 	BEGIN
@@ -23,7 +23,7 @@ PROCEDURE All1(CONST m: ARRAY [?] OF Datatype; op: PROCEDURE(x:Datatype):Datatyp
 			END;
 		END;
 		RETURN RESULT
-	END All1;
+	END All1;*)
 	
 PROCEDURE SameDimension(VAR a:Array; CONST len:ARRAY [*] OF LONGINT);
 	BEGIN
@@ -42,9 +42,18 @@ BEGIN
 	RETURN res
 END Count;
 
-PROCEDURE Mean*(CONST X: Vector): Datatype;
+PROCEDURE Prod*(CONST v: Vector):Datatype;
+VAR i:LONGINT; x:Datatype;
 BEGIN
-	RETURN SUM(X)/LEN(X,0)
+	x:=v[0];
+	FOR i:=1 TO LEN(v,0)-1 DO x:=x*v[i] END;
+	RETURN x;
+END Prod;
+
+
+PROCEDURE Mean*(CONST X: Array): Datatype;
+BEGIN
+	RETURN SUM(X)/Prod(LEN(X))
 END Mean;
 
 PROCEDURE KSmallest( VAR a: Vector;  n, k: LONGINT ): Datatype;
@@ -200,7 +209,7 @@ END ZeroMeanColumns;
  y[i] = softmax(x[i]) = exp(x[i])/sum(exp(x)) *)
 PROCEDURE SoftMax*(VAR x: ARRAY[?] OF Datatype):ARRAY [?] OF Datatype;
 	BEGIN
-		RESULT :=All1(x, MathL.exp);
+		RESULT :=ALL(x, MathL.exp);
 		RESULT:=1/SUM(RESULT) * RESULT;
 		RETURN RESULT
 END SoftMax;
@@ -219,7 +228,7 @@ Normalize input such that input mean(x)=0, input SD(x)=1, then bring to [0..1] u
 PROCEDURE SoftMaxNormalize*(CONST x: ARRAY[?] OF Datatype):ARRAY [?] OF Datatype;
 	BEGIN
 		RESULT:=Normalize(x);
-		RESULT :=All1(RESULT, logistic);
+		RESULT :=ALL(RESULT, logistic);
 		RETURN RESULT
 END SoftMaxNormalize;
 (*
