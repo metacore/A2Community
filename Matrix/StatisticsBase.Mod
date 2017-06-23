@@ -7,23 +7,6 @@ TYPE
 	Vector*=MatrixBase.Vector;
 	Datatype*=MatrixBase.Datatype;
 	Array*=ARRAY[?] OF Datatype;
-
-(* to be replaced by generic ALL operator *)(*
-PROCEDURE All1(CONST m: ARRAY [?] OF Datatype; op: PROCEDURE(x:Datatype):Datatype):ARRAY [?] OF Datatype;
-	VAR i:LONGINT;
-	BEGIN
-		SameDimension(RESULT, LEN(m));
-		IF DIM(m)>1 THEN
-			FOR i:=0 TO LEN(m,0)-1 DO
-				RESULT[i,*]:=All1(m[i,*], op);
-			END;
-		ELSE
-			FOR i:=0 TO LEN(m,0)-1 DO
-				RESULT[i]:=op(m[i])
-			END;
-		END;
-		RETURN RESULT
-	END All1;*)
 	
 PROCEDURE SameDimension(VAR a:Array; CONST len:ARRAY [*] OF LONGINT);
 	BEGIN
@@ -122,53 +105,53 @@ PROCEDURE QSort*(VAR X : Vector);
  END Median;
 
  (** variance of dataset *)
- PROCEDURE Variance*(CONST v:Vector):Datatype;
- VAR diff:Vector;
+ PROCEDURE Variance*(CONST v:Array):Datatype;
+ VAR diff:Array;
  BEGIN
  	 diff:=v-Mean(v);
- 	 RETURN (diff+*diff) / LEN(v,0)
+ 	 RETURN (diff+*diff) / Prod(LEN(v))
  END Variance;
 
  (** of full data *)
- PROCEDURE StandardDeviation*(CONST v:Vector): Datatype;
+ PROCEDURE StandardDeviation*(CONST v:Array): Datatype;
  BEGIN
  	RETURN MathL.sqrt(Variance(v))
  END StandardDeviation;
 
 
 	(** variance estimated from subset of data, divisor is (N-1)*)
- PROCEDURE EstimatedVariance*(CONST v:Vector):Datatype;
- VAR diff:Vector;
+ PROCEDURE EstimatedVariance*(CONST v:Array):Datatype;
+ VAR diff:Array;
  BEGIN
  	 diff:=v-Mean(v);
- 	 RETURN (diff+*diff) / (LEN(v,0)-1)
+ 	 RETURN (diff+*diff) / (Prod(LEN(v))-1)
  END EstimatedVariance;
  
  (** subset of data , divisor is (N-1)*)
- PROCEDURE EstimatedStandardDeviation*(CONST v:Vector): Datatype;
+ PROCEDURE EstimatedStandardDeviation*(CONST v:Array): Datatype;
  BEGIN
  	RETURN MathL.sqrt(EstimatedVariance(v))
  END EstimatedStandardDeviation;
 
- PROCEDURE Skewness*(CONST X : Vector) : Datatype;
+ PROCEDURE Skewness*(CONST X : Array) : Datatype;
 	VAR
 		sigma : Datatype;
-		x1: Vector;
+		x1: Array;
 	BEGIN
 		sigma:=StandardDeviation(X);
 		x1:=X-Mean(X);
-		RETURN  ((x1 .* x1) +* x1) / (sigma*sigma*sigma)/ LEN(X,0)
+		RETURN  ((x1 .* x1) +* x1) / (sigma*sigma*sigma)/ Prod(LEN(X))
 	END Skewness;
 
-PROCEDURE Kurtosis*(CONST X : Vector) : Datatype;
+PROCEDURE Kurtosis*(CONST X : Array) : Datatype;
 	VAR
 		variance: Datatype;
-		x1,x2:Vector;
+		x1,x2:Array;
 	BEGIN
 		variance:=Variance(X);
 		x1:=X-Mean(X);
 		x2:=x1.*x1;
-		RETURN (x2 +* x2) / (variance*variance) / LEN(X,0) - 3;
+		RETURN (x2 +* x2) / (variance*variance) / Prod(LEN(X)) - 3;
 	END Kurtosis;
 	
 PROCEDURE Normalize*(CONST a: Array):Array;
@@ -207,7 +190,7 @@ END ZeroMeanColumns;
 (*! to do: move the following proc's  to higher level modules - may not be basic statistics  *)
 (** SoftMax  of a data vector = Normalized exponential; SUM=1.0
  y[i] = softmax(x[i]) = exp(x[i])/sum(exp(x)) *)
-PROCEDURE SoftMax*(VAR x: ARRAY[?] OF Datatype):ARRAY [?] OF Datatype;
+PROCEDURE SoftMax*(VAR x: Array):Array;
 	BEGIN
 		RESULT :=ALL(x, MathL.exp);
 		RESULT:=1/SUM(RESULT) * RESULT;
@@ -225,7 +208,7 @@ PROCEDURE Logistic*(X : Datatype) : Datatype;  (* logistic function as nonlinear
 (**
 Normalize input such that input mean(x)=0, input SD(x)=1, then bring to [0..1] using SoftMax sigmoid transform 
  y[i] = softmax(x[i]) = exp(x[i])/sum(exp(x)) *)
-PROCEDURE SoftMaxNormalize*(CONST x: ARRAY[?] OF Datatype):ARRAY [?] OF Datatype;
+PROCEDURE SoftMaxNormalize*(CONST x: Array):Array;
 	BEGIN
 		RESULT:=Normalize(x);
 		RESULT :=ALL(RESULT, Logistic);
