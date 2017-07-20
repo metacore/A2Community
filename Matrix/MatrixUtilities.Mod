@@ -659,26 +659,37 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 	END WriteBool;
 	*)
 	
-	PROCEDURE StoreLR*(W:Streams.Writer; CONST t: ARRAY [?] OF Datatype);
-	VAR i:LONGINT; len: ARRAY [*] OF LONGINT;
+	PROCEDURE WriteHeader*(W: Streams.Writer; datatype: LONGINT; CONST len: ARRAY [*] OF LONGINT);
+	VAR
+		i: LONGINT;
 	BEGIN
-		W.String("TENSOR 1.0 LR "); (* type, version *) W.Ln;
-		W.Int(DIM(t),0);
-		len:=LEN(t);
-		FOR i:=0 TO LEN(len,0)-1 DO W.Char(" "); W.Int(len[i],0); END;
+		W.String("TENSOR 1.0 ");
+		IF(datatype=DatatypeLR) THEN
+			W.String("LR ");
+		ELSIF datatype=DatatypeLInt THEN
+			W.String("LInt ");
+		ELSE
+			HALT(202);
+		END;
 		W.Ln;
+		W.Int(LEN(len,0),0);
+		FOR i:=0 TO LEN(len,0)-1 DO
+			W.Char(" ");
+			W.Int(len[i],0);
+		END;
+		W.Ln;
+	END WriteHeader;
+	
+	PROCEDURE StoreLR*(W:Streams.Writer; CONST t: ARRAY [?] OF Datatype);
+	BEGIN
+		WriteHeader(W, DatatypeLR, LEN(t));
 		WriteLR(W,t);
 		W.Update;
 	END StoreLR;
 	
 	PROCEDURE StoreLInt*(W:Streams.Writer; CONST t: ARRAY [?] OF LONGINT);
-	VAR i:LONGINT; len: ARRAY [*] OF LONGINT;
 	BEGIN
-		W.String("TENSOR 1.0 LInt "); (* type, version *) W.Ln;
-		W.Int(DIM(t),0);
-		len:=LEN(t);
-		FOR i:=0 TO LEN(len,0)-1 DO W.Char(" "); W.Int(len[i],0); END;
-		W.Ln;
+		WriteHeader(W,DatatypeLInt, LEN(t));
 		WriteLInt(W,t);
 		W.Update;
 	END StoreLInt;
