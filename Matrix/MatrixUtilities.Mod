@@ -678,6 +678,7 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 			W.Int(len[i],0);
 		END;
 		W.Ln;
+		W.Update;
 	END WriteHeader;
 	
 	PROCEDURE StoreLR*(W:Streams.Writer; CONST t: ARRAY [?] OF Datatype);
