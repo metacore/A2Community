@@ -64,7 +64,10 @@ CONST
 	Tiny = 1.0D-10;  
 	Equal*=0; Smaller*=1; Larger*=2; NoFit*=3;
 	Downsample*=0; And*=1; Or*=2;
-
+	
+	DatatypeLR*=0;
+	DatatypeLInt*=1;	
+	
 VAR  RG: RandomGenerator (*Rand.Generator*);
 
 	
@@ -714,14 +717,29 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 	END ReadLInt;
 	
 	(*parse header of .MtA files storing an ARRAY [?] OF Datatype, or ARRAY [*{*}] OF Datatype*)
-	PROCEDURE ParseHeader*(r:Streams.Reader; VAR  structure, datatype, version: ARRAY OF CHAR; VAR len: ARRAY [*] OF LONGINT);
-	VAR i, k:LONGINT; 
+	PROCEDURE ParseHeader*(r:Streams.Reader; VAR  datatype: LONGINT; VAR len: ARRAY [*] OF LONGINT);
+	VAR 
+		i, k:LONGINT;
+		dontcare: BOOLEAN;
+		structure, datatypeString, version: ARRAY 8 OF CHAR;
 	BEGIN
-		IF r.GetString(structure) & r.GetString(version) &	r.GetString(datatype) THEN
-			ASSERT ((version[0]="1")&(version[2]="0"),202);
-			IF r.GetInteger(k, FALSE) THEN NEW(len,k) ELSE HALT(200) END;
+		IF r.GetString(structure) & r.GetString(version) &	r.GetString(datatypeString) THEN
+			ASSERT(version="1.0",202);
+			ASSERT(structure="TENSOR",202);
+			IF datatypeString='LR' THEN
+				datatype:=DatatypeLR;
+			ELSIF datatypeString='LInt' THEN
+				datatype:=DatatypeLInt;
+			ELSE
+				HALT(202);
+			END;
+			IF r.GetInteger(k, FALSE) THEN
+				NEW(len,k)
+			ELSE 
+				HALT(200)
+			END;
 			FOR i:=0 TO k-1 DO 
-				IF r.GetInteger(len[i],FALSE) THEN END;
+				dontcare:=r.GetInteger(len[i],FALSE) ;
 			END;
 		END;
 		r.SkipLn;
@@ -730,50 +748,23 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 	(* derive structure from header*)
 	PROCEDURE LoadLR*(R:Streams.Reader): ARRAY [?] OF Datatype;
 	VAR  len: ARRAY [*] OF LONGINT;
+		datatype:LONGINT;
 	BEGIN
-		len:=GetStructureLR(R);
+		ParseHeader(R,datatype,len);
+		ASSERT(datatype=DatatypeLR);
 		IF (DIM(RESULT)#LEN(len,0)) OR (LEN(RESULT)#len) THEN NEW(RESULT,len) END;
 		ReadLR(R,RESULT);
 		RETURN RESULT
 	END LoadLR;
 	
-	PROCEDURE GetStructureLR*(CONST R: Streams.Reader): ARRAY[*] OF LONGINT;
-	VAR
-		s: ARRAY 64 OF CHAR;
-		i,k: LONGINT;
-	BEGIN
-		R.Ln(s);
-		ASSERT(s="TENSOR 1.0 LR "); 
-		IF R.GetInteger(k, FALSE) THEN NEW(RESULT,k) ELSE HALT(200) END;
-		FOR i:=0 TO k-1 DO 
-			IF R.GetInteger(RESULT[i],FALSE) THEN END;
-		END;
-		R.SkipLn;
-		RETURN RESULT;
-	END GetStructureLR;
-	
-	
-	
-	PROCEDURE GetStructureLInt*(R: Streams.Reader): ARRAY [*] OF LONGINT;
-	VAR
-		s: ARRAY 64 OF CHAR;
-		i,k: LONGINT;
-	BEGIN
-		R.Ln(s);
-		ASSERT(s="TENSOR 1.0 LInt "); 
-		IF R.GetInteger(k, FALSE) THEN NEW(RESULT,k) ELSE HALT(200) END;
-		FOR i:=0 TO k-1 DO 
-			IF R.GetInteger(RESULT[i],FALSE) THEN END;
-		END;
-		R.SkipLn;
-		RETURN RESULT;
-	END GetStructureLInt;	
 	
 (* derive structure from header*)
 	PROCEDURE LoadLInt*(R:Streams.Reader): ARRAY [?] OF LONGINT;
-	VAR ; len: ARRAY [*] OF LONGINT;
+	VAR  len: ARRAY [*] OF LONGINT;
+		datatype: LONGINT;
 	BEGIN
-		len:=GetStructureLInt(R);
+		ParseHeader(R,datatype,len);
+		ASSERT(datatype=DatatypeLInt);
 		IF (DIM(RESULT)#LEN (len)) OR (LEN(RESULT)#len) THEN NEW(RESULT,len) END;
 		ReadLInt(R,RESULT);
 		RETURN RESULT
