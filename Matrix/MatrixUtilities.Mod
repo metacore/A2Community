@@ -1,7 +1,6 @@
-MODULE MatrixUtlities;   (**  AUTHOR "Patrick Hunziker"; PURPOSE "";    **)
+MODULE MatrixUtilities;   (**  AUTHOR "Patrick Hunziker"; PURPOSE "";    **)
 (*! to do: make random generator for matrices/tensors thread safe*)
 
-MODULE MatrixUtilities;
 IMPORT Rand:=Random, MatrixBase, ComplexMathL, KernelLog, Strings, Reals, Streams;  
 
 TYPE 
