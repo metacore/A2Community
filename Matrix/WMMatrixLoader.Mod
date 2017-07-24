@@ -8,7 +8,7 @@ to enable direct opening from File List Window, add this to the FileHandler sect
 			</Section>
 *)
 
-IMPORT WMWindowManager, WMGraphics, WMMatrix, WMStack, Files, Streams, Strings, Options, MatrixBase, MatrixUtilities,MatrixRaster, Codecs, Commands;
+IMPORT WMWindowManager, WMGraphics, WMMatrix, WMStack, Files, Streams, Strings, Options, MatrixBase, MatrixUtilities,MatrixRaster, Codecs, Commands, WMTensor;
 	
 CONST
 	(* display options *)
@@ -22,6 +22,7 @@ VAR d: ARRAY [?] OF MatrixBase.Datatype;
 	r:Files.Reader;
 	mWindow:WMMatrix.Window;
 	sWindow:WMStack.Window;
+	tWindow: WMTensor.Window;
 	title: Files.FileName;
 	i,x,y,z, xx,yy:LONGINT;
 	max: MatrixBase.Datatype;
@@ -31,6 +32,12 @@ BEGIN
 		d:=MatrixUtilities.LoadLR(r);
 		IF DIM(d)=2 THEN 
 			NEW(mWindow, d, name);
+			mWindow.AddWindow;
+			RETURN mWindow;
+		ELSIF DIM(d)=1 THEN
+			NEW(d2,1,LEN(d,0));
+			d2[0,?]:=d[?];
+			NEW(mWindow, d2, name);
 			mWindow.AddWindow;
 			RETURN mWindow;
 		ELSIF DIM(d)=3 THEN
@@ -109,6 +116,10 @@ BEGIN
 				sWindow.AddWindow;
 				RETURN sWindow;
 			END;
+		ELSIF DIM(d)=4 THEN
+			NEW(tWindow, d, name,0);
+			tWindow.AddWindow;
+			RETURN tWindow;
 		ELSE RETURN NIL
 		END;
 	ELSE RETURN NIL
@@ -206,3 +217,5 @@ WMMatrixLoader.Open BraidVolume16.MtA 1~ (* volume example *)
 WMMatrixLoader.Open BraidVolume16.MtA 2~ (* volume example *)
 
 WMMatrixLoader.Do SchwarzeDame.png~
+
+SystemTools.FreeDownTo WMMatrixLoader ~
