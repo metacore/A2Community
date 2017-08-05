@@ -65,8 +65,17 @@ CONST
 	Equal*=0; Smaller*=1; Larger*=2; NoFit*=3;
 	Downsample*=0; And*=1; Or*=2;
 	
-	DatatypeLR*=0;
-	DatatypeLInt*=1;	
+	DatatypeChar*=0;
+	DatatypeLR*=2;
+	DatatypeR*=3;
+	DatatypeSR*=4;(*16 bit Float*)
+	
+	DatatypeHInt*=6;
+	DatatypeLInt*=7;	
+	DatatypeInt*=8;
+	DatatypeSInt*=9;
+	DatatypeUInt8*=10;
+
 	
 VAR  RG: RandomGenerator (*Rand.Generator*);
 
@@ -631,6 +640,18 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 		END;
 	END WriteLR;
 
+	PROCEDURE WriteUInt8*(W:Streams.Writer; CONST t: ARRAY [?] OF INTEGER);
+	VAR len: ARRAY [*] OF LONGINT; i:LONGINT;
+	BEGIN
+		ASSERT(DIM(t)>0);
+		len:=LEN(t);
+		IF  DIM(t)=1 THEN 
+			FOR i:=0 TO LEN(t,0)-1 DO W.Char(CHR(t[i])) END;
+		ELSE
+			FOR i:=0 TO LEN(t,0)-1 DO WriteUInt8(W, t[i,?]) END;
+		END;
+	END WriteUInt8;
+
 	(* raw *)
 	PROCEDURE WriteLInt*(W:Streams.Writer; CONST t: ARRAY [?] OF LONGINT);
 	VAR len: ARRAY [*] OF LONGINT; i:LONGINT;
@@ -662,15 +683,19 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 	PROCEDURE WriteHeader*(W: Streams.Writer; datatype: LONGINT; CONST len: ARRAY [*] OF LONGINT);
 	VAR
 		i: LONGINT;
+		comment:ARRAY 16 OF CHAR;
 	BEGIN
 		W.String("TENSOR 1.0 ");
 		IF(datatype=DatatypeLR) THEN
 			W.String("LR ");
 		ELSIF datatype=DatatypeLInt THEN
 			W.String("LInt ");
+		ELSIF datatype=DatatypeUInt8 THEN
+			W.String("UInt8 ");
 		ELSE
 			HALT(202);
 		END;
+		comment:=""; W.String(comment); (*! tbd*)
 		W.Ln;
 		W.Int(LEN(len,0),0);
 		FOR i:=0 TO LEN(len,0)-1 DO
@@ -706,16 +731,16 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 		END;
 	END ReadLR;
 	
-	PROCEDURE ReadInt8*(R:Streams.Reader; VAR t: ARRAY [?] OF INTEGER);
+	PROCEDURE ReadUInt8*(R:Streams.Reader; VAR t: ARRAY [?] OF INTEGER);
 	VAR i:LONGINT; c:CHAR;
 	BEGIN
 		ASSERT(DIM(t)>0);
 		IF  DIM(t)=1 THEN 
 			FOR i:=0 TO LEN(t,0)-1 DO R.Char(c); t[i]:=ORD(c) END;
 		ELSE
-			FOR i:=0 TO LEN(t,0)-1 DO ReadInt8(R, t[i,?]) END;
+			FOR i:=0 TO LEN(t,0)-1 DO ReadUInt8(R, t[i,?]) END;
 		END;
-	END ReadInt8;
+	END ReadUInt8;
 	
 	PROCEDURE ReadLInt*(R:Streams.Reader; VAR t: ARRAY [?] OF LONGINT);
 	VAR i:LONGINT;
@@ -733,22 +758,19 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 	VAR 
 		i, k:LONGINT;
 		dontcare: BOOLEAN;
-		structure, datatypeString, version: ARRAY 8 OF CHAR;
+		structure, datatypeString, version, comment: ARRAY 8 OF CHAR;
 	BEGIN
 		IF r.GetString(structure) & r.GetString(version) &	r.GetString(datatypeString) THEN
 			ASSERT(version="1.0",202);
 			ASSERT(structure="TENSOR",202);
-			IF datatypeString='LR' THEN
-				datatype:=DatatypeLR;
-			ELSIF datatypeString='LInt' THEN
-				datatype:=DatatypeLInt;
-			ELSE
-				HALT(202);
+			IF datatypeString='LR' THEN	datatype:=DatatypeLR;
+			ELSIF datatypeString='LInt' THEN	datatype:=DatatypeLInt;
+			ELSIF (datatypeString='C') OR (datatypeString='UInt8') THEN datatype:=DatatypeUInt8
+			ELSE HALT(202);
 			END;
-			IF r.GetInteger(k, FALSE) THEN
-				NEW(len,k)
-			ELSE 
-				HALT(200)
+			r.Ln(comment);
+			IF r.GetInteger(k, FALSE) THEN NEW(len,k)
+			ELSE HALT(200)
 			END;
 			FOR i:=0 TO k-1 DO 
 				dontcare:=r.GetInteger(len[i],FALSE) ;
@@ -781,6 +803,19 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 		ReadLInt(R,RESULT);
 		RETURN RESULT
 	END LoadLInt;
+
+(* derive structure from header*)
+	PROCEDURE LoadUInt8*(R:Streams.Reader): ARRAY [?] OF INTEGER;
+	VAR  len: ARRAY [*] OF LONGINT;
+		datatype: LONGINT;
+	BEGIN
+		ParseHeader(R,datatype,len);
+		ASSERT(datatype=DatatypeUInt8);
+		IF (DIM(RESULT)#LEN (len)) OR (LEN(RESULT)#len) THEN NEW(RESULT,len) END;
+		ReadUInt8(R,RESULT);
+		RETURN RESULT
+	END LoadUInt8;
+
 	
 (*
 	PROCEDURE Test*(context:Commands.Context);
