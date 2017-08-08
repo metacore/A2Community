@@ -62,7 +62,7 @@ BEGIN
 	IF context.arg.GetString(filename) & context.arg.GetInteger(h, FALSE) & context.arg.GetInteger(w,FALSE) THEN
 		f:=Files.Old(filename); Files.OpenReader(r,f,0);
 		NEW(raw,w,h);
-		MatrixUtilities.ReadInt8(r, raw);
+		MatrixUtilities.ReadUInt8(r, raw);
 		data:=raw[..,..];
 		
 		NEW(analyzer, Wavelets.Haar, Wavelets.undefined, data); 
@@ -102,7 +102,7 @@ BEGIN
 	IF context.arg.GetString(filename) & context.arg.GetInteger(h, FALSE) & context.arg.GetInteger(w,FALSE) THEN
 		f:=Files.Old(filename); Files.OpenReader(r,f,0);
 		NEW(raw,w,h);
-		MatrixUtilities.ReadInt8(r, raw);
+		MatrixUtilities.ReadUInt8(r, raw);
 		data:=raw[..,..];
 		NEW(analyzer, Wavelets.Haar, Wavelets.undefined, data); 
 		analyzer.AnalyzeMultiscale(3);
@@ -125,7 +125,7 @@ BEGIN
 		IF f#NIL THEN 
 			Files.OpenReader(r,f,0);
 			NEW(raw,w,h);
-			MatrixUtilities.ReadInt8(r, raw);
+			MatrixUtilities.ReadUInt8(r, raw);
 			data:=raw[..,..];
 			NEW(analyzer, Wavelets.Haar, Wavelets.undefined, data); 
 			analyzer.AnalyzePacket(3);
