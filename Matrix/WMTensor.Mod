@@ -319,7 +319,7 @@ TYPE Window*= OBJECT (WM.BufferWindow) (* or could use WM.DoubleBufferWindow or 
 				b:=ALIAS OF model.b[cur3 MOD LEN(model.b,0),?] 
 			ELSE r:=ALIAS OF model.r; g:=ALIAS OF model.g; b:=ALIAS OF model.b; (*only effective in DIM=3*)
 			END;
-			IF DIM(model.m)=2 THEN MatrixRaster.LRealRGBToImageB( model.r[*,*], model.g[*,*], model.b[*,*], offset, gain, img);
+			IF DIM(model.r)=2 THEN MatrixRaster.LRealRGBToImageB( model.r[*,*], model.g[*,*], model.b[*,*], offset, gain, img);
 			ELSIF orientation=0 THEN MatrixRaster.LRealRGBToImageB( r[current,*,*], g[current,*,*], b[current,*,*], offset, gain, img);
 			ELSIF orientation=1 THEN MatrixRaster.LRealRGBToImageB( r[..,current,..], g[..,current,..], b[..,current,..], offset, gain, img);
 			ELSE MatrixRaster.LRealRGBToImageB( r[..,..,current], g[..,..,current], b[..,..,current], offset, gain, img);
