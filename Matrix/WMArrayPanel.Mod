@@ -1,6 +1,6 @@
 MODULE WMArrayPanel; (** AUTHOR ""; PURPOSE "Display of 3D and 4D tensors as image"; *)
 
-IMPORT Inputs, XML, MatrixRaster, MatrixUtilities, Files, WMMessages, WM:=WMWindowManager, WMComponents, WMProperties, WMStandardComponents, Strings, Models, WMGraphics, Commands;
+IMPORT Inputs, XML, MatrixRaster, MatrixUtilities, Files, Streams, WMMessages, WM:=WMWindowManager, WMComponents, WMProperties, WMStandardComponents, Strings, Models, WMGraphics, Commands;
 CONST 	
 	unsigned=0;
 	signed=1;
@@ -53,6 +53,7 @@ TYPE TYPE Panel= OBJECT (WMStandardComponents.ImagePanel) (*! tbd: convert some 
 		VAR filename: Files.FileName; f:Files.File; w:Files.Writer;
 		BEGIN
 			IF (x.msgType = WMMessages.MsgSerialize) & (x.msgSubType = WMMessages.MsgSubSerializeData) THEN
+				GenerateName(id.Get()^, filename);
 				Strings.Append(filename, ".MtA"); (* file type "MathArray" *)
 				f:=Files.New(filename);
 				Files.OpenWriter(w,f,0);
@@ -278,7 +279,23 @@ TYPE TYPE Panel= OBJECT (WMStandardComponents.ImagePanel) (*! tbd: convert some 
 	
 	END Panel;
 
-		
+PROCEDURE GenerateName(prefix: ARRAY OF CHAR; VAR str: ARRAY OF CHAR);
+VAR  i,j:LONGINT; title: Files.FileName; c:CHAR; s:ARRAY 8 OF CHAR;
+BEGIN
+	i:=0; j:=0;
+	WHILE (i<LEN(prefix)) & (j<LEN(title)-1) DO
+		c:=prefix[i];
+		IF (c>="A")&(c<="Z") OR (c>="a")&(c<="z") OR(c>="0")&(c<="9") OR (c="_") OR (c=" ")THEN
+			IF c=" " THEN c:="_" END;
+			title[j]:=c; INC(i); INC(j);
+		ELSE
+			INC(i);
+		END;
+	END;
+	title[j]:=0X;
+	IF title="" THEN title:="Matrix" END;
+	COPY(title, str);
+END GenerateName;
 	
 PROCEDURE GenPanel*() : XML.Element;
 VAR p : Panel; nil: Tensor;
@@ -290,11 +307,12 @@ VAR d : Data;
 BEGIN NEW(d); RETURN d
 END GenData;
 
-PROCEDURE Test*(context:Commands.Context); (*deprecated -  will be eliminated from source*)
+PROCEDURE  Test*(context:Commands.Context); (*deprecated -  will be eliminated from source*)
 VAR window:WMComponents.FormWindow;
 	panel:Panel;
 	tensor: ARRAY [?] OF LONGINT; (* or LONGREAL or other..*)
 BEGIN
+	log:=context.out;
 	(*have some data in a 3D array ready*)
 	NEW(tensor, 4, 50,100,120); 
 	tensor[..,..,10..40,..]:=1;
@@ -317,6 +335,7 @@ BEGIN
 	window.form.fillColor.Set(008888FFH);(*background*)
 END Test;
 
+VAR log:Streams.Writer;
 
 END WMArrayPanel.
 
