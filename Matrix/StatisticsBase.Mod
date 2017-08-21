@@ -39,6 +39,16 @@ BEGIN
 	RETURN SUM(X)/Prod(LEN(X))
 END Mean;
 
+PROCEDURE MeanSquare*(CONST X: Array): Datatype;
+BEGIN
+	RETURN X+*X / Prod(LEN(X))
+END MeanSquare;
+
+PROCEDURE RMS*(CONST X: Array): Datatype; (*root mean square*)
+BEGIN
+	RETURN MathL.sqrt(X+*X / Prod(LEN(X)))
+END RMS;
+
 PROCEDURE KSmallest( VAR a: Vector;  n, k: LONGINT ): Datatype;
 (** caution: modifies a , Algorithm by N.Wirth / Hoare, cf. N. Wirth: Algorithms & Datastructures. *)
 VAR i, j, l, m: LONGINT;  x: Datatype;
