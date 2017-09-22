@@ -23,7 +23,7 @@ TYPE Data*= OBJECT (Models.Model)
 		END Init;
 	END Data;
 	
-TYPE TYPE Panel= OBJECT (WMStandardComponents.ImagePanel) (*! tbd: convert some local variables to properties. move some local variables to model .  tbd: serialization*)
+TYPE TYPE Panel*= OBJECT (WMStandardComponents.ImagePanel) (*! tbd: convert some local variables to properties. move some local variables to model .  tbd: serialization*)
 		VAR data*:Data; (*is also in model property*)
 		orientation-: WMProperties.Int32Property;
 		type, offset*, mx0,my0,mx1,my1,
@@ -298,8 +298,13 @@ BEGIN
 END GenerateName;
 	
 PROCEDURE GenPanel*() : XML.Element;
-VAR p : Panel; nil: Tensor;
-BEGIN NEW(p, nil, "", 0); RETURN p
+VAR
+	p : Panel;
+	dummy: Tensor;
+BEGIN
+	NEW(dummy, 20,20);
+	NEW(p, [[0]], "", 0);
+	RETURN p
 END GenPanel;
 
 PROCEDURE GenData*() : XML.Element;
@@ -310,7 +315,7 @@ END GenData;
 PROCEDURE  Test*(context:Commands.Context); (*deprecated -  will be eliminated from source*)
 VAR window:WMComponents.FormWindow;
 	panel:Panel;
-	tensor: ARRAY [?] OF LONGINT; (* or LONGREAL or other..*)
+	tensor: ARRAY [?] OF LONGREAL; (* or LONGREAL or other..*)
 BEGIN
 	log:=context.out;
 	(*have some data in a 3D array ready*)
@@ -333,6 +338,12 @@ BEGIN
 	WM.DefaultAddWindow(window);
 	window.SetContent(panel);
 	window.form.fillColor.Set(008888FFH);(*background*)
+	
+	LOOP		
+		tensor[0,10..15,..,..]:= MatrixUtilities.Random([1,5,100,120],MatrixUtilities.Uniform);
+		panel.SetArray(tensor);
+	END;
+	
 END Test;
 
 VAR log:Streams.Writer;
