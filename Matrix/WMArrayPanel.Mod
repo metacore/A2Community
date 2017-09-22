@@ -32,22 +32,21 @@ TYPE TYPE Panel*= OBJECT (WMStandardComponents.ImagePanel) (*! tbd: convert some
 		baseTitle, title: ARRAY 256 OF CHAR;
 		img0 : WMGraphics.Image;
 		
-	PROCEDURE &New*(CONST m: Tensor; CONST title: ARRAY OF CHAR; orientation:LONGINT);
+	PROCEDURE &Init*();
 	BEGIN
-		Init;
+		Init^;
 		SetGenerator("WMArrayPanels.GenPanel");
-		ASSERT(DIM(m) IN {2,3,4}, 200);
-		ASSERT(orientation<DIM(m),201);
+		
 		NEW(SELF.orientation, NIL, Strings.NewString("orientation"), Strings.NewString("")); properties.Add(SELF.orientation);
-		SELF.orientation.Set(orientation);
+		SELF.orientation.Set(0);
 		NEW(img0);
 		NEW(data);
-		IF LEN(m)>0 THEN SetArray(m) ELSE model.Set(data); model.Changed; END;
+	 	model.Set(data); model.Changed;
 		COPY(title,baseTitle); 
 		id.Set(Strings.NewString(title));
 		current:=0;
 		RecacheProperties;
-	END New;
+	END Init;
 
 	PROCEDURE HandleInternal*(VAR x : WMMessages.Message);
 		VAR filename: Files.FileName; f:Files.File; w:Files.Writer;
@@ -139,9 +138,16 @@ TYPE TYPE Panel*= OBJECT (WMStandardComponents.ImagePanel) (*! tbd: convert some
 				KeyEvent^(ucs,flags,keysym);
 			END;
 		END KeyEvent;
+		
+	PROCEDURE SetOrientation*(orientation:LONGINT );
+	BEGIN
+		ASSERT(orientation<DIM(data.m),201);
+		SELF.orientation.Set(orientation);
+	END SetOrientation;
 
 	PROCEDURE SetArray*(CONST m: Tensor);
 	BEGIN
+		ASSERT(DIM(m) IN {2,3,4}, 200);
 		IF LEN(m)>0 THEN
 			data.m:=ALIAS OF m; 
 			max:=MAX(m); min:=MIN(m); IF min<0 THEN type:=signed ELSE type:=unsigned END; 
@@ -300,10 +306,8 @@ END GenerateName;
 PROCEDURE GenPanel*() : XML.Element;
 VAR
 	p : Panel;
-	dummy: Tensor;
 BEGIN
-	NEW(dummy, 20,20);
-	NEW(p, [[0]], "", 0);
+	NEW(p);
 	RETURN p
 END GenPanel;
 
@@ -319,12 +323,15 @@ VAR window:WMComponents.FormWindow;
 BEGIN
 	log:=context.out;
 	(*have some data in a 3D array ready*)
-	NEW(tensor,  50,100,200); 
+	NEW(tensor,50,100,120); 
 	tensor[..,10..40,..]:=1;
 	tensor[10..15,..,..]:=2;
 	tensor[..,..,10..30]:=3;
+	
 	(*show data as mouse or arrow key scrollable window*)
-	NEW(panel, tensor, "SubTensor",0);
+	NEW(panel);
+	panel.SetArray(tensor);
+	panel.SetOrientation(0);
 	NEW(window, 400,400, FALSE); 
 	window.SetTitle(Strings.NewString("tensor window"));
 	INCL(window.flags, WM.FlagStorable); (* allow storing of data interactively, through right-click on navigator icon*)
@@ -333,7 +340,7 @@ BEGIN
 	window.form.fillColor.Set(008888FFH);(*background*)
 	
 	LOOP		
-		tensor[10..15,..,..]:= MatrixUtilities.Random([5,100,200],MatrixUtilities.Uniform);
+		tensor[10..15,..,..]:= MatrixUtilities.Random([1,5,100,120],MatrixUtilities.Uniform);
 		panel.SetArray(tensor);
 	END;
 	
