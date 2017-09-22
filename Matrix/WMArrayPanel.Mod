@@ -319,17 +319,10 @@ VAR window:WMComponents.FormWindow;
 BEGIN
 	log:=context.out;
 	(*have some data in a 3D array ready*)
-	NEW(tensor, 4, 50,100,120); 
-	tensor[..,..,10..40,..]:=1;
-	tensor[..,10..15,..,..]:=2;
-	tensor[..,..,..,10..30]:=3;
-	tensor[0,..,..,..]:=1;
-	
-	tensor[0,..,0..10,..]:=tensor[0,..,0..10,..]+1;
-	tensor[1,..,10..20,..]:=tensor[1,..,10..20,..]+1;
-	tensor[2,..,20..30,..]:=tensor[2,..,20..30,..]+1;
-	tensor[3,..,30..40,..]:=tensor[3,..,30..40,..]+1;
-	
+	NEW(tensor,  50,100,200); 
+	tensor[..,10..40,..]:=1;
+	tensor[10..15,..,..]:=2;
+	tensor[..,..,10..30]:=3;
 	(*show data as mouse or arrow key scrollable window*)
 	NEW(panel, tensor, "SubTensor",0);
 	NEW(window, 400,400, FALSE); 
@@ -340,7 +333,7 @@ BEGIN
 	window.form.fillColor.Set(008888FFH);(*background*)
 	
 	LOOP		
-		tensor[0,10..15,..,..]:= MatrixUtilities.Random([1,5,100,120],MatrixUtilities.Uniform);
+		tensor[10..15,..,..]:= MatrixUtilities.Random([5,100,200],MatrixUtilities.Uniform);
 		panel.SetArray(tensor);
 	END;
 	
