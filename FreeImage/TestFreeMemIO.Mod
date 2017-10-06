@@ -1,15 +1,15 @@
 MODULE TestFreeMemIO; (** AUTHOR "fnecati"; PURPOSE "test module for freeimage' MemIO functions"; *)
 
-IMPORT FI := FreeImageDll, Out:=KernelLog, Files, Strings, S:=SYSTEM,
+IMPORT FI := FreeImageDll, Out:=KernelLog, Files, S:=SYSTEM,
 	Commands;
 	
 			
-(* Open a image file  and show it *)
+(** Open an image file,  save it to memory and 
+	later, load it from the memory and save it disk *)
 PROCEDURE SaveMemIO*(context: Commands.Context);
 VAR fname: ARRAY 128 OF CHAR;
 
-	tdib, tdibg, check: FI.FIBITMAP;
-	title: ARRAY 64 OF CHAR;
+	tdib, check: FI.FIBITMAP;
 	fif, memfif: FI.IMAGE_FORMAT;
 	hmem: FI.FIMEMORY;
 	res: BOOLEAN;
@@ -33,7 +33,7 @@ BEGIN
 	(* at this point, hmem contains the entire PNG data in memory.
 	the amount of space used by the memory is equal to file_size *)
 	filesize := FI.TellMemory(hmem);
-	Out.String("File size : "); Out.Int(filesize, 0); Out.Ln;
+	Out.String("File size (bytes): "); Out.Int(filesize, 0); Out.Ln;
 
 	(* its easy load an image from memory as well *)
 
@@ -61,7 +61,7 @@ BEGIN
 	Out.String("BPP: "); Out.Int(FI.GetBPP(tdib),0); Out.Ln;
 	Window.ShowPicture(tdib, title$)
 	*)
-	Out.String("SaveMemIO finished."); Out.Ln;
+	Out.String("SaveMemIO finished, savet to dump.png file"); Out.Ln;
 END SaveMemIO;
 
 (* you could also have image data in memory via some other method, and just set
@@ -70,12 +70,11 @@ size of that data, then FreeImage_LoadFromMemory could load the image from that 
 
 PROCEDURE LoadMemIO*(context: Commands.Context);
 VAR fname: ARRAY 128 OF CHAR;
-	tdib, tdibg, check: FI.FIBITMAP;
+	tdib: FI.FIBITMAP;
 	title: ARRAY 64 OF CHAR;
-	fif, memfif: FI.IMAGE_FORMAT;
+	fif: FI.IMAGE_FORMAT;
 	hmem: FI.FIMEMORY;
 	res: BOOLEAN;
-	filesize: LONGINT;
 	f: Files.File;
 	rd: Files.Rider;
 	membuf: POINTER TO ARRAY OF CHAR;
@@ -83,19 +82,16 @@ VAR fname: ARRAY 128 OF CHAR;
 BEGIN
 	IF ~context.arg.GetString(fname) THEN RETURN END;
 
-	tdib := FI.LoadImage(fname,0);
-
-
-	IF tdib = NIL THEN
+	f := Files.Old(fname);
+	IF f = NIL THEN
 		Out.String(fname); Out.String(": Image NOT Loaded .."); Out.Ln();
 		RETURN;
 	END;
-	FI.Unload(tdib);
-
-
-	f := Files.Old(fname);
-	Out.String("Length of "); Out.String(title); Out.Int(f.Length(), 10); Out.Ln;
+				
 	bufsize := f.Length();
+	Out.String("Length of "); Out.String(title); Out.Int(bufsize, 10);  
+	Out.String(" bytes"); Out.Ln;
+		
 	NEW(membuf, bufsize);
 	f.Set(rd, 0);
 
@@ -108,26 +104,26 @@ BEGIN
 	fif := FI.GetFileTypeFromMemory(hmem, 0);
 
 	(* load an image from the memory stream *)
-	check := FI.LoadFromMemory(fif, hmem, 0);
+	tdib := FI.LoadFromMemory(fif, hmem, 0);
 
 	(* save as a regular file *)
-	res := FI.SaveImage(check, "dump1.png", FI.PNG_DEFAULT);
+	res := FI.SaveImage(tdib, "dump1.png", FI.PNG_DEFAULT);
 
 	(* make sure to free the data since FreeImage_SaveToMemory
 	will cause it to be malloc'd *)
-	FI.Unload(check);
+	FI.Unload(tdib);
 	FI.CloseMemory(hmem);
 	membuf := NIL;
-	Out.String("LoadMemIO finished."); Out.Ln;
+	Out.String("LoadMemIO finished, saved to dump1.png file."); Out.Ln;
 END LoadMemIO;
 
 
-(* not working correctly *)
+(** load an image, save to memory, then, acquire it save its data to file *)
 PROCEDURE AcquireMemIO*(context: Commands.Context);
 VAR fname: ARRAY 128 OF CHAR;
 
-	tdib, tdibg, check: FI.FIBITMAP;
-	fif, memfif: FI.IMAGE_FORMAT;
+	tdib: FI.FIBITMAP;
+	fif: FI.IMAGE_FORMAT;
 	hmem: FI.FIMEMORY;
 	res: BOOLEAN;
 
@@ -160,14 +156,14 @@ BEGIN
 	membufptr := NIL;
 	res := FI.AcquireMemory(hmem, membufptr, bufsize);
 	
-	Out.String("bufsize= "); Out.Int(bufsize, 0); Out.Ln;
 	IF membufptr = NIL THEN
 		Out.String("membuf=NIL "); Out.Ln;
 		FI.CloseMemory(hmem);
 		RETURN
 	ELSE
-		Out.String("membuf # NIL "); Out.Ln;
+		Out.String("membuf # NIL"); Out.Ln;
 	END;
+	Out.String("bufsize (bytes): "); Out.Int(bufsize, 0); Out.Ln;
 	
 	(* save the buffer in a file stream *)
 	f := Files.New("buffer1.png");
@@ -180,13 +176,10 @@ BEGIN
 		INC(membufptr);
 	END;
 	f.Update();	 
-(*	writer := f.NewWriter(NIL);
-	writer.WriteBytes(membuf^, 0, bufsize); *)
 	Files.Register(f);
 
 	FI.CloseMemory(hmem);
-	
-	Out.String("AcquireMemIO finished."); Out.Ln;
+	Out.String("AcquireMemIO finished, saved to buffer1.png file."); Out.Ln;
 END AcquireMemIO;
 
 BEGIN
@@ -195,12 +188,12 @@ END TestFreeMemIO.
 
 
 
-TestFreeMemIO.SaveMemIO Seashore2.png ~
+TestFreeMemIO.SaveMemIO Lennagray.png ~
 
 
-TestFreeMemIO.LoadMemIO Seashore2.png~
+TestFreeMemIO.LoadMemIO   Lennagray.png ~
 
-TestFreeMemIO.AcquireMemIO Seashore2.png~
+TestFreeMemIO.AcquireMemIO  Lennagray.png~
 
 
 SystemTools.Free TestFreeMemIO  ~

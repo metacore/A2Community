@@ -1,10 +1,10 @@
-This subsystem contains WinAos and LinuxAos wrappers for FreeImage (v3.15.4)
-Date 20-2-2013
+This subsystem contains WinAos and LinuxAos wrappers for FreeImage (v3.17.0)
+
 #========================================================================================
 # WHAT IS FREEIMAGE
 #========================================================================================
 FreeImage is an Open Source library project for developers who would like to support
-popular graphics image formats like PNG, BMP, JPEG, TIFF and others as needed by today's 
+popular graphics image formats like PNG, BMP, JPEG, TIFF and others as needed by todays 
 multimedia applications. FreeImage is easy to use, fast, multithreading safe, compatible with all 
 32-bit versions of Windows, and cross-platform (works both with Linux and Mac OS X).
 
@@ -12,7 +12,7 @@ multimedia applications. FreeImage is easy to use, fast, multithreading safe, co
 # Installation
 #========================================================================================
 #WinAos: 
-	Get the FreeImage.dll (v3.15.4) from http://freeimage.sourceforge.net/
+	Get the FreeImage.dll (v3.17.0) from http://freeimage.sourceforge.net/
 	and put it 'Windows\System32' or 'Work' directory. 
 
 #Linux: 
@@ -21,7 +21,7 @@ multimedia applications. FreeImage is easy to use, fast, multithreading safe, co
       >	 sudo apt-get install libfreeimage3
 
 
-Library functions are described in detail in FreeImage3154.pdf file.
+Library functions are described in detail in FreeImage3170.pdf file.
 
 
 #========================================================================================
@@ -34,21 +34,27 @@ Library functions are described in detail in FreeImage3154.pdf file.
  Compiler.Compile Win32.FreeImageDll.Mod ~
  
 # examples, compile;
-Compiler.Compile FreeImageUtils.Mod TestFreeImage.Mod TestFreeMeta.Mod TestFreeMemIO~ 
+Compiler.Compile FreeImageUtils.Mod TestFreeImage.Mod TestFreeMeta.Mod ~ 
 
+#======================================================
+#======================================================
+# NOTE: FreeImage uses absolute path names  for image file names,
+# 
+# 
+#
 # Examples, run:
 
 TestFreeImage.GetFormats ~
 TestFreeImage.MakeFresnel ~
-TestFreeImage.Open  <yourimagefile> ~ 
+TestFreeImage.Open  <yourimagefile> ~  
 
 #Unload the module list:
 SystemTools.FreeDownTo FreeImageDll ~
 
 
-#========================================================================================
+#======================================================
 FEATURES
-#========================================================================================
+#======================================================
     reference: http://freeimage.sourceforge.net/
 
     * Ease of use. The library has been designed to be extremely simple in use. 

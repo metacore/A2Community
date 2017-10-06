@@ -3,9 +3,32 @@ MODULE FreeImageDll; (** AUTHOR "fnecati"; PURPOSE "FreeImage interface for Linu
 IMPORT 
 	SYSTEM, Unix, Strings, Modules, KernelLog;
 
-(* Date:  20-12- 2013 
-Wrapper for FreeImage.dll (v3.15.4).
+(* Date:  21-3-2015 
+Wrapper for FreeImage.dll (v3.17.0).
 	http://freeimage.sourceforge.net/
+
+ Design and implementation by
+ - Floris van den Berg (flvdberg@wxs.nl)
+ - Hervé Drolon (drolon@infonie.fr)
+
+ Contributors:
+ - see changes log named 'Whatsnew.txt', see header of each .h and .cpp file
+
+ This file is part of FreeImage 3
+
+ COVERED CODE IS PROVIDED UNDER THIS LICENSE ON AN "AS IS" BASIS, WITHOUT WARRANTY
+ OF ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING, WITHOUT LIMITATION, WARRANTIES
+ THAT THE COVERED CODE IS FREE OF DEFECTS, MERCHANTABLE, FIT FOR A PARTICULAR PURPOSE
+ OR NON-INFRINGING. THE ENTIRE RISK AS TO THE QUALITY AND PERFORMANCE OF THE COVERED
+ CODE IS WITH YOU. SHOULD ANY COVERED CODE PROVE DEFECTIVE IN ANY RESPECT, YOU (NOT
+ THE INITIAL DEVELOPER OR ANY OTHER CONTRIBUTOR) ASSUME THE COST OF ANY NECESSARY
+ SERVICING, REPAIR OR CORRECTION. THIS DISCLAIMER OF WARRANTY CONSTITUTES AN ESSENTIAL
+ PART OF THIS LICENSE. NO USE OF ANY COVERED CODE IS AUTHORIZED HEREUNDER EXCEPT UNDER
+ THIS DISCLAIMER.
+
+ Use at your own risk!
+ ==========================================================
+
 *)
 
 (*  Handle, Memory I/O,  Zlib Compression routines are not tested , and, line conversion routines  are not translated yet. *)
@@ -13,13 +36,13 @@ Wrapper for FreeImage.dll (v3.15.4).
 CONST
 	libname="libfreeimage.so.3";
 VAR 
-	lib: LONGINT;
+	lib: ADDRESS;
 CONST
 	
-(*  Version information ------------------------------------------------------ *)
+	(* Version information  *)
 	MAJOR_VERSION* = 3;
-	MINOR_VERSION* = 15;
-	RELEASE_SERIAL* = 4;
+	MINOR_VERSION* = 17;
+	RELEASE_SERIAL* = 0;
 		
 	(* Indexes for byte arrays, masks and shifts for treating pixels as words
 	These coincide with the order of RGBQUAD and RGBTRIPLE
@@ -72,11 +95,18 @@ CONST
 	FI16_565_GREEN_SHIFT* = 5;
 	FI16_565_BLUE_SHIFT* = 0;
 
-	(*	ICC profile support *)
+	(* ICC profile support *)
 CONST
 	FIICC_DEFAULT* = 0H;
-	FIICC_COLOR_IS_CMYK*	 = 1H;
+	FIICC_COLOR_IS_CMYK* = 1H;
 
+TYPE 
+	FIICCPROFILE* = RECORD
+		flags*: INTEGER;	(* ! info flag *)
+		size*: LONGINT;		(* ! profile's size measured in bytes *)
+		data*: ADDRESS;		(* ! points to a block of contiguous memory containing the profile *)
+	END;
+	
 CONST
 	(* I/O image format identifiers. *)
 TYPE IMAGE_FORMAT* = LONGINT;
@@ -117,70 +147,74 @@ CONST
 	FIF_JP2* = 31;
 	FIF_PFM* = 32;
 	FIF_PICT* = 33;
+	
 	FIF_RAW* = 34;
-			
+	FIF_WEBP* = 35;
+	FIF_JXR* = 36;
+	
 	(* Image type used in FreeImage.*)
 TYPE IMAGE_TYPE* = LONGINT;
 CONST
 	FIT_UNKNOWN* = 0; 	(* unknown type *)
-	FIT_BITMAP* = 1; 	(* standard image			: 1-, 4-, 8-, 16-, 24-, 32-bit *)
-	FIT_UINT16*	 = 2; 	(* array of unsigned short	: unsigned 16-bit *)
-	FIT_INT16*	 = 3; 	(* array of short			: signed 16-bit *)
-	FIT_UINT32*	 = 4; 	(* array of unsigned long	: unsigned 32-bit *)
-	FIT_INT32*	 = 5; 	(* array of long			: signed 32-bit *)
-	FIT_FLOAT*	 = 6; 	(* array of float			: 32-bit IEEE floating point *)
-	FIT_DOUBLE*	 = 7; 	(* array of double			: 64-bit IEEE floating point *)
-	FIT_COMPLEX*	 = 8; 	(* array of FICOMPLEX		: 2 x 64-bit IEEE  floating point *)
-	FIT_RGB16*	 = 9; 	(* 48-bit RGB image			: 3 x 16-bit *)
-	FIT_RGBA16*	 = 10; 	(* 64-bit RGBA image		: 4 x 16-bit *)
-	FIT_RGBF*	 = 11; 	(* 96-bit RGB float image	: 3 x 32-bit IEEE floating point *)
-	FIT_RGBAF*	 = 12; 	(* 128-bit RGBA float image	: 4 x 32-bit IEEE floating point *)
+	FIT_BITMAP* = 1; 	(* standard image		: 1-, 4-, 8-, 16-, 24-, 32-bit *)
+	FIT_UINT16* = 2; 	(* array of unsigned short	: unsigned 16-bit *)
+	FIT_INT16* = 3; 	(* array of short		: signed 16-bit *)
+	FIT_UINT32* = 4; 	(* array of unsigned long	: unsigned 32-bit *)
+	FIT_INT32* = 5; 	(* array of long		: signed 32-bit *)
+	FIT_FLOAT* = 6; 	(* array of float		: 32-bit IEEE floating point *)
+	FIT_DOUBLE* = 7; 	(* array of double		: 64-bit IEEE floating point *)
+	FIT_COMPLEX* = 8; 	(* array of FICOMPLEX		: 2 x 64-bit IEEE  floating point *)
+	FIT_RGB16* = 9; 	(* 48-bit RGB image		: 3 x 16-bit *)
+	FIT_RGBA16* = 10; 	(* 64-bit RGBA image		: 4 x 16-bit *)
+	FIT_RGBF* = 11; 	(* 96-bit RGB float image	: 3 x 32-bit IEEE floating point *)
+	FIT_RGBAF* = 12; 	(* 128-bit RGBA float image	: 4 x 32-bit IEEE floating point *)
 
 	(* Image color type used in FreeImage. *)
 TYPE IMAGE_COLOR_TYPE* = LONGINT;
 CONST
-	FIC_MINISWHITE* = 0; 		(* min value is white *)
-	FIC_MINISBLACK* = 1; 		(* min value is black *)
+	FIC_MINISWHITE* = 0; 	(* min value is white *)
+	FIC_MINISBLACK* = 1; 	(* min value is black *)
 	FIC_RGB* = 2; 		(* RGB color model *)
-	FIC_PALETTE* = 3; 		(* color map indexed *)
-	FIC_RGBALPHA* = 4; 		(* RGB color model with alpha channel *)
+	FIC_PALETTE* = 3; 	(* color map indexed *)
+	FIC_RGBALPHA* = 4; 	(* RGB color model with alpha channel *)
 	FIC_CMYK* = 5; 		(* CMYK color model *)
 
 	(* Color quantization algorithms. Constants used in FreeImage_ColorQuantize. *)
 TYPE IMAGE_QUANTIZE* = LONGINT;
 CONST
-	FIQ_WUQUANT* = 0; 		(* Xiaolin Wu color quantization algorithm *)
-	FIQ_NNQUANT* = 1; 			(* NeuQuant neural-net quantization algorithm by Anthony Dekker *)
+	FIQ_WUQUANT* = 0; 	(* Xiaolin Wu color quantization algorithm *)
+	FIQ_NNQUANT* = 1; 	(* NeuQuant neural-net quantization algorithm by Anthony Dekker *)
+	FIQ_LFPQUANT* = 2;	(* Lossless Fast Pseudo-Quantization Algorithm by Carsten Klein *)
 
 	(* Dithering algorithms. Constants used FreeImage_Dither. *)
 TYPE IMAGE_DITHER* = LONGINT;
 CONST
-	FID_FS* = 0; 	(* Floyd & Steinberg error diffusion *)
+	FID_FS* = 0; 		(* Floyd & Steinberg error diffusion *)
 	FID_BAYER4x4* = 1; 	(* Bayer ordered dispersed dot dithering (order 2 dithering matrix)*)
 	FID_BAYER8x8* = 2; 	(* Bayer ordered dispersed dot dithering (order 3 dithering matrix)*)
 	FID_CLUSTER6x6* = 3; 	(* Ordered clustered dot dithering (order 3 - 6x6 matrix)*)
 	FID_CLUSTER8x8* = 4; 	(* Ordered clustered dot dithering (order 4 - 8x8 matrix)*)
-	FID_CLUSTER16x16* = 5; (* Ordered clustered dot dithering (order 8 - 16x16 matrix)*)
-	FID_BAYER16x16* = 6; (* Bayer ordered dispersed dot dithering (order 4 dithering matrix)*)
+	FID_CLUSTER16x16* = 5;  (* Ordered clustered dot dithering (order 8 - 16x16 matrix)*)
+	FID_BAYER16x16* = 6; 	(* Bayer ordered dispersed dot dithering (order 4 dithering matrix)*)
 
 	(* Lossless JPEG transformations Constants used in FreeImage_JPEGTransform	*)
 TYPE IMAGE_JPEG_OPERATION* = LONGINT;
 CONST
-	FIJPEG_OP_NONE* = 0; 	(* no transformation *)
-	FIJPEG_OP_FLIP_H* = 1; 	(* horizontal flip *)
-	FIJPEG_OP_FLIP_V* = 2; 	(* vertical flip *)
+	FIJPEG_OP_NONE* = 0; 		(* no transformation *)
+	FIJPEG_OP_FLIP_H* = 1; 		(* horizontal flip *)
+	FIJPEG_OP_FLIP_V* = 2; 		(* vertical flip *)
 	FIJPEG_OP_TRANSPOSE* = 3; 	(* transpose across UL-to-LR axis *)
 	FIJPEG_OP_TRANSVERSE* = 4; 	(* transpose across UR-to-LL axis *)
 	FIJPEG_OP_ROTATE_90* = 5; 	(* 90-degree clockwise rotation *)
-	FIJPEG_OP_ROTATE_180*	= 6; 	 (* 180-degree rotation *)
-	FIJPEG_OP_ROTATE_270*	= 7; 	(* 270-degree clockwise (or 90 ccw) *)
+	FIJPEG_OP_ROTATE_180* = 6; 	(* 180-degree rotation *)
+	FIJPEG_OP_ROTATE_270* = 7; 	(* 270-degree clockwise (or 90 ccw) *)
 
 	(* Tone mapping operators. Constants used in FreeImage_ToneMapping. *)
 TYPE IMAGE_TMO* = LONGINT;
 CONST
-	FITMO_DRAGO03* = 0; (* Adaptive logarithmic mapping (F. Drago, 2003) *)
-	FITMO_REINHARD05* = 1; (* Dynamic range reduction inspired by photoreceptor physiology (E. Reinhard, 2005) *)
-	FITMO_FATTAL02*  = 2;	(* Gradient domain high dynamic range compression (R. Fattal, 2002) *)
+	FITMO_DRAGO03* = 0; 	(* Adaptive logarithmic mapping (F. Drago, 2003) *)
+	FITMO_REINHARD05* = 1; 	(* Dynamic range reduction inspired by photoreceptor physiology (E. Reinhard, 2005) *)
+	FITMO_FATTAL02* = 2;	(* Gradient domain high dynamic range compression (R. Fattal, 2002) *)
 
 	(* Upsampling / downsampling filters. Constants used in FreeImage_Rescale. *)
 TYPE IMAGE_FILTER* = LONGINT;
@@ -189,22 +223,22 @@ CONST
 	FILTER_BICUBIC* = 1; 	(* Mitchell & Netravali's two-param cubic filter *)
 	FILTER_BILINEAR* = 2; 	(* Bilinear filter *)
 	FILTER_BSPLINE* = 3; 	(* 4th order (cubic) b-spline *)
-	FILTER_CATMULLROM* = 4; 	(* Catmull-Rom spline, Overhauser spline *)
-	FILTER_LANCZOS3* = 5; 	 (* Lanczos3 filter *)
+	FILTER_CATMULLROM* = 4; (* Catmull-Rom spline, Overhauser spline *)
+	FILTER_LANCZOS3* = 5;	(* Lanczos3 filter *)
 
 	(* Color channels. Constants used in color manipulation routines. *)
 TYPE IMAGE_COLOR_CHANNEL* = LONGINT;
 CONST
-	FICC_RGB* = 0; (* Use red, green and blue channels *)
-	FICC_RED* = 1; (* Use red channel *)
-	FICC_GREEN* = 2; (* Use green channel *)
-	FICC_BLUE* = 3; (* Use blue channel *)
-	FICC_ALPHA* = 4; (* Use alpha channel *)
-	FICC_BLACK* = 5; (* Use black channel *)
-	FICC_REAL* = 6; (* Complex images: use real part *)
-	FICC_IMAG* = 7; (* Complex images: use imaginary part *)
-	FICC_MAG* = 8; (* Complex images: use magnitude *)
-	FICC_PHASE* = 9; 	 (* Complex images: use phase *)
+	FICC_RGB* = 0; 		(* Use red, green and blue channels *)
+	FICC_RED* = 1; 		(* Use red channel *)
+	FICC_GREEN* = 2; 	(* Use green channel *)
+	FICC_BLUE* = 3; 	(* Use blue channel *)
+	FICC_ALPHA* = 4; 	(* Use alpha channel *)
+	FICC_BLACK* = 5; 	(* Use black channel *)
+	FICC_REAL* = 6; 	(* Complex images: use real part *)
+	FICC_IMAG* = 7; 	(* Complex images: use imaginary part *)
+	FICC_MAG* = 8; 		(* Complex images: use magnitude *)
+	FICC_PHASE* = 9; 	(* Complex images: use phase *)
 
 	(* Metadata support ---------------------- *)
 	(*  Tag data type information (based on TIFF specifications)
@@ -228,28 +262,28 @@ CONST
 	FIDT_IFD* = 13; 	(* 32-bit unsigned integer (offset)*)
 	FIDT_PALETTE* = 14; 	(* 32-bit RGBQUAD *)
 	FIDT_LONG8* = 16;	(* 64-bit unsigned integer *)
-	FIDT_SLONG8* = 17; (* 64-bit signed integer *)
+	FIDT_SLONG8* = 17; 	(* 64-bit signed integer *)
 	FIDT_IFD8* = 18;	(* 64-bit unsigned integer (offset) *)
 
 	(*  Metadata models supported by FreeImage *)
 TYPE IMAGE_MDMODEL* = LONGINT;
 CONST
 	FIMD_NODATA* = -1;
-	FIMD_COMMENTS* = 0; 	(* single comment or keywords *)
-	FIMD_EXIF_MAIN* = 1; 	(* Exif-TIFF metadata *)
-	FIMD_EXIF_EXIF* = 2; 	(* Exif-specific metadata *)
-	FIMD_EXIF_GPS* = 3; 	(* Exif GPS metadata *)
+	FIMD_COMMENTS* = 0; 		(* single comment or keywords *)
+	FIMD_EXIF_MAIN* = 1; 		(* Exif-TIFF metadata *)
+	FIMD_EXIF_EXIF* = 2; 		(* Exif-specific metadata *)
+	FIMD_EXIF_GPS* = 3; 		(* Exif GPS metadata *)
 	FIMD_EXIF_MAKERNOTE* = 4; 	(* Exif maker note metadata *)
 	FIMD_EXIF_INTEROP* = 5; 	(* Exif interoperability metadata *)
-	FIMD_IPTC* = 6; 	(* IPTC/NAA metadata *)
-	FIMD_XMP* = 7; 	(* Abobe XMP metadata *)
-	FIMD_GEOTIFF* = 8; 	(* GeoTIFF metadata *)
-	FIMD_ANIMATION* = 9; 	(* Animation metadata *)
-	FIMD_CUSTOM* = 10; (* Used to attach other metadata types to a dib *)
-	FIMD_EXIF_RAW* = 11;	(* Exif metadata as a raw buffer *)
+	FIMD_IPTC* = 6; 		(* IPTC/NAA metadata *)
+	FIMD_XMP* = 7; 			(* Abobe XMP metadata *)
+	FIMD_GEOTIFF* = 8; 		(* GeoTIFF metadata *)
+	FIMD_ANIMATION* = 9; 		(* Animation metadata *)
+	FIMD_CUSTOM* = 10; 		(* Used to attach other metadata types to a dib *)
+	FIMD_EXIF_RAW* = 11;		(* Exif metadata as a raw buffer *)
 
 	(*  Load / Save flag constants  *)
-TYPE  IMAGE_FLAGS*=LONGINT;
+TYPE  IMAGE_FLAGS* = LONGINT;
 CONST
 	FIF_LOAD_NOPIXELS* = 8000H; (* loading: load the image header only (not supported by all plugins, default to full loading) *)
 
@@ -257,14 +291,14 @@ CONST
 	BMP_SAVE_RLE* = 1;
 	CUT_DEFAULT* = 0;
 	DDS_DEFAULT* = 0;
-	EXR_DEFAULT*=	0;		(* save data as half with piz-based wavelet compression *)
-	EXR_FLOAT*=0001H;	(* save data as float instead of as half (not recommended) *)
-	EXR_NONE*=0002H;	(* save with no compression *) 
-	EXR_ZIP*=0004H;	(* save with zlib compression, in blocks of 16 scan lines *)
-	EXR_PIZ*=0008H;	(* save with piz-based wavelet compression *)
-	EXR_PXR24*=0010H;	(* save with lossy 24-bit float compression *)
-	EXR_B44*=0020H;	(* save with lossy 44% float compression - goes to 22% when combined with EXR_LC *)
-	EXR_LC*=0040H;	(* save images with one luminance and two chroma channels, rather than as RGB (lossy compression) *)
+	EXR_DEFAULT* = 0;	(* save data as half with piz-based wavelet compression *)
+	EXR_FLOAT* = 0001H;	(* save data as float instead of as half (not recommended) *)
+	EXR_NONE* = 0002H;	(* save with no compression *) 
+	EXR_ZIP* = 0004H;	(* save with zlib compression, in blocks of 16 scan lines *)
+	EXR_PIZ* = 0008H;	(* save with piz-based wavelet compression *)
+	EXR_PXR24* = 0010H;	(* save with lossy 24-bit float compression *)
+	EXR_B44* = 0020H;	(* save with lossy 44% float compression - goes to 22% when combined with EXR_LC *)
+	EXR_LC* = 0040H;	(* save images with one luminance and two chroma channels, rather than as RGB (lossy compression) *)
 		
 	FAXG3_DEFAULT* = 0;
 	GIF_DEFAULT* = 0;
@@ -279,73 +313,78 @@ CONST
 	JPEG_DEFAULT* = 0;
 	JPEG_FAST* = 1;
 	JPEG_ACCURATE* = 2;
-	JPEG_CMYK* = 01000H; 	(*  load separated CMYK "as is" (use | to combine with other flags) *)
+	JPEG_CMYK* = 01000H; 		(*  load separated CMYK "as is" (use | to combine with other flags) *)
 	JPEG_EXIFROTATE* = 0008H;	(* load and rotate according to Exif 'Orientation' tag if available *)
-	JPEG_GREYSCALE* =0010H;	(* load and convert to a 8-bit greyscale image *)
+	JPEG_GREYSCALE* = 0010H;	(* load and convert to a 8-bit greyscale image *)
 		
 	JPEG_QUALITYSUPERB* = 080H;
 	JPEG_QUALITYGOOD* = 0100H;
 	JPEG_QUALITYNORMAL* = 0200H;
 	JPEG_QUALITYAVERAGE* = 0400H;
 	JPEG_QUALITYBAD* = 0800H;
-	JPEG_PROGRESSIVE* = 02000H; (*save as a progressive-JPEG (use | to combine with other flags) *)
-	JPEG_SUBSAMPLING_411*=1000H;		(* save with high 4x1 chroma subsampling (4:1:1)  *)
-	JPEG_SUBSAMPLING_420*= 4000H;		(* save with medium 2x2 medium chroma subsampling (4:2:0) - default value *)
-	JPEG_SUBSAMPLING_422* = 8000H;		(* save with low 2x1 chroma subsampling (4:2:2)  *)
-	JPEG_SUBSAMPLING_444*= 10000H;	(* save with no chroma subsampling (4:4:4) *)
-	JPEG_OPTIMIZE* = 20000H; (* on saving, compute optimal Huffman coding tables (can reduce a few percent of file size) *)
-	JPEG_BASELINE* = 40000H; (* save basic JPEG, without metadata or any markers *)
+	JPEG_PROGRESSIVE* = 02000H; 	(*save as a progressive-JPEG (use | to combine with other flags) *)
+	JPEG_SUBSAMPLING_411* = 1000H;	(* save with high 4x1 chroma subsampling (4:1:1)  *)
+	JPEG_SUBSAMPLING_420* = 4000H;	(* save with medium 2x2 medium chroma subsampling (4:2:0) - default value *)
+	JPEG_SUBSAMPLING_422* = 8000H;	(* save with low 2x1 chroma subsampling (4:2:2)  *)
+	JPEG_SUBSAMPLING_444* = 10000H;	(* save with no chroma subsampling (4:4:4) *)
+	JPEG_OPTIMIZE* = 20000H; 	(* on saving, compute optimal Huffman coding tables (can reduce a few percent of file size) *)
+	JPEG_BASELINE* = 40000H; 	(* save basic JPEG, without metadata or any markers *)
 		
 	KOALA_DEFAULT* = 0;
 	LBM_DEFAULT* = 0;
 	MNG_DEFAULT* = 0;
 	PCD_DEFAULT* = 0;
-	PCD_BASE* = 1; 		(* load the bitmap sized 768 x 512 *)
+	PCD_BASE* = 1; 			(* load the bitmap sized 768 x 512 *)
 	PCD_BASEDIV4* = 2; 		(*  load the bitmap sized 384 x 256 *)
 	PCD_BASEDIV16* = 3; 		(*  load the bitmap sized 192 x 128 *)
 	PCX_DEFAULT* = 0;
 	PFM_DEFAULT* = 0;
 	PICT_DEFAULT* =  0;
 	PNG_DEFAULT* = 0;
-	PNG_IGNOREGAMMA* = 1; 		(*  avoid gamma correction *)
-	PNG_Z_BEST_SPEED* =	0001H;	(* save using ZLib level 1 compression flag (default value is 6) *)
-	PNG_Z_DEFAULT_COMPRESSION*=	0006H;	(* save using ZLib level 6 compression flag (default recommended value) *)
-	PNG_Z_BEST_COMPRESSION*=0009H;	(* save using ZLib level 9 compression flag (default value is 6) *)
-	PNG_Z_NO_COMPRESSION*=	0100H;	(* save without ZLib compression *)
-	PNG_INTERLACED*=	0200H;	(* save using Adam7 interlacing (use | to combine with other save flags)*)		
+	PNG_IGNOREGAMMA* = 1; 			(*  avoid gamma correction *)
+	PNG_Z_BEST_SPEED* = 0001H;		(* save using ZLib level 1 compression flag (default value is 6) *)
+	PNG_Z_DEFAULT_COMPRESSION* = 0006H;	(* save using ZLib level 6 compression flag (default recommended value) *)
+	PNG_Z_BEST_COMPRESSION* = 0009H;	(* save using ZLib level 9 compression flag (default value is 6) *)
+	PNG_Z_NO_COMPRESSION* =	0100H;		(* save without ZLib compression *)
+	PNG_INTERLACED* = 0200H;		(* save using Adam7 interlacing (use | to combine with other save flags)*)		
 	PNM_DEFAULT* = 0;
-	PNM_SAVE_RAW* = 0; (*  If set the writer saves in RAW format (i.e. P4, P5 or P6) *)
-	PNM_SAVE_ASCII* = 1; (* If set the writer saves in ASCII format (i.e. P1, P2 or P3) *)
+	PNM_SAVE_RAW* = 0; 	(* If set the writer saves in RAW format (i.e. P4, P5 or P6) *)
+	PNM_SAVE_ASCII* = 1; 	(* If set the writer saves in ASCII format (i.e. P1, P2 or P3) *)
 	PSD_DEFAULT* = 0;
-	PSD_CMYK* = 1;	(* reads tags for separated CMYK (default is conversion to RGB) *)
-	PSD_LAB* =	2; (* reads tags for CIELab (default is conversion to RGB) *)
+	PSD_CMYK* = 1;		(* reads tags for separated CMYK (default is conversion to RGB) *)
+	PSD_LAB* = 2; 	(* reads tags for CIELab (default is conversion to RGB) *)
 		
 	RAS_DEFAULT* = 0;
-	RAW_DEFAULT* = 0;		(* load the file as linear RGB 48-bit *)
-	RAW_PREVIEW* = 1;		(* try to load the embedded JPEG preview with included Exif Data or default to RGB 24-bit *)
-	RAW_DISPLAY* = 2;		(* load the file as RGB 24-bit *)
-	RAW_HALFSIZE* = 4;		(* output a half-size color image *)
+	RAW_DEFAULT* = 0;	(* load the file as linear RGB 48-bit *)
+	RAW_PREVIEW* = 1;	(* try to load the embedded JPEG preview with included Exif Data or default to RGB 24-bit *)
+	RAW_DISPLAY* = 2;	(* load the file as RGB 24-bit *)
+	RAW_HALFSIZE* = 4;	(* output a half-size color image *)
+	RAW_UNPROCESSED* = 8;	(* output a FIT_UINT16 raw Bayer image *)
 		
 	SGI_DEFAULT* = 0;
 	TARGA_DEFAULT* = 0;
-	TARGA_LOAD_RGB888* = 1; (*  If set the loader converts RGB555 and ARGB8888 -> RGB888. *)
-	TARGA_SAVE_RLE* = 2;		(* If set, the writer saves with RLE compression *)
+	TARGA_LOAD_RGB888* = 1; (* If set the loader converts RGB555 and ARGB8888 -> RGB888. *)
+	TARGA_SAVE_RLE* = 2;	(* If set, the writer saves with RLE compression *)
 		
 	TIFF_DEFAULT* = 0;
-	TIFF_CMYK* = 00001H; 	(*  reads/stores tags for separated CMYK (use | to combine with compression flags) *)
-	TIFF_PACKBITS* = 00100H; (*  save using PACKBITS compression *)
-	TIFF_DEFLATE* = 00200H; (*  save using DEFLATE compression (a.k.a. ZLIB compression) *)
-	TIFF_ADOBE_DEFLATE* = 00400H; (*  save using ADOBE DEFLATE compression *)
-	TIFF_NONE* = 00800H; (*  save without any compression *)
-	TIFF_CCITTFAX3* = 01000H; (*  save using CCITT Group 3 fax encoding *)
-	TIFF_CCITTFAX4* = 02000H; (*  save using CCITT Group 4 fax encoding *)
-	TIFF_LZW* = 04000H; 	(* save using LZW compression *)
-	TIFF_JPEG* = 08000H; 	(*  save using JPEG compression *)
-	TIFF_LOGLUV* = 10000H; (* save using LogLuv compression *)
+	TIFF_CMYK* = 00001H; 		(* reads/stores tags for separated CMYK (use | to combine with compression flags) *)
+	TIFF_PACKBITS* = 00100H; 	(* save using PACKBITS compression *)
+	TIFF_DEFLATE* = 00200H; 	(* save using DEFLATE compression (a.k.a. ZLIB compression) *)
+	TIFF_ADOBE_DEFLATE* = 00400H; 	(* save using ADOBE DEFLATE compression *)
+	TIFF_NONE* = 00800H; 		(* save without any compression *)
+	TIFF_CCITTFAX3* = 01000H; 	(* save using CCITT Group 3 fax encoding *)
+	TIFF_CCITTFAX4* = 02000H; 	(* save using CCITT Group 4 fax encoding *)
+	TIFF_LZW* = 04000H; 		(* save using LZW compression *)
+	TIFF_JPEG* = 08000H; 		(* save using JPEG compression *)
+	TIFF_LOGLUV* = 10000H; 		(* save using LogLuv compression *)
 	WBMP_DEFAULT* = 0;
 	XBM_DEFAULT* = 0;
 	XPM_DEFAULT* = 0;
-
+	WEBP_DEFAULT* =	0;		(* ! save with good quality (75:1) *)
+	WEBP_LOSSLESS* = 100H; 		(* ! save in lossless mode *)
+	JXR_DEFAULT* = 0;		(* ! save with quality 80 and no chroma subsampling (4:4:4) *)
+	JXR_LOSSLESS* = 0064H;		(* ! save lossless *)
+	JXR_PROGRESSIVE* = 2000H;	(* ! save as a progressive-JXR (use | to combine with other save flags) *)
 
 (*  Background filling options ---------------------------------------------------------
 	Constants used in FreeImage_FillBackground and FreeImage_EnlargeCanvas *)
@@ -354,7 +393,15 @@ CONST
 	COLOR_IS_RGBA_COLOR* = 1H;	(* RGBQUAD color is a RGBA color (contains a valid alpha channel) *)
 	COLOR_FIND_EQUAL_COLOR* = 2H;	(* For palettized images: lookup equal RGB color from palette *)
 	COLOR_ALPHA_IS_INDEX* =  4H;	(* The color's rgbReserved member (alpha) contains the palette index to be used *)
-	COLOR_PALETTE_SEARCH_MASK* =	(COLOR_FIND_EQUAL_COLOR  + COLOR_ALPHA_IS_INDEX);	(* No color lookup is performed *)
+	COLOR_PALETTE_SEARCH_MASK* = (COLOR_FIND_EQUAL_COLOR  + COLOR_ALPHA_IS_INDEX);	(* No color lookup is performed *)
+
+(* RescaleEx options ---------------------------------------------------------
+ Constants used in FreeImage_RescaleEx *)
+
+	RESCALE_DEFAULT* = 0;		(* default options; none of the following other options apply *)
+	RESCALE_TRUE_COLOR* = 1;	(* for non-transparent greyscale images, convert to 24-bit if src bitdepth <= 8 (default is a 8-bit greyscale image). *)
+	RESCALE_OMIT_METADATA* = 2;	(* do not copy metadata to the rescaled image *)
+
 
 TYPE
 	RGBQUAD* = RECORD
@@ -468,17 +515,11 @@ TYPE
 	FIMEMORY* = POINTER TO RECORD END;(* Handle to a memory I/O stream *)
 	FIBITMAP* = POINTER TO RECORD END; (* Handle to a FreeImage bitmap *)
 	FIMULTIBITMAP* = POINTER TO RECORD END; (* handle to a multibitmap *)
-	FIMETADATA* = POINTER TO RECORD END; (*Handle to a metadata model*)
-	FITAG* = POINTER TO RECORD END; (*Handle to a FreeImage tag *)
-	FIICCPROFILE* = POINTER TO RECORD
-		flags*: INTEGER; (* info flag *)
-		size*: LONGINT; (* profile's size measured in bytes *)
-		data*: ADDRESS; (* points to a block of contiguous memory containing the profile*)
-	END;
+	FIMETADATA* = POINTER TO RECORD END; (* Handle to a metadata model *)
+	FITAG* = POINTER TO RECORD END; (* Handle to a FreeImage tag *)
 
-
-	OutputMessageFunction* = PROCEDURE {C} (fif: IMAGE_FORMAT; msg: Strings.String);
-	OutputMessageFunctionStdCall* = PROCEDURE {C} (fif: IMAGE_FORMAT;  msg: Strings.String);
+	OutputMessageFunction* = PROCEDURE {C} (fif: IMAGE_FORMAT; msg: ADDRESS);
+	OutputMessageFunctionStdCall* = PROCEDURE {C} (fif: IMAGE_FORMAT;  msg: ADDRESS);
 	
 
 CONST
@@ -513,14 +554,12 @@ VAR
 
 	(* Load/Save routines -------------------------------- *)
 	Load-: PROCEDURE {C} (fif: IMAGE_FORMAT; CONST filename: ARRAY OF CHAR; flags: IMAGE_FLAGS): FIBITMAP;
-	(*LoadU-: PROCEDURE {C} (fif: IMAGE_FORMAT; CONST filename: ARRAY OF CHAR16; flags: IMAGE_FLAGS): FIBITMAP;*)
+	LoadU-: PROCEDURE {C} (fif: IMAGE_FORMAT; CONST filename: ARRAY OF CHAR16; flags: IMAGE_FLAGS): FIBITMAP;
 	Save-: PROCEDURE {C}(fif: IMAGE_FORMAT; dib: FIBITMAP; CONST filename: ARRAY OF CHAR; flags: IMAGE_FLAGS): BOOLEAN;
-
-	(*SaveU-: PROCEDURE {C} (fif: IMAGE_FORMAT; dib: FIBITMAP; filename: PCharU; flags: IMAGE_FLAGS): BOOLEAN;
-	LoadFromHandle-: PROCEDURE {C} (fif: IMAGE_FORMAT; io: FreeImageIO; hadle: LONGINT; flags: LONGINT): FIBITMAP;
+	SaveU-: PROCEDURE {C} (fif: IMAGE_FORMAT; dib: FIBITMAP; CONST filename: ARRAY OF CHAR16; flags: IMAGE_FLAGS): BOOLEAN;
+	(*LoadFromHandle-: PROCEDURE {C} (fif: IMAGE_FORMAT; io: FreeImageIO; hadle: LONGINT; flags: LONGINT): FIBITMAP;
 	SaveToHandle-: PROCEDURE {C} (fif: IMAGE_FORMAT; dib: FIBITMAP; io: FreeImageIO ; handle: LONGINT;  flags: LONGINT): BOOLEAN;
 	*)
-
 
 
 	(* Memory I/O stream routines  -------------------------------- *)
@@ -544,6 +583,7 @@ VAR
 	IsPluginEnabled-: PROCEDURE {C} (fif: IMAGE_FORMAT): LONGINT;
 	GetFIFFromFormat-: PROCEDURE {C} (CONST format: ARRAY OF CHAR): IMAGE_FORMAT;
 	GetFIFFromMime-: PROCEDURE {C} (CONST format: ARRAY OF CHAR): IMAGE_FORMAT;
+
 	getFormatFromFIF-: PROCEDURE {C} (fif: IMAGE_FORMAT): ADDRESS;
 	getFIFExtensionList-: PROCEDURE {C} (fif: IMAGE_FORMAT): ADDRESS;
 	getFIFDescription-: PROCEDURE {C} (fif: IMAGE_FORMAT): ADDRESS;
@@ -551,19 +591,14 @@ VAR
 
 	GetFIFFromFilename- : PROCEDURE {C} (CONST fname: ARRAY OF CHAR): IMAGE_FORMAT;
 	GetFIFFromFilenameU-: PROCEDURE {C} (CONST fname: ARRAY OF CHAR16): IMAGE_FORMAT;
-
 	FIFSupportsReading-: PROCEDURE {C} (fif: IMAGE_FORMAT): BOOLEAN;
 	FIFSupportsWriting-: PROCEDURE {C} (fif: IMAGE_FORMAT): BOOLEAN;
-
-
 	FIFSupportsExportBPP-: PROCEDURE {C} (fif: IMAGE_FORMAT; bpp: LONGINT): BOOLEAN;
 	FIFSupportsExportType-: PROCEDURE {C} (fif: IMAGE_FORMAT; image_type: IMAGE_TYPE): BOOLEAN;
 	FIFSupportsICCProfiles-: PROCEDURE {C} (fif: IMAGE_FORMAT): BOOLEAN;
 	FIFSupportsNoPixels-: PROCEDURE {C} (fif: IMAGE_FORMAT): BOOLEAN;
 
-	
 	(* Multipaging interface -------------------------------- *)
-
 	OpenMultiBitmap-: PROCEDURE {C} (fif: IMAGE_FORMAT; CONST filename: ARRAY OF CHAR; create_new, read_only, keep_cache_in_memory: BOOLEAN): FIMULTIBITMAP;
 	OpenMultiBitmapFromHandle-: PROCEDURE {C}  (fif: IMAGE_FORMAT ; io: FreeImageIO; handle: LONGINT;  flags: LONGINT): FIMULTIBITMAP; 
 	SaveMultiBitmapToHandle-: PROCEDURE {C} (fif: IMAGE_FORMAT; bitmap: FIMULTIBITMAP; io: FreeImageIO;  handle: FHandle;  flags: LONGINT): BOOLEAN;
@@ -627,6 +662,7 @@ VAR
 	GetLine-: PROCEDURE {C}  (dib: FIBITMAP): LONGINT;
 	GetPitch-: PROCEDURE {C}  (dib: FIBITMAP): LONGINT;
 	GetDIBSize-: PROCEDURE {C}  (dib: FIBITMAP): LONGINT;
+	GetMemorySize-: PROCEDURE {C} (dib: FIBITMAP): LONGINT;
 	GetPalette-: PROCEDURE {C}  (dib: FIBITMAP): PtrPALETTE;	
 	GetDotsPerMeterX-: PROCEDURE {C} (dib: FIBITMAP): LONGINT;
 	GetDotsPerMeterY-: PROCEDURE {C} (dib: FIBITMAP): LONGINT;
@@ -634,7 +670,7 @@ VAR
 	SetDotsPerMeterY-: PROCEDURE {C} (dib: FIBITMAP; res: LONGINT);
 	GetInfoHeader-: PROCEDURE {C} (dib: FIBITMAP): PtrBITMAPINFOHEADER;
 	GetInfo-: PROCEDURE {C} (dib: FIBITMAP): PtrBITMAPINFO;
-	GetColorType-: PROCEDURE {C} (dib: LONGINT): LONGINT;
+	GetColorType-: PROCEDURE {C} (dib: FIBITMAP): LONGINT;
 	GetRedMask-: PROCEDURE {C} (dib: FIBITMAP): LONGINT;
 	GetGreenMask-: PROCEDURE {C} (dib: FIBITMAP): LONGINT;
 	GetBlueMask-: PROCEDURE {C} (dib: FIBITMAP): LONGINT;
@@ -671,17 +707,19 @@ VAR
 	ColorQuantizeEx-: PROCEDURE {C} (dib: FIBITMAP; quantize: IMAGE_QUANTIZE; PaletteSize: LONGINT; ReserveSize: LONGINT; ReservePalette: RGBQUAD): FIBITMAP;
 	Threshold-: PROCEDURE {C}  (dib: FIBITMAP; T: SHORTINT): FIBITMAP;
 	Dither-: PROCEDURE {C}  (dib: FIBITMAP; algorithm: IMAGE_DITHER): FIBITMAP;
-	ConvertFromRawBits-: PROCEDURE {C} (bits: LONGINT; width, height, pitch: LONGINT; bpp, red_mask, green_mask, blue_mask: LONGINT; topdown: BOOLEAN): FIBITMAP;
-	ConvertToRawBits-: PROCEDURE {C}  (bits: LONGINT; dib: FIBITMAP; pitch: LONGINT; bpp, red_mask, green_mask, blue_mask: LONGINT; topdown: BOOLEAN);
+	ConvertFromRawBits-: PROCEDURE {C} (bits: ADDRESS; width, height, pitch: LONGINT; bpp, red_mask, green_mask, blue_mask: LONGINT; topdown: BOOLEAN): FIBITMAP;
+	ConvertFromRawBitsEx-: PROCEDURE {C} (copySource: BOOLEAN; bits: ADDRESS; type: IMAGE_TYPE; width, height, pitch: LONGINT; bpp, red_mask, green_mask, blue_mask: LONGINT;  topdown: BOOLEAN): FIBITMAP;
+	ConvertToRawBits-: PROCEDURE {C} (bits: ADDRESS; dib: FIBITMAP; pitch: LONGINT; bpp, red_mask, green_mask, blue_mask: LONGINT; topdown: BOOLEAN);
 	ConvertToFloat-: PROCEDURE {C} (dib: FIBITMAP): FIBITMAP;
 	ConvertToRGBF-: PROCEDURE {C}  (dib: FIBITMAP): FIBITMAP;
+	ConvertToRGBAF- : PROCEDURE {C} (dib: FIBITMAP): FIBITMAP;
 	ConvertToUINT16-: PROCEDURE {C} (dib: FIBITMAP): FIBITMAP;
 	ConvertToRGB16-: PROCEDURE {C} (dib: FIBITMAP): FIBITMAP;
-
+	ConvertToRGBA16-: PROCEDURE {C} (dib: FIBITMAP): FIBITMAP;
 	ConvertToStandardType-: PROCEDURE {C}  (src: FIBITMAP; scale_linear: BOOLEAN): FIBITMAP;
 	ConvertToType-: PROCEDURE {C}  (src: FIBITMAP; dst_type: IMAGE_TYPE; scale_linear: BOOLEAN): FIBITMAP;
 
-	(* tone mapping operators *)
+	(* Tone mapping operators *)
 	ToneMapping-: PROCEDURE {C}  (dib: FIBITMAP; tmo: IMAGE_TMO; first_param, second_param: LONGREAL): FIBITMAP;
 	TmoDrago03-: PROCEDURE {C}  (src: FIBITMAP; gamma, exposure: LONGREAL): FIBITMAP;
 
@@ -727,6 +765,7 @@ VAR
 	 (* metadata setter and getter *)
 	SetMetadata-: PROCEDURE {C} (model: IMAGE_MDMODEL; dib: FIBITMAP; CONST key: ARRAY OF CHAR; tag: FITAG): BOOLEAN;
 	GetMetadata-: PROCEDURE {C} (model: IMAGE_MDMODEL; dib: FIBITMAP; CONST key: ARRAY OF CHAR; VAR tag: FITAG): BOOLEAN;
+	SetMetadataKeyValue-: PROCEDURE {C} (model: IMAGE_MDMODEL; dib: FIBITMAP; CONST key, value: ARRAY OF CHAR): BOOLEAN;
 
 	(* helpers *)
 	GetMetadataCount-: PROCEDURE {C} (model: IMAGE_MDMODEL; dib: FIBITMAP): LONGINT;
@@ -734,6 +773,22 @@ VAR
 	 (* tag to C string conversion *)
 	tagToString-: PROCEDURE {C} (model: IMAGE_MDMODEL; tag: FITAG; make: ADDRESS): ADDRESS;
 	
+
+ (*  --------------------------------------------------------------------------
+	JPEG lossless transformation routines
+	-------------------------------------------------------------------------- *)
+	JPEGTransform-: PROCEDURE {C} (CONST srcfile, dstfile: ARRAY OF CHAR; operation: IMAGE_JPEG_OPERATION; perfect: BOOLEAN): BOOLEAN;
+	JPEGTransformU-: PROCEDURE {C} (CONST srcfile, dstfile: ARRAY OF CHAR16; operation: IMAGE_JPEG_OPERATION; perfect: BOOLEAN):  BOOLEAN;
+	JPEGCrop-: PROCEDURE {C} (CONST srcfile, dstfile: ARRAY OF CHAR; left, top, right, bottom: LONGINT): BOOLEAN;
+	JPEGCropU-: PROCEDURE {C} (CONST srcfile, dstfile: ARRAY OF CHAR16;  left,  top, right, bottom: LONGINT): BOOLEAN;
+
+(*
+	JPEGTransformFromHandle-: PROCEDURE {C}(FreeImageIO* src_io, fi_handle src_handle, FreeImageIO* dst_io, fi_handle dst_handle; operation: IMAGE_JPEG_OPERATION; VAR left, top, right, bottom: LONGINT; perfect: BOOLEAN): BOOLEAN;
+*)
+	JPEGTransformCombined-: PROCEDURE {C} (CONST srcfile, destfile: ARRAY OF CHAR; operation: IMAGE_JPEG_OPERATION; VAR left, top, right, bottom: LONGINT; perfect: BOOLEAN): BOOLEAN;
+	JPEGTransformCombinedU-: PROCEDURE {C} (CONST srcfile, dstfile: ARRAY OF CHAR16; operation: IMAGE_JPEG_OPERATION; VAR left, top, right, bottom: LONGINT; perfect: BOOLEAN): BOOLEAN;
+	JPEGTransformCombinedFromMemory-: PROCEDURE {C} (srcstream,  dststream: FIMEMORY; operation: IMAGE_JPEG_OPERATION; VAR left, top, right, bottom:LONGINT; perfect: BOOLEAN): BOOLEAN;
+
 	(* Image manipulation toolkit -------------------------------- *)
 		(* rotation and flipping *)
 	(*  @deprecated see FreeImage_Rotate *)
@@ -743,14 +798,11 @@ VAR
 	RotateEx-: PROCEDURE {C} (dib: FIBITMAP; angle: LONGREAL; x_shift, y_shift, x_origin, y_origin: LONGREAL; use_mask: BOOLEAN): FIBITMAP;
 	FlipHorizontal-: PROCEDURE {C} (dib: FIBITMAP): BOOLEAN;
 	FlipVertical-: PROCEDURE {C}(dib: FIBITMAP): BOOLEAN;
-	JPEGTransform-: PROCEDURE {C} (CONST srcfile, dstfile: ARRAY OF CHAR; operation: IMAGE_JPEG_OPERATION; perfect: BOOLEAN): BOOLEAN;
-
-	JPEGTransformU-: PROCEDURE {C} (CONST srcfile, dstfile: ARRAY OF CHAR16; operation: IMAGE_JPEG_OPERATION; perfect: BOOLEAN):  BOOLEAN;
-
 
 		(* upsampling / downsampling *)
 	Rescale-: PROCEDURE {C} (dib: FIBITMAP; dst_width, dst_height: LONGINT; filter: IMAGE_FILTER): FIBITMAP;
-	MakeThumbnail-:  PROCEDURE {C} (dib: FIBITMAP; max_pixel_size: LONGINT; convert: BOOLEAN): FIBITMAP;
+	MakeThumbnail-:  PROCEDURE {C} (dib: FIBITMAP; max_pixel_size: LONGINT; convert: BOOLEAN): FIBITMAP;	
+	RescaleRect-: PROCEDURE {C} (dib: FIBITMAP; dst_width, dst_height, left, top, right, bottom: LONGINT; filter: IMAGE_FILTER; flags: LONGINT): FIBITMAP;
 
 		(* color manipulation routines (point operations)*)
 	AdjustCurve-: PROCEDURE {C} (dib: FIBITMAP;  LUT: ADDRESS; (* ARRAY OF CHAR *) channel: IMAGE_COLOR_CHANNEL): BOOLEAN;
@@ -766,7 +818,6 @@ VAR
 	ApplyPaletteIndexMapping-: PROCEDURE {C} (dib: FIBITMAP; VAR  srcindices,	dstindices: LUT; count: LONGINT;swap: BOOLEAN): LONGINT;
 	SwapPaletteIndices-: PROCEDURE {C} (dib: FIBITMAP; VAR index_a, index_b: LUT): LONGINT;
 
-
 	(* channel processing routines -------------------------------- *)
 	GetChannel-: PROCEDURE {C}  (dib: FIBITMAP; channel: IMAGE_COLOR_CHANNEL): FIBITMAP;
 	SetChannel-: PROCEDURE {C}  (dib: FIBITMAP; dib8: FIBITMAP; channel: IMAGE_COLOR_CHANNEL): BOOLEAN;
@@ -776,26 +827,22 @@ VAR
 	(* copy / paste / composite routines -------------------------------- *)
 	Copy-: PROCEDURE {C} (dib: FIBITMAP; left, top, right, bottom: LONGINT): FIBITMAP;
 	Paste-: PROCEDURE {C} (dst: FIBITMAP; src: FIBITMAP; left, top, alpha: LONGINT): BOOLEAN;
+	CreateView-: PROCEDURE {C} (dib: FIBITMAP; left, top, right, bottom: LONGINT): FIBITMAP;
 	Composite-: PROCEDURE {C} (fg: FIBITMAP; useFileBkg: BOOLEAN; appBkColor: RGBQUAD; bg: FIBITMAP): FIBITMAP;
-	JPEGCrop-: PROCEDURE {C} (CONST srcfile, dstfile: ARRAY OF CHAR; left, top, right, bottom: LONGINT): BOOLEAN;
-	JPEGCropU-: PROCEDURE {C} (CONST srcfile, dstfile: ARRAY OF CHAR16;  left,  top, right, bottom: LONGINT): BOOLEAN;
 	PreMultiplyWithAlpha-: PROCEDURE {C} (dib: FIBITMAP): BOOLEAN;
-
 
 	(*  background filling routines -------------------------------- *)
 	FillBackground-: PROCEDURE {C} (dib: FIBITMAP ;  color: LONGINT; options: LONGINT): BOOLEAN;
 	EnlargeCanvas-: PROCEDURE {C} (src: FIBITMAP;   left,  top, right,  bottom: LONGINT; color: LONGINT;  options: LONGINT): FIBITMAP;
-	(*
-	AllocateEx-: PROCEDURE {C} (width, height, bpp: LONGINT; color: RGBQUAD;  options : LONGINT; const RGBQUAD *palette FI_DEFAULT(NULL); red_mask, green_mask, blue_mask LONGINT): FIBITMAP;
-	AllocateExT-: PROCEDURE {C} (type: IMAGE_TYPE;  width,  height,  bpp: LONGINT; const void * color, int options FI_DEFAULT(0), const RGBQUAD *palette FI_DEFAULT(NULL); red_mask, green_mask, blue_mask: LONGINT): FIBITMAP;
-	*)
+	AllocateEx-: PROCEDURE {C} (width, height, bpp: LONGINT; color: ADDRESS;  options : LONGINT; palette: PtrPALETTE; red_mask, green_mask, blue_mask: LONGINT): FIBITMAP;
+	AllocateExT-: PROCEDURE {C} (type: IMAGE_TYPE;  width,  height,  bpp: LONGINT;  color: ADDRESS; options: LONGINT; palette: PtrPALETTE; red_mask, green_mask, blue_mask: LONGINT): FIBITMAP;
 
 	(* miscellaneous algorithms -------------------------------- *)
 	MultigridPoissonSolver-: PROCEDURE {C} (Laplacian: FIBITMAP; ncycle:LONGINT): FIBITMAP;
 
 
 (** Wrapper for Unix.Dlsym *)
-PROCEDURE GetProcAddress*( lib: LONGINT;  CONST procName: ARRAY OF CHAR;  adr: ADDRESS );
+PROCEDURE GetProcAddress*( lib: ADDRESS;  CONST procName: ARRAY OF CHAR;  adr: ADDRESS );
 BEGIN
 	Unix.Dlsym(lib,  procName, adr);
 END GetProcAddress;
@@ -827,8 +874,10 @@ BEGIN
 	
 	(* Load/Save routines *)	
 	GetProcAddress(lib, "FreeImage_Load", ADDRESSOF( Load ));
+	GetProcAddress(lib, "FreeImage_LoadU", ADDRESSOF( LoadU ));
 
 	GetProcAddress(lib, "FreeImage_Save", ADDRESSOF( Save ));
+	GetProcAddress(lib, "FreeImage_SaveU", ADDRESSOF( SaveU ));
 
 	(* Memory I/O stream routines *)
 	GetProcAddress(lib, "FreeImage_OpenMemory", ADDRESSOF( OpenMemory));
@@ -863,7 +912,6 @@ BEGIN
 	GetProcAddress(lib, "FreeImage_FIFSupportsNoPixels", ADDRESSOF( FIFSupportsNoPixels));
 	
 	(* Multipaging interface *)
-
 	GetProcAddress(lib, "FreeImage_OpenMultiBitmap", ADDRESSOF( OpenMultiBitmap));
 	GetProcAddress(lib, "FreeImage_OpenMultiBitmapFromHandle", ADDRESSOF( OpenMultiBitmapFromHandle));
 	GetProcAddress(lib, "FreeImage_SaveMultiBitmapToHandle", ADDRESSOF( SaveMultiBitmapToHandle));
@@ -922,6 +970,7 @@ BEGIN
 	GetProcAddress(lib, "FreeImage_GetLine", ADDRESSOF( GetLine));
 	GetProcAddress(lib, "FreeImage_GetPitch", ADDRESSOF( GetPitch));
 	GetProcAddress(lib, "FreeImage_GetDIBSize", ADDRESSOF( GetDIBSize));
+	GetProcAddress(lib, "FreeImage_GetMemorySize", ADDRESSOF( GetMemorySize));
 	GetProcAddress(lib, "FreeImage_GetPalette", ADDRESSOF( GetPalette));
 	GetProcAddress(lib, "FreeImage_GetDotsPerMeterX", ADDRESSOF( GetDotsPerMeterX));
 	GetProcAddress(lib, "FreeImage_GetDotsPerMeterY", ADDRESSOF( GetDotsPerMeterY));
@@ -968,13 +1017,17 @@ BEGIN
 
 	GetProcAddress(lib, "FreeImage_Dither", ADDRESSOF( Dither));
 	GetProcAddress(lib, "FreeImage_ConvertFromRawBits", ADDRESSOF( ConvertFromRawBits));
+	GetProcAddress(lib, "FreeImage_ConvertFromRawBitsEx", ADDRESSOF( ConvertFromRawBitsEx));
+
 	GetProcAddress(lib, "FreeImage_ConvertToRawBits", ADDRESSOF( ConvertToRawBits));
 	GetProcAddress(lib, "FreeImage_ConvertToFloat", ADDRESSOF( ConvertToFloat));
 
 	GetProcAddress(lib, "FreeImage_ConvertToRGBF", ADDRESSOF( ConvertToRGBF));
+	GetProcAddress(lib, "FreeImage_ConvertToRGBAF", ADDRESSOF( ConvertToRGBAF));
+
 	GetProcAddress(lib, "FreeImage_ConvertToUINT16", ADDRESSOF( ConvertToUINT16));
 	GetProcAddress(lib, "FreeImage_ConvertToRGB16", ADDRESSOF( ConvertToRGB16));
-
+	GetProcAddress(lib, "FreeImage_ConvertToRGBA16", ADDRESSOF( ConvertToRGBA16));
 
 	GetProcAddress(lib, "FreeImage_ConvertToStandardType", ADDRESSOF( ConvertToStandardType));
 	GetProcAddress(lib, "FreeImage_ConvertToType", ADDRESSOF( ConvertToType));
@@ -994,39 +1047,51 @@ BEGIN
 	GetProcAddress(lib, "FreeImage_ZLibCRC32", ADDRESSOF( ZLibCRC32));
 	
 	(* Metadata routines *)
-		(* tag creation / destruction *)
-		GetProcAddress(lib, "FreeImage_CreateTag", ADDRESSOF( CreateTag));
-		GetProcAddress(lib, "FreeImage_DeleteTag", ADDRESSOF( DeleteTag));
-		GetProcAddress(lib, "FreeImage_CloneTag", ADDRESSOF( CloneTag));
-		(* tag getters and setters *)
-		GetProcAddress(lib, "FreeImage_GetTagKey", ADDRESSOF( getTagKey));
-		GetProcAddress(lib, "FreeImage_GetTagDescription", ADDRESSOF( getTagDescription));
-		GetProcAddress(lib, "FreeImage_GetTagID", ADDRESSOF( GetTagID));
-		GetProcAddress(lib, "FreeImage_GetTagType", ADDRESSOF( GetTagType));
-		GetProcAddress(lib, "FreeImage_GetTagCount", ADDRESSOF( GetTagCount));
-		GetProcAddress(lib, "FreeImage_GetTagLength", ADDRESSOF( GetTagLength));
-		GetProcAddress(lib, "FreeImage_GetTagValue", ADDRESSOF( GetTagValue));
-		GetProcAddress(lib, "FreeImage_SetTagKey", ADDRESSOF( SetTagKey));
-		GetProcAddress(lib, "FreeImage_SetTagDescription", ADDRESSOF( SetTagDescription));
-		GetProcAddress(lib, "FreeImage_SetTagID", ADDRESSOF( SetTagID));
-		GetProcAddress(lib, "FreeImage_SetTagType", ADDRESSOF( SetTagType));
-		GetProcAddress(lib, "FreeImage_SetTagCount", ADDRESSOF( SetTagCount));
-		GetProcAddress(lib, "FreeImage_SetTagLength", ADDRESSOF( SetTagLength));
-		GetProcAddress(lib, "FreeImage_SetTagValue", ADDRESSOF( SetTagValue));
-		(* iterator *)
-		GetProcAddress(lib, "FreeImage_FindFirstMetadata", ADDRESSOF( FindFirstMetadata));
-		GetProcAddress(lib, "FreeImage_FindNextMetadata", ADDRESSOF( FindNextMetadata));	
-		GetProcAddress(lib, "FreeImage_FindCloseMetadata", ADDRESSOF( FindCloseMetadata));
+	(* tag creation / destruction *)
+	GetProcAddress(lib, "FreeImage_CreateTag", ADDRESSOF( CreateTag));
+	GetProcAddress(lib, "FreeImage_DeleteTag", ADDRESSOF( DeleteTag));
+	GetProcAddress(lib, "FreeImage_CloneTag", ADDRESSOF( CloneTag));
+	(* tag getters and setters *)
+	GetProcAddress(lib, "FreeImage_GetTagKey", ADDRESSOF( getTagKey));
+	GetProcAddress(lib, "FreeImage_GetTagDescription", ADDRESSOF( getTagDescription));
+	GetProcAddress(lib, "FreeImage_GetTagID", ADDRESSOF( GetTagID));
+	GetProcAddress(lib, "FreeImage_GetTagType", ADDRESSOF( GetTagType));
+	GetProcAddress(lib, "FreeImage_GetTagCount", ADDRESSOF( GetTagCount));
+	GetProcAddress(lib, "FreeImage_GetTagLength", ADDRESSOF( GetTagLength));
+	GetProcAddress(lib, "FreeImage_GetTagValue", ADDRESSOF( GetTagValue));
+	GetProcAddress(lib, "FreeImage_SetTagKey", ADDRESSOF( SetTagKey));
+	GetProcAddress(lib, "FreeImage_SetTagDescription", ADDRESSOF( SetTagDescription));
+	GetProcAddress(lib, "FreeImage_SetTagID", ADDRESSOF( SetTagID));
+	GetProcAddress(lib, "FreeImage_SetTagType", ADDRESSOF( SetTagType));
+	GetProcAddress(lib, "FreeImage_SetTagCount", ADDRESSOF( SetTagCount));
+	GetProcAddress(lib, "FreeImage_SetTagLength", ADDRESSOF( SetTagLength));
+	GetProcAddress(lib, "FreeImage_SetTagValue", ADDRESSOF( SetTagValue));
+	(* iterator *)
+	GetProcAddress(lib, "FreeImage_FindFirstMetadata", ADDRESSOF( FindFirstMetadata));
+	GetProcAddress(lib, "FreeImage_FindNextMetadata", ADDRESSOF( FindNextMetadata));	
+	GetProcAddress(lib, "FreeImage_FindCloseMetadata", ADDRESSOF( FindCloseMetadata));
 
-		(* metadata setter and getter *)
-		GetProcAddress(lib, "FreeImage_SetMetadata", ADDRESSOF( SetMetadata));
-		GetProcAddress(lib, "FreeImage_GetMetadata", ADDRESSOF( GetMetadata));				
-		(*  helpers *)
-		GetProcAddress(lib, "FreeImage_GetMetadataCount", ADDRESSOF( GetMetadataCount));	
-		GetProcAddress(lib, "FreeImage_CloneMetadata", ADDRESSOF( CloneMetadata));			
-		(*  tag to C string conversion *)
-		GetProcAddress(lib, "FreeImage_TagToString", ADDRESSOF( tagToString));		
+	(* metadata setter and getter *)
+	GetProcAddress(lib, "FreeImage_SetMetadata", ADDRESSOF( SetMetadata));
+	GetProcAddress(lib, "FreeImage_GetMetadata", ADDRESSOF( GetMetadata));
+	GetProcAddress(lib, "FreeImage_SetMetadataKeyValue", ADDRESSOF( SetMetadataKeyValue));
+			
+	(*  helpers *)
+	GetProcAddress(lib, "FreeImage_GetMetadataCount", ADDRESSOF( GetMetadataCount));	
+	GetProcAddress(lib, "FreeImage_CloneMetadata", ADDRESSOF( CloneMetadata));			
+	(*  tag to C string conversion *)
+	GetProcAddress(lib, "FreeImage_TagToString", ADDRESSOF( tagToString));		
 
+	(* JPEG lossless transformation routines *)
+	GetProcAddress(lib, "FreeImage_JPEGTransform", ADDRESSOF( JPEGTransform));
+	GetProcAddress(lib, "FreeImage_JPEGTransformU", ADDRESSOF( JPEGTransformU));	
+	GetProcAddress(lib, "FreeImage_JPEGCrop", ADDRESSOF( JPEGCrop));
+	GetProcAddress(lib, "FreeImage_JPEGCropU", ADDRESSOF( JPEGCropU));
+
+	GetProcAddress(lib, "FreeImage_JPEGTransformCombined", ADDRESSOF( JPEGTransformCombined));
+	GetProcAddress(lib, "FreeImage_JPEGTransformCombinedU", ADDRESSOF( JPEGTransformCombinedU));
+	GetProcAddress(lib, "FreeImage_JPEGTransformCombinedFromMemory", ADDRESSOF( JPEGTransformCombinedFromMemory));	
+	
 	(* Image manipulation toolkit *)
 	(* rotation and flipping *)
 	GetProcAddress(lib, "FreeImage_RotateClassic", ADDRESSOF( RotateClassic));
@@ -1034,12 +1099,12 @@ BEGIN
 	GetProcAddress(lib, "FreeImage_RotateEx", ADDRESSOF( RotateEx));
 	GetProcAddress(lib, "FreeImage_FlipHorizontal", ADDRESSOF( FlipHorizontal));
 	GetProcAddress(lib, "FreeImage_FlipVertical", ADDRESSOF( FlipVertical));
-	GetProcAddress(lib, "FreeImage_JPEGTransform", ADDRESSOF( JPEGTransform));
-	GetProcAddress(lib, "FreeImage_JPEGTransformU", ADDRESSOF( JPEGTransformU));
 	
 	(* upsampling / downsampling *)
 	GetProcAddress(lib, "FreeImage_Rescale", ADDRESSOF( Rescale));
 	GetProcAddress(lib, "FreeImage_MakeThumbnail", ADDRESSOF( MakeThumbnail));
+	GetProcAddress(lib, "FreeImage_RescaleRect", ADDRESSOF( RescaleRect));
+
 	(* color manipulation routines (point operations)*)
 	GetProcAddress(lib, "FreeImage_AdjustCurve", ADDRESSOF( AdjustCurve));
 	GetProcAddress(lib, "FreeImage_AdjustGamma", ADDRESSOF( AdjustGamma));
@@ -1053,23 +1118,26 @@ BEGIN
 	GetProcAddress(lib, "FreeImage_SwapColors", ADDRESSOF( SwapColors));
 	GetProcAddress(lib, "FreeImage_ApplyPaletteIndexMapping", ADDRESSOF( ApplyPaletteIndexMapping));
 	GetProcAddress(lib, "FreeImage_SwapPaletteIndices", ADDRESSOF( SwapPaletteIndices));
+
 	(* channel processing routines*)
 	GetProcAddress(lib, "FreeImage_GetChannel", ADDRESSOF( GetChannel));
 	GetProcAddress(lib, "FreeImage_SetChannel", ADDRESSOF( SetChannel));
 	GetProcAddress(lib, "FreeImage_GetComplexChannel", ADDRESSOF( GetComplexChannel));
 	GetProcAddress(lib, "FreeImage_SetComplexChannel", ADDRESSOF( SetComplexChannel));
+
 	(* copy / paste / composite routines*)
 	GetProcAddress(lib, "FreeImage_Copy", ADDRESSOF( Copy));
 	GetProcAddress(lib, "FreeImage_Paste", ADDRESSOF( Paste));
+	GetProcAddress(lib, "FreeImage_CreateView", ADDRESSOF( CreateView));
 	GetProcAddress(lib, "FreeImage_Composite", ADDRESSOF( Composite));
-	GetProcAddress(lib, "FreeImage_JPEGCrop", ADDRESSOF( JPEGCrop));
-	GetProcAddress(lib, "FreeImage_JPEGCropU", ADDRESSOF( JPEGCropU));
 	GetProcAddress(lib, "FreeImage_PreMultiplyWithAlpha", ADDRESSOF( PreMultiplyWithAlpha));
+
 	(*  background filling routines *)
 	GetProcAddress(lib, "FreeImage_FillBackground", ADDRESSOF( FillBackground));
 	GetProcAddress(lib, "FreeImage_EnlargeCanvas", ADDRESSOF( EnlargeCanvas));
-(*	GetProcAddress(lib, "FreeImage_AllocateEx", ADDRESSOF( AllocateEx));
-	GetProcAddress(lib, "FreeImage_AllocateExT", ADDRESSOF( AllocateExT)); *)
+	GetProcAddress(lib, "FreeImage_AllocateEx", ADDRESSOF( AllocateEx));
+	GetProcAddress(lib, "FreeImage_AllocateExT", ADDRESSOF( AllocateExT));
+
 	(* miscellaneous algorithms*)
 	GetProcAddress(lib, "FreeImage_MultigridPoissonSolver", ADDRESSOF( MultigridPoissonSolver));
 	
@@ -1085,14 +1153,14 @@ END OnClose;
 
 (* utilities  *)
 
-(* Get string from address  *)
-PROCEDURE GetStringFromAddr*(adr: ADDRESS): Strings.String;
+(** Get string from address  *)
+PROCEDURE GetStringFromAddr* (adr: ADDRESS): Strings.String;
 VAR  sadr: ADDRESS;
 	cnt: LONGINT;
 	ch: CHAR;
 	s: Strings.String;
 BEGIN
-	IF adr # 0 THEN
+	IF adr # NIL THEN
 		(* find length  *)
 		sadr := adr;
 		cnt  := 0;		
@@ -1107,8 +1175,8 @@ BEGIN
 	RETURN s;
 END GetStringFromAddr;
 
-(* wrapper procedure for getVersion() *)
-PROCEDURE GetVersion*():Strings.String;
+(** wrapper procedure for getVersion() *)
+PROCEDURE GetVersion* (): Strings.String;
 VAR adr: ADDRESS;
 	v: Strings.String;
 BEGIN
@@ -1117,8 +1185,8 @@ BEGIN
 	RETURN v;
 END GetVersion;
 
-(* wrapper procedure for getCopyrightMessage() *)
-PROCEDURE GetCopyrightMessage*():Strings.String;
+(** wrapper procedure for getCopyrightMessage() *)
+PROCEDURE GetCopyrightMessage* (): Strings.String;
 VAR adr: ADDRESS;
 	v: Strings.String;
 BEGIN
@@ -1127,7 +1195,7 @@ BEGIN
 	RETURN v;
 END GetCopyrightMessage;
 
-(* wrapper procedure for getFormatFromFIF *)
+(** wrapper procedure for getFormatFromFIF *)
 PROCEDURE GetFormatFromFIF* (fif: IMAGE_FORMAT): Strings.String;
 VAR adr: ADDRESS;
 	v: Strings.String;
@@ -1137,7 +1205,7 @@ BEGIN
 	RETURN v;
 END GetFormatFromFIF;
 
-(* wrapper procedure for getFIFExtensionList *)
+(** wrapper procedure for getFIFExtensionList *)
 PROCEDURE GetFIFExtensionList* (fif: IMAGE_FORMAT): Strings.String;
 VAR adr: ADDRESS;
 	v: Strings.String;
@@ -1147,7 +1215,7 @@ BEGIN
 	RETURN v;
 END GetFIFExtensionList;
 
-(* wrapper procedure for getFIFDescription *)
+(** wrapper procedure for getFIFDescription *)
 PROCEDURE GetFIFDescription* (fif: IMAGE_FORMAT): Strings.String;
 VAR adr: ADDRESS;
 	v: Strings.String;
@@ -1157,7 +1225,7 @@ BEGIN
 	RETURN v;
 END GetFIFDescription;
 
-(* wrapper procedure for getFIFRegExpr *)
+(** wrapper procedure for getFIFRegExpr *)
 PROCEDURE GetFIFRegExpr* (fif: IMAGE_FORMAT): Strings.String;
 VAR adr: ADDRESS;
 	v: Strings.String;
@@ -1167,8 +1235,8 @@ BEGIN
 	RETURN v;
 END GetFIFRegExpr;
 
-(* wrapper procedure for getTagKey *)
-PROCEDURE GetTagKey*(tag: FITAG): Strings.String;
+(** wrapper procedure for getTagKey *)
+PROCEDURE GetTagKey* (tag: FITAG): Strings.String;
 VAR v: Strings.String;
 	adr: ADDRESS;
 BEGIN
@@ -1177,8 +1245,8 @@ BEGIN
 	RETURN v;
 END GetTagKey;
 
-(* wrapper procedure for getTagDescription *)
-PROCEDURE GetTagDescription*(tag: FITAG): Strings.String;
+(** wrapper procedure for getTagDescription *)
+PROCEDURE GetTagDescription* (tag: FITAG): Strings.String;
 VAR v: Strings.String;
 	adr: ADDRESS;
 BEGIN
@@ -1187,8 +1255,8 @@ BEGIN
 	RETURN v;
 END GetTagDescription;
 
-(* wrapper procedure for tagToString *)
-PROCEDURE TagToString*(model: IMAGE_MDMODEL; tag: FITAG): Strings.String;
+(** wrapper procedure for tagToString *)
+PROCEDURE TagToString* (model: IMAGE_MDMODEL; tag: FITAG): Strings.String;
 VAR v: Strings.String;
 	adr: ADDRESS;
 BEGIN
@@ -1197,7 +1265,7 @@ BEGIN
 	RETURN v;
 END TagToString;
 
-(* Utilitiy functions, load file fname as FIBITMAP with flags *)
+(** Utilitiy functions, load file fname as FIBITMAP with flags *)
 PROCEDURE LoadImage* (CONST fname: ARRAY OF CHAR; flags: IMAGE_FLAGS): FIBITMAP;
 VAR
 	type: IMAGE_FORMAT;
@@ -1220,7 +1288,7 @@ BEGIN
 	END
 END LoadImage;
 
-(* save FITMAP image to a file named fname *)
+(** save FITMAP image to a file named fname *)
 PROCEDURE SaveImage* (dib: FIBITMAP; CONST fname: ARRAY OF CHAR; flags: IMAGE_FLAGS): BOOLEAN;
 VAR
 	cansave, success: BOOLEAN;
@@ -1246,10 +1314,17 @@ BEGIN
 END SaveImage;
 
 (* called by FreeImage when error occurs *)
-PROCEDURE {C} MyOutputMessageFunction(fif: IMAGE_FORMAT;  msg: Strings.String);
+PROCEDURE {C} MyOutputMessageFunction(fif: IMAGE_FORMAT;  msg: ADDRESS);
+VAR adr: ADDRESS;
+	ch: CHAR;
 BEGIN	
 	IF msg # NIL THEN
-		KernelLog.String("FreeImage ERROR: "); KernelLog.String(msg^); 
+		KernelLog.String("FreeImage ERROR: "); 
+		adr := msg;
+
+		SYSTEM.GET(adr,ch);
+		WHILE (ch # 0X) DO  KernelLog.Char(ch); INC(adr); SYSTEM.GET(adr,ch); END;
+
 		KernelLog.String(", FIF_FORMAT= "); KernelLog.Int(fif, 0);
 		KernelLog.Ln; 
 	END;	

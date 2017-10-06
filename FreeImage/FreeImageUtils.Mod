@@ -78,6 +78,32 @@ BEGIN
 				
 END StoreImage;
 
+(** store 32 bit Raster.Image using FreeImage *)	
+PROCEDURE StoreImage2*(img: Raster.Image; CONST filename: ARRAY OF CHAR);
+VAR dib: FI.FIBITMAP;
+	bits: ADDRESS;
+	w, h: LONGINT;
+	res1: BOOLEAN;
+BEGIN
+
+	IF (img # NIL) & (img.width # 0) & (img.height # 0) THEN
+	(*	KernelLog.String("img.fmt.bpp= "); KernelLog.Int(img.fmt.bpp, 0); KernelLog.Ln; *)
+		w := img.width; h := img.height;
+		dib := FI.Allocate(w, h, 32, 0, 0, 0);
+	
+		IF dib # NIL THEN
+			bits := FI.GetBits(dib);
+			SYSTEM.MOVE(img.adr, bits, w*h*4);
+			res1 := FI.FlipVertical(dib);
+			IF FI.SaveImage(dib, filename, 0) THEN
+				KernelLog.String(filename); KernelLog.String(" is saved"); KernelLog.Ln;
+			END;
+			FI.Unload(dib);
+		END;	
+	END;
+				
+END StoreImage2;
+
 (** Load an FreeImage FIBITMAP image and convert to BGRA8888 format Raster.Image *)
 PROCEDURE LoadImage*(CONST filename: ARRAY OF CHAR): Raster.Image;
 VAR img: Raster.Image;

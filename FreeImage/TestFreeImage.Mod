@@ -1,41 +1,20 @@
-MODULE TestFreeImage; (*fnecati* AUTHOR ""; PURPOSE "test module for FreeImage examples"; *)
-
+MODULE TestFreeImage; (** AUTHOR "fnecati"; PURPOSE "test module for FreeImage examples"; *)
 IMPORT
 	FI := FreeImageDll, FIUtils:= FreeImageUtils, KernelLog, Strings, 
-	Commands, WM := WMWindowManager, Raster, 
+	Commands, WM := WMWindowManager, Raster,
 	WMGraphics, Math, WMComponents, WMStandardComponents, SYSTEM;
 
 TYPE
-	FIBITMAP=FI.FIBITMAP;
+	FIBITMAP = FI.FIBITMAP;
 
 TYPE 
-	PicView* = OBJECT(WM.BufferWindow)
+	PicPanel* = OBJECT(WMComponents.FormWindow)
+		VAR impanel-: WMStandardComponents.ImagePanel;
 		
 		PROCEDURE &New*(w, h: LONGINT);
 		BEGIN
 			Init(w, h, FALSE);
-			WM.DefaultAddWindow(SELF);
-		END New;
-		
-		PROCEDURE SetImage*(p: Raster.Image; CONST title: ARRAY OF CHAR);
-		VAR mode: Raster.Mode;
-		BEGIN
-			SetTitle(Strings.NewString(title));
-			Raster.InitMode(mode,  Raster.srcCopy);
-			Raster.Copy(p, img, 0, 0, p.width, p.height, 0, 0, mode);
-			Invalidate(WMGraphics.MakeRectangle(0,0, p.width, p.height));
-		END SetImage;
-		
-	END PicView;
-
-TYPE 
-	PicPanel* = OBJECT(WMComponents.FormWindow)
-		VAR impanel: WMStandardComponents.ImagePanel;
-		
-		PROCEDURE &New*(w, h: LONGINT);
-		BEGIN
-			Init(w, h, TRUE);
-			NEW(impanel); impanel.bounds.SetWidth(256);
+			NEW(impanel); 
 			impanel.alignment.Set(WMComponents.AlignClient);
 			
 			SetContent(impanel);
@@ -45,9 +24,8 @@ TYPE
 		PROCEDURE SetImage*(p: WMGraphics.Image; CONST title: ARRAY OF CHAR);
 		BEGIN
 			SetTitle(Strings.NewString(title));
-			impanel.SetImage(SELF, p);
+			impanel.SetImage(SELF, p);			
 (*			impanel.Invalidate(); *)
-			Invalidate(WMGraphics.MakeRectangle(0,0, GetWidth(), GetHeight()));
 		END SetImage;
 		
 	END PicPanel;
@@ -140,12 +118,9 @@ END GetFormats;
 PROCEDURE Open*(context: Commands.Context);
 VAR fname: ARRAY 128 OF CHAR;
 	tdib, dib: FIBITMAP;
-	pw: PicView;
 	img: WMGraphics.Image;
-	w, h, i, j, Bpp: LONGINT;
+	w, h,  Bpp: LONGINT;
 	bits: ADDRESS;
-	pix: Raster.Pixel;
-	mode: Raster.Mode;
 	res: BOOLEAN;
 	pp: PicPanel;
 BEGIN
@@ -192,7 +167,7 @@ BEGIN
 	(*	NEW(pw, img.width, img.height);
 		pw.SetImage(img, fname);
 *)
-		NEW(pp, 600, 600);
+		NEW(pp, 320, 240);
 		pp.SetImage(img, fname);
 		KernelLog.String("Open Ok."); KernelLog.Ln; 
 	END;	
@@ -202,12 +177,10 @@ END Open;
 PROCEDURE OpenHDR*(context: Commands.Context);
 VAR fname: ARRAY 128 OF CHAR;
 	tdib, dib: FIBITMAP;
-	pw: PicView;
+	pp: PicPanel;
 	img: WMGraphics.Image;
-	w, h, i, j, Bpp: LONGINT;
+	w, h, Bpp: LONGINT;
 	bits: ADDRESS;
-	pix: Raster.Pixel;
-	mode: Raster.Mode;
 	res: BOOLEAN;
 BEGIN
 	context.arg.SkipWhitespace();
@@ -249,8 +222,8 @@ BEGIN
 		*)
 		FI.Unload(tdib);
 	
-		NEW(pw, img.width, img.height);
-		pw.SetImage(img, fname);
+		NEW(pp, 320, 240);
+		pp.SetImage(img, fname);
 
 		KernelLog.String("OpenHDR Ok."); KernelLog.Ln; 
 	END;	
@@ -362,48 +335,20 @@ BEGIN
 	FI.Unload(im);
 	
 END MakeFresnel;
-	
 
 BEGIN
 
 END TestFreeImage.
 
 
-TestFreeImage.Open E:/WinAosSvn/WinAos/Work/EarthMap.png  ~
-
-TestFreeImage.Open "E:/WinAosSvn/WinAos/Work/earth_rectangular_04.jpg" ~
-
-
-TestFreeImage.OpenHDR E:/WinAosSvn/WinAos/Work/test8_Ref.hdr ~
+TestFreeImage.Open EarthMap.png  ~
 TestFreeImage.OpenHDR FreeImage/campus_probe.hdr ~
-
-TestFreeImage.Open ./s3010027.jpg ~ 
-./s3010027.jpg
-sel1.jpg ~ 
-
-TestFreeImage.Open E:/WinAosSvn/WinAos/Work/IMG_20130714_172908.jpg ~
-
-TestFreeImage.Open  DSC_7163.JPG ~
-
-E:/WinAosSvn/WinAos/Work/IMG_20130714_172908.jpg
-E:/WinAosSvn/source/Clouds.jp2 ~
-
-
-E:/WinAosSvn/WinAos/Work/EarthMap.png
-TestFreeImage.Open E:/WinAosSvn/source/Rainbow.jp2 ~ 
-
-E:/WinAosSvn/source/Rainbow.jp2
-E:/WinAosSvn/source/Rainbow.jp2
 
 TestFreeImage.SaveJPG  "Seashore2.png" ~
 
 TestFreeImage.GetFormats ~
 
 TestFreeImage.MakeFresnel ~ 
-
-
-DSC_7713.JPG
-DSC_7713.NEF
 
 SystemTools.Free TestFreeImage  FreeImageUtils FreeImageDll~
 
