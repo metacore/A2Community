@@ -1,24 +1,33 @@
 # ========================================
-# V4L2 (Video For Linux 2) interface for LinuxAos
+# V4L2 (Video For Linux 2) interface for UnixAos
 #
 # 13-04-2013
-# 
+#
+# Official V4L2 API spec is available at:  
+#                   http://linuxtv.org/downloads/v4l-dvb-apis/
 # ========================================
 
 # Compile modules:
 
 Compiler.Compile 
-	Unix.V4L2.Mod Unix.libv4l2.Mod 
-	Unix.VideoExample.Mod
+	V4L2/Unix.V4L2.Mod 
+	V4L2/Unix.libv4l2.Mod 
+	V4L2/Unix.VideoExample.Mod
 	~
 	
 # run demo example:
 
-	VideoExample.Start ~ 
+	VideoExample.Start ~   			#start capturing on /dev/video0
+	VideoExample.OpenPreview ~	 	# open preview window
+	VideoExample.OpenControlWin ~ 	# open camera control gui
+	VideoExample.ResetAllControls ~  
+	VideoExample.Stop ~  			# stop capturing
 	
-	VideoExample.Stop ~ 
-
 # free modules:
 
 	SystemTools.Free VideoExample libv4l2 V4L2 ~ 
+	
+
+
+
 	
