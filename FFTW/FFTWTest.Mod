@@ -11,7 +11,7 @@ MODULE FFTWTest;
 *)
 
 IMPORT
-	Commands, Streams,  Kernel,
+	Commands, Streams,  Kernel,  
 	KernelLog, Math := MathL, dll:=FFTW ;
 	
 TYPE
@@ -48,12 +48,14 @@ VAR
 	flops, a, b, c: LONGREAL;
 
 BEGIN
+		KernelLog.String("version: "); KernelLog.String(dll.version()^); KernelLog.Ln;
+
 		KernelLog.Ln; KernelLog.String('FFTW library Testfftw1d:'); KernelLog.Ln; 
 		
 		context.arg.SkipWhitespace;
 		context.arg.Int(N,FALSE); 
 		context.arg.SkipWhitespace;
-		context.arg.Int(nRetry,FALSE);					
+		context.arg.Int(nRetry,FALSE);	
 			
 		WHILE context.arg.res = 0 DO						
 		
@@ -110,7 +112,7 @@ BEGIN
 		
 			wr.String(', restit. err. (L2)='); wr.FloatFix(err,0,16,0); wr.Ln;		
 			wr.Update;
-
+						
 		 	(* destroy plans *)
 			dll.DestroyPlan(planf);
 			dll.DestroyPlan(plani);
@@ -400,6 +402,8 @@ BEGIN
 			wr.String(', restit. err. (L2)='); wr.FloatFix(err,0,16,0); wr.Ln;		
 			wr.Update;
 
+
+			
 		 	(* destroy plans *)
 			dll.DestroyPlan(planf);
 			dll.DestroyPlan(plani);
@@ -413,6 +417,7 @@ BEGIN
 			context.arg.SkipWhitespace;
 			
 			context.arg.Int(nRetry,FALSE);
+			
 		END;
 
 	KernelLog.String('Done!'); KernelLog.Ln;
@@ -450,7 +455,7 @@ FFTWTest.TestfftwExecuteComplexDft1d
 
 
 FFTWTest.Testfftw1d
-256 1 
+256 1 ~ 
 
 11 100
 16 100

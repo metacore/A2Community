@@ -1,9 +1,10 @@
 MODULE FFTWf; (** AUTHOR "fnecati"; PURPOSE "Single precision wrapper for FFTW library"; *)
 
-IMPORT SYSTEM, Kernel32, Modules, KernelLog;
+IMPORT SYSTEM, Strings, Kernel32, Modules, KernelLog;
 
 (*! For single precision REAL  type:
-	real: 4 bytes, complex: 8 bytes *)
+	real: 4 bytes (32 bit), complex: 8 bytes (64 bit)*)
+
 (*
    complex array represented as (r0,i0) (r1,i1) (r2,i2) ... (rn-1, in-1) in arrays,
    complex matrix as rows of complex array.
@@ -16,47 +17,44 @@ CONST
 	 dllname="libfftw3f-3.dll"; (* 32 bit single precision library name *)	
 	
 TYPE 
-	Plan* = ADDRESS; (* FFTW planner flag*)
+	Plan* = ADDRESS; (** FFTW planner*)
 
-(* fft direction *)
+(** fft direction *)
 TYPE Direction* = LONGINT;
 CONST
 	FORWARD* = -1;
 	BACKWARD* = 1;
 
-(* documented planner flags, { 0..21} bits *)
-TYPE Flags* = LONGINT;
+(** documented planner flags, { 0..21} bits *)
+TYPE Flags* = SET;
 CONST
-	MEASURE* = 0;
-	DESTROY_INPUT* = 1; 
-	UNALIGNED* = 2; 
-	CONSERVE_MEMORY* = 4; 
-	EXHAUSTIVE* = 8; 
-	PRESERVE_INPUT* = 16; 
-	PATIENT* = 32; 
-	ESTIMATE* = 64; 
+	MEASURE* = {};
+	DESTROY_INPUT* = {0}; 
+	UNALIGNED* = {1}; 
+	CONSERVE_MEMORY* = {2}; 
+	EXHAUSTIVE* = {3}; (* NO_EXHAUSTIVE is default *)
+	PRESERVE_INPUT* = {4}; (* cancels FFTW_DESTROY_INPUT *)
+	PATIENT* = {5};  (* IMPATIENT is default *)
+	ESTIMATE* = {6}; 
+	WISDOM_ONLY* = {21};
 	
-(* undocumented beyond-guru flags *)
-	ESTIMATE_PATIENT* = 128;
-	BELIEVE_PCOST* =  256;
-	NO_DFT_R2HC* =  512;
-	NO_NONTHREADED* = 1024;
-	NO_BUFFERING* = 2048;
-	NO_INDIRECT_OP* =  4096;
-	ALLOW_LARGE_GENERIC* =  8192; (* NO_LARGE_GENERIC is default *)
-	NO_RANK_SPLITS* =  16384;
-	NO_VRANK_SPLITS* = 32768;
-	NO_VRECURSE* =  65536;
-	NO_SIMD* = 131072;
-	NO_SLOW* =  262144;
-	NO_FIXED_RADIX_LARGE_N* =  524288;
-	ALLOW_PRUNING* =  1048576;
-	WISDOM_ONLY* =  2097152;
+	(** undocumented beyond-guru flags *)
+	ESTIMATE_PATIENT* = {7};
+	BELIEVE_PCOST* =  {8};
+	NO_DFT_R2HC* =  {9};
+	NO_NONTHREADED* = {10};
+	NO_BUFFERING* = {11};
+	NO_INDIRECT_OP* =  {12};
+	ALLOW_LARGE_GENERIC* =  {13}; (* NO_LARGE_GENERIC is default *)
+	NO_RANK_SPLITS* =  {14};
+	NO_VRANK_SPLITS* = {15};
+	NO_VRECURSE* =  {16};
+	NO_SIMD* = {17};
+	NO_SLOW* = {18};
+	NO_FIXED_RADIX_LARGE_N* =  {19};
+	ALLOW_PRUNING* =  {20};
 
-
-(* 
-	fftw_r2r_kind_do_not_use_me 
-*)
+(** fftw_r2r_kind_do_not_use_me *)
 TYPE Kind* = LONGINT;
 CONST
 	R2HC* = 0;
@@ -71,16 +69,16 @@ CONST
 	RODFT10* = 9;
 	RODFT11* = 10;
 
-(*  fftw_iodim_do_not_use_me *)	
+(**  fftw_iodim_do_not_use_me *)	
 TYPE 
 	Iodim* = RECORD
-		n* , inps* , outs* : LONGINT;
+		n* , inps* , outs* : LONGINT;  (* dimension size , input stride, output stride  *)
 	END;
 	
 VAR 
 
-	malloc- : PROCEDURE {WINAPI}   (length: LONGINT): LONGINT;
-	free- : PROCEDURE  {WINAPI} (mem: LONGINT);
+	malloc- : PROCEDURE {WINAPI}   (length: SIZE): ADDRESS;
+	free- : PROCEDURE  {WINAPI} (mem: ADDRESS);
 	destroy_plan- : PROCEDURE {WINAPI} (plan: Plan);
 	cleanup- : PROCEDURE {WINAPI} ;
 	set_timelimit-: PROCEDURE {WINAPI} (seconds: LONGREAL);
@@ -99,7 +97,7 @@ VAR
 	plan_dft_1d- :  PROCEDURE  {WINAPI} (n: LONGINT; input: ADDRESS; output: ADDRESS; direction: Direction; flags: Flags): Plan;
 	plan_dft_2d-: PROCEDURE {WINAPI}  (nx, ny: LONGINT; input, output: ADDRESS; direction: Direction; flags: Flags): Plan;
 	plan_dft_3d-: PROCEDURE {WINAPI}  (nx, ny, nz: LONGINT; input, output: ADDRESS; direction: Direction; flags: Flags): Plan;
-	plan_dft-: PROCEDURE {WINAPI}  (rank: LONGINT; n: ADDRESS; input, output: ADDRESS; direction: Direction; flags: LONGINT): Plan;
+	plan_dft-: PROCEDURE {WINAPI}  (rank: LONGINT; n: ADDRESS; input, output: ADDRESS; direction: Direction; flags: Flags): Plan;
 
 	plan_dft_r2c_1d-: PROCEDURE {WINAPI}  (n: LONGINT; input, output: ADDRESS; flags: Flags): Plan;
 	plan_dft_r2c_2d-: PROCEDURE {WINAPI}  (nx, ny: LONGINT; input, output: ADDRESS; flags: Flags): Plan;
@@ -126,7 +124,7 @@ VAR
     	plan_many_dft_c2r- : PROCEDURE {WINAPI} (rank: LONGINT; n: ADDRESS; howmany: LONGINT; Cin: ADDRESS; inembed: LONGINT;  istride: LONGINT; idist: LONGINT;
                              Rout : ADDRESS; onembed: LONGINT; ostride: LONGINT;  odist: LONGINT; flags: Flags): Plan;
    
-       (* Guru fftw*)
+	(* Guru fftw*)
 	plan_guru_dft- : PROCEDURE {WINAPI} (rank: LONGINT;  dims: ADDRESS; howmany_rank: LONGINT; howmany_dims: ADDRESS; in, out: ADDRESS;  sign: Direction; flags: Flags): Plan;
 	plan_guru_split_dft- : PROCEDURE {WINAPI} (rank: LONGINT;  dims: ADDRESS; howmany_rank: LONGINT; howmany_dims: ADDRESS; realinput, imaginput: ADDRESS; realout, imagout: ADDRESS; flags: Flags): Plan;
 
@@ -152,246 +150,306 @@ VAR
 	init_threads- : PROCEDURE {WINAPI} (): LONGINT;	
 	plan_with_nthreads- : PROCEDURE {WINAPI} (n: LONGINT);
 	cleanup_threads- : PROCEDURE {WINAPI} ;
+
+	print_plan- : PROCEDURE {WINAPI} (plan: Plan);
+(*	sprint_plan- :  PROCEDURE {WINAPI} (plan: Plan): ADDRESS;*)
 	
-	(* wrappers for above procedures*)
+	estimate_cost- : PROCEDURE {WINAPI} (plan: Plan): LONGREAL;
+	cost- : PROCEDURE {WINAPI} (plan: Plan): LONGREAL;
 
-	PROCEDURE Malloc* (length: LONGINT): ADDRESS;
-	BEGIN
-		RETURN malloc(length);
-	END Malloc;
+	alignment_of- : PROCEDURE {WINAPI} (realArray: ADDRESS): LONGINT;
+(*	version- : PROCEDURE {WINAPI} (): ADDRESS; *)
+	xversion- :  ADDRESS;
 	
-	PROCEDURE Free* (mem: ADDRESS);
-	BEGIN
-		free(mem);
-	END Free;
-		
-	PROCEDURE Execute*(plan: Plan);
-	BEGIN
-		execute(plan);
-	END Execute;
+(*! wrappers for above procedures*)
+
+PROCEDURE version*(): Strings.String;
+BEGIN
+	RETURN GetStringFromAddr(xversion);
+END version;
+
+PROCEDURE Malloc* (length: SIZE): ADDRESS;
+BEGIN
+	RETURN malloc(length);
+END Malloc;
+
+PROCEDURE Free* (mem: ADDRESS);
+BEGIN
+	free(mem);
+END Free;
 	
-	PROCEDURE ExecuteDft1din*(plan: Plan; VAR inout: ARRAY [*] OF REAL);
-	VAR adrio: ADDRESS;
-	BEGIN
-		adrio := ADDRESSOF(inout[0]);
-		execute_dft(plan, adrio, adrio);
-	END ExecuteDft1din;
+PROCEDURE Execute*(plan: Plan);
+BEGIN
+	execute(plan);
+END Execute;
 
-	PROCEDURE ExecuteDft1dinout*(plan: Plan; VAR in, out: ARRAY [*] OF REAL);
-	VAR adri, adro: ADDRESS;
-	BEGIN
-		adri := ADDRESSOF(in[0]); adro := ADDRESSOF(out[0]);
-		execute_dft(plan, adri, adro);
-	END ExecuteDft1dinout;
+PROCEDURE ExecuteDft1din*(plan: Plan; VAR inout: ARRAY [*] OF REAL);
+VAR adrio: ADDRESS;
+BEGIN
+	adrio := ADDRESSOF(inout[0]);
+	execute_dft(plan, adrio, adrio);
+END ExecuteDft1din;
 
-	PROCEDURE ExecuteDftComplex1din*(plan: Plan; VAR inout: ARRAY [*] OF COMPLEX);
-	VAR adrio: ADDRESS;
-	BEGIN
-		adrio := ADDRESSOF(inout[0]);
-		execute_dft(plan, adrio, adrio);
-	END ExecuteDftComplex1din;
+PROCEDURE ExecuteDft1dinout*(plan: Plan; VAR in, out: ARRAY [*] OF REAL);
+VAR adri, adro: ADDRESS;
+BEGIN
+	adri := ADDRESSOF(in[0]); adro := ADDRESSOF(out[0]);
+	execute_dft(plan, adri, adro);
+END ExecuteDft1dinout;
 
-	PROCEDURE ExecuteDftComplex1dinout*(plan: Plan; VAR in, out: ARRAY [*] OF COMPLEX);
-	VAR adri, adro: ADDRESS;
-	BEGIN
-		adri := ADDRESSOF(in[0]); adro := ADDRESSOF(out[0]);
-		execute_dft(plan, adri, adro);
-	END ExecuteDftComplex1dinout;
+PROCEDURE ExecuteDftComplex1din*(plan: Plan; VAR inout: ARRAY [*] OF COMPLEX);
+VAR adrio: ADDRESS;
+BEGIN
+	adrio := ADDRESSOF(inout[0]);
+	execute_dft(plan, adrio, adrio);
+END ExecuteDftComplex1din;
 
-	PROCEDURE ExecuteDft2dinout*(plan: Plan; VAR in, out: ARRAY [*,*] OF REAL);
-	VAR adri, adro: ADDRESS;
-	BEGIN
-		adri := ADDRESSOF(in[0,0]); adro := ADDRESSOF(out[0,0]);
-		execute_dft(plan, adri, adro);
-	END ExecuteDft2dinout;
+PROCEDURE ExecuteDftComplex1dinout*(plan: Plan; VAR in, out: ARRAY [*] OF COMPLEX);
+VAR adri, adro: ADDRESS;
+BEGIN
+	adri := ADDRESSOF(in[0]); adro := ADDRESSOF(out[0]);
+	execute_dft(plan, adri, adro);
+END ExecuteDftComplex1dinout;
 
-	PROCEDURE ExecuteDft2din*(plan: Plan; VAR inout: ARRAY [*,*] OF REAL);
-	VAR adrio: ADDRESS;
-	BEGIN
-		adrio := ADDRESSOF(inout[0,0]);
-		execute_dft(plan, adrio, adrio);
-	END ExecuteDft2din;
+PROCEDURE ExecuteDft2dinout*(plan: Plan; VAR in, out: ARRAY [*,*] OF REAL);
+VAR adri, adro: ADDRESS;
+BEGIN
+	adri := ADDRESSOF(in[0,0]); adro := ADDRESSOF(out[0,0]);
+	execute_dft(plan, adri, adro);
+END ExecuteDft2dinout;
+
+PROCEDURE ExecuteDft2din*(plan: Plan; VAR inout: ARRAY [*,*] OF REAL);
+VAR adrio: ADDRESS;
+BEGIN
+	adrio := ADDRESSOF(inout[0,0]);
+	execute_dft(plan, adrio, adrio);
+END ExecuteDft2din;
+
+PROCEDURE ExecuteDftComplex2din*(plan: Plan; VAR inout: ARRAY [*,*] OF COMPLEX);
+VAR adrio: ADDRESS;
+BEGIN
+	adrio := ADDRESSOF(inout[0,0]);
+	execute_dft(plan, adrio, adrio);
+END ExecuteDftComplex2din;
 			
-	PROCEDURE DestroyPlan*(plan: Plan);
-	BEGIN	
-		destroy_plan(plan);
-	END DestroyPlan;
+PROCEDURE DestroyPlan*(plan: Plan);
+BEGIN	
+	destroy_plan(plan);
+END DestroyPlan;
 
-	PROCEDURE Cleanup*;
-	BEGIN
-		cleanup;
-	END Cleanup;
-	
-	PROCEDURE SetTimeLimit*(seconds: LONGREAL);
-	BEGIN
-		set_timelimit(seconds);
-	END SetTimeLimit;
-				
-	PROCEDURE Flops* (plan: Plan; VAR add, mul, fma: LONGREAL);
-	BEGIN
-		flops(plan, add,mul, fma);
-	END Flops;
+PROCEDURE Cleanup*;
+BEGIN
+	cleanup;
+END Cleanup;
+
+PROCEDURE SetTimeLimit*(seconds: LONGREAL);
+BEGIN
+	set_timelimit(seconds);
+END SetTimeLimit;
 			
-	(* 1d- in-place Complex transform *)
-	PROCEDURE PlanDft1Din*(VAR a : ARRAY [*] OF REAL; dir: LONGINT): Plan;
-	VAR adr : ADDRESS;
-	BEGIN
-		adr := ADDRESSOF(a[0]);
-		RETURN plan_dft_1d(LEN(a,0) DIV 2, adr,adr, dir, ESTIMATE);
-	END PlanDft1Din;
-
-	(* 1d- in-place Complex transform *)
-	PROCEDURE PlanDftComplex1Din*(VAR a : ARRAY [*] OF COMPLEX; dir: LONGINT): Plan;
-	VAR adr : ADDRESS;
-	BEGIN
-		adr := ADDRESSOF(a[0]);
-		RETURN plan_dft_1d(LEN(a,0), adr,adr, dir,ESTIMATE);
-	END PlanDftComplex1Din;
+PROCEDURE Flops* (plan: Plan; VAR add, mul, fma: LONGREAL);
+BEGIN
+	flops(plan, add,mul, fma);
+END Flops;
 		
-	(* 2d- in-place Complex transform *)
-	PROCEDURE PlanDft2Din*(VAR a : ARRAY [*,*] OF REAL; dir: LONGINT): Plan;
-	VAR adr: ADDRESS;
-	BEGIN
-		adr := ADDRESSOF(a[0,0]);
-		RETURN plan_dft_2d(LEN(a,0), LEN(a,1) DIV 2,adr,adr, dir, ESTIMATE);
-	END PlanDft2Din;
+(* 1d- in-place Complex transform *)
+PROCEDURE PlanDft1Din*(VAR a : ARRAY [*] OF REAL; dir: Direction): Plan;
+VAR adr : ADDRESS;
+BEGIN
+	adr := ADDRESSOF(a[0]);
+	RETURN plan_dft_1d(LEN(a,0) DIV 2, adr,adr, dir, ESTIMATE);
+END PlanDft1Din;
 
-	(* 2d- in-place Complex transform *)
-	PROCEDURE PlanDftComplex2Din*(VAR a : ARRAY [*,*] OF COMPLEX; dir: LONGINT): Plan;
-	VAR adr: ADDRESS;
-	BEGIN
-		adr := ADDRESSOF(a[0,0]);
-		RETURN plan_dft_2d(LEN(a,0), LEN(a,1),adr,adr, dir,ESTIMATE);
-	END PlanDftComplex2Din;
+(* 1d- in-place Complex transform *)
+PROCEDURE PlanDftComplex1Din*(VAR a : ARRAY [*] OF COMPLEX; dir: Direction): Plan;
+VAR adr : ADDRESS;
+BEGIN
+	adr := ADDRESSOF(a[0]);
+	RETURN plan_dft_1d(LEN(a,0), adr,adr, dir,ESTIMATE);
+END PlanDftComplex1Din;
 	
-	(* 3d- in-place Complex transform *)
-	PROCEDURE PlanDft3Din*(VAR a : ARRAY [*,*,*] OF REAL; dir: LONGINT): Plan;
-	VAR adr: ADDRESS;
-	BEGIN
-		adr := ADDRESSOF(a[0,0,0]);
-		RETURN plan_dft_3d(LEN(a,0) , LEN(a,1),LEN(a,2) DIV 2, adr,adr, dir, ESTIMATE);
-	END PlanDft3Din;	
-	
-	(* 1d- out of place Complex transform *)
-	PROCEDURE PlanDft1Dinout*(VAR a, b : ARRAY [*] OF REAL; dir: LONGINT): Plan;
-	VAR adr, adr1: ADDRESS;
-	BEGIN
-		ASSERT(LEN(a) = LEN(b));
-		adr := ADDRESSOF(a[0]);
-		adr1 := ADDRESSOF(b[0]);
-		RETURN plan_dft_1d(LEN(a,0) DIV 2, adr,adr1, dir,ESTIMATE);
-	END PlanDft1Dinout;
+(* 2d- in-place Complex transform *)
+PROCEDURE PlanDft2Din*(VAR a : ARRAY [*,*] OF REAL; dir: Direction): Plan;
+VAR adr: ADDRESS;
+BEGIN
+	adr := ADDRESSOF(a[0,0]);
+	RETURN plan_dft_2d(LEN(a,0), LEN(a,1) DIV 2,adr,adr, dir, ESTIMATE);
+END PlanDft2Din;
 
-	(* 1d- out of place Complex transform *)
-	PROCEDURE PlanDftComplex1Dinout*(VAR a, b : ARRAY [*] OF COMPLEX; dir: LONGINT): Plan;
-	VAR adr, adr1: ADDRESS;
-	BEGIN
-		ASSERT(LEN(a) = LEN(b));
-		adr := ADDRESSOF(a[0]);
-		adr1 := ADDRESSOF(b[0]);
-		RETURN plan_dft_1d(LEN(a,0), adr,adr1, dir,ESTIMATE);
-	END PlanDftComplex1Dinout;
+(* 2d- in-place Complex transform *)
+PROCEDURE PlanDftComplex2Din*(VAR a : ARRAY [*,*] OF COMPLEX; dir: Direction): Plan;
+VAR adr: ADDRESS;
+BEGIN
+	adr := ADDRESSOF(a[0,0]);
+	RETURN plan_dft_2d(LEN(a,0), LEN(a,1),adr,adr, dir,ESTIMATE);
+END PlanDftComplex2Din;
+
+(* 3d- in-place Complex transform *)
+PROCEDURE PlanDft3Din*(VAR a : ARRAY [*,*,*] OF REAL; dir: Direction): Plan;
+VAR adr: ADDRESS;
+BEGIN
+	adr := ADDRESSOF(a[0,0,0]);
+	RETURN plan_dft_3d(LEN(a,0) , LEN(a,1),LEN(a,2) DIV 2, adr,adr, dir, ESTIMATE);
+END PlanDft3Din;	
+
+(* 1d- out of place Complex transform *)
+PROCEDURE PlanDft1Dinout*(VAR a, b : ARRAY [*] OF REAL; dir: Direction): Plan;
+VAR adr, adr1: ADDRESS;
+BEGIN
+	ASSERT(LEN(a) = LEN(b));
+	adr := ADDRESSOF(a[0]);
+	adr1 := ADDRESSOF(b[0]);
+	RETURN plan_dft_1d(LEN(a,0) DIV 2, adr,adr1, dir,ESTIMATE);
+END PlanDft1Dinout;
+
+(* 1d- out of place Complex transform *)
+PROCEDURE PlanDftComplex1Dinout*(VAR a, b : ARRAY [*] OF COMPLEX; dir: Direction): Plan;
+VAR adr, adr1: ADDRESS;
+BEGIN
+	ASSERT(LEN(a) = LEN(b));
+	adr := ADDRESSOF(a[0]);
+	adr1 := ADDRESSOF(b[0]);
+	RETURN plan_dft_1d(LEN(a,0), adr,adr1, dir,ESTIMATE);
+END PlanDftComplex1Dinout;
+	
+(* 2d- out of place Complex transform *)
+PROCEDURE PlanDft2Dinout*(VAR a, b : ARRAY [*,*] OF REAL; dir: Direction): Plan;
+VAR adr, adr1: ADDRESS;
+BEGIN
+	ASSERT(LEN(a,0) = LEN(b,0));
+	ASSERT(LEN(a,1) = LEN(b,1));
+	adr := ADDRESSOF(a[0,0]);
+	adr1 := ADDRESSOF(b[0,0]);
+	RETURN plan_dft_2d(LEN(a,0), LEN(a,1) DIV 2,adr,adr1, dir,ESTIMATE);
+END PlanDft2Dinout;
+
+(* 3d- out of place Complex transform *)
+PROCEDURE PlanDft3Dinout*(VAR a, b : ARRAY [*,*,*] OF REAL; dir: Direction): Plan;
+VAR adr, adr1: ADDRESS;
+BEGIN
+	ASSERT(LEN(a,0) = LEN(b,0));
+	ASSERT(LEN(a,1) = LEN(b,1));
+	ASSERT(LEN(a,2) = LEN(b,2));
+	adr := ADDRESSOF(a[0,0,0]);
+	adr1 := ADDRESSOF(b[0,0,0]);
+	RETURN plan_dft_3d(LEN(a,0), LEN(a,1),LEN(a,2) DIV 2,adr,adr1, dir,ESTIMATE);
+END PlanDft3Dinout;
+	
+(** Wrapper for Kernel32.getProcAddress. *)
+PROCEDURE GetProcAddress*( hModule: Kernel32.HMODULE;  CONST procName: ARRAY OF CHAR;  adr: ADDRESS );
+VAR padr: ADDRESS;
+BEGIN
+	padr := Kernel32.getProcAddress( hModule, procName );
+	SYSTEM.PUT(adr, padr);
+END GetProcAddress;
+	
+PROCEDURE Init;
+BEGIN 
+	(* load the DLL *)	
+	dll := Kernel32.LoadLibrary(dllname);
+	ASSERT(dll # 0, 303);
 		
-	(* 2d- out of place Complex transform *)
-	PROCEDURE PlanDft2Dinout*(VAR a, b : ARRAY [*,*] OF REAL; dir: LONGINT): Plan;
-	VAR adr, adr1: ADDRESS;
-	BEGIN
-		ASSERT(LEN(a,0) = LEN(b,0));
-		ASSERT(LEN(a,1) = LEN(b,1));
-		adr := ADDRESSOF(a[0,0]);
-		adr1 := ADDRESSOF(b[0,0]);
-		RETURN plan_dft_2d(LEN(a,0), LEN(a,1) DIV 2,adr,adr1, dir,ESTIMATE);
-	END PlanDft2Dinout;
+	GetProcAddress(dll, "fftwf_malloc", ADDRESSOF( malloc));
+	GetProcAddress(dll, "fftwf_free", ADDRESSOF( free ));
+	GetProcAddress(dll, "fftwf_destroy_plan", ADDRESSOF( destroy_plan ));				
+	GetProcAddress(dll, "fftwf_cleanup", ADDRESSOF( cleanup ));
 
-	(* 3d- out of place Complex transform *)
-	PROCEDURE PlanDft3Dinout*(VAR a, b : ARRAY [*,*,*] OF REAL; dir: LONGINT): Plan;
-	VAR adr, adr1: ADDRESS;
-	BEGIN
-		ASSERT(LEN(a,0) = LEN(b,0));
-		ASSERT(LEN(a,1) = LEN(b,1));
-		ASSERT(LEN(a,2) = LEN(b,2));
-		adr := ADDRESSOF(a[0,0,0]);
-		adr1 := ADDRESSOF(b[0,0,0]);
-		RETURN plan_dft_3d(LEN(a,0), LEN(a,1),LEN(a,2) DIV 2,adr,adr1, dir,ESTIMATE);
-	END PlanDft3Dinout;
+	GetProcAddress(dll, "fftwf_execute", ADDRESSOF( execute ));
+
+	GetProcAddress(dll, "fftwf_execute_dft", ADDRESSOF( execute_dft ));
+	GetProcAddress(dll, "fftwf_execute_split_dft", ADDRESSOF( execute_split_dft ));
+	GetProcAddress(dll, "fftwf_execute_dft_r2c", ADDRESSOF( execute_dft_r2c ));
+	GetProcAddress(dll, "fftwf_execute_split_dft_r2c", ADDRESSOF( execute_split_dft_r2c ));
+	GetProcAddress(dll, "fftwf_execute_dft_c2r", ADDRESSOF( execute_dft_c2r ));
+	GetProcAddress(dll, "fftwf_execute_split_dft_c2r", ADDRESSOF( execute_split_dft_c2r ));
+	GetProcAddress(dll, "fftwf_execute_r2r", ADDRESSOF( execute_r2r ));
+
+	GetProcAddress(dll, "fftwf_plan_dft_1d", ADDRESSOF( plan_dft_1d ));				
+	GetProcAddress(dll, "fftwf_plan_dft_2d", ADDRESSOF( plan_dft_2d ));
+	GetProcAddress(dll, "fftwf_plan_dft_3d", ADDRESSOF( plan_dft_3d ));				
+	GetProcAddress(dll, "fftwf_plan_dft", ADDRESSOF( plan_dft ));
+
+	GetProcAddress(dll, "fftwf_plan_dft_r2c_1d", ADDRESSOF( plan_dft_r2c_1d ));				
+	GetProcAddress(dll, "fftwf_plan_dft_r2c_2d", ADDRESSOF( plan_dft_r2c_2d ));
+	GetProcAddress(dll, "fftwf_plan_dft_r2c_3d", ADDRESSOF( plan_dft_r2c_3d ));				
+	GetProcAddress(dll, "fftwf_plan_dft_r2c", ADDRESSOF( plan_dft_r2c ));
+
+	GetProcAddress(dll, "fftwf_plan_dft_c2r_1d", ADDRESSOF(  plan_dft_c2r_1d ));				
+	GetProcAddress(dll, "fftwf_plan_dft_c2r_2d", ADDRESSOF( plan_dft_c2r_2d ));
+	GetProcAddress(dll, "fftwf_plan_dft_c2r_3d", ADDRESSOF( plan_dft_c2r_3d ));
+	GetProcAddress(dll, "fftwf_plan_dft_c2r", ADDRESSOF( plan_dft_c2r ));
+
+	GetProcAddress(dll, "fftwf_plan_r2r_1d", ADDRESSOF( plan_r2r_1d ));
+	GetProcAddress(dll, "fftwf_plan_r2r_2d", ADDRESSOF( plan_r2r_2d ));	
+	GetProcAddress(dll, "fftwf_plan_r2r_3d", ADDRESSOF( plan_r2r_3d ));
+	GetProcAddress(dll, "fftwf_plan_r2r", ADDRESSOF( plan_r2r ));
+
+
+	GetProcAddress(dll, "fftwf_plan_many_dft", ADDRESSOF( plan_many_dft ));
+	GetProcAddress(dll, "fftwf_plan_many_dft_r2c", ADDRESSOF( plan_many_dft_r2c ));
+	GetProcAddress(dll, "fftwf_plan_many_dft_c2r", ADDRESSOF( plan_many_dft_c2r ));
 	
+	GetProcAddress(dll, "fftwf_plan_guru_dft", ADDRESSOF( plan_guru_dft ));
+	GetProcAddress(dll, "fftwf_plan_guru_split_dft", ADDRESSOF( plan_guru_dft ));
+
+	GetProcAddress(dll, "fftwf_plan_guru_dft_r2c", ADDRESSOF( plan_guru_dft_r2c ));
+	GetProcAddress(dll, "fftwf_plan_guru_split_dft_r2c", ADDRESSOF( plan_guru_split_dft_r2c ));
+	GetProcAddress(dll, "fftwf_plan_guru_dft_c2r", ADDRESSOF( plan_guru_dft_c2r ));
+	GetProcAddress(dll, "fftwf_plan_guru_split_dft_c2r", ADDRESSOF( plan_guru_split_dft_c2r ));
+
 	
-	PROCEDURE Init;
-	BEGIN 
-		(* load the DLL *)	
-		dll := Kernel32.LoadLibrary(dllname);
-		ASSERT(dll # 0, 303);
-		
-		Kernel32.GetProcAddress(dll, "fftwf_malloc", SYSTEM.VAL(ADDRESS, malloc));
-		Kernel32.GetProcAddress(dll, "fftwf_free", SYSTEM.VAL(ADDRESS, free ));
-		Kernel32.GetProcAddress(dll, "fftwf_destroy_plan", SYSTEM.VAL(ADDRESS, destroy_plan ));				
-		Kernel32.GetProcAddress(dll, "fftwf_cleanup", SYSTEM.VAL(ADDRESS, cleanup ));
+	GetProcAddress(dll, "fftwf_flops", ADDRESSOF( flops ));
 
-		Kernel32.GetProcAddress(dll, "fftwf_set_timelimit", SYSTEM.VAL(ADDRESS, set_timelimit ));
-		Kernel32.GetProcAddress(dll, "fftwf_execute", SYSTEM.VAL(ADDRESS, execute ));
+	
+	GetProcAddress(dll, "fftwf_init_threads", ADDRESSOF( init_threads ));
+	GetProcAddress(dll, "fftwf_plan_with_nthreads", ADDRESSOF( plan_with_nthreads ));
+	GetProcAddress(dll, "fftwf_cleanup_threads", ADDRESSOF( cleanup_threads ));
+	
+	GetProcAddress(dll, "fftwf_print_plan", ADDRESSOF( print_plan ));
+	(*GetProcAddress(dll, "fftwf_sprint_plan", ADDRESSOF( sprint_plan ));*)
 
+	GetProcAddress(dll, "fftwf_estimate_cost", ADDRESSOF( estimate_cost ));
+	GetProcAddress(dll, "fftwf_cost", ADDRESSOF( cost ));
 
-		Kernel32.GetProcAddress(dll, "fftwf_execute_dft", SYSTEM.VAL(ADDRESS, execute_dft ));
-		Kernel32.GetProcAddress(dll, "fftwf_execute_split_dft", SYSTEM.VAL(ADDRESS, execute_split_dft ));
-		Kernel32.GetProcAddress(dll, "fftwf_execute_dft_r2c", SYSTEM.VAL(ADDRESS, execute_dft_r2c ));
-		Kernel32.GetProcAddress(dll, "fftwf_execute_split_dft_r2c", SYSTEM.VAL(ADDRESS, execute_split_dft_r2c ));
-		Kernel32.GetProcAddress(dll, "fftwf_execute_dft_c2r", SYSTEM.VAL(ADDRESS, execute_dft_c2r ));
-		Kernel32.GetProcAddress(dll, "fftwf_execute_split_dft_c2r", SYSTEM.VAL(ADDRESS, execute_split_dft_c2r ));
-		Kernel32.GetProcAddress(dll, "fftwf_execute_r2r", SYSTEM.VAL(ADDRESS, execute_r2r ));
-
-		Kernel32.GetProcAddress(dll, "fftwf_plan_dft_1d", SYSTEM.VAL(ADDRESS, plan_dft_1d ));				
-		Kernel32.GetProcAddress(dll, "fftwf_plan_dft_2d", SYSTEM.VAL(ADDRESS, plan_dft_2d ));
-		Kernel32.GetProcAddress(dll, "fftwf_plan_dft_3d", SYSTEM.VAL(ADDRESS, plan_dft_3d ));				
-		Kernel32.GetProcAddress(dll, "fftwf_plan_dft", SYSTEM.VAL(ADDRESS, plan_dft ));
-
-		Kernel32.GetProcAddress(dll, "fftwf_plan_dft_r2c_1d", SYSTEM.VAL(ADDRESS, plan_dft_r2c_1d ));				
-		Kernel32.GetProcAddress(dll, "fftwf_plan_dft_r2c_2d", SYSTEM.VAL(ADDRESS, plan_dft_r2c_2d ));
-		Kernel32.GetProcAddress(dll, "fftwf_plan_dft_r2c_3d", SYSTEM.VAL(ADDRESS, plan_dft_r2c_3d ));				
-		Kernel32.GetProcAddress(dll, "fftwf_plan_dft_r2c", SYSTEM.VAL(ADDRESS, plan_dft_r2c ));
-
-		Kernel32.GetProcAddress(dll, "fftwf_plan_dft_c2r_1d", SYSTEM.VAL(ADDRESS,  plan_dft_c2r_1d ));				
-		Kernel32.GetProcAddress(dll, "fftwf_plan_dft_c2r_2d", SYSTEM.VAL(ADDRESS, plan_dft_c2r_2d ));
-		Kernel32.GetProcAddress(dll, "fftwf_plan_dft_c2r_3d", SYSTEM.VAL(ADDRESS, plan_dft_c2r_3d ));
-		Kernel32.GetProcAddress(dll, "fftwf_plan_dft_c2r", SYSTEM.VAL(ADDRESS, plan_dft_c2r ));
-
-		Kernel32.GetProcAddress(dll, "fftwf_plan_r2r_1d", SYSTEM.VAL(ADDRESS, plan_r2r_1d ));
-		Kernel32.GetProcAddress(dll, "fftwf_plan_r2r_2d", SYSTEM.VAL(ADDRESS, plan_r2r_2d ));	
-		Kernel32.GetProcAddress(dll, "fftwf_plan_r2r_3d", SYSTEM.VAL(ADDRESS, plan_r2r_3d ));
-		Kernel32.GetProcAddress(dll, "fftwf_plan_r2r", SYSTEM.VAL(ADDRESS, plan_r2r ));
-
-		Kernel32.GetProcAddress(dll, "fftwf_plan_many_dft", SYSTEM.VAL(ADDRESS, plan_many_dft ));	
-		Kernel32.GetProcAddress(dll, "fftwf_plan_many_dft_r2c", SYSTEM.VAL(ADDRESS, plan_many_dft_r2c ));
-		Kernel32.GetProcAddress(dll, "fftwf_plan_many_dft_c2r", SYSTEM.VAL(ADDRESS, plan_many_dft_c2r ));
-
-		Kernel32.GetProcAddress(dll, "fftwf_plan_guru_dft", SYSTEM.VAL(ADDRESS, plan_guru_dft ));
-		Kernel32.GetProcAddress(dll, "fftwf_plan_guru_split_dft", SYSTEM.VAL(ADDRESS, plan_guru_dft ));
-
-		Kernel32.GetProcAddress(dll, "fftwf_plan_guru_dft_r2c", SYSTEM.VAL(ADDRESS, plan_guru_dft_r2c ));
-		Kernel32.GetProcAddress(dll, "fftwf_plan_guru_split_dft_r2c", SYSTEM.VAL(ADDRESS, plan_guru_split_dft_r2c ));
-		Kernel32.GetProcAddress(dll, "fftwf_plan_guru_dft_c2r", SYSTEM.VAL(ADDRESS, plan_guru_dft_c2r ));
-		Kernel32.GetProcAddress(dll, "fftwf_plan_guru_split_dft_c2r", SYSTEM.VAL(ADDRESS, plan_guru_split_dft_c2r ));
-
-		Kernel32.GetProcAddress(dll, "fftwf_flops", SYSTEM.VAL(ADDRESS, flops ));				
-
-		Kernel32.GetProcAddress(dll, "fftwf_init_threads", SYSTEM.VAL(ADDRESS, init_threads ));
-		Kernel32.GetProcAddress(dll, "fftwf_plan_with_nthreads", SYSTEM.VAL(ADDRESS, plan_with_nthreads ));
-		Kernel32.GetProcAddress(dll, "fftwf_cleanup_threads", SYSTEM.VAL(ADDRESS, cleanup_threads ));
-						
+	GetProcAddress(dll, "fftwf_alignment_of", ADDRESSOF( alignment_of ));
+	GetProcAddress(dll, "fftwf_version", ADDRESSOF( xversion ));
+	
 	 KernelLog.String(dllname); KernelLog.String(" library loaded"); KernelLog.Ln;
-	END Init;
+END Init;
 
-    PROCEDURE OnClose;
-     VAR res: LONGINT;
-    BEGIN 
-   	 IF dll # Kernel32.NULL THEN
-   	 	cleanup;
-   	 	res := Kernel32.FreeLibrary(dll);
-	 	KernelLog.String(dllname); KernelLog.String(" library unloaded.."); KernelLog.Ln;
-  	END;	 
-    END OnClose;
+PROCEDURE OnClose;
+VAR res: LONGINT;
+BEGIN 
+	IF dll # Kernel32.NULL THEN
+		cleanup;
+		res := Kernel32.FreeLibrary(dll);
+		KernelLog.String(dllname); KernelLog.String(" library unloaded.."); KernelLog.Ln;
+	END;	 
+END OnClose;
+
+(* Get string from address  *)
+PROCEDURE GetStringFromAddr (adr: ADDRESS): Strings.String;
+VAR  sadr: ADDRESS;
+	cnt: LONGINT;
+	ch: CHAR;
+	s: Strings.String;
+BEGIN {EXCLUSIVE}
+	IF adr # 0 THEN
+		(* find length  *)
+		sadr := adr;
+		cnt  := 0;		
+		SYSTEM.GET(sadr,ch);
+		WHILE (ch # 0X) DO  INC(cnt); INC(sadr); SYSTEM.GET(sadr,ch); END;
+		
+		(* then, copy string *)
+		NEW(s, cnt+1);
+		SYSTEM.MOVE(adr, ADDRESSOF(s[0]), cnt);
+	END;
+	
+	RETURN s;
+END GetStringFromAddr;
 
 BEGIN
 	Init;
 	Modules.InstallTermHandler(OnClose)  
 END FFTWf.
-

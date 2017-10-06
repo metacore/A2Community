@@ -11,7 +11,7 @@ MODULE FFTWTestf;
 *)
 
 IMPORT
-	Commands, Streams,  Kernel,
+	Commands, Streams,  Kernel, Strings,
 	KernelLog, Math, dll:=FFTWf ;
 	
 TYPE
@@ -48,6 +48,8 @@ VAR
 	flops, a, b, c: LONGREAL;
 
 BEGIN
+
+		KernelLog.String("version: "); KernelLog.String(dll.version()^); KernelLog.Ln;
 
 		KernelLog.Ln; KernelLog.String('FFTWf library Testfftw1d:'); KernelLog.Ln; 
 		
@@ -622,7 +624,7 @@ SystemTools.Free  FFTWTestf FFTWf~
 
 
 FFTWTestf.TestfftwExecuteDft1d
-256 1 
+256 1 ~
 
 11 100
 16 100
@@ -644,7 +646,7 @@ FFTWTestf.TestfftwExecuteComplexDft1d
 4096 20 ~
 
 FFTWTestf.Testfftw1d
-256 20 
+256 20  ~ 
 
 11 100
 16 100
