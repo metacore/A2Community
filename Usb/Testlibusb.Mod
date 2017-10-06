@@ -216,27 +216,16 @@ BEGIN
 		IF ((desc.iProduct) > 0) THEN
 			ret := libusb.get_string_descriptor_ascii(handle, desc.iProduct, ADDRESSOF(string[0]), LEN(string));
 			IF (ret > 0) THEN
-(*				snprintf(description + strlen(description), sizeof(description) -	strlen(description), "%s", string); *)
 				out.String(string); out.String(" ");
-
 			ELSE
-(*				snprintf(description + strlen(description), sizeof(description) -	strlen(description), "%04X", desc.idProduct); *)
 				out.Hex(desc.idProduct, -4)
 			END
 		ELSE
-(*			snprintf(description + strlen(description), sizeof(description) -	strlen(description), "%04X", desc.idProduct); *)
 			out.Hex(desc.idProduct, -4)
 		END
 	ELSE
-		(* snprintf(description, sizeof(description), "%04X - %04X",	desc.idVendor, desc.idProduct);*)
 		out.Hex(desc.idVendor, -4); out.String(" - "); out.Hex(desc.idProduct, -4);
 	END;
-
-(*
-	printf("%.*sDev (bus %d, device %d): %s\n", level * 2, "                    ",
-		libusb_get_bus_number(dev), libusb_get_device_address(dev), description);
-*)
-
 
 
 	out.Ln; out.Update;
@@ -295,7 +284,7 @@ BEGIN
 		RETURN
 	END;
 
-	(* libusb.set_debug(ctx, 5); *)
+	(* libusb.set_debug(ctx, 4); *)
 	
 	version := libusb.get_version();	
 	IF version # NIL THEN
@@ -313,7 +302,7 @@ BEGIN
 		print_device(devs[i], 0);
 	END;
 
-     libusb.free_device_list(devs, 1);
+        libusb.free_device_list(devs, 1);
 	libusb.exit (ctx); 
 
 	out.Update;
@@ -336,7 +325,7 @@ END Testlibusb.
 SystemTools.Free Testlibusb ~
 SystemTools.Free libusb ~ 
 
-Testlibusb.Do ~ 				Testlibusb.Test1 ~ 
+Testlibusb.Test1 ~ 
 
 Execute on console as admin:
 
