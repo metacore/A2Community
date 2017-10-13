@@ -14,6 +14,7 @@ BEGIN
 		RESULT[i]:=series[n];
 		series[n]:=series[i];
 	END;
+	RESULT[0]:=series[0];
 	RETURN RESULT
 END Permutation;
 
@@ -46,4 +47,4 @@ BEGIN
 	NEW(sequence);
 END StatisticsCombinatorics.
 
-StatisticsCombinatorics.Test 10~
+

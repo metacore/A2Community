@@ -1,7 +1,7 @@
 MODULE MatrixUtilities;   (**  AUTHOR "Patrick Hunziker"; PURPOSE "";    **)
 (*! to do: make random generator for matrices/tensors thread safe*)
 
-IMPORT Rand:=Random, MatrixBase, ComplexMathL, KernelLog, Strings, Reals, Streams;  
+IMPORT Rand:=Random, MatrixBase, ComplexMathL, KernelLog, Strings, Reals, Streams, Files;  
 
 TYPE 
 	
@@ -709,14 +709,14 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 	PROCEDURE StoreLR*(W:Streams.Writer; CONST t: ARRAY [?] OF Datatype);
 	BEGIN
 		WriteHeader(W, DatatypeLR, LEN(t));
-		WriteLR(W,t);
+		IF DIM(t)>0 THEN WriteLR(W,t) END;
 		W.Update;
 	END StoreLR;
 	
 	PROCEDURE StoreLInt*(W:Streams.Writer; CONST t: ARRAY [?] OF LONGINT);
 	BEGIN
 		WriteHeader(W,DatatypeLInt, LEN(t));
-		WriteLInt(W,t);
+		IF DIM(t)>0 THEN WriteLInt(W,t) END;
 		W.Update;
 	END StoreLInt;
 
@@ -787,7 +787,7 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 		ParseHeader(R,datatype,len);
 		ASSERT(datatype=DatatypeLR);
 		IF (DIM(RESULT)#LEN(len,0)) OR (LEN(RESULT)#len) THEN NEW(RESULT,len) END;
-		ReadLR(R,RESULT);
+		IF DIM(RESULT)>0 THEN ReadLR(R,RESULT) END;
 		RETURN RESULT
 	END LoadLR;
 	
@@ -800,7 +800,7 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 		ParseHeader(R,datatype,len);
 		ASSERT(datatype=DatatypeLInt);
 		IF (DIM(RESULT)#LEN (len)) OR (LEN(RESULT)#len) THEN NEW(RESULT,len) END;
-		ReadLInt(R,RESULT);
+		IF DIM(RESULT)>0 THEN ReadLInt(R,RESULT) END;
 		RETURN RESULT
 	END LoadLInt;
 
@@ -968,6 +968,18 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 	
 	*)
 	
+	PROCEDURE Test*;
+	VAR t,t1:Tensor; len:ARRAY [*]OF LONGINT; i:LONGINT;
+		f:Files.File; w:Files.Writer; r:Files.Reader;
+	BEGIN
+		NEW(len,0);
+		NEW(t,len);
+		f:=Files.New("");
+		Files.OpenWriter(w,f,0);
+		w.Int(0,0); w.Ln(); w.Update;
+		Files.OpenReader(r,f,0);
+		IF ~ r.GetInteger(i,FALSE) THEN HALT(200) END;
+	END Test;
 
 
 BEGIN
