@@ -536,6 +536,20 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 		END;
 	END Out;
 	
+	PROCEDURE OutInt*(CONST t: ARRAY[?] OF LONGINT);
+	VAR i:LONGINT;
+	BEGIN
+		IF DIM(t)>1 THEN
+			FOR i:=0 TO LEN(t,0)-1 DO
+				OutInt(t[i,?]);
+			END;
+			KernelLog.Ln;
+		ELSE
+			FOR i:=0 TO LEN(t,0)-1 DO
+				KernelLog.Int(t[i],6);
+			END;
+		END;
+	END OutInt;
 
 	PROCEDURE OutMatrix*( CONST m: Matrix );  
 	VAR i: LONGINT;  
@@ -574,6 +588,37 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 			OutComplex(C[i], 10,6,0);
 		END;
 	END OutComplexVector;
+	
+	PROCEDURE Print*(w:Streams.Writer; CONST t: ARRAY[?] OF Datatype; n, f, D: LONGINT );
+	VAR i:LONGINT;
+	BEGIN
+		IF DIM(t)>1 THEN
+			FOR i:=0 TO LEN(t,0)-1 DO
+				Print(w, t[i,?],n,f,D);
+			END;
+			w.Ln;
+		ELSE
+			FOR i:=0 TO LEN(t,0)-1 DO
+				WriteFloat(w,t[i],n,f,D);
+			END;
+		END;
+	END Print;
+	
+	PROCEDURE PrintInt*(w:Streams.Writer; CONST t: ARRAY[?] OF LONGINT);
+	VAR i:LONGINT;
+	BEGIN
+		IF DIM(t)>1 THEN
+			FOR i:=0 TO LEN(t,0)-1 DO
+				PrintInt(w, t[i,?]);
+			END;
+			w.Ln;
+		ELSE
+			FOR i:=0 TO LEN(t,0)-1 DO
+				w.Int(t[i],6);
+			END;
+		END;
+	END PrintInt;
+
 	
 	PROCEDURE WriteFloat*(W:Streams.Writer; x: LONGREAL;  n, f, D: LONGINT ); (* call Update() after writing *)
 	VAR s: ARRAY 64 OF CHAR;  
