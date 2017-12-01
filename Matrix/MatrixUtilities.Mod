@@ -12,8 +12,11 @@ TYPE
 	UnaryOp*=PROCEDURE(x:Datatype):Datatype;
 	BinaryOp*=PROCEDURE(x,y:Datatype):Datatype;
 
+
+	LenType = LONGINT; 
+	
 TYPE RandomGenerator*= OBJECT(Rand.Generator);
-		PROCEDURE Random*(CONST size: ARRAY [*] OF SIZE;  content: LONGINT ): Tensor;  
+		PROCEDURE Random*(CONST size: ARRAY [*] OF LenType;  content: LONGINT ): Tensor;  
 		VAR i: LONGINT;
 		BEGIN {EXCLUSIVE}
 			IF DIM(RESULT)=0 THEN NEW(RESULT, size) END;
@@ -30,7 +33,7 @@ TYPE RandomGenerator*= OBJECT(Rand.Generator);
 			END;  
 			RETURN RESULT
 		END Random;  	
-		PROCEDURE Dices*(CONST size: ARRAY [*] OF SIZE;  sides: LONGINT ): IntTensor;  
+		PROCEDURE Dices*(CONST size: ARRAY [*] OF LenType;  sides: LONGINT ): IntTensor;  
 		VAR i: LONGINT;
 		BEGIN {EXCLUSIVE}
 			IF DIM(RESULT)=0 THEN NEW(RESULT, size) END;
@@ -41,7 +44,7 @@ TYPE RandomGenerator*= OBJECT(Rand.Generator);
 			END;  
 			RETURN RESULT
 		END Dices;  	
-		PROCEDURE Binary*(CONST size: ARRAY [*] OF SIZE;  p: Datatype ): IntTensor;  
+		PROCEDURE Binary*(CONST size: ARRAY [*] OF LenType;  p: Datatype ): IntTensor;  
 		VAR i: LONGINT;
 		BEGIN {EXCLUSIVE}
 			IF DIM(RESULT)=0 THEN NEW(RESULT, size) END;
@@ -83,7 +86,7 @@ VAR  RG: RandomGenerator (*Rand.Generator*);
 
 
 	PROCEDURE Identity*( VAR M: Matrix );  
-	VAR i: SIZE;  
+	VAR i: LenType;  
 	BEGIN 
 		M := 0;  
 		FOR i := 0 TO MIN(LEN( M)) - 1 DO M[i, i] := 1;  END;  
@@ -143,7 +146,7 @@ VAR  RG: RandomGenerator (*Rand.Generator*);
 		RETURN A
 	END RandomMatrix;  
 
-	PROCEDURE Random*(CONST size: ARRAY [*] OF SIZE;  content: LONGINT ): Tensor;  
+	PROCEDURE Random*(CONST size: ARRAY [*] OF LenType;  content: LONGINT ): Tensor;  
 	VAR i: LONGINT;
 	BEGIN 
 		IF DIM(RESULT)=0 THEN NEW(RESULT, size) END;
@@ -627,7 +630,7 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 	END WriteFloat;
 	
 	PROCEDURE WriteArray*(W:Streams.Writer; CONST t: ARRAY [?] OF Datatype; n,f,D:LONGINT);(* call Update() after writing *)
-	VAR len: ARRAY [*] OF SIZE; i:LONGINT;
+	VAR len: ARRAY [*] OF LenType; i:LONGINT;
 	BEGIN
 		ASSERT(DIM(t)>0);
 		len:=LEN(t);
@@ -674,7 +677,7 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 	
 	(* raw *)
 	PROCEDURE WriteLR*(W:Streams.Writer; CONST t: ARRAY [?] OF Datatype);
-	VAR len: ARRAY [*] OF SIZE; i:LONGINT;
+	VAR len: ARRAY [*] OF LenType; i:LONGINT;
 	BEGIN
 		ASSERT(DIM(t)>0);
 		len:=LEN(t);
@@ -686,7 +689,7 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 	END WriteLR;
 
 	PROCEDURE WriteUInt8*(W:Streams.Writer; CONST t: ARRAY [?] OF INTEGER);
-	VAR len: ARRAY [*] OF SIZE; i:LONGINT;
+	VAR len: ARRAY [*] OF LenType; i:LONGINT;
 	BEGIN
 		ASSERT(DIM(t)>0);
 		len:=LEN(t);
@@ -699,7 +702,7 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 
 	(* raw *)
 	PROCEDURE WriteLInt*(W:Streams.Writer; CONST t: ARRAY [?] OF LONGINT);
-	VAR len: ARRAY [*] OF SIZE; i:LONGINT;
+	VAR len: ARRAY [*] OF LenType; i:LONGINT;
 	BEGIN
 		ASSERT(DIM(t)>0);
 		len:=LEN(t);
@@ -725,7 +728,7 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 	END WriteBool;
 	*)
 	
-	PROCEDURE WriteHeader*(W: Streams.Writer; datatype: LONGINT; CONST len: ARRAY [*] OF SIZE);
+	PROCEDURE WriteHeader*(W: Streams.Writer; datatype: LONGINT; CONST len: ARRAY [*] OF LenType);
 	VAR
 		i: LONGINT;
 		comment:ARRAY 16 OF CHAR;
@@ -799,7 +802,7 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 	END ReadLInt;
 	
 	(*parse header of .MtA files storing an ARRAY [?] OF Datatype, or ARRAY [*{*}] OF Datatype*)
-	PROCEDURE ParseHeader*(r:Streams.Reader; VAR  datatype: LONGINT; VAR len: ARRAY [*] OF SIZE);
+	PROCEDURE ParseHeader*(r:Streams.Reader; VAR  datatype: LONGINT; VAR len: ARRAY [*] OF LenType);
 	VAR 
 		i, k:LONGINT;
 		dontcare: BOOLEAN;
@@ -827,7 +830,7 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 	
 	(* derive structure from header*)
 	PROCEDURE LoadLR*(R:Streams.Reader): ARRAY [?] OF Datatype;
-	VAR  len: ARRAY [*] OF SIZE;
+	VAR  len: ARRAY [*] OF LenType;
 		datatype:LONGINT;
 	BEGIN
 		ParseHeader(R,datatype,len);
@@ -840,7 +843,7 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 	
 (* derive structure from header*)
 	PROCEDURE LoadLInt*(R:Streams.Reader): ARRAY [?] OF LONGINT;
-	VAR  len: ARRAY [*] OF SIZE;
+	VAR  len: ARRAY [*] OF LenType;
 		datatype: LONGINT;
 	BEGIN
 		ParseHeader(R,datatype,len);
@@ -852,7 +855,7 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 
 (* derive structure from header*)
 	PROCEDURE LoadUInt8*(R:Streams.Reader): ARRAY [?] OF INTEGER;
-	VAR  len: ARRAY [*] OF SIZE;
+	VAR  len: ARRAY [*] OF LenType;
 		datatype: LONGINT;
 	BEGIN
 		ParseHeader(R,datatype,len);
@@ -1015,7 +1018,7 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 	*)
 	
 	PROCEDURE Test*;
-	VAR t,t1:Tensor; len:ARRAY [*]OF SIZE; i:LONGINT;
+	VAR t,t1:Tensor; len:ARRAY [*]OF LenType; i:LONGINT;
 		f:Files.File; w:Files.Writer; r:Files.Reader;
 	BEGIN
 		NEW(len,0);
