@@ -150,6 +150,10 @@ VAR  RG: RandomGenerator (*Rand.Generator*);
 	VAR i: LONGINT;
 	BEGIN 
 		IF DIM(RESULT)=0 THEN NEW(RESULT, size) END;
+		(*RESULT:= RG.Random(size,content);
+		RETURN RESULT;
+		*)
+		
 		IF DIM(RESULT)=1 THEN
 			FOR i:=0 TO LEN(RESULT,0)-1 DO
 				(*x:=(RG.Uniform()-0.5)*2; *)(* -1 < x < 1 *)
@@ -604,6 +608,7 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 			FOR i:=0 TO LEN(t,0)-1 DO
 				WriteFloat(w,t[i],n,f,D);
 			END;
+			w.Ln;
 		END;
 	END Print;
 	
@@ -619,6 +624,7 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 			FOR i:=0 TO LEN(t,0)-1 DO
 				w.Int(t[i],6);
 			END;
+			w.Ln;
 		END;
 	END PrintInt;
 
@@ -804,7 +810,7 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 	(*parse header of .MtA files storing an ARRAY [?] OF Datatype, or ARRAY [*{*}] OF Datatype*)
 	PROCEDURE ParseHeader*(r:Streams.Reader; VAR  datatype: LONGINT; VAR len: ARRAY [*] OF LenType);
 	VAR 
-		i, k:LONGINT;
+		i, j, k:LONGINT;
 		dontcare: BOOLEAN;
 		structure, datatypeString, version, comment: ARRAY 8 OF CHAR;
 	BEGIN
@@ -821,8 +827,8 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 			ELSE HALT(200)
 			END;
 			FOR i:=0 TO k-1 DO 
-				dontcare:=r.GetInteger(i,FALSE) ;
-				len[i] := i;
+				dontcare:=r.GetInteger(j,FALSE) ;
+				len[i] := j;
 			END;
 		END;
 		r.SkipLn;

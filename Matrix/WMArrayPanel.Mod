@@ -280,7 +280,7 @@ TYPE TYPE Panel*= OBJECT (WMStandardComponents.ImagePanel) (*! tbd: convert some
 			Render;
 			bounds.SetWidth(img0.width);
 			bounds.SetHeight(img0.height);
-			SetImage(SELF, img0)
+			SetImage(SELF, img0) (*Implicit invalidate*)
 		END RecacheProperties;
 	
 	END Panel;
@@ -354,3 +354,4 @@ WMArrayPanel.Test~
 
 SystemTools.FreeDownTo WMArrayPanel~
 
+SystemTools.FreeDownTo MatrixUtilities ~

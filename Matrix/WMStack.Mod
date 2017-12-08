@@ -44,6 +44,7 @@ TYPE Window*= OBJECT (WM.BufferWindow) (* or could use WM.DoubleBufferWindow or 
 		NEW(model); 
 		IF LEN(m,0)>0 THEN SetImage(m);END; 
 		COPY(title,baseTitle); 
+		COPY(title,SELF.title);
 		SetTitle(Strings.NewString(title));
 		INCL(flags, WM.FlagStorable);
 		current:=0;
