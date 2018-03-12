@@ -1125,24 +1125,27 @@ VAR
 	VAR
 		ts: ARRAY 16 OF CHAR;
 		res: LONGINT;  create: CreateStruct;  win: Window;  hMenu: User32.HMenu;
-		x, y, w, h: LONGINT;
+		x, y, w, h, locFrameX, locFrameY: LONGINT;
 		border: LONGINT;  rect: User32.Rect;   (*ALEX 2005.11.30*)
 		hDC: User32.HDC;
 	CONST SMCYMaximized = 62;  SMCXMaximized = 61;
 	BEGIN
+
+		w := width;
+		h := height;
 	
 		KernelLog.String("Initial size of A2 window: ");
 		KernelLog.Int(width, 0); KernelLog.Char('x');
 		KernelLog.Int(height, 0); KernelLog.Ln;
 		KernelLog.Ln;
 		
+		locFrameX := frameX;
+		locFrameY := frameY;
+		
 		KernelLog.String("captionY: "); KernelLog.Int(captionY, 0);
 		KernelLog.String(", frameX: "); KernelLog.Int(frameX, 0);
 		KernelLog.String(", frameY: "); KernelLog.Int(frameY, 0);
 		KernelLog.Ln;
-		
-		w := width;
-		h := height;
 	
 		IF disp = NIL THEN
 			NEW( win );  Init( win );  hMenu := Kernel32.NULL;  RegisterClasses();  NEW( create );  create.win := win;
@@ -1153,7 +1156,12 @@ VAR
 					IF WMWindowManager.FlagNoResizing IN winA2.flags THEN
 						create.style :=
 							{User32.WSMinimizeBox, User32.WSSysMenu,
-							User32.WSVisible, User32.WSBorder}
+							User32.WSVisible, User32.WSBorder};
+						locFrameX := fixedFrameX;
+						locFrameY := fixedFrameY;
+						KernelLog.String("frameX changed: "); KernelLog.Int(locFrameX, 0);
+						KernelLog.String(", frameY changed: "); KernelLog.Int(locFrameY, 0);
+						KernelLog.Ln;
 					ELSE
 						create.style :=
 							{User32.WSMinimizeBox, User32.WSMaximizeBox, User32.WSSysMenu,
@@ -1168,9 +1176,9 @@ VAR
 				
 				COPY( windowClassName, create.className );  border := 0;
 				IF h = 0 THEN
-					h := User32.GetSystemMetrics( SMCYMaximized ) - captionY - 2 * frameY;
+					h := User32.GetSystemMetrics( SMCYMaximized ) - captionY - 2 * locFrameY;
 					IF w = 0 THEN
-						w := User32.GetSystemMetrics( SMCXMaximized ) - 2 * frameX;
+						w := User32.GetSystemMetrics( SMCXMaximized ) - 2 * locFrameX;
 						create.style := create.style + {User32.WSMaximize};
 					END;
 				ELSE
@@ -1180,12 +1188,12 @@ VAR
 					END;*)
 					(* We actually need to increase window size, because h x w is the
 					client rect size! *)
-					h := h + captionY + 2 * frameY - 2;
+					h := h + captionY + 2 * locFrameY;
 					IF (w # 0) THEN
-						w := w + 2 * frameX - 2;
+						w := w + 2 * locFrameX;
 					END;
 				END;
-				IF w = 0 THEN w := User32.GetSystemMetrics( SMCXMaximized ) - 2 * frameX;  END;
+				IF w = 0 THEN w := User32.GetSystemMetrics( SMCXMaximized ) - 2 * locFrameX;  END;
 				
 				(*create.w := w + 2 * frameX;  create.h := h  + captionY + 2*frameY;*)
 				

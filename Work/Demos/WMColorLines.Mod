@@ -35,6 +35,7 @@ TYPE
 		imgSpheres: ARRAY 7 OF WMGraphics.Image;
 		timer: Kernel.Timer;
 		strTitle, strLines, strScore: String;
+		frame: ARRAY 4 OF WMGraphics.Point2d;
 		
 	PROCEDURE &New(alpha: BOOLEAN);
 	VAR
@@ -52,7 +53,13 @@ TYPE
 		END;
 		Restart;
 		Data(0, 0);
-		Init(TOTAL_SIZE, TOTAL_SIZE + STATUS_SIZE, alpha);
+		Init(TOTAL_SIZE + 1, TOTAL_SIZE + STATUS_SIZE + 1, alpha);
+		
+		frame[0].x := 0; frame[0].y := 0;
+		frame[1].x := TOTAL_SIZE; frame[1].y := 0;
+		frame[2].x := TOTAL_SIZE; frame[2].y := TOTAL_SIZE + STATUS_SIZE;
+		frame[3].x := 0; frame[3].y := TOTAL_SIZE + STATUS_SIZE;
+		
 		strTitle := Strings.NewString("WM Color Lines");
 		SetTitle(strTitle);
 		SetIcon(LoadImage(RES, ICON));
@@ -73,7 +80,7 @@ TYPE
 
 	PROCEDURE AllDraw;
 	VAR
-		x, y, pos: INTEGER;
+		x, y, i, pos: INTEGER;
 	BEGIN
 		canvas.Fill(WMGraphics.MakeRectangle(0, 0, GetWidth(), GetHeight()), BOARD_COLOR, WMGraphics.ModeCopy);
 		FOR y := 0 TO M - 1 DO
@@ -83,14 +90,14 @@ TYPE
 				END
 			END
 		END;
-		FOR y := 0 TO M DO
-			pos := y * CELL_SIZE;
-			canvas.Line(0, pos, TOTAL_SIZE, pos, GRID_COLOR, WMGraphics.ModeCopy)
-		END;
-		FOR x := 0 TO M DO
-			pos := x * CELL_SIZE;
+		FOR i := 0 TO M DO
+			pos := i * CELL_SIZE;
+			canvas.Line(0, pos, TOTAL_SIZE, pos, GRID_COLOR, WMGraphics.ModeCopy);
 			canvas.Line(pos, 0, pos, TOTAL_SIZE, GRID_COLOR, WMGraphics.ModeCopy)
 		END;
+		canvas.PolyLine(frame, 4, TRUE, GRID_COLOR, WMGraphics.ModeCopy);
+		
+		canvas.SetColor(GRID_COLOR);
 		canvas.DrawString(4, TOTAL_SIZE + STATUS_SIZE - 2, strLines^); 
 		canvas.DrawString(TOTAL_SIZE DIV 2 + 4, TOTAL_SIZE + STATUS_SIZE - 2, strScore^); 
 		Invalidate(WMGraphics.MakeRectangle(0, 0, GetWidth(), GetHeight()))
