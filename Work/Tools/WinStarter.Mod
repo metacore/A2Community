@@ -193,7 +193,7 @@ TYPE
 
 	Display = OBJECT (Displays.Display) (* only one instance of this object allowed ! *)
 
-		PROCEDURE Transfer( VAR buf: ARRAY OF CHAR;  ofs, stride, x, y, w, h, op: LONGINT );
+		PROCEDURE Transfer*( VAR buf: ARRAY OF CHAR;  ofs, stride, x, y, w, h, op: LONGINT );
 		BEGIN
 
 			IF letWindowsHandleTheBuffer THEN
@@ -217,8 +217,7 @@ TYPE
 
 VAR
 	dummyClass, windowClass: User32.WndClassEx;
-	dummyClassName, windowClassName, controlClassName: ARRAY 32 OF CHAR;
-	windowTitle: ARRAY 257 OF CHAR;
+	dummyClassName, windowClassName, controlClassName, windowTitle : ARRAY 32 OF CHAR;
 	nWindows: LONGINT;  aControlWinClass: LONGINT;  fixedFrameX, fixedFrameY, frameX, frameY, captionY, menuY: LONGINT;
 	hCurrentCursor, hAlternativeCursor: User32.HCursor;  capture, hook, mouse: Window;  kioskmode*: BOOLEAN;
 	dummyWin*: Window;
@@ -252,7 +251,7 @@ VAR
 	BEGIN
 		str := "";
 		create.win.hWnd :=
-			User32.CreateWindowEx( 0, create.className, str, create.style, create.x, create.y, create.w, create.h,
+			User32.CreateWindowEx( 0, create.className, str, Kernel32.SetToDW(create.style), create.x, create.y, create.w, create.h,
 													   create.win.hWndParent, create.hMenu, Kernel32.hInstance,
 													   SYSTEM.VAL( User32.LParam, create ) );
 		IF User32.WSMaximize IN create.style THEN
@@ -358,7 +357,7 @@ VAR
 
 (* Common base handler for all variants of windows provided by this module. *)
 	PROCEDURE DummyHandler( win: Window;  uMsg: LONGINT;  wParam: User32.WParam;  lParam: User32.LParam ): User32.LResult;
-	VAR res: User32.LResult; proc: User32.WndProc; hhWnd: ANY;  ret: Kernel32.BOOL;
+	VAR res: User32.LResult; proc: User32.WndProc; hhWnd: ADDRESS;  ret: Kernel32.BOOL;
 	BEGIN
 		IF (uMsg = User32.WMDestroy) & ~(external IN win.state) THEN
 			EXCL( win.state, update );  DEC( nWindows );
@@ -425,7 +424,7 @@ VAR
 			lParam := SYSTEM.VAL( User32.LParam, create.win );
 			ret := User32.PostMessage( hwnd, WMSetup, wParam, lParam )
 		ELSIF uMsg = WMSetup THEN
-			win := SYSTEM.VAL( Window, lParam );  ret := User32.SetWindowLong( hwnd, GWLWindow, lParam );
+			win := SYSTEM.VAL( Window, lParam );  ret := User32.SetWindowLong( hwnd, GWLWindow, LONGINT(lParam) );
 			create := SYSTEM.VAL( CreateStruct, wParam );
 			IF ~(dummy IN win.state) THEN SetupWin( win ) ELSE Add( win, TRUE ) END;
 			IF ~(external IN win.state) THEN INC( nWindows ) END;
@@ -437,7 +436,7 @@ VAR
 	END DummyProc;
 
 	PROCEDURE ChangeCursor;
-	VAR point: User32.Point;  ret: Kernel32.BOOL;
+	VAR point: User32.Point;  ret: Kernel32.HANDLE;
 	BEGIN
 		ret := User32.GetCursorPos( point );  ret := User32.SetCursor( hCurrentCursor );
 		IF hCurrentCursor = Kernel32.NULL THEN
@@ -460,12 +459,12 @@ VAR
 	END Min;
 
 	PROCEDURE HandleMouse( win: Window;  uMsg: LONGINT;  wParam: User32.WParam;  lParam: User32.LParam );
-	VAR m: AosInputs.AbsMouseMsg;  oldx, oldy: LONGINT;  keys: SET; ret: Kernel32.BOOL;
+	VAR m: AosInputs.AbsMouseMsg;  oldx, oldy: LONGINT;  keys: SET; ret: Kernel32.HANDLE;
 	BEGIN
 		(* User32.SetCursor(hCurrentCursor);*)
-		oldx := win.track.X;  oldy := win.track.Y;
-		win.track.X := SHORT( lParam MOD ASH( 1, 16 ) ) - win.dx;
-		win.track.Y := SHORT( (* win.height-*) ASH( lParam, -16 ) - 1 ) - win.dy;
+		oldx := win.track.X;  oldy := win.track.Y;  
+		win.track.X := LONGINT( lParam MOD ASH( 1, 16 ) ) - win.dx;
+		win.track.Y := LONGINT( (* win.height-*) ASH( lParam, -16 ) - 1 ) - win.dy;
 		m.x := win.track.X;  m.y := win.track.Y;  m.z := win.track.Z;
 
 		m.dx := 0;  m.dy := 0;  m.dz := 0;
@@ -503,7 +502,7 @@ VAR
 		| User32.WMXButtonUp:
 				EXCL( keys, MX )
 		| User32.WMMouseWheel:
-				IF SHORT( ASH( wParam, -16 ) ) > 0 THEN m.dz := -1 ELSE m.dz := 1 END;
+				IF LONGINT(wParam) DIV 10000H  > 0 THEN m.dz := -1 ELSE m.dz := 1 END;
 				m.x := oldx;  m.y := oldy;  win.track.X := oldx;  win.track.Y := oldy;
 				(* strange: if wheel used, then coordinates are not realtive to windows -> use coordinates of last event, fof *)
 		ELSE
@@ -535,7 +534,7 @@ VAR
 	PROCEDURE HandleChar( win: Window;  wParam: User32.WParam;  lParam: User32.LParam );
 	VAR ch: CHAR;  msg: AosInputs.KeyboardMsg;  key: LONGINT;
 	BEGIN
-		GetChar( wParam, lParam, ch, key );
+		GetChar( LONGINT(wParam), LONGINT(lParam), ch, key );
 		GetKeyFlags(msg.flags);
 		msg.ch := ch;  msg.keysym := key;
 		(*
@@ -555,7 +554,7 @@ VAR
 	PROCEDURE HandleKey( win: Window;  wParam: User32.WParam;  lParam: User32.LParam );
 	VAR ch: CHAR;  msg: AosInputs.KeyboardMsg;  key : LONGINT; rect: User32.Rect;  ret: Kernel32.BOOL;
 	BEGIN
-		DecomposeKeyEvent( wParam, lParam, ch, key, FALSE );
+		DecomposeKeyEvent( LONGINT(wParam), LONGINT(lParam), ch, key, FALSE );
 
 		IF  (key = AosInputs.KsF8) & (maximized IN win.state) & ~fullscreen (*ALEX 2005.11.30*) THEN
 			IF win.frame THEN
@@ -586,7 +585,7 @@ VAR
 		GetKeyFlags(msg.flags);
 		IF (msg.flags * AosInputs.Ctrl # {}) & (msg.flags * AosInputs.Alt = {}) & (VK0 <= wParam) & (wParam <= VK9) THEN
 			(* Same behaviour as AOS *)
-			ch := CHR(wParam); key := wParam;
+			ch := CHR(wParam); key := LONGINT(wParam);
 		END;
 
 		IF (AosInputs.LeftAlt IN msg.flags) & (AosInputs.LeftShift IN msg.flags) THEN
@@ -625,7 +624,7 @@ VAR
 	PROCEDURE HandleKeyUp( win: Window;  wParam: User32.WParam;  lParam: User32.LParam );
 	VAR ch: CHAR;  msg: AosInputs.KeyboardMsg; key : LONGINT;
 	BEGIN
-		DecomposeKeyEvent( wParam, lParam, ch, key, TRUE );
+		DecomposeKeyEvent( LONGINT(wParam), LONGINT(lParam), ch, key, TRUE );
 		GetKeyFlags(msg.flags);
 
 		IF ~((AosInputs.LeftAlt IN msg.flags) & (AosInputs.LeftShift IN msg.flags)) THEN
@@ -667,10 +666,7 @@ VAR
 	VAR x, y, w, h, dx, dy, bw, bh: LONGINT;  hOldBr: GDI32.HBrush;  ret: Kernel32.BOOL;
 	BEGIN
 		IF ~(minimized IN win.state) THEN
-			IF id = resize THEN
-				win.width := lParam MOD ASH( 1, 16 );  win.height := lParam DIV ASH( 1, 16 );
-				  SetDocRect( win, TRUE )
-			END;
+			IF id = resize THEN win.width := LONGINT(lParam) MOD ASH( 1, 16 );  win.height := LONGINT(lParam) DIV ASH( 1, 16 );  SetDocRect( win, TRUE ) END;
 			ret := User32.ValidateRect( win.hWnd, NIL );
 			IF win.hDC = 0 THEN GetDC( win );  END;
 
@@ -787,7 +783,7 @@ VAR
 	VAR pos: User32.WindowPos;
 	BEGIN
 		SYSTEM.MOVE( lParam, ADDRESSOF( pos ), SIZEOF( User32.WindowPos ) );
-		IF ~(User32.SWPNoMove IN pos.flags) THEN
+		IF ~(User32.SWPNoMove IN Kernel32.DWToSet(pos.flags)) THEN
 			IF (pos.x < -disp.width) & (pos.y < -disp.height) THEN Minimize( win )
 			ELSIF (pos.x >= 0) & (pos.y >= 0) THEN Restore( win )
 			END
@@ -799,7 +795,7 @@ VAR
 	PROCEDURE WindowHandler( win: Window;  uMsg: LONGINT;  wParam: User32.WParam;
 													  lParam: User32.LParam ): User32.LResult;
 
-	VAR handled: BOOLEAN; ret: Kernel32.BOOL;
+	VAR handled: BOOLEAN; ret: Kernel32.HANDLE;
 
 		closer: OBJECT (* to call a close request in an A2 thread, otherwise finalization does not work etc. *)
 		BEGIN{ACTIVE}
@@ -863,7 +859,7 @@ VAR
 
 	PROCEDURE {WINAPI} WindowProc( hwnd: User32.HWND;  uMsg: LONGINT;  wParam: User32.WParam;
 															    lParam: User32.LParam ): User32.LResult;
-	VAR win: Window;  dbh: DEV_BROADCAST_HDRP; dbv : DEV_BROADCAST_VOLUMEP; i: LONGINT;
+	VAR win {UNTRACED}: Window;  dbh {UNTRACED}: DEV_BROADCAST_HDRP; dbv  {UNTRACED}: DEV_BROADCAST_VOLUMEP; i: LONGINT;
 	BEGIN
 
 		IF uMsg = WM_DEVICECHANGE THEN
@@ -871,13 +867,13 @@ VAR
 				dbh := SYSTEM.VAL(DEV_BROADCAST_HDRP,lParam);
 				IF dbh.dbch_devicetype = DBT_DEVTYP_VOLUME THEN
 					dbv := SYSTEM.VAL(DEV_BROADCAST_VOLUMEP,lParam);
-					WinFS.DeviceNotification(wParam,dbv.dbcv_unitmask);
+					WinFS.DeviceNotification(LONGINT(wParam),dbv.dbcv_unitmask);
 				END;
 			ELSIF wParam = DBT_DEVICEREMOVECOMPLETE THEN
 				dbh := SYSTEM.VAL(DEV_BROADCAST_HDRP,lParam);
 				IF dbh.dbch_devicetype = DBT_DEVTYP_VOLUME THEN
 					dbv := SYSTEM.VAL(DEV_BROADCAST_VOLUMEP,lParam);
-					WinFS.DeviceNotification(wParam,dbv.dbcv_unitmask);
+					WinFS.DeviceNotification(LONGINT(wParam),dbv.dbcv_unitmask);
 				END;
 			END;
 		END;
@@ -957,7 +953,7 @@ VAR
 	VAR str: ARRAY 32 OF CHAR;
 		ret: Kernel32.ATOM;
 	BEGIN
-		dummyClass.cbSize := SIZEOF( User32.WndClassEx );  dummyClass.style := {};  dummyClass.lpfnWndProc := DummyProc;
+		dummyClass.cbSize := SIZEOF( User32.WndClassEx );  dummyClass.style := Kernel32.SetToDW({});  dummyClass.lpfnWndProc := DummyProc;
 		dummyClass.cbClsExtra := 0;  dummyClass.cbWndExtra := 4;  dummyClass.hInstance := Kernel32.hInstance;
 		dummyClass.hIcon := Kernel32.NULL;  dummyClass.hIconSm := Kernel32.NULL;  dummyClass.hCursor := Kernel32.NULL;
 		dummyClass.hbrBackground := Kernel32.NULL;  dummyClass.lpszMenuName := Kernel32.NULL;
@@ -965,7 +961,7 @@ VAR
 		ret := User32.RegisterClassEx( dummyClass );
 
 		windowClass.cbSize := SIZEOF( User32.WndClassEx );
-		windowClass.style := {7};   (* Cs_parentdc: INTEGER is 128  = 2^7 *)
+		windowClass.style := Kernel32.SetToDW({7});   (* Cs_parentdc: INTEGER is 128  = 2^7 *)
 		windowClass.lpfnWndProc := WindowProc;  windowClass.cbClsExtra := 0;  windowClass.cbWndExtra := 4;
 		windowClass.hInstance := Kernel32.hInstance;  str := "Console";  windowClass.hIcon := User32.LoadIcon( Kernel32.hInstance, str );
 		str := "Console.Small";  windowClass.hIconSm := User32.LoadIcon( Kernel32.hInstance, str );  windowClass.hCursor := Kernel32.NULL;
@@ -1078,7 +1074,7 @@ VAR
 		ISOToOberon[254] := CHR( 112 );  ISOToOberon[255] := CHR( 121 );
 
 		InitBMI;
-
+		COPY(WindowTitle, windowTitle);
 	END InitMod;
 
 	PROCEDURE DisableCursor*;
@@ -1105,7 +1101,6 @@ VAR
 
 	PROCEDURE Shutdown;
 	VAR disp: Window;
-		res: LONGINT;
 	BEGIN
 		(*
 		disp := Displays.root;
