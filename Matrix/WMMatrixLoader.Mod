@@ -20,7 +20,7 @@ VAR d: ARRAY [?] OF MatrixBase.Datatype;
 	d2: ARRAY [*,*] OF MatrixBase.Datatype;
 	d16: ARRAY [?] OF INTEGER;
 	d32: ARRAY[?] OF LONGINT;
-	len: ARRAY [*] OF LONGINT;
+	len: ARRAY [*] OF SIZE;
 	f:Files.File;
 	r:Files.Reader;
 	mWindow:WMMatrix.Window;

@@ -33,20 +33,27 @@ BEGIN
 	RETURN x;
 END Prod;
 
+PROCEDURE ProdS*(CONST v: ARRAY [*] OF SIZE):Datatype;
+VAR i:LONGINT; x:SIZE;
+BEGIN
+	x:=v[0];
+	FOR i:=1 TO LEN(v,0)-1 DO x:=x*v[i] END;
+	RETURN Datatype(x);
+END ProdS;
 
 PROCEDURE Mean*(CONST X: Array): Datatype;
 BEGIN
-	RETURN SUM(X)/Prod(LEN(X))
+	RETURN SUM(X)/ProdS(LEN(X))
 END Mean;
 
 PROCEDURE MeanSquare*(CONST X: Array): Datatype;
 BEGIN
-	RETURN X+*X / Prod(LEN(X))
+	RETURN X+*X / ProdS(LEN(X))
 END MeanSquare;
 
 PROCEDURE RMS*(CONST X: Array): Datatype; (*root mean square*)
 BEGIN
-	RETURN MathL.sqrt(X+*X / Prod(LEN(X)))
+	RETURN MathL.sqrt(X+*X / ProdS(LEN(X)))
 END RMS;
 
 PROCEDURE KSmallest( VAR a: Vector;  n, k: LONGINT ): Datatype;
@@ -119,7 +126,7 @@ PROCEDURE QSort*(VAR X : Vector);
  VAR diff:Array;
  BEGIN
  	 diff:=v-Mean(v);
- 	 RETURN (diff+*diff) / Prod(LEN(v))
+ 	 RETURN (diff+*diff) / ProdS(LEN(v))
  END Variance;
 
  (** of full data *)
@@ -134,7 +141,7 @@ PROCEDURE QSort*(VAR X : Vector);
  VAR diff:Array;
  BEGIN
  	 diff:=v-Mean(v);
- 	 RETURN (diff+*diff) / (Prod(LEN(v))-1)
+ 	 RETURN (diff+*diff) / (ProdS(LEN(v))-1)
  END EstimatedVariance;
  
  (** subset of data , divisor is (N-1)*)
@@ -150,7 +157,7 @@ PROCEDURE QSort*(VAR X : Vector);
 	BEGIN
 		sigma:=StandardDeviation(X);
 		x1:=X-Mean(X);
-		RETURN  ((x1 .* x1) +* x1) / (sigma*sigma*sigma)/ Prod(LEN(X))
+		RETURN  ((x1 .* x1) +* x1) / (sigma*sigma*sigma)/ ProdS(LEN(X))
 	END Skewness;
 
 PROCEDURE Kurtosis*(CONST X : Array) : Datatype;
@@ -161,7 +168,7 @@ PROCEDURE Kurtosis*(CONST X : Array) : Datatype;
 		variance:=Variance(X);
 		x1:=X-Mean(X);
 		x2:=x1.*x1;
-		RETURN (x2 +* x2) / (variance*variance) / Prod(LEN(X)) - 3;
+		RETURN (x2 +* x2) / (variance*variance) / ProdS(LEN(X)) - 3;
 	END Kurtosis;
 	
 PROCEDURE Normalize*(CONST a: Array):Array;

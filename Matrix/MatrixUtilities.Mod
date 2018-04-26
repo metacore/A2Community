@@ -13,7 +13,7 @@ TYPE
 	BinaryOp*=PROCEDURE(x,y:Datatype):Datatype;
 
 
-	LenType = LONGINT; 
+	LenType = SIZE; 
 	
 TYPE RandomGenerator*= OBJECT(Rand.Generator);
 		PROCEDURE Random*(CONST size: ARRAY [*] OF LenType;  content: LONGINT ): Tensor;  

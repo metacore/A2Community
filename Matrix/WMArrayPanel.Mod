@@ -200,7 +200,7 @@ TYPE TYPE Panel*= OBJECT (WMStandardComponents.ImagePanel) (*! tbd: convert some
 	
 	PROCEDURE Render*;
 	VAR m,r,g,b: Tensor; orient, w, h: LONGINT; 
-		len: ARRAY [*] OF LONGINT;
+		len: ARRAY [*] OF SIZE;
 	BEGIN
 		orient:=orientation.Get();
 		
