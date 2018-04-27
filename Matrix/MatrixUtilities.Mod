@@ -627,7 +627,22 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 			w.Ln;
 		END;
 	END PrintInt;
-
+	
+	PROCEDURE PrintSize*(w:Streams.Writer; CONST t: ARRAY[?] OF SIZE);
+	VAR i:SIZE;
+	BEGIN
+		IF DIM(t)>1 THEN
+			FOR i:=0 TO LEN(t,0)-1 DO
+				PrintSize(w, t[i,?]);
+			END;
+			w.Ln;
+		ELSE
+			FOR i:=0 TO LEN(t,0)-1 DO
+				w.Int(t[i],6);
+			END;
+			w.Ln;
+		END;
+	END PrintSize;
 	
 	PROCEDURE WriteFloat*(W:Streams.Writer; x: LONGREAL;  n, f, D: LONGINT ); (* call Update() after writing *)
 	VAR s: ARRAY 64 OF CHAR;  
@@ -720,6 +735,19 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 	END WriteLInt;
 	
 		(* raw *)
+	PROCEDURE WriteSize*(W:Streams.Writer; CONST t: ARRAY [?] OF SIZE);
+	VAR len: ARRAY [*] OF LenType; i:LONGINT;
+	BEGIN
+		ASSERT(DIM(t)>0);
+		len:=LEN(t);
+		IF  DIM(t)=1 THEN 
+			FOR i:=0 TO LEN(t,0)-1 DO W.RawHInt(t[i]) END;
+		ELSE
+			FOR i:=0 TO LEN(t,0)-1 DO WriteSize(W, t[i,?]) END;
+		END;
+	END WriteSize;
+	
+		(* raw *)
 	(* todo: packed storage of bits
 	PROCEDURE WriteBool*(W:Streams.Writer; CONST t: ARRAY [?] OF BOOLEAN);
 	VAR len: ARRAY [*] OF LONGINT; i:LONGINT;
@@ -774,6 +802,14 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 		W.Update;
 	END StoreLInt;
 
+	
+	PROCEDURE StoreSize*(W:Streams.Writer; CONST t: ARRAY [?] OF SIZE);
+	BEGIN
+		WriteHeader(W,DatatypeLInt, LEN(t));
+		IF DIM(t)>0 THEN WriteSize(W,t) END;
+		W.Update;
+	END StoreSize;
+	
 	PROCEDURE ReadLR*(R:Streams.Reader; VAR t: ARRAY [?] OF Datatype);
 	VAR i:LONGINT;
 	BEGIN
