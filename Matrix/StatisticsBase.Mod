@@ -8,7 +8,7 @@ TYPE
 	Datatype*=MatrixBase.Datatype;
 	Array*=ARRAY[?] OF Datatype;
 	
-PROCEDURE SameDimension(VAR a:Array; CONST len:ARRAY [*] OF LONGINT);
+PROCEDURE SameDimension(VAR a:Array; CONST len:ARRAY [*] OF SIZE);
 	BEGIN
 		IF (DIM(a)#LEN(len,0)) OR (LEN(a)#len) THEN 
 			NEW(a,len) 
