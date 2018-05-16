@@ -117,18 +117,8 @@ Matrix/MLTest.Mod
 Matrix/LinearPDE.Mod
 Matrix/HypercubePDE.Mod 
 
+SystemTools.FreeDownTo MatrixBase ~
 
-SearchTools.Replace MyWork/Matrix/*.Mod
-    SYSTEM.ADDRESS ADDRESS
-    S.ADDRESS ADDRESS
-    SYSTEM.SIZE SIZE
-    S.SIZE SIZE
-    SYSTEM.ADR ADDRESSOF
-    S.ADR ADDRESSOF
-    SYSTEM.LSH LSH
-    S.LSH LSH
-    SYSTEM.ROT ROT
-    S.ROT ROT
-    ~
+
 
 

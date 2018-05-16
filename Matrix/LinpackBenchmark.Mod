@@ -378,6 +378,18 @@ IF details THEN
 		Out.String( "; time, flops: " );  Out.String( " " );  Out.Int( t, 6 );  Out.String( "ms  " );  
 		MatrixUtilities.OutFloat( flops / 1000000, 12, 1 ,0);  Out.String( " MFLOPs  " );  Out.Ln;  
 		
+		(*----------------MatMul Transposed C------------------*)
+		
+		Out.String( "MatMul   A`*A`      " );  
+
+		Kernel.SetTimer( timer, 0 );  B := A` * A`;  
+		t := Kernel.Elapsed( timer );   (*in ms*)
+		
+		ops := 2.0 * size * size * size;   (*cost of matrix multiply; using k=2 *)
+		flops := ops / (t / 1000);   (*per second*)
+		Out.String( "; time, flops: " );  Out.String( " " );  Out.Int( t, 6 );  Out.String( "ms  " );  
+		MatrixUtilities.OutFloat( flops / 1000000, 12, 1 ,0);  Out.String( " MFLOPs  " );  Out.Ln;  
+		
 		
 		(*-----------------InnerProduct-----------------*)
 		Out.String( "InnerProd Matrix " );  
@@ -483,6 +495,20 @@ IF details THEN
 		flops := ops / (t / 1000);   (*per second*)
 		Out.String( "; time, flops: " );  Out.String( " " );  Out.Int( t, 6 );  Out.String( "ms  " );  
 		MatrixUtilities.OutFloat( flops / 1000000, 12, 1 ,0);  Out.String( " 'MFLOPs '  " );  Out.Ln;  
+		
+		(*----------------Transpose-----------------*)
+		Out.String( "TransposeExplicit  " );  
+
+		Kernel.SetTimer( timer, 0 );  
+		FOR i := 0 TO size - 1 DO TransposeExplicit(A);  END;  
+		
+		t := Kernel.Elapsed( timer );   (*in ms*)
+		
+		ops := 1.0 * size * size * size;   (*cost of inner product *)
+		flops := ops / (t / 1000);   (*per second*)
+		Out.String( "; time, flops: " );  Out.String( " " );  Out.Int( t, 6 );  Out.String( "ms  " );  
+		MatrixUtilities.OutFloat( flops / 1000000, 12, 1 ,0);  Out.String( " 'MFLOPs '  " );  Out.Ln;  
+		
 	END;		
 		(*----------------Transpose blockwise-----------------*)
 		(*
@@ -835,11 +861,30 @@ END;
 		Linpack( 1000, FALSE);  
 	END Linpack1000d;  
 
+PROCEDURE TransposeExplicit(VAR a: Matrix);
+VAR 
+	b,c: Vector;
+	i,j, len:LONGINT;
+	res:LONGREAL;
+BEGIN
+	NEW(b, LEN(a,1));
+	FOR i:=0 TO LEN(a,0)-1 DO
+		len:=LEN(a,1)-i-1;
+		b[i+1..]:=a[i,i+1..];
+		a[i,i+1..]:=a[i+1..,i];
+		a[i+1..,i]:=b[i+1..]
+	END;	
+END TransposeExplicit;
+
+
 (** Test Performance of various linear algebra operations*)
 	PROCEDURE Test*;  
 	BEGIN 
-		(*Linpack( 16 , TRUE); Linpack( 32 , TRUE);  Linpack( 64 , TRUE);  Linpack( 128, TRUE );  Linpack( 256, TRUE);  
-	*)	Linpack( 512 , TRUE);  Linpack( 1024, FALSE);  Linpack(2048, FALSE);  (*Linpack(3072, FALSE); *)
+		(*Linpack( 16 , TRUE); Linpack( 32 , TRUE);  Linpack( 64 , TRUE);  Linpack( 128, TRUE );  Linpack( 256, TRUE);  *)
+		Linpack( 512 , TRUE);  Linpack( 1024, FALSE);  
+		Linpack(2048, FALSE);  (*Linpack(2560, FALSE);  
+		Linpack(3072, FALSE); Linpack(3584, FALSE); 
+		Linpack(4096, FALSE); *)
 	END Test;  
 	
 	(** compare performance of three approaches to LU decomposition: a) direct, b) block operators, and c) active objects performing block operations *)

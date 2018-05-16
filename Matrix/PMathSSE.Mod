@@ -571,7 +571,83 @@ PROCEDURE fastExp(x:REAL):REAL; (*  approximation. decreasingly accurate for inc
 			RETURN Math.exp(x)
 		END;
 	END fastExp;
-
+	
+	
+PROCEDURE -fastExp2(x:LONGREAL):LONGREAL; (*  approximation. decreasingly accurate for increasing x, and only faster than standard if inlined,  see https://codingforspeed.com/using-faster-exponential-approximation/ *)
+CONST onePlus=1.0/1024; one=1.0;
+BEGIN
+    CODE
+    		MULSS r1,r2
+    		ADDPS r1,r3
+    		MULSS r1,r1
+    		MULSS r1,r1
+    		MULSS r1,r1
+    		MULSS r1,r1
+    		MULSS r1,r1
+    		MULSS r1,r1
+    		MULSS r1,r1
+    		MULSS r1,r1
+    		MULSS r1,r1
+    		MULSS r1,r1
+      WITH
+	      IN
+	          r1:=onePlus;
+	          r2:=x;
+	          r3:=one;
+	      OUT
+	          RETURN r1;
+      END;
+	END fastExp2;
+	
+	PROCEDURE -scaledELU*(x:LONGREAL):LONGREAL;
+	CONST alpha=1.67326324235; lambda=1.050700987;
+			onePlus=1.0/1024; one=1.0;
+	BEGIN
+	CODE
+    		MULSS r1,r2
+    		ADDPS r1,r3
+    		MULSS r1,r1
+    		MULSS r1,r1
+    		MULSS r1,r1
+    		MULSS r1,r1
+    		MULSS r1,r1
+    		MULSS r1,r1
+    		MULSS r1,r1
+    		MULSS r1,r1
+    		MULSS r1,r1
+    		MULSS r1,r1
+    		
+    		SUBSS r1,r2
+    		MULSS r1,r4
+    		MULSS r1,r5
+    		
+      WITH
+	      IN
+	          r1:=onePlus;
+	          r2:=x;
+	          r3:=one;
+	          r4:=alpha;
+	          r5:=lambda;
+	      OUT
+	          RETURN r1;
+      END;
+	END scaledELU;
+	
+	PROCEDURE ScaledELU*(x:LONGREAL):LONGREAL;
+	CONST lambda=1.050700987;
+	BEGIN
+		IF x>0 THEN RETURN lambda*x
+		ELSE RETURN scaledELU(x)
+		END;
+	END ScaledELU;
+	(*
+	CONST alpha=1.67326324235; lambda=1.050700987; (*constants valid for data with mean=0 and variance=1, see Klambauer, 2017, appendix *)
+BEGIN
+	IF x>0 THEN RETURN lambda * x
+	ELSE 
+		(*RETURN lambda * (alpha*Mathe.exp(x)-alpha)*)
+		RETURN lambda * (alpha*PMathSSE.fastExp2(x)-alpha)
+*)
 (*(*
 fast ENTIER:
 Well this is great and all but what can we do using non-SSE4.1 instructions? You can always use the standard C math.h floor(), ceil() and your own flavor of round() but if you want to do some intensive and fast vector math in your game, SSE is your savior. If you do a search on Google, something like sse floor, youll probably get a lot of wrong algorithms. Most of them wont work for negative integer values, flooring -10 to -11 for instance. So I took some time to figure out an algorithm using only SSE3 instructions.

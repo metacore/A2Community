@@ -103,7 +103,7 @@ VAR
 	END ComputeEpsL;  
 	
 	PROCEDURE WriteLVector*(W:Streams.Writer; CONST v:Vector);
-	VAR i:LONGINT;
+	VAR i:SIZE;
 	BEGIN
 		FOR i:=0 TO LEN(v,0)-1 DO
 			W.RawLReal(v[i]);
@@ -112,7 +112,7 @@ VAR
 	END WriteLVector;
 	
 	PROCEDURE WriteLMatrix*(W:Streams.Writer; CONST m:Matrix);
-	VAR i:LONGINT;
+	VAR i:SIZE;
 	BEGIN
 		FOR i:=0 TO LEN(m,0)-1 DO
 			WriteLVector(W,m[i])
@@ -124,7 +124,7 @@ VAR
 
 
 	PROCEDURE ReadLVector*(R:Streams.Reader; VAR v:Vector);
-	VAR i:LONGINT;
+	VAR i:SIZE;
 	BEGIN
 		FOR i:=0 TO LEN(v,0)-1 DO
 			R.RawLReal(v[i]);
@@ -132,7 +132,7 @@ VAR
 	END ReadLVector;
 	
 	PROCEDURE ReadLMatrix*(R:Streams.Reader; VAR m:Matrix);
-	VAR i:LONGINT;
+	VAR i:SIZE;
 	BEGIN
 		FOR i:=0 TO LEN(m,0)-1 DO
 			ReadLVector(R,m[i])
@@ -149,5 +149,6 @@ END MatrixBase.
 fofPC.Compile  \s *
 OFormatter.Format *
 SystemTools.Free  MatrixStandardSolvers MatrixBase ~
+SystemTools.FreeDownTo MatrixBase~
 
 MatrixBase.Test~

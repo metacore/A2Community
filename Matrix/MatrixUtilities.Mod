@@ -698,7 +698,7 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 	
 	(* raw *)
 	PROCEDURE WriteLR*(W:Streams.Writer; CONST t: ARRAY [?] OF Datatype);
-	VAR len: ARRAY [*] OF LenType; i:LONGINT;
+	VAR len: ARRAY [*] OF LenType; i:SIZE;
 	BEGIN
 		ASSERT(DIM(t)>0);
 		len:=LEN(t);
@@ -710,7 +710,7 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 	END WriteLR;
 
 	PROCEDURE WriteUInt8*(W:Streams.Writer; CONST t: ARRAY [?] OF INTEGER);
-	VAR len: ARRAY [*] OF LenType; i:LONGINT;
+	VAR len: ARRAY [*] OF LenType; i:SIZE;
 	BEGIN
 		ASSERT(DIM(t)>0);
 		len:=LEN(t);
@@ -723,7 +723,7 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 
 	(* raw *)
 	PROCEDURE WriteLInt*(W:Streams.Writer; CONST t: ARRAY [?] OF LONGINT);
-	VAR len: ARRAY [*] OF LenType; i:LONGINT;
+	VAR len: ARRAY [*] OF LenType; i:SIZE;
 	BEGIN
 		ASSERT(DIM(t)>0);
 		len:=LEN(t);
@@ -736,7 +736,7 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 	
 		(* raw *)
 	PROCEDURE WriteSize*(W:Streams.Writer; CONST t: ARRAY [?] OF SIZE);
-	VAR len: ARRAY [*] OF LenType; i:LONGINT;
+	VAR len: ARRAY [*] OF LenType; i:SIZE;
 	BEGIN
 		ASSERT(DIM(t)>0);
 		len:=LEN(t);
@@ -811,7 +811,7 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 	END StoreSize;
 	
 	PROCEDURE ReadLR*(R:Streams.Reader; VAR t: ARRAY [?] OF Datatype);
-	VAR i:LONGINT;
+	VAR i:SIZE;
 	BEGIN
 		ASSERT(DIM(t)>0);
 		IF  DIM(t)=1 THEN 
@@ -822,7 +822,7 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 	END ReadLR;
 	
 	PROCEDURE ReadUInt8*(R:Streams.Reader; VAR t: ARRAY [?] OF INTEGER);
-	VAR i:LONGINT; c:CHAR;
+	VAR i:SIZE; c:CHAR;
 	BEGIN
 		ASSERT(DIM(t)>0);
 		IF  DIM(t)=1 THEN 
@@ -833,7 +833,7 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 	END ReadUInt8;
 	
 	PROCEDURE ReadLInt*(R:Streams.Reader; VAR t: ARRAY [?] OF LONGINT);
-	VAR i:LONGINT;
+	VAR i:SIZE;
 	BEGIN
 		ASSERT(DIM(t)>0);
 		IF  DIM(t)=1 THEN 
