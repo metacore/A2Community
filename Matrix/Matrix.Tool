@@ -89,8 +89,6 @@ Matrix/ExtraSort.Mod
 Matrix/MLClassifier.Mod
 Matrix/MLKernels.Mod
 Matrix/MLKernelMeans.Mod
-Matrix/PMathSSE.Mod
-Matrix/MLNeuralNet.Mod
 Matrix/MLRegression.Mod
 Matrix/MLRidgeRegression.Mod
 Matrix/StatisticsBase.Mod
@@ -107,6 +105,9 @@ Matrix/TestPlanarWavelets.Mod
 Matrix/LinpackBenchmark.Mod
 
 Matrix/MatrixWarp.Mod
+
+Matrix/PMathSSE.Mod
+Matrix/MLNeuralNet.Mod
 ~
 not ready yet:
 Compiler.Compile -p=Win32G Matrix/PMathSSE.Mod
