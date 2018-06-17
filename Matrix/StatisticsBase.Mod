@@ -177,8 +177,9 @@ BEGIN
 	N:=Count(a);
 	RESULT:=a-SUM(a)/N;
 	sd:=MathL.sqrt( RESULT+*RESULT / N);
-	RESULT:= 1/sd * RESULT;
-	RETURN RESULT
+	IF sd=0 THEN RETURN RESULT
+	ELSE RETURN 1/sd * RESULT
+	END;
 END Normalize;
 
 PROCEDURE NormalizeColumns*(VAR A:Matrix); (*normalizing to mean=0 and SD=1*)
@@ -292,4 +293,4 @@ StatisticsBase.TestSort ~
 StatisticsBase.TestMedian ~
 StatisticsBase.TestSoftMax ~
 
-SystemTools.FreeDownTo StatisticsBase ~
+System.FreeDownTo StatisticsBase ~
