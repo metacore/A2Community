@@ -177,7 +177,7 @@ BEGIN
 	N:=Count(a);
 	RESULT:=a-SUM(a)/N;
 	sd:=MathL.sqrt( RESULT+*RESULT / N);
-	IF sd=0 THEN RETURN RESULT
+	IF sd=0 THEN (*HALT(200); *) RETURN RESULT
 	ELSE RETURN 1/sd * RESULT
 	END;
 END Normalize;
