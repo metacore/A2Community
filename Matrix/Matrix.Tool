@@ -1,122 +1,120 @@
-Linear Algebra and Planar/Volumetric Signal Processing Modules. Copyright Patrick Hunziker, Basel, 2005-2015.
+Linear Algebra and Planar/Volumetric Signal Processing Modules. Copyright Patrick Hunziker, Basel, 2005-2018.
 
+Compiler.Compile -S="../../WinAos/Matrix/"
 
-Compiler.Compile
+MatrixBase.Mod 
 
-Matrix/MatrixBase.Mod 
+ComplexMathL.Mod 
+MatrixUtilities.Mod 
+MatrixStreams.Mod
+PMath.Mod 
 
-Matrix/ComplexMathL.Mod 
-Matrix/MatrixUtilities.Mod 
-Matrix/MatrixStreams.Mod
-Matrix/PMath.Mod 
+LinearMath.Mod 
+LinearFilters.Mod 
+LinearFIRConvolveLongReal.Mod 
+LinearIIRConvolveLongReal.Mod 
+LinearConvolve.Mod 
+Wavelets.Mod
 
-Matrix/LinearMath.Mod 
-Matrix/LinearFilters.Mod 
-Matrix/LinearFIRConvolveLongReal.Mod 
-Matrix/LinearIIRConvolveLongReal.Mod 
-Matrix/LinearConvolve.Mod 
-Matrix/Wavelets.Mod
+LinearFFT.Mod 
+MatrixInterpolation.Mod
+MatrixBSplineInterpolation.Mod
 
-Matrix/LinearFFT.Mod 
-Matrix/MatrixInterpolation.Mod
-Matrix/MatrixBSplineInterpolation.Mod
+PlanarBase.Mod 
+PlanarMath.Mod 
+PlanarFFT.Mod
+PlanarNabla.Mod
+PlanarNorms.Mod
+PlanarTransform.Mod
+PlanarPDE.Mod
+PlanarWavelets.Mod
 
-Matrix/PlanarBase.Mod 
-Matrix/PlanarMath.Mod 
-Matrix/PlanarFFT.Mod
-Matrix/PlanarNabla.Mod
-Matrix/PlanarNorms.Mod
-Matrix/PlanarTransform.Mod
-Matrix/PlanarPDE.Mod
-Matrix/PlanarWavelets.Mod
+MatrixMoments.Mod
+LinearTransform.Mod 
 
-Matrix/MatrixMoments.Mod
-Matrix/LinearTransform.Mod 
+VolumeBase.Mod 
+VolumeNabla.Mod
+VolumeTransform.Mod 
+VolumePDE.Mod
+VolumeMoments.Mod
 
-Matrix/VolumeBase.Mod 
-Matrix/VolumeNabla.Mod
-Matrix/VolumeTransform.Mod 
-Matrix/VolumePDE.Mod
-Matrix/VolumeMoments.Mod
+HypercubeBase.Mod  
+HypercubeNabla.Mod
+HypercubeTransform.Mod 
+HypercubeMoments.Mod
 
-Matrix/HypercubeBase.Mod  
-Matrix/HypercubeNabla.Mod
-Matrix/HypercubeTransform.Mod 
-Matrix/HypercubeMoments.Mod
+MatrixStandardSolvers.Mod
 
-Matrix/MatrixStandardSolvers.Mod
+MatrixTransforms.Mod
+MatrixIterativeSolvers.Mod
+MatrixAlgebraicMultigrid.Mod
+MatrixNorms.Mod
+MatrixPolynomEq.Mod
+MatrixSVD.Mod
+MatrixEigen.Mod
+MatrixFastMatrixMultiply.Mod
+MatrixLeastSquares.Mod
+MatrixPrincipalComponents.Mod
 
-Matrix/MatrixTransforms.Mod
-Matrix/MatrixIterativeSolvers.Mod
-Matrix/MatrixAlgebraicMultigrid.Mod
-Matrix/MatrixNorms.Mod
-Matrix/MatrixPolynomEq.Mod
-Matrix/MatrixSVD.Mod
-Matrix/MatrixEigen.Mod
-Matrix/MatrixFastMatrixMultiply.Mod
-Matrix/MatrixLeastSquares.Mod
-Matrix/MatrixPrincipalComponents.Mod
+MatrixRoots.Mod
+MatrixKrylovCGS.Mod
+MatrixKrylovGMRES.Mod
+MatrixKrylovMINRES.Mod
+MatrixOptim.Mod
+TestMatrixOptim.Mod
 
-Matrix/MatrixRoots.Mod
-Matrix/MatrixKrylovCGS.Mod
-Matrix/MatrixKrylovGMRES.Mod
-Matrix/MatrixKrylovMINRES.Mod
-Matrix/MatrixOptim.Mod
-Matrix/TestMatrixOptim.Mod
+MatrixActive.Mod
+MatrixComputeObjects.Mod
+MatrixBlockSolvers.Mod
 
-Matrix/MatrixActive.Mod
-Matrix/MatrixComputeObjects.Mod
-Matrix/MatrixBlockSolvers.Mod
-
-Matrix/MatrixFigures.Mod
-Matrix/MatrixAVI.Mod
-Matrix/MatrixRaster.Mod
-Matrix/WMMatrix.Mod
-Matrix/WMMatrixGraph.Mod
-Matrix/WMStack.Mod
-Matrix/WMTensor.Mod
-Matrix/WMArrayPanel.Mod
-Matrix/WMMatrixLoader.Mod
+MatrixFigures.Mod
+MatrixAVI.Mod
+MatrixRaster.Mod
+WMMatrix.Mod
+WMMatrixGraph.Mod
+WMStack.Mod
+WMTensor.Mod
+WMArrayPanel.Mod
+WMMatrixLoader.Mod
 WMSimpleGraphs.Mod
 
-Matrix/PlanarMorphology.Mod
-Matrix/VolumeMorphology.Mod
+PlanarMorphology.Mod
+VolumeMorphology.Mod
 
 
-Matrix/MLBase.Mod
-Matrix/ErrorBase.Mod
-Matrix/ExtraSort.Mod
-Matrix/MLClassifier.Mod
-Matrix/MLKernels.Mod
-Matrix/MLKernelMeans.Mod
-Matrix/MLRegression.Mod
-Matrix/MLRidgeRegression.Mod
-Matrix/StatisticsBase.Mod
-Matrix/StatisticsHistograms.Mod
-Matrix/StatisticsFunctions.Mod
-Matrix/StatisticsLinearRegression.Mod
-Matrix/StatisticsCombinatorics.Mod
+MLBase.Mod
+ErrorBase.Mod
+ExtraSort.Mod
+MLClassifier.Mod
+MLKernels.Mod
+MLKernelMeans.Mod
+(*PMathSSE.Mod*)
+(*MLNeuralNet.Mod*)
+MLRegression.Mod
+MLRidgeRegression.Mod
+StatisticsBase.Mod
+StatisticsHistograms.Mod
+StatisticsFunctions.Mod
+StatisticsLinearRegression.Mod
+StatisticsCombinatorics.Mod
 
-Matrix/TestComplexMathL.Mod
-Matrix/TestMatrixStandardSolvers.Mod
-Matrix/TestPlanarPDE.Mod
-Matrix/TestVolumePDE.Mod
-Matrix/TestPlanarWavelets.Mod
-Matrix/LinpackBenchmark.Mod
+TestComplexMathL.Mod
+TestMatrixStandardSolvers.Mod
+TestPlanarPDE.Mod
+TestVolumePDE.Mod
+TestPlanarWavelets.Mod
+LinpackBenchmark.Mod
 
-Matrix/MatrixWarp.Mod
-
-Matrix/PMathSSE.Mod
-Matrix/MLNeuralNet.Mod
+MatrixWarp.Mod
 ~
 not ready yet:
-Compiler.Compile -p=Win32G Matrix/PMathSSE.Mod
+Compiler.Compile -p=Win32G PMathSSE.Mod
 
-Matrix/MLTest.Mod
+MLTest.Mod
 
 (*position: after LinearConvolve.Mod *)
-Matrix/LinearPDE.Mod
-Matrix/HypercubePDE.Mod 
+LinearPDE.Mod
+HypercubePDE.Mod 
 
 SystemTools.FreeDownTo MatrixBase ~
 
