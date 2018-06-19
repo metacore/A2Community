@@ -185,7 +185,7 @@ PROCEDURE nil(x:REAL):LONGINT;
 BEGIN
 	RETURN 0
 END nil;
-
+(*
 PROCEDURE -Truncate1(x:REAL):LONGINT; (*fast rounding - not working yet*)
 CODE{SYSTEM.i386, SYSTEM.SSE3, SYSTEM.FPU}
 	FISTTP [ESP+x]
@@ -203,6 +203,8 @@ PROCEDURE Truncate*(x:REAL):LONGINT;
 BEGIN
 	RETURN Truncate0(x)
 END Truncate;
+
+*)
 (*
 	PROCEDURE -fastExp(x:LONGREAL):LONGREAL; (*approximation, relatively fast, inline, see https://codingforspeed.com/using-faster-exponential-approximation/ *)
 	BEGIN
@@ -330,6 +332,7 @@ BEGIN
 	END;
 END tanh;
 
+(*
 PROCEDURE tanh1 (x: Datatype): Datatype; (* somewhat slower than tanh() *)
 VAR t:Datatype; i:LONGINT;
 BEGIN
@@ -340,7 +343,7 @@ BEGIN
 	ELSE RETURN -EvalSpline(-t-i, TanhCoeff[i])
 	END;
 END tanh1;
-
+*)
 PROCEDURE logisticL*(x:LONGREAL):LONGREAL; (*! improve - remove double function call*)
 BEGIN
 	RETURN logistic0(SHORT(x))
@@ -712,7 +715,8 @@ BEGIN
 		context.out.Float(PMath.logisticL(x) -logistic(x),24); 
 		context.out.Ln;
 	END; 
-	i:=Truncate(2.5);
+	(*i:=Truncate(2.5);*)
+	i:=2;
 	context.out.Int(i,10); context.out.Ln;
 	IF context.arg.GetInteger(i,FALSE) THEN END;
 	t0:=Kernel.GetTicks();
@@ -746,9 +750,11 @@ BEGIN
 	FOR i:=-5 TO 5 DO
 		context.out.Float(i/4,12);
 		context.out.Float(ENTIER(i/4),12);
+		(*
 		context.out.Float(Truncate((i/4)),12);
 		context.out.Float(Truncate0((i/4)),12);
 		context.out.Float(Truncate1((i/4)),12);
+		*)
 		context.out.Ln;
 	END;
 END Do4;
