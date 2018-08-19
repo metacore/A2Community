@@ -76,7 +76,8 @@ WMStack.Mod
 WMTensor.Mod
 WMArrayPanel.Mod
 WMMatrixLoader.Mod
-WMSimpleGraphs.Mod
+
+(*WMSimpleGraphs.Mod*)
 
 PlanarMorphology.Mod
 VolumeMorphology.Mod

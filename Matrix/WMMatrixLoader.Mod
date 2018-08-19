@@ -27,13 +27,13 @@ VAR d: ARRAY [?] OF MatrixBase.Datatype;
 	sWindow:WMStack.Window;
 	tWindow: WMTensor.Window;
 	title: Files.FileName;
-	i,x,y,z, xx,yy, datatype:LONGINT;
+	i,x,y,z, xx,yy, datatype, version:LONGINT;
 	max: MatrixBase.Datatype;
 BEGIN
 	f:=Files.Old(name);
 	IF f#NIL THEN 
 		Files.OpenReader(r,f,0);
-		MatrixUtilities.ParseHeader(r,datatype,len); 
+		MatrixUtilities.ParseHeader(r,version, datatype,len); 
 		NEW(d,len);
 		CASE datatype OF 
 		MatrixUtilities.DatatypeUInt8: NEW(d16,len); MatrixUtilities.ReadUInt8(r,d16); d:=d16;

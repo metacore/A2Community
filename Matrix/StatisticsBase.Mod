@@ -53,7 +53,9 @@ END MeanSquare;
 
 PROCEDURE RMS*(CONST X: Array): Datatype; (*root mean square*)
 BEGIN
-	RETURN MathL.sqrt(X+*X / ProdS(LEN(X)))
+	IF DIM(X)=0 THEN RETURN 0 (*!TBD: apply to other structures ? or TRAP ?*)
+	ELSE RETURN MathL.sqrt(X+*X / ProdS(LEN(X)))
+	END;
 END RMS;
 
 PROCEDURE KSmallest( VAR a: Vector;  n, k: LONGINT ): Datatype;
