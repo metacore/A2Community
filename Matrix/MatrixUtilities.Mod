@@ -1,22 +1,21 @@
 MODULE MatrixUtilities;   (**  AUTHOR "Patrick Hunziker"; PURPOSE "";    **)
 (*! to do: make random generator for matrices/tensors thread safe*)
+(*!tbd: portability issue of data transferred between SIZE=LInt and SIZE=HInt *)
 
-IMPORT Rand:=Random, MatrixBase, ComplexMathL, KernelLog, Strings, Reals, Streams, Files;  
+IMPORT Rand:=Random, MatrixBase, ComplexMathL, KernelLog, Strings, Reals, Streams, Files(*, Shortreal*);  
 
 TYPE 
 	
+	Bytes2=ARRAY 2 OF CHAR;
 	Datatype* = MatrixBase.Datatype;  
 	Matrix* = MatrixBase.Matrix;  Vector* = MatrixBase.Vector;  Tensor*=ARRAY[?] OF Datatype;
 	IntVector*= ARRAY [*] OF LONGINT; IntMatrix= ARRAY [*,*] OF LONGINT; IntTensor*=ARRAY[?] OF LONGINT;
 	BoolMatrix*= ARRAY [*,*] OF BOOLEAN;	BoolTensor*=ARRAY [?] OF BOOLEAN;
 	UnaryOp*=PROCEDURE(x:Datatype):Datatype;
 	BinaryOp*=PROCEDURE(x,y:Datatype):Datatype;
-
-
-	LenType = SIZE; 
 	
 TYPE RandomGenerator*= OBJECT(Rand.Generator);
-		PROCEDURE Random*(CONST size: ARRAY [*] OF LenType;  content: LONGINT ): Tensor;  
+		PROCEDURE Random*(CONST size: ARRAY [*] OF SIZE;  content: LONGINT ): Tensor;  
 		VAR i: LONGINT;
 		BEGIN {EXCLUSIVE}
 			IF DIM(RESULT)=0 THEN NEW(RESULT, size) END;
@@ -33,7 +32,7 @@ TYPE RandomGenerator*= OBJECT(Rand.Generator);
 			END;  
 			RETURN RESULT
 		END Random;  	
-		PROCEDURE Dices*(CONST size: ARRAY [*] OF LenType;  sides: LONGINT ): IntTensor;  
+		PROCEDURE Dices*(CONST size: ARRAY [*] OF SIZE;  sides: LONGINT ): IntTensor;  
 		VAR i: LONGINT;
 		BEGIN {EXCLUSIVE}
 			IF DIM(RESULT)=0 THEN NEW(RESULT, size) END;
@@ -44,7 +43,7 @@ TYPE RandomGenerator*= OBJECT(Rand.Generator);
 			END;  
 			RETURN RESULT
 		END Dices;  	
-		PROCEDURE Binary*(CONST size: ARRAY [*] OF LenType;  p: Datatype ): IntTensor;  
+		PROCEDURE Binary*(CONST size: ARRAY [*] OF SIZE;  p: Datatype ): IntTensor;  
 		VAR i: LONGINT;
 		BEGIN {EXCLUSIVE}
 			IF DIM(RESULT)=0 THEN NEW(RESULT, size) END;
@@ -78,6 +77,7 @@ CONST
 	DatatypeInt*=8;
 	DatatypeSInt*=9;
 	DatatypeUInt8*=10;
+	DatatypeSize*=DatatypeHInt;
 
 	
 VAR  RG: RandomGenerator (*Rand.Generator*);
@@ -86,7 +86,7 @@ VAR  RG: RandomGenerator (*Rand.Generator*);
 
 
 	PROCEDURE Identity*( VAR M: Matrix );  
-	VAR i: LenType;  
+	VAR i: SIZE;  
 	BEGIN 
 		M := 0;  
 		FOR i := 0 TO MIN(LEN( M)) - 1 DO M[i, i] := 1;  END;  
@@ -146,7 +146,7 @@ VAR  RG: RandomGenerator (*Rand.Generator*);
 		RETURN A
 	END RandomMatrix;  
 
-	PROCEDURE Random*(CONST size: ARRAY [*] OF LenType;  content: LONGINT ): Tensor;  
+	PROCEDURE Random*(CONST size: ARRAY [*] OF SIZE;  content: LONGINT ): Tensor;  
 	VAR i: LONGINT;
 	BEGIN 
 		IF DIM(RESULT)=0 THEN NEW(RESULT, size) END;
@@ -651,7 +651,7 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 	END WriteFloat;
 	
 	PROCEDURE WriteArray*(W:Streams.Writer; CONST t: ARRAY [?] OF Datatype; n,f,D:LONGINT);(* call Update() after writing *)
-	VAR len: ARRAY [*] OF LenType; i:LONGINT;
+	VAR len: ARRAY [*] OF SIZE; i:LONGINT;
 	BEGIN
 		ASSERT(DIM(t)>0);
 		len:=LEN(t);
@@ -698,7 +698,7 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 	
 	(* raw *)
 	PROCEDURE WriteLR*(W:Streams.Writer; CONST t: ARRAY [?] OF Datatype);
-	VAR len: ARRAY [*] OF LenType; i:SIZE;
+	VAR len: ARRAY [*] OF SIZE; i:SIZE;
 	BEGIN
 		ASSERT(DIM(t)>0);
 		len:=LEN(t);
@@ -708,9 +708,21 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 			FOR i:=0 TO LEN(t,0)-1 DO WriteLR(W, t[i,?]) END;
 		END;
 	END WriteLR;
+	
+	PROCEDURE WriteLRasSR*(W:Streams.Writer; CONST t: ARRAY [?] OF Datatype);
+	(*VAR len: ARRAY [*] OF SIZE; i:SIZE; sr: Shortreal.SHORTREAL;
+	BEGIN
+		ASSERT(DIM(t)>0);
+		len:=LEN(t);
+		IF  DIM(t)=1 THEN 
+			FOR i:=0 TO LEN(t,0)-1 DO W.Bytes(SYSTEM.VAL( Bytes2, t[i] ), 0, 2); (*W.RawLReal(t[i])*) END;
+		ELSE
+			FOR i:=0 TO LEN(t,0)-1 DO WriteLR(W, t[i,?]) END;
+		END;*)
+	END WriteLRasSR;
 
 	PROCEDURE WriteUInt8*(W:Streams.Writer; CONST t: ARRAY [?] OF INTEGER);
-	VAR len: ARRAY [*] OF LenType; i:SIZE;
+	VAR len: ARRAY [*] OF SIZE; i:SIZE;
 	BEGIN
 		ASSERT(DIM(t)>0);
 		len:=LEN(t);
@@ -723,7 +735,7 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 
 	(* raw *)
 	PROCEDURE WriteLInt*(W:Streams.Writer; CONST t: ARRAY [?] OF LONGINT);
-	VAR len: ARRAY [*] OF LenType; i:SIZE;
+	VAR len: ARRAY [*] OF SIZE; i:SIZE;
 	BEGIN
 		ASSERT(DIM(t)>0);
 		len:=LEN(t);
@@ -736,7 +748,7 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 	
 		(* raw *)
 	PROCEDURE WriteSize*(W:Streams.Writer; CONST t: ARRAY [?] OF SIZE);
-	VAR len: ARRAY [*] OF LenType; i:SIZE;
+	VAR len: ARRAY [*] OF SIZE; i:SIZE;
 	BEGIN
 		ASSERT(DIM(t)>0);
 		len:=LEN(t);
@@ -762,18 +774,20 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 	END WriteBool;
 	*)
 	
-	PROCEDURE WriteHeader*(W: Streams.Writer; datatype: LONGINT; CONST len: ARRAY [*] OF LenType);
+	PROCEDURE WriteHeader*(W: Streams.Writer; datatype: LONGINT; CONST len: ARRAY [*] OF SIZE);
 	VAR
 		i: LONGINT;
 		comment:ARRAY 16 OF CHAR;
 	BEGIN
-		W.String("TENSOR 1.0 ");
+		W.String("TENSOR 2.0 ");
 		IF(datatype=DatatypeLR) THEN
 			W.String("LR ");
 		ELSIF datatype=DatatypeLInt THEN
 			W.String("LInt ");
 		ELSIF datatype=DatatypeUInt8 THEN
 			W.String("UInt8 ");
+		ELSIF datatype=DatatypeHInt THEN
+			W.String("HInt");
 		ELSE
 			HALT(202);
 		END;
@@ -795,6 +809,14 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 		W.Update;
 	END StoreLR;
 	
+	PROCEDURE StoreLRasSR*(W:Streams.Writer; CONST t: ARRAY [?] OF Datatype);
+	BEGIN
+		WriteHeader(W, DatatypeSR, LEN(t));
+		IF DIM(t)>0 THEN WriteLRasSR(W,t) END;
+		W.Update;
+	END StoreLRasSR;
+
+	
 	PROCEDURE StoreLInt*(W:Streams.Writer; CONST t: ARRAY [?] OF LONGINT);
 	BEGIN
 		WriteHeader(W,DatatypeLInt, LEN(t));
@@ -805,7 +827,7 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 	
 	PROCEDURE StoreSize*(W:Streams.Writer; CONST t: ARRAY [?] OF SIZE);
 	BEGIN
-		WriteHeader(W,DatatypeLInt, LEN(t));
+		WriteHeader(W,DatatypeSize, LEN(t));
 		IF DIM(t)>0 THEN WriteSize(W,t) END;
 		W.Update;
 	END StoreSize;
@@ -820,6 +842,19 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 			FOR i:=0 TO LEN(t,0)-1 DO ReadLR(R, t[i,?]) END;
 		END;
 	END ReadLR;
+	
+	
+	PROCEDURE ReadLRfromSR*(R:Streams.Reader; VAR t: ARRAY [?] OF Datatype);
+	(*VAR i:SIZE; sr: Shortreal.SHORTREAL; b2: ARRAY 2 OF CHAR;
+	BEGIN
+		ASSERT(DIM(t)>0);
+		IF  DIM(t)=1 THEN 
+			FOR i:=0 TO LEN(t,0)-1 DO R.Bytes(b2,0,2); t[i]:= LONG(LONG(SYSTEM.VAL(Shortreal.SHORTREAL,b2))) (*R.RawLReal(t[i])*) END;
+		ELSE
+			FOR i:=0 TO LEN(t,0)-1 DO ReadLR(R, t[i,?]) END;
+		END;*)
+	END ReadLRfromSR;
+
 	
 	PROCEDURE ReadUInt8*(R:Streams.Reader; VAR t: ARRAY [?] OF INTEGER);
 	VAR i:SIZE; c:CHAR;
@@ -842,29 +877,75 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 			FOR i:=0 TO LEN(t,0)-1 DO ReadLInt(R, t[i,?]) END;
 		END;
 	END ReadLInt;
+
+	PROCEDURE ReadSize*(R:Streams.Reader; VAR t: ARRAY [?] OF SIZE);
+	VAR i:SIZE; h:HUGEINT;
+	BEGIN
+		ASSERT(DIM(t)>0);
+		IF  DIM(t)=1 THEN 
+			FOR i:=0 TO LEN(t,0)-1 DO R.RawHInt(h); t[i]:=SHORT(h) END; (* compiler problem with R.RawHInt(t[i])  ?*)
+		ELSE
+			FOR i:=0 TO LEN(t,0)-1 DO ReadSize(R, t[i,?]) END;
+		END;
+	END ReadSize;
+
+	
+	PROCEDURE GetSizeVectorV1(r: Streams.Reader): ARRAY [*] OF LONGINT;
+	VAR 
+		i, k:LONGINT;
+		lenL: ARRAY [*] OF LONGINT;
+	BEGIN
+		IF r.GetInteger(k,FALSE) THEN 
+			NEW(lenL,k);
+			FOR i:=0 TO k-1 DO 
+				IF r.GetInteger(lenL[i],FALSE) THEN ELSE HALT(201); END;
+			END;
+		ELSE HALT(200)
+		END;
+		RETURN lenL
+	END GetSizeVectorV1;
+	
+	PROCEDURE GetSizeVectorV2(r: Streams.Reader): ARRAY [*] OF SIZE;
+	VAR 
+		i,j, k:LONGINT;
+	BEGIN
+		IF r.GetInteger(k,FALSE) THEN 
+			NEW(RESULT,k);
+			FOR i:=0 TO k-1 DO 
+				IF r.GetInteger(j,FALSE) THEN
+					RESULT[i]:=j 
+				ELSE HALT(201); 
+				END;
+			END;
+		ELSE HALT(200)
+		END;
+		RETURN RESULT
+	END GetSizeVectorV2;
 	
 	(*parse header of .MtA files storing an ARRAY [?] OF Datatype, or ARRAY [*{*}] OF Datatype*)
-	PROCEDURE ParseHeader*(r:Streams.Reader; VAR  datatype: LONGINT; VAR len: ARRAY [*] OF LenType);
+	PROCEDURE ParseHeader*(r:Streams.Reader; VAR version, datatype: LONGINT; VAR len: ARRAY [*] OF SIZE);
 	VAR 
 		i, j, k:LONGINT;
 		dontcare: BOOLEAN;
-		structure, datatypeString, version, comment: ARRAY 8 OF CHAR;
+		structure, datatypeString, versionString, comment: ARRAY 8 OF CHAR;
 	BEGIN
-		IF r.GetString(structure) & r.GetString(version) &	r.GetString(datatypeString) THEN
-			ASSERT(version="1.0",202);
+		IF r.GetString(structure) & r.GetString(versionString) &	r.GetString(datatypeString) THEN
+			IF versionString="1.0" THEN version:=1;
+			ELSIF versionString="2.0" THEN version:=2;
+			ELSE HALT(200)
+			END;
 			ASSERT(structure="TENSOR",202);
 			IF datatypeString='LR' THEN	datatype:=DatatypeLR;
 			ELSIF datatypeString='LInt' THEN	datatype:=DatatypeLInt;
 			ELSIF (datatypeString='C') OR (datatypeString='UInt8') THEN datatype:=DatatypeUInt8
+			ELSIF (datatypeString='HInt') THEN datatype:=DatatypeHInt
 			ELSE HALT(202);
 			END;
 			r.Ln(comment);
-			IF r.GetInteger(k, FALSE) THEN NEW(len,k)
-			ELSE HALT(200)
-			END;
-			FOR i:=0 TO k-1 DO 
-				dontcare:=r.GetInteger(j,FALSE) ;
-				len[i] := j;
+			
+			IF version=1 THEN len:=GetSizeVectorV1(r);
+			ELSIF version=2 THEN len:=GetSizeVectorV2(r);
+			ELSE HALT(200);
 			END;
 		END;
 		r.SkipLn;
@@ -872,37 +953,69 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 	
 	(* derive structure from header*)
 	PROCEDURE LoadLR*(R:Streams.Reader): ARRAY [?] OF Datatype;
-	VAR  len: ARRAY [*] OF LenType;
-		datatype:LONGINT;
+	VAR  len: ARRAY [*] OF SIZE;
+		version, datatype:LONGINT;
 	BEGIN
-		ParseHeader(R,datatype,len);
+		ParseHeader(R,version, datatype,len);
 		ASSERT(datatype=DatatypeLR);
 		IF (DIM(RESULT)#LEN(len,0)) OR (LEN(RESULT)#len) THEN NEW(RESULT,len) END;
 		IF DIM(RESULT)>0 THEN ReadLR(R,RESULT) END;
 		RETURN RESULT
 	END LoadLR;
+
+	PROCEDURE LoadLRfromSR*(R:Streams.Reader): ARRAY [?] OF Datatype;
+	VAR  len: ARRAY [*] OF SIZE;
+		version, datatype:LONGINT;
+	BEGIN
+		ParseHeader(R,version, datatype,len);
+		ASSERT(datatype=DatatypeSR);
+		IF (DIM(RESULT)#LEN(len,0)) OR (LEN(RESULT)#len) THEN NEW(RESULT,len) END;
+		IF DIM(RESULT)>0 THEN ReadLRfromSR(R,RESULT) END;
+		RETURN RESULT
+	END LoadLRfromSR;
 	
 	
 (* derive structure from header*)
 	PROCEDURE LoadLInt*(R:Streams.Reader): ARRAY [?] OF LONGINT;
-	VAR  len: ARRAY [*] OF LenType;
-		datatype: LONGINT;
+	VAR  len: ARRAY [*] OF SIZE;
+		version, datatype: LONGINT;
 	BEGIN
-		ParseHeader(R,datatype,len);
+		ParseHeader(R,version, datatype,len);
 		ASSERT(datatype=DatatypeLInt);
-		IF (DIM(RESULT)#LEN (len)) OR (LEN(RESULT)#len) THEN NEW(RESULT,len) END;
+		IF (DIM(RESULT)#LEN (len,0)) OR (LEN(RESULT)#len) THEN NEW(RESULT,len) END;
 		IF DIM(RESULT)>0 THEN ReadLInt(R,RESULT) END;
 		RETURN RESULT
 	END LoadLInt;
+	
+	(* derive structure from header*)
+	PROCEDURE LoadSize*(R:Streams.Reader): ARRAY [?] OF SIZE;
+	VAR  len: ARRAY [*] OF SIZE;
+		resultLInt:ARRAY [*] OF LONGINT;
+		version, datatype: LONGINT;
+	BEGIN
+		ParseHeader(R,version, datatype,len);
+		IF (version=1)&(datatype=DatatypeLInt) THEN datatype:=DatatypeSize END;(*!bug fix for  2018.4.27 to about 2018.8.15*) 
+		IF LEN(len,0)>0 THEN 	
+			IF datatype=DatatypeSize THEN 
+				IF (DIM(RESULT)#LEN(len,0)) OR (LEN(RESULT)#len) THEN NEW(RESULT,len) END;
+				ReadSize(R,RESULT) 
+			ELSIF datatype=DatatypeLInt THEN 
+				IF (DIM(resultLInt)#LEN (len,0)) OR (LEN(resultLInt)#len) THEN NEW(resultLInt,len) END;
+				ReadLInt(R,resultLInt); 
+				RESULT:=resultLInt
+			END;
+		END;
+		RETURN RESULT
+	END LoadSize;
 
 (* derive structure from header*)
 	PROCEDURE LoadUInt8*(R:Streams.Reader): ARRAY [?] OF INTEGER;
-	VAR  len: ARRAY [*] OF LenType;
-		datatype: LONGINT;
+	VAR  len: ARRAY [*] OF SIZE;
+		version, datatype: LONGINT;
 	BEGIN
-		ParseHeader(R,datatype,len);
+		ParseHeader(R,version, datatype,len);
 		ASSERT(datatype=DatatypeUInt8);
-		IF (DIM(RESULT)#LEN (len)) OR (LEN(RESULT)#len) THEN NEW(RESULT,len) END;
+		IF (DIM(RESULT)#LEN (len,0)) OR (LEN(RESULT)#len) THEN NEW(RESULT,len) END;
 		ReadUInt8(R,RESULT);
 		RETURN RESULT
 	END LoadUInt8;
@@ -1060,7 +1173,7 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 	*)
 	
 	PROCEDURE Test*;
-	VAR t,t1:Tensor; len:ARRAY [*]OF LenType; i:LONGINT;
+	VAR t,t1:Tensor; len:ARRAY [*]OF SIZE; i:LONGINT;
 		f:Files.File; w:Files.Writer; r:Files.Reader;
 	BEGIN
 		NEW(len,0);
@@ -1081,4 +1194,4 @@ MatrixUtilities.Test
 
 fofPC.Compile \s * 
 OFormatter.Format * MN * 
-SystemTools.FreeDownTo MatrixUtilities ~
+System.FreeDownTo MatrixUtilities ~

@@ -52,7 +52,9 @@ TYPE TYPE Panel*= OBJECT (WMStandardComponents.ImagePanel) (*! tbd: convert some
 		VAR filename: Files.FileName; f:Files.File; w:Files.Writer;
 		BEGIN
 			IF (x.msgType = WMMessages.MsgSerialize) & (x.msgSubType = WMMessages.MsgSubSerializeData) THEN
-				GenerateName(id.Get()^, filename);
+				IF title#"" THEN GenerateName(title, filename)
+				ELSE GenerateName(id.Get()^, filename);
+				END;
 				Strings.Append(filename, ".MtA"); (* file type "MathArray" *)
 				f:=Files.New(filename);
 				Files.OpenWriter(w,f,0);
@@ -316,6 +318,54 @@ VAR d : Data;
 BEGIN NEW(d); RETURN d
 END GenData;
 
+PROCEDURE GetPanel*(CONST tensor: ARRAY [?] OF LONGREAL): Panel;
+VAR	panel:Panel;
+BEGIN
+	NEW(panel);
+	panel.SetArray(tensor);
+	panel.SetOrientation(0);
+	RETURN panel
+END GetPanel;
+
+(*
+
+PROCEDURE AddWindow*(CONST tensor: ARRAY [?] OF LONGREAL; CONST title: ARRAY OF CHAR);
+VAR window:WMComponents.FormWindow; w,h:LONGINT;
+	panel:Panel;
+BEGIN
+	NEW(panel);
+	panel.SetArray(tensor);
+	panel.SetOrientation(0);
+	IF DIM(tensor)>1 THEN w:=LEN(tensor)[DIM(tensor)-1]; h:=LEN(tensor)[DIM(tensor)-2];
+	ELSE w:=400; h:=400;
+	END;
+	NEW(window, w, h, FALSE); 
+	window.SetTitle(Strings.NewString(title));
+	INCL(window.flags, WM.FlagStorable); (* allow storing of data interactively, through right-click on navigator icon*)
+	WM.DefaultAddWindow(window);
+	window.SetContent(panel);
+	window.form.fillColor.Set(008888FFH);(*background*)
+END AddWindow;
+*)
+
+PROCEDURE AddWindow*(CONST tensor: ARRAY [?] OF LONGREAL; CONST title: ARRAY OF CHAR);
+VAR window:WMComponents.FormWindow; w,h:LONGINT;
+	panel:Panel;
+BEGIN
+	IF DIM(tensor)>1 THEN w:=LEN(tensor)[DIM(tensor)-1]; h:=LEN(tensor)[DIM(tensor)-2];
+	ELSE w:=400; h:=400;
+	END;
+	NEW(window, w, h, FALSE); 
+	window.SetTitle(Strings.NewString(title));
+	INCL(window.flags, WM.FlagStorable); (* allow storing of data interactively, through right-click on navigator icon*)
+	WM.DefaultAddWindow(window);
+	panel:=GetPanel(tensor);
+	COPY(title, panel.title); COPY(title, panel.baseTitle);
+	window.SetContent(panel);
+	window.form.fillColor.Set(008888FFH);(*background*)
+END AddWindow;
+
+
 PROCEDURE  Test*(context:Commands.Context); (*deprecated -  will be eliminated from source*)
 VAR window:WMComponents.FormWindow;
 	panel:Panel;
@@ -352,6 +402,6 @@ END WMArrayPanel.
 
 WMArrayPanel.Test~
 
-SystemTools.FreeDownTo WMArrayPanel~
+System.FreeDownTo WMArrayPanel~
 
-SystemTools.FreeDownTo MatrixUtilities ~
+System.FreeDownTo MatrixUtilities ~
