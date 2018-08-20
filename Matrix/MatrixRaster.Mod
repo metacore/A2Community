@@ -23,7 +23,7 @@ BEGIN
 		END;
 	END;
 	Raster.InitPaletteFormat(F,pal);
-	Raster.Create(im,SHORT(LEN(data,1)),SHORT(LEN(data,0)),F);	(*TO DO: reuse if fitting ...*)
+	Raster.Create(im,LEN(data,1),LEN(data,0),F);	(*TO DO: reuse if fitting ...*)
 	FOR y:=0 TO LEN(data,0)-1 DO
 		FOR x:=0 TO LEN(data,1)-1 DO
 			im.mem[y*im.bpr+x]:= CHR(data[y,x] MOD 256); 
@@ -36,7 +36,7 @@ VAR F:Raster.Format; pal:Raster.Palette; i,x,y:LONGINT;
 BEGIN
 	IF (LEN(data,0)=0) OR (LEN(data,1)=0) THEN RETURN END;
 	F:=Raster.BGR888;
-	Raster.Create(im,SHORT(LEN(data,1)),SHORT(LEN(data,0)),F);
+	Raster.Create(im,LEN(data,1),LEN(data,0),F);
 	FOR y:=0 TO LEN(data,0)-1 DO
 		FOR x:=0 TO LEN(data,1)-1 DO
 			im.mem[y*im.bpr+3*x+0]:= CHR(data[y,x,2] MOD 256); 
@@ -53,7 +53,7 @@ BEGIN
 	IF (LEN(data,0)=0) OR (LEN(data,1)=0) THEN RETURN END;
 	F:=Raster.BGR888; 
 	max:=MAX(data MOD 10000H);(*!to do: avoid temp allocation*)
-	Raster.Create(im,SHORT(LEN(data,1)),SHORT(LEN(data,0)),F);
+	Raster.Create(im,LEN(data,1),LEN(data,0),F);
 	IF LEN(palette)=0 THEN 
 		NEW(palette, max+1,3); 
 		FOR col:=0 TO LEN(palette,0)-1 DO 
@@ -77,7 +77,7 @@ BEGIN
 	F:=Raster.BGR888; 
 	max:=MAX(data);
 	IF im=NIL THEN NEW(im); END;
-	Raster.Create(im,SHORT(LEN(data,1)),SHORT(LEN(data,0)),F);
+	Raster.Create(im,LEN(data,1),LEN(data,0),F);
 	IF LEN(palette)=0 THEN 
 		NEW(palette, max+1,3); 
 		FOR col:=0 TO LEN(palette,0)-1 DO 
@@ -101,7 +101,7 @@ BEGIN
 	F:=Raster.BGR888; 
 	max:=MAX(data);
 	IF im=NIL THEN NEW(im); END;
-	Raster.Create(im,SHORT(LEN(data,1)),SHORT(LEN(data,0)),F);
+	Raster.Create(im,LEN(data,1),LEN(data,0),F);
 	IF LEN(palette)=0 THEN 
 		NEW(palette, max+1,3); 
 		FOR col:=0 TO LEN(palette,0)-1 DO 
@@ -137,7 +137,7 @@ BEGIN
 	IF (LEN(data,0)=0) OR (LEN(data,1)=0) THEN RETURN END;
 	Raster.InitMode(putMode, Raster.srcCopy);
 	F:=Raster.BGRA8888;
-	Raster.Create(im,SHORT(LEN(data,1)),SHORT(LEN(data,0)),F);
+	Raster.Create(im,LEN(data,1),LEN(data,0),F);
 	FOR y:=0 TO LEN(data,0)-1 DO
 		FOR x:=0 TO LEN(data,1)-1 DO
 			Raster.Put(im,x,y, SYSTEM.VAL(Raster.Pixel,data[y,x]),putMode);
@@ -151,7 +151,7 @@ VAR F:Raster.Format; pal:Raster.Palette; max,valI,i,col,x,y:LONGINT; val:REAL; p
 BEGIN
 	IF (LEN(data,0)=0) OR (LEN(data,1)=0) THEN RETURN END;
 	F:=Raster.BGR888; 
-	Raster.Create(im,SHORT(LEN(data,1)),SHORT(LEN(data,0)),F);
+	Raster.Create(im,LEN(data,1),LEN(data,0),F);
 	FOR y:=0 TO LEN(data,0)-1 DO
 		FOR x:=0 TO LEN(data,1)-1 DO
 			val:=data[y,x]; IF Reals.IsNaN(val) THEN val:=0 END;
@@ -168,7 +168,7 @@ VAR F:Raster.Format; pal:Raster.Palette; max,valI,i,col,x,y:LONGINT; val:LONGREA
 BEGIN
 	IF (LEN(data,0)=0) OR (LEN(data,1)=0) THEN RETURN END;
 	F:=Raster.BGR888; 
-	Raster.Create(im,SHORT(LEN(data,1)),SHORT(LEN(data,0)),F);
+	Raster.Create(im,LEN(data,1),LEN(data,0),F);
 	FOR y:=0 TO LEN(data,0)-1 DO
 		FOR x:=0 TO LEN(data,1)-1 DO
 			val:=data[y,x]; IF Reals.IsNaNL(val) THEN val:=0 END;
@@ -186,7 +186,7 @@ VAR F:Raster.Format; pal:Raster.Palette; max,valI,i,col,x,y:LONGINT; val:LONGREA
 BEGIN
 	IF (LEN(data,0)=0) OR (LEN(data,1)=0) THEN RETURN END;
 	F:=Raster.BGR888; 
-	Raster.Create(im,SHORT(LEN(data,1)),SHORT(LEN(data,0)),F);
+	Raster.Create(im,LEN(data,1),LEN(data,0),F);
 	FOR y:=0 TO LEN(data,0)-1 DO
 		FOR x:=0 TO LEN(data,1)-1 DO
 			val:=data[y,x]; IF Reals.IsNaNL(val) THEN val:=0 END;
@@ -209,7 +209,7 @@ VAR F:Raster.Format; pal:Raster.Palette; max,valI,i,col,x,y:LONGINT; val:LONGREA
 BEGIN
 	IF (LEN(data,0)=0) OR (LEN(data,1)=0) THEN RETURN END;
 	F:=Raster.BGR888; 
-	Raster.Create(im,SHORT(LEN(data,1)),SHORT(LEN(data,0)),F);
+	Raster.Create(im,LEN(data,1),LEN(data,0),F);
 	FOR y:=0 TO LEN(data,0)-1 DO
 		FOR x:=0 TO LEN(data,1)-1 DO
 			val:=data[y,x]; 
@@ -263,7 +263,7 @@ BEGIN
 	g:=MAX(G); IF Reals.IsNaNL(g) THEN g:=0 END;
 	b:=MAX(B); IF Reals.IsNaNL(b) THEN b:=0 END;
 	gain:=255/MAX(r, MAX(g,b)); 
-	Raster.Create(im,SHORT(w),SHORT(h),Raster.BGR888);
+	Raster.Create(im,w,h,Raster.BGR888);
 	FOR y:=0 TO h-1 DO
 		FOR x:=0 TO w-1 DO
 			im.mem[y*im.bpr+3*x+0]:= CHR(ENTIER(gain*B[y,x])); 
@@ -277,7 +277,7 @@ PROCEDURE LRealRGBToImageB*(CONST R,G,B:ARRAY [*,*] OF LONGREAL;  offset, gain:L
 VAR x,y, w,h:LONGINT; 
 BEGIN
 	w:=LEN(R,1); h:=LEN(R,0);
-	Raster.Create(im,SHORT(w),SHORT(h),Raster.BGR888);
+	Raster.Create(im,w,h,Raster.BGR888);
 	FOR y:=0 TO h-1 DO
 		FOR x:=0 TO w-1 DO
 			im.mem[y*im.bpr+3*x+0]:= CHR(ENTIER(offset+gain*B[y,x])); 
@@ -425,6 +425,6 @@ END Test;
 
 END MatrixRaster.
 
-SystemTools.FreeDownTo
+System.FreeDownTo
 MatrixRaster~
 MatrixRaster.Test ~
