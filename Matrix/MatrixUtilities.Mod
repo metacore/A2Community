@@ -709,7 +709,19 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 		END;
 	END WriteLR;
 	
-	PROCEDURE WriteLRasSR*(W:Streams.Writer; CONST t: ARRAY [?] OF Datatype);
+	PROCEDURE WriteR*(W:Streams.Writer; CONST t: ARRAY [?] OF REAL);
+	VAR len: ARRAY [*] OF SIZE; i:SIZE;
+	BEGIN
+		ASSERT(DIM(t)>0);
+		len:=LEN(t);
+		IF  DIM(t)=1 THEN 
+			FOR i:=0 TO LEN(t,0)-1 DO W.RawReal(t[i]) END;
+		ELSE
+			FOR i:=0 TO LEN(t,0)-1 DO WriteR(W, t[i,?]) END;
+		END;
+	END WriteR;
+		
+	PROCEDURE WriteRasSR*(W:Streams.Writer; CONST t: ARRAY [?] OF REAL);
 	(*VAR len: ARRAY [*] OF SIZE; i:SIZE; sr: Shortreal.SHORTREAL;
 	BEGIN
 		ASSERT(DIM(t)>0);
@@ -719,7 +731,7 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 		ELSE
 			FOR i:=0 TO LEN(t,0)-1 DO WriteLR(W, t[i,?]) END;
 		END;*)
-	END WriteLRasSR;
+	END WriteRasSR;
 
 	PROCEDURE WriteUInt8*(W:Streams.Writer; CONST t: ARRAY [?] OF INTEGER);
 	VAR len: ARRAY [*] OF SIZE; i:SIZE;
@@ -782,6 +794,8 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 		W.String("TENSOR 2.0 ");
 		IF(datatype=DatatypeLR) THEN
 			W.String("LR ");
+		ELSIF(datatype=DatatypeR) THEN
+			W.String("R ");
 		ELSIF datatype=DatatypeLInt THEN
 			W.String("LInt ");
 		ELSIF datatype=DatatypeUInt8 THEN
@@ -808,13 +822,20 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 		IF DIM(t)>0 THEN WriteLR(W,t) END;
 		W.Update;
 	END StoreLR;
+
+	PROCEDURE StoreR*(W:Streams.Writer; CONST t: ARRAY [?] OF REAL);
+	BEGIN
+		WriteHeader(W, DatatypeR, LEN(t));
+		IF DIM(t)>0 THEN WriteR(W,t) END;
+		W.Update;
+	END StoreR;
 	
-	PROCEDURE StoreLRasSR*(W:Streams.Writer; CONST t: ARRAY [?] OF Datatype);
+	PROCEDURE StoreRasSR*(W:Streams.Writer; CONST t: ARRAY [?] OF REAL);
 	BEGIN
 		WriteHeader(W, DatatypeSR, LEN(t));
-		IF DIM(t)>0 THEN WriteLRasSR(W,t) END;
+		IF DIM(t)>0 THEN WriteRasSR(W,t) END;
 		W.Update;
-	END StoreLRasSR;
+	END StoreRasSR;
 
 	
 	PROCEDURE StoreLInt*(W:Streams.Writer; CONST t: ARRAY [?] OF LONGINT);
@@ -843,8 +864,19 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 		END;
 	END ReadLR;
 	
+	PROCEDURE ReadR*(R:Streams.Reader; VAR t: ARRAY [?] OF REAL);
+	VAR i:SIZE;
+	BEGIN
+		ASSERT(DIM(t)>0);
+		IF  DIM(t)=1 THEN 
+			FOR i:=0 TO LEN(t,0)-1 DO R.RawReal(t[i]) END;
+		ELSE
+			FOR i:=0 TO LEN(t,0)-1 DO ReadR(R, t[i,?]) END;
+		END;
+	END ReadR;
 	
-	PROCEDURE ReadLRfromSR*(R:Streams.Reader; VAR t: ARRAY [?] OF Datatype);
+	
+	PROCEDURE ReadRfromSR*(R:Streams.Reader; VAR t: ARRAY [?] OF REAL);
 	(*VAR i:SIZE; sr: Shortreal.SHORTREAL; b2: ARRAY 2 OF CHAR;
 	BEGIN
 		ASSERT(DIM(t)>0);
@@ -853,7 +885,7 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 		ELSE
 			FOR i:=0 TO LEN(t,0)-1 DO ReadLR(R, t[i,?]) END;
 		END;*)
-	END ReadLRfromSR;
+	END ReadRfromSR;
 
 	
 	PROCEDURE ReadUInt8*(R:Streams.Reader; VAR t: ARRAY [?] OF INTEGER);
@@ -936,6 +968,7 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 			END;
 			ASSERT(structure="TENSOR",202);
 			IF datatypeString='LR' THEN	datatype:=DatatypeLR;
+			ELSIF datatypeString='R' THEN	datatype:=DatatypeR;
 			ELSIF datatypeString='LInt' THEN	datatype:=DatatypeLInt;
 			ELSIF (datatypeString='C') OR (datatypeString='UInt8') THEN datatype:=DatatypeUInt8
 			ELSIF (datatypeString='HInt') THEN datatype:=DatatypeHInt
@@ -963,16 +996,28 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 		RETURN RESULT
 	END LoadLR;
 
-	PROCEDURE LoadLRfromSR*(R:Streams.Reader): ARRAY [?] OF Datatype;
+	PROCEDURE LoadR*(R:Streams.Reader): ARRAY [?] OF REAL;
+	VAR  len: ARRAY [*] OF SIZE;
+		version, datatype:LONGINT;
+	BEGIN
+		ParseHeader(R,version, datatype,len);
+		ASSERT(datatype=DatatypeR);
+		IF (DIM(RESULT)#LEN(len,0)) OR (LEN(RESULT)#len) THEN NEW(RESULT,len) END;
+		IF DIM(RESULT)>0 THEN ReadR(R,RESULT) END;
+		RETURN RESULT
+	END LoadR;
+
+
+	PROCEDURE LoadRfromSR*(R:Streams.Reader): ARRAY [?] OF REAL;
 	VAR  len: ARRAY [*] OF SIZE;
 		version, datatype:LONGINT;
 	BEGIN
 		ParseHeader(R,version, datatype,len);
 		ASSERT(datatype=DatatypeSR);
 		IF (DIM(RESULT)#LEN(len,0)) OR (LEN(RESULT)#len) THEN NEW(RESULT,len) END;
-		IF DIM(RESULT)>0 THEN ReadLRfromSR(R,RESULT) END;
+		IF DIM(RESULT)>0 THEN ReadRfromSR(R,RESULT) END;
 		RETURN RESULT
-	END LoadLRfromSR;
+	END LoadRfromSR;
 	
 	
 (* derive structure from header*)
