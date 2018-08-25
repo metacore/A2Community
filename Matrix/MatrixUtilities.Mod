@@ -17,7 +17,7 @@ TYPE
 TYPE RandomGenerator*= OBJECT(Rand.Generator);
 		PROCEDURE Random*(CONST size: ARRAY [*] OF SIZE;  content: LONGINT ): Tensor;  
 		VAR i: LONGINT;
-		BEGIN {EXCLUSIVE}
+		BEGIN (*{EXCLUSIVE}*)
 			IF DIM(RESULT)=0 THEN NEW(RESULT, size) END;
 			IF DIM(RESULT)=1 THEN
 				FOR i:=0 TO LEN(RESULT,0)-1 DO
@@ -34,7 +34,7 @@ TYPE RandomGenerator*= OBJECT(Rand.Generator);
 		END Random;  	
 		PROCEDURE Dices*(CONST size: ARRAY [*] OF SIZE;  sides: LONGINT ): IntTensor;  
 		VAR i: LONGINT;
-		BEGIN {EXCLUSIVE}
+		BEGIN (*{EXCLUSIVE}*)
 			IF DIM(RESULT)=0 THEN NEW(RESULT, size) END;
 			IF DIM(RESULT)=1 THEN
 				FOR i:=0 TO LEN(RESULT,0)-1 DO RESULT[i] :=Dice(sides) END;  
@@ -45,8 +45,9 @@ TYPE RandomGenerator*= OBJECT(Rand.Generator);
 		END Dices;  	
 		PROCEDURE Binary*(CONST size: ARRAY [*] OF SIZE;  p: Datatype ): IntTensor;  
 		VAR i: LONGINT;
-		BEGIN {EXCLUSIVE}
-			IF DIM(RESULT)=0 THEN NEW(RESULT, size) END;
+		BEGIN (* {EXCLUSIVE}*)
+			(*IF DIM(RESULT)=0 THEN NEW(RESULT, size) END;*)
+			IF LEN(RESULT)#size THEN NEW(RESULT, size) END;
 			IF DIM(RESULT)=1 THEN
 				FOR i:=0 TO LEN(RESULT,0)-1 DO 
 					IF Uniform()<p THEN RESULT[i] :=1 

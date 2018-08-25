@@ -18,6 +18,7 @@ CONST
 PROCEDURE Load*(CONST name:Files.FileName; orientation:LONGINT; options:Options.Options): WMWindowManager.Window;
 VAR d: ARRAY [?] OF MatrixBase.Datatype;
 	d2: ARRAY [*,*] OF MatrixBase.Datatype;
+	dr: ARRAY [?] OF REAL;
 	d16: ARRAY [?] OF INTEGER;
 	d32: ARRAY[?] OF LONGINT;
 	len: ARRAY [*] OF SIZE;
@@ -38,10 +39,10 @@ BEGIN
 		CASE datatype OF 
 		MatrixUtilities.DatatypeUInt8: NEW(d16,len); MatrixUtilities.ReadUInt8(r,d16); d:=d16;
 		| MatrixUtilities.DatatypeLInt: NEW(d32,len); MatrixUtilities.ReadLInt(r,d32); d:=d32;
+		| MatrixUtilities.DatatypeR : NEW(d, len); MatrixUtilities.ReadR(r,dr); d:=dr;
 		| MatrixUtilities.DatatypeLR : NEW(d, len); MatrixUtilities.ReadLR(r,d);
 		ELSE HALT(200);
 		END;
-		(*d:=MatrixUtilities.LoadLR(r);*)
 		IF DIM(d)=2 THEN 
 			NEW(mWindow, d, name);
 			mWindow.AddWindow;
