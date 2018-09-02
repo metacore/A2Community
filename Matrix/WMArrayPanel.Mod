@@ -349,13 +349,13 @@ END AddWindow;
 *)
 
 PROCEDURE AddWindow*(CONST tensor: ARRAY [?] OF LONGREAL; CONST title: ARRAY OF CHAR);
-VAR window:WMComponents.FormWindow; w,h:LONGINT;
+VAR window:WMComponents.FormWindow; w,h:SIZE;
 	panel:Panel;
 BEGIN
 	IF DIM(tensor)>1 THEN w:=LEN(tensor)[DIM(tensor)-1]; h:=LEN(tensor)[DIM(tensor)-2];
 	ELSE w:=400; h:=400;
 	END;
-	NEW(window, w, h, FALSE); 
+	NEW(window, LONGINT(w), LONGINT(h), FALSE); 
 	window.SetTitle(Strings.NewString(title));
 	INCL(window.flags, WM.FlagStorable); (* allow storing of data interactively, through right-click on navigator icon*)
 	WM.DefaultAddWindow(window);

@@ -1,6 +1,6 @@
 Linear Algebra and Planar/Volumetric Signal Processing Modules. Copyright Patrick Hunziker, Basel, 2005-2018.
 
-Compiler.Compile -S="../../WinAos/Matrix/"
+Compiler.Compile -S="Matrix/"
 
 MatrixBase.Mod 
 
