@@ -42,10 +42,36 @@ TYPE
 		Constrain*: Boundary;
 		map*,smallmap*, m,m0: BooleanMap;
 		resized:BOOLEAN;
-	PROCEDURE Resize(w,h:LONGINT); (*implementation limitation: binary size steps*)
+		len,newLen: ARRAY [*] OF SIZE;
+	PROCEDURE Resize(w,h:LONGINT); (*implementation limitation: binary size steps*) (*!TO DO: adapt Resize similar to MatrixPDE.Mod*)
+	VAR x,y,z:LONGINT;
 	BEGIN
 		IF  (h#LEN(constraint,1)) OR (w#LEN(constraint,2)) THEN (*no reduction along dimension 0 *)
 			resized:=TRUE;
+			len:=LEN(constraint);
+			
+			m:=m0; m:=map; 
+			c:=c0; c:=constraint;
+			WHILE (LEN(smallconstraint,0)>1) & ((LEN(smallconstraint,0)#h) OR (LEN(smallconstraint,1)#w)) DO
+				newLen:=LEN(c); newLen[1..2]:=(newLen[1..2]+1) DIV 2;
+				NEW(smallmap, newLen); 
+				NEW(smallconstraint, newLen);
+				FOR z:=0 TO LEN(c,0)-1 DO
+					FOR y:=0 TO LEN(c,1)-1 DO
+						FOR x:=0 TO LEN(c,2)-1 DO
+							IF m[y,x] THEN 
+								smallmap[y DIV 2, x DIV 2]:= m[y,x]; (*redundant multiplicity z times *)
+								smallconstraint[z, y DIV 2,x DIV 2]:= c[z,y,x] 
+							END; (* hack*)
+						END;
+					END;
+				END;
+				m:=m0; m:=smallmap;
+				c:=c0; c:=smallconstraint;
+			END;
+
+			(*
+			
 			IF  (h#LEN(smallconstraint,1)) OR (w#LEN(smallconstraint,2))  THEN
 				smallconstraint:=c0; smallconstraint:=constraint;
 				smallmap:=m0; smallmap:=map;
@@ -58,6 +84,7 @@ TYPE
 				END;
 			ELSE (*already done*)
 			END;
+			*)
 		ELSE resized:=FALSE
 		END;
 	END Resize;

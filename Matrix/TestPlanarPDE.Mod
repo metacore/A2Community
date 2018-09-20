@@ -48,7 +48,7 @@ TYPE
 		NEW( c, size, size); c[45..55] := 1;  c[.. , 45..55] := -1;   c[100.. , 145..155] := 1;
 		NEW( b, size, size); b[45..55] := TRUE;  b[.. , 45..55] := TRUE;   b[100.. , 145..155] := TRUE;
 		NEW(con); con.Set(c,b);
-		NEW( laplace );  laplace.SolveMultigrid( d, threshold, 32, 100, 10, con.Constrain );  
+		NEW( laplace );  laplace.SolveMultigrid( d, threshold, 32, 20, 200, con.Constrain );  
 		WMMatrix.AddWindow(d,"d");
 	END TestConstrainedLaplace;  
 
@@ -85,7 +85,7 @@ TYPE
 
 END TestPlanarPDE.
 
-SystemTools.Free TestPlanarPDE  PlanarPDE PlanarNabla PlanarBase ~ 
+System.Free TestPlanarPDE  PlanarPDE PlanarNabla PlanarBase ~ 
 
 TestPlanarPDE.TestLaplace
 TestPlanarPDE.TestConstrainedLaplace

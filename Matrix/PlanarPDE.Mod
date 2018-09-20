@@ -47,19 +47,20 @@ TYPE
 		map*,smallmap*, m,m0: BooleanMap;
 		resized:BOOLEAN;
 		x,y:LONGINT;
-	PROCEDURE Resize(w,h:LONGINT); (*implementation limitation: binary size steps*) (*#to do: 3D maps*)
+	PROCEDURE Resize(w,h:LONGINT); (*implementation limitation: binary size steps*) 
 	BEGIN
 		IF (w#LEN(constraint,1)) OR (h#LEN(constraint,0)) THEN
 			resized:=TRUE;
-			m:=map; c:=constraint;
-			WHILE (LEN(smallconstraint,0)>1) & ((LEN(smallconstraint,0)#h) OR (LEN(smallconstraint,1)#w)) DO
-				NEW(smallmap, (LEN(map)+1) DIV 2); 
+			m:=m0; m:=map; 
+			c:=c0; c:=constraint;
+			WHILE (LEN(smallconstraint,0)>1) & ((LEN(smallconstraint,0)>h) OR (LEN(smallconstraint,1)>w)) DO
+				NEW(smallmap, (LEN(m)+1) DIV 2); 
 				NEW(smallconstraint, LEN(smallmap));
-				FOR y:=0 TO LEN(map,0)-1 DO
-					FOR x:=0 TO LEN(map,1)-1 DO
-						IF map[y,x] THEN 
-							smallmap[y DIV 2, x DIV 2]:= map[y,x];
-							smallconstraint[y DIV 2,x DIV 2]:= constraint[y,x] 
+				FOR y:=0 TO LEN(m,0)-1 DO
+					FOR x:=0 TO LEN(m,1)-1 DO
+						IF m[y,x] THEN 
+							smallmap[y DIV 2, x DIV 2]:= TRUE;
+							smallconstraint[y DIV 2,x DIV 2]:= c[y,x] 
 						END; (* hack*)
 					END;
 				END;
