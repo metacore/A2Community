@@ -46,10 +46,27 @@ TYPE
 		Constrain*: Boundary;
 		map*,smallmap*, m,m0: BooleanMap;
 		resized:BOOLEAN;
+		x,y:LONGINT;
 	PROCEDURE Resize(w,h:LONGINT); (*implementation limitation: binary size steps*) (*#to do: 3D maps*)
 	BEGIN
 		IF (w#LEN(constraint,1)) OR (h#LEN(constraint,0)) THEN
 			resized:=TRUE;
+			m:=map; c:=constraint;
+			WHILE (LEN(smallconstraint,0)>1) & ((LEN(smallconstraint,0)#h) OR (LEN(smallconstraint,1)#w)) DO
+				NEW(smallmap, (LEN(map)+1) DIV 2); 
+				NEW(smallconstraint, LEN(smallmap));
+				FOR y:=0 TO LEN(map,0)-1 DO
+					FOR x:=0 TO LEN(map,1)-1 DO
+						IF map[y,x] THEN 
+							smallmap[y DIV 2, x DIV 2]:= map[y,x];
+							smallconstraint[y DIV 2,x DIV 2]:= constraint[y,x] 
+						END; (* hack*)
+					END;
+				END;
+				m:=m0; m:=smallmap;
+				c:=c0; c:=smallconstraint;
+			END;
+			(*
 			IF (w#LEN(smallconstraint,1)) OR (h#LEN(smallconstraint,0)) THEN
 				smallconstraint:=c0; smallconstraint:=constraint;
 				smallmap:=m0; smallmap:=map;
@@ -62,6 +79,7 @@ TYPE
 				END;
 			ELSE (*already done*)
 			END;
+			*)
 		ELSE resized:=FALSE
 		END;
 	END Resize;
@@ -428,4 +446,4 @@ END PlanarPDE.
 
 OFormatter.Format *
 
-SystemTools.FreeDownTo PlanarPDE ~
+System.FreeDownTo PlanarPDE ~
