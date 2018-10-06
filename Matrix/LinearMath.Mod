@@ -1,6 +1,6 @@
 MODULE LinearMath;
 
-IMPORT MatrixBase, Mathe:=MathL, NbrCplx, MathCplx;
+IMPORT MatrixBase, Mathe:=MathL, NbrCplx, MathCplx, PMath;
 
 TYPE 
 	Datatype=MatrixBase.Datatype;
@@ -76,6 +76,13 @@ TYPE
 		END;;*)
 		RETURN RESULT
 	END Arctan;
+	
+	PROCEDURE Tanh*(CONST in:Array):Array;
+	BEGIN
+		IF LEN(RESULT)#LEN(in) THEN NEW(RESULT,LEN(in))  END;
+		RESULT:=ALL(in, PMath.tanhL);
+		RETURN RESULT
+	END Tanh;
 	
 	PROCEDURE Ln*(CONST in:Array):Array;
 	VAR i:LONGINT;

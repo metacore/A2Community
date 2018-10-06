@@ -1,4 +1,4 @@
-MODULE PlanarMath;
+MODULE TensorMath;
 
 (*To do: complex derivatives including complex optimization algorithms: see 
 Kenneth Kreutz-Delgado : The Complex Gradient Operator and the CR-Calculus.
@@ -8,15 +8,19 @@ IMPORT MatrixBase, LinearMath, Mathe:=MathL, PMath;
 
 TYPE 
 	Datatype=MatrixBase.Datatype;
-	Array = ARRAY [*,*] OF Datatype;
+	Array = ARRAY [?] OF Datatype;
 	
 	PROCEDURE Max*(CONST a,b:Array):Array;
 	VAR i:LONGINT;
 	BEGIN
 		ASSERT(LEN(a)=LEN(b));
 		IF LEN(RESULT,0)#LEN(a) THEN NEW(RESULT,LEN(a,0),LEN(a,1)) END;
-		FOR i:=0 TO LEN(a,0)-1 DO
-			RESULT[i]:=LinearMath.Max(a[i],b[i]) 
+		IF DIM(a)=1 THEN
+			RESULT[..]:=LinearMath.Max(a[..],b[..]) 
+		ELSE
+			FOR i:=0 TO LEN(a,0)-1 DO
+				RESULT[i,?]:=LinearMath.Max(a[i,?],b[i,?]) 
+			END;
 		END;
 		RETURN RESULT
 	END Max;
@@ -26,8 +30,12 @@ TYPE
 	BEGIN
 		ASSERT(LEN(a)=LEN(b));
 		IF LEN(RESULT,0)#LEN(a) THEN NEW(RESULT,LEN(a,0),LEN(a,1)) END;
-		FOR i:=0 TO LEN(a,0)-1 DO
-			RESULT[i]:=LinearMath.Min(a[i],b[i]) 
+		IF DIM(a)=1 THEN
+			RESULT[..]:=LinearMath.Max(a[..],b[..]) 
+		ELSE
+			FOR i:=0 TO LEN(a,0)-1 DO
+				RESULT[i,?]:=LinearMath.Min(a[i,?],b[i,?]) 
+			END;
 		END;
 		RETURN RESULT
 	END Min;
@@ -38,46 +46,30 @@ TYPE
 	END Sqr;
 	
 	PROCEDURE Sqrt*(CONST in:Array):Array;
-	VAR i:LONGINT;
 	BEGIN
-		IF LEN(RESULT)#LEN(in) THEN NEW(RESULT,LEN(in,0),LEN(in,1)) END;
+		IF LEN(RESULT)#LEN(in) THEN NEW(RESULT,LEN(in))  END;
 		RESULT:=ALL(in, Mathe.sqrt);
-		(*FOR i:=0 TO LEN(in,0)-1 DO
-			RESULT[i]:=LinearMath.Sqrt(in[i]) 
-		END;*)
 		RETURN RESULT
 	END Sqrt;
 	
 	PROCEDURE Sin*(CONST in:Array):Array;
-	VAR i:LONGINT;
 	BEGIN
-		IF LEN(RESULT)#LEN(in) THEN NEW(RESULT,LEN(in,0),LEN(in,1)) END;
+		IF LEN(RESULT)#LEN(in) THEN NEW(RESULT,LEN(in))  END;
 		RESULT:=ALL(in, Mathe.sin);
-		(*FOR i:=0 TO LEN(in,0)-1 DO
-			RESULT[i]:=LinearMath.Sin(in[i]) 
-		END;*)
 		RETURN RESULT
 	END Sin;
 	
 	PROCEDURE Cos*(CONST in:Array):Array;
-	VAR i:LONGINT;
 	BEGIN
-		IF LEN(RESULT)#LEN(in) THEN NEW(RESULT,LEN(in,0),LEN(in,1)) END;
+		IF LEN(RESULT)#LEN(in) THEN NEW(RESULT,LEN(in))  END;
 		RESULT:=ALL(in, Mathe.cos);
-		(*FOR i:=0 TO LEN(in,0)-1 DO
-			RESULT[i]:=LinearMath.Cos(in[i]) 
-		END;*)
 		RETURN RESULT
 	END Cos;
 	
 	PROCEDURE Arctan*(CONST in:Array):Array;
-	VAR i:LONGINT;
 	BEGIN
-		IF LEN(RESULT)#LEN(in) THEN NEW(RESULT,LEN(in,0),LEN(in,1)) END;
+		IF LEN(RESULT)#LEN(in) THEN NEW(RESULT,LEN(in))  END;
 		RESULT:=ALL(in, Mathe.arctan);
-		(*FOR i:=0 TO LEN(in,0)-1 DO
-			RESULT[i]:=LinearMath.Arctan(in[i]) 
-		END;*)
 		RETURN RESULT
 	END Arctan;
 	
@@ -88,15 +80,17 @@ TYPE
 		RETURN RESULT
 	END Tanh;
 
+	PROCEDURE Logistic*(CONST in:Array):Array;
+	BEGIN
+		IF LEN(RESULT)#LEN(in) THEN NEW(RESULT,LEN(in))  END;
+		RESULT:=ALL(in, PMath.logisticL);
+		RETURN RESULT
+	END Logistic;
 	
 	PROCEDURE Ln*(CONST in:Array):Array;
-	VAR i:LONGINT;
 	BEGIN
-		IF LEN(RESULT)#LEN(in) THEN NEW(RESULT,LEN(in,0),LEN(in,1)) END;
+		IF LEN(RESULT)#LEN(in) THEN NEW(RESULT,LEN(in))  END;
 		RESULT:=ALL(in, Mathe.ln);
-		(*FOR i:=0 TO LEN(in,0)-1 DO
-			RESULT[i]:=LinearMath.Ln(in[i]) 
-		END;*)
 		RETURN RESULT
 	END Ln;
 	
@@ -121,12 +115,16 @@ TYPE
 	PROCEDURE ComplexSqrt*( CONST R,I:Array; VAR outR,outI:Array);
 	VAR  i:LONGINT; 
 	BEGIN 
-		FOR i:=0 TO LEN(R,0)-1 DO
-			LinearMath.ComplexSqrt(R[i],I[i], outR[i],outI[i]);
+		IF DIM(R)=1 THEN
+			LinearMath.ComplexSqrt(R,I, outR[..], outI[..]);
+		ELSE
+			FOR i:=0 TO LEN(R,0)-1 DO
+				ComplexSqrt(R[i,?],I[i,?], outR[i,?],outI[i,?]);
+			END;
 		END;
 	END ComplexSqrt;  
 	
 	
-END PlanarMath.
+END TensorMath.
 
-SystemTools.FreeDownTo PlanarMath
+SystemTools.FreeDownTo TensorMath
