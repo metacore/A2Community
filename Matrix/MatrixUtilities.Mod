@@ -699,10 +699,9 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 	
 	(* raw *)
 	PROCEDURE WriteLR*(W:Streams.Writer; CONST t: ARRAY [?] OF Datatype);
-	VAR len: ARRAY [*] OF SIZE; i:SIZE;
+	VAR i:SIZE;
 	BEGIN
 		ASSERT(DIM(t)>0);
-		len:=LEN(t);
 		IF  DIM(t)=1 THEN 
 			FOR i:=0 TO LEN(t,0)-1 DO W.RawLReal(t[i]) END;
 		ELSE
@@ -711,10 +710,9 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 	END WriteLR;
 	
 	PROCEDURE WriteR*(W:Streams.Writer; CONST t: ARRAY [?] OF REAL);
-	VAR len: ARRAY [*] OF SIZE; i:SIZE;
+	VAR i:SIZE;
 	BEGIN
 		ASSERT(DIM(t)>0);
-		len:=LEN(t);
 		IF  DIM(t)=1 THEN 
 			FOR i:=0 TO LEN(t,0)-1 DO W.RawReal(t[i]) END;
 		ELSE
@@ -723,10 +721,9 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 	END WriteR;
 		
 	PROCEDURE WriteRasSR*(W:Streams.Writer; CONST t: ARRAY [?] OF REAL);
-	(*VAR len: ARRAY [*] OF SIZE; i:SIZE; sr: Shortreal.SHORTREAL;
+	(*VAR i:SIZE; sr: Shortreal.SHORTREAL;
 	BEGIN
 		ASSERT(DIM(t)>0);
-		len:=LEN(t);
 		IF  DIM(t)=1 THEN 
 			FOR i:=0 TO LEN(t,0)-1 DO W.Bytes(SYSTEM.VAL( Bytes2, t[i] ), 0, 2); (*W.RawLReal(t[i])*) END;
 		ELSE
@@ -735,23 +732,33 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 	END WriteRasSR;
 
 	PROCEDURE WriteUInt8*(W:Streams.Writer; CONST t: ARRAY [?] OF INTEGER);
-	VAR len: ARRAY [*] OF SIZE; i:SIZE;
+	VAR i:SIZE;
 	BEGIN
 		ASSERT(DIM(t)>0);
-		len:=LEN(t);
 		IF  DIM(t)=1 THEN 
 			FOR i:=0 TO LEN(t,0)-1 DO W.Char(CHR(t[i])) END;
 		ELSE
 			FOR i:=0 TO LEN(t,0)-1 DO WriteUInt8(W, t[i,?]) END;
 		END;
 	END WriteUInt8;
+	
+	(* raw *)
+	PROCEDURE WriteInt*(W:Streams.Writer; CONST t: ARRAY [?] OF INTEGER);
+	VAR i:SIZE;
+	BEGIN
+		ASSERT(DIM(t)>0);
+		IF  DIM(t)=1 THEN 
+			FOR i:=0 TO LEN(t,0)-1 DO W.RawInt(t[i]) END;
+		ELSE
+			FOR i:=0 TO LEN(t,0)-1 DO WriteInt(W, t[i,?]) END;
+		END;
+	END WriteInt;
 
 	(* raw *)
 	PROCEDURE WriteLInt*(W:Streams.Writer; CONST t: ARRAY [?] OF LONGINT);
-	VAR len: ARRAY [*] OF SIZE; i:SIZE;
+	VAR i:SIZE;
 	BEGIN
 		ASSERT(DIM(t)>0);
-		len:=LEN(t);
 		IF  DIM(t)=1 THEN 
 			FOR i:=0 TO LEN(t,0)-1 DO W.RawLInt(t[i]) END;
 		ELSE
@@ -761,10 +768,9 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 	
 		(* raw *)
 	PROCEDURE WriteSize*(W:Streams.Writer; CONST t: ARRAY [?] OF SIZE);
-	VAR len: ARRAY [*] OF SIZE; i:SIZE;
+	VAR i:SIZE;
 	BEGIN
 		ASSERT(DIM(t)>0);
-		len:=LEN(t);
 		IF  DIM(t)=1 THEN 
 			FOR i:=0 TO LEN(t,0)-1 DO W.RawHInt(t[i]) END;
 		ELSE
@@ -775,10 +781,9 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 		(* raw *)
 	(* todo: packed storage of bits
 	PROCEDURE WriteBool*(W:Streams.Writer; CONST t: ARRAY [?] OF BOOLEAN);
-	VAR len: ARRAY [*] OF LONGINT; i:LONGINT;
+	VAR i:LONGINT;
 	BEGIN
 		ASSERT(DIM(t)>0);
-		len:=LEN(t);
 		IF  DIM(t)=1 THEN 
 			FOR i:=0 TO LEN(t,0)-1 DO W.RawLInt(t[i]) END;
 		ELSE
@@ -797,6 +802,8 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 			W.String("LR ");
 		ELSIF(datatype=DatatypeR) THEN
 			W.String("R ");
+		ELSIF datatype=DatatypeInt THEN
+			W.String("Int ");
 		ELSIF datatype=DatatypeLInt THEN
 			W.String("LInt ");
 		ELSIF datatype=DatatypeUInt8 THEN
@@ -837,7 +844,13 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 		IF DIM(t)>0 THEN WriteRasSR(W,t) END;
 		W.Update;
 	END StoreRasSR;
-
+	
+	PROCEDURE StoreInt*(W:Streams.Writer; CONST t: ARRAY [?] OF INTEGER);
+	BEGIN
+		WriteHeader(W,DatatypeInt, LEN(t));
+		IF DIM(t)>0 THEN WriteInt(W,t) END;
+		W.Update;
+	END StoreInt;
 	
 	PROCEDURE StoreLInt*(W:Streams.Writer; CONST t: ARRAY [?] OF LONGINT);
 	BEGIN
@@ -899,6 +912,17 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 			FOR i:=0 TO LEN(t,0)-1 DO ReadUInt8(R, t[i,?]) END;
 		END;
 	END ReadUInt8;
+	
+	PROCEDURE ReadInt*(R:Streams.Reader; VAR t: ARRAY [?] OF INTEGER);
+	VAR i:SIZE;
+	BEGIN
+		ASSERT(DIM(t)>0);
+		IF  DIM(t)=1 THEN 
+			FOR i:=0 TO LEN(t,0)-1 DO R.RawInt(t[i]) END;
+		ELSE
+			FOR i:=0 TO LEN(t,0)-1 DO ReadInt(R, t[i,?]) END;
+		END;
+	END ReadInt;
 	
 	PROCEDURE ReadLInt*(R:Streams.Reader; VAR t: ARRAY [?] OF LONGINT);
 	VAR i:SIZE;
@@ -1020,6 +1044,17 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 		RETURN RESULT
 	END LoadRfromSR;
 	
+	(* derive structure from header*)
+	PROCEDURE LoadInt*(R:Streams.Reader): ARRAY [?] OF INTEGER;
+	VAR  len: ARRAY [*] OF SIZE;
+		version, datatype: LONGINT;
+	BEGIN
+		ParseHeader(R,version, datatype,len);
+		ASSERT(datatype=DatatypeInt);
+		IF (DIM(RESULT)#LEN (len,0)) OR (LEN(RESULT)#len) THEN NEW(RESULT,len) END;
+		IF DIM(RESULT)>0 THEN ReadInt(R,RESULT) END;
+		RETURN RESULT
+	END LoadInt;
 	
 (* derive structure from header*)
 	PROCEDURE LoadLInt*(R:Streams.Reader): ARRAY [?] OF LONGINT;
