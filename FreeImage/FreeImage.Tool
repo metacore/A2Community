@@ -27,14 +27,16 @@ Library functions are described in detail in FreeImage3170.pdf file.
 #========================================================================================
 # Compile the module list:
 #========================================================================================
-# LinuxAos:	
- Compiler.Compile Unix.FreeImageDll.Mod ~
 
-# WinAos:	
- Compiler.Compile Win32.FreeImageDll.Mod ~
- 
-# examples, compile;
-Compiler.Compile FreeImageUtils.Mod TestFreeImage.Mod TestFreeMeta.Mod ~ 
+# UNIX and WIN platforms:
+
+	Compiler.Compile 
+		FreeImage/FreeImageDll.Mod
+		FreeImage/FreeImageUtils.Mod
+		FreeImage/TestFreeImage.Mod
+		FreeImage/TestFreeMeta.Mod 
+		~ 
+
 
 #======================================================
 #======================================================
@@ -46,10 +48,10 @@ Compiler.Compile FreeImageUtils.Mod TestFreeImage.Mod TestFreeMeta.Mod ~
 
 TestFreeImage.GetFormats ~
 TestFreeImage.MakeFresnel ~
-TestFreeImage.Open  <yourimagefile> ~  
+TestFreeImage.Open  "BluebottlePic0.png" ~  
 
 #Unload the module list:
-SystemTools.FreeDownTo FreeImageDll ~
+System.FreeDownTo FreeImageDll ~
 
 
 #======================================================

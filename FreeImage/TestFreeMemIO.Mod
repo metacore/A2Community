@@ -196,6 +196,6 @@ TestFreeMemIO.LoadMemIO   Lennagray.png ~
 TestFreeMemIO.AcquireMemIO  Lennagray.png~
 
 
-SystemTools.Free TestFreeMemIO  ~
+System.Free TestFreeMemIO  ~
 
-SystemTools.FreeDownTo FreeImageDll ~ 
+System.FreeDownTo FreeImageDll ~ 

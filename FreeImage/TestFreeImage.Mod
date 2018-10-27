@@ -8,10 +8,10 @@ TYPE
 	FIBITMAP = FI.FIBITMAP;
 
 TYPE 
-	PicPanel* = OBJECT(WMComponents.FormWindow)
+	PicPanel = OBJECT(WMComponents.FormWindow)
 		VAR impanel-: WMStandardComponents.ImagePanel;
 		
-		PROCEDURE &New*(w, h: LONGINT);
+		PROCEDURE &New(w, h: LONGINT);
 		BEGIN
 			Init(w, h, FALSE);
 			NEW(impanel); 
@@ -21,7 +21,7 @@ TYPE
 			WM.DefaultAddWindow(SELF);
 		END New;
 		
-		PROCEDURE SetImage*(p: WMGraphics.Image; CONST title: ARRAY OF CHAR);
+		PROCEDURE SetImage(p: WMGraphics.Image; CONST title: ARRAY OF CHAR);
 		BEGIN
 			SetTitle(Strings.NewString(title));
 			impanel.SetImage(SELF, p);			
@@ -132,8 +132,9 @@ BEGIN
 	(*	KernelLog.String("FI.GetBPP(tdib)= "); KernelLog.Int(FI.GetBPP(tdib), 0); KernelLog.Ln; 
 		KernelLog.String("FI.GetWidth(tdib)= "); KernelLog.Int(FI.GetWidth(tdib), 0); KernelLog.Ln; 
 		KernelLog.String("FI.GetHeight(tdib)= "); KernelLog.Int(FI.GetHeight(tdib), 0); KernelLog.Ln; 
-	*)		
-		IF FI.GetBPP(tdib) # 32 THEN 
+	*)	
+		Bpp := FI.GetBPP(tdib);
+		IF  Bpp # 32 THEN 
 			dib := FI.ConvertTo32Bits(tdib); 
 			FI.Unload(tdib);
 			tdib := dib
@@ -350,6 +351,6 @@ TestFreeImage.GetFormats ~
 
 TestFreeImage.MakeFresnel ~ 
 
-SystemTools.Free TestFreeImage  FreeImageUtils FreeImageDll~
+System.Free TestFreeImage  FreeImageUtils FreeImageDll~
 
-SystemTools.FreeDownTo FreeImageDll ~ 
+System.FreeDownTo FreeImageDll ~ 

@@ -82,26 +82,33 @@ PROCEDURE Open*(context: Commands.Context);
 VAR 
 	tdib: FI.FIBITMAP;
 	fname: ARRAY 128 OF CHAR;
-	count: LONGINT;
+	count, w, h: LONGINT;
 	tagmake: FITAG;
 	buffer: Strings.String;
 	bufferstr: ARRAY 256 OF CHAR;
 BEGIN
 	IF ~ context.arg.GetString(fname) THEN RETURN END;
-		
-	tdib := FI.LoadImage(fname,0);
+	
+	tdib := FI.LoadImage(fname, 0);
 
 	IF tdib # NIL THEN
-		out.String(fname); out.String(": Image Loaded .."); out.Ln();
-
+		out.String(fname); out.String(": Image Loaded .."); out.Ln;
+		out.Ln;
+		out.String('wxh: '); out.Update;
+		w := FI.GetWidth(tdib);
+		h := FI.GetHeight(tdib);
+		out.Int(w, 0);
+		out.Int(h, 5); out.Ln;
+(*
+		(* TRAPS on Linux64 *)
 		out.String('wxh: '); out.Int(FI.GetWidth(tdib), 0);
-		out.Int(FI.GetHeight(tdib), 5); out.Ln;
-			
+		out.Int(FI.GetHeight(tdib), 5); out.Ln;	*)
+		out.Update;
 	ELSE
-		out.String(fname); out.String(": Image NOT Loaded .."); out.Ln();
+		out.String(fname); out.String(": Image NOT Loaded .."); out.Ln(); out.Update;
 		RETURN
 	END;
-
+	
 	count := FI.GetMetadataCount(FI.FIMD_COMMENTS, tdib);
 	IF count > 0 THEN
 		out.String("FIMD_COMMENTS: "); out.Int(count, 5); out.Ln;
@@ -171,7 +178,7 @@ BEGIN
 			END
 		END 
 	END;
-		
+	FI.Unload(tdib);	
 	out.String("---- Finished----"); out.Ln; 
 	out.Update;
 END Open;
@@ -180,17 +187,15 @@ BEGIN
 	Streams.OpenWriter(out, KernelLog.Send);	
 END TestFreeMeta.
 
-TestFreeMeta.Open E:/WinAosSvn/WinAos/Work/IMG_20130714_172908.jpg ~
-TestFreeMeta.Open E:/WinAosSvn/WinAos/Work/exif.jpg ~
+
+TestFreeMeta.Open "D:/a2/Win64/Work/samia2.jpg"
+
+
 TestFreeMeta.Open E:/WinAosSvn/WinAos/Work/test8_Bg.jpg ~
 
 TestFreeMeta.Open DSC_7163.JPG ~
 
-"DSC_7163.JPG" ~ 
-"s3010027.jpg"~ 
-"sel1.jpg"~ 
 
-
-SystemTools.Free  TestFreeMeta FreeImageDll ~ 
+System.FreeDoenTo FreeImageDll ~ 
 
 
