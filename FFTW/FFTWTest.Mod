@@ -427,7 +427,7 @@ BEGIN
 			Streams.OpenWriter(wr,KernelLog.Send);
 END FFTWTest.
 
-SystemTools.Free  FFTWTest FFTW ~
+System.Free  FFTWTest FFTW ~
 
 FFTWTest.TestfftwExecuteDft1d
 256 20 

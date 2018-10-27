@@ -2,19 +2,20 @@ FFTW Library for WinAos and LinuxAos
 
 Uses fftw3 series libraries.
 
-Compile for:
+# Compile for UNIX, WIN Platforms:
 
-# UnixAos: 
-	Compiler.Compile  Unix.FFTW.Mod Unix.FFTWf.Mod ~ 
-
-# WinAos: 
-	Compiler.Compile  Win32.FFTW.Mod Win32.FFTWf.Mod  ~
+Compiler.Compile  
+		FFTW/FFTW.Mod 
+		FFTW/FFTWf.Mod ~ 
 
 # compile test modules
-Compiler.Compile FFTWTest.Mod FFTWTestf.Mod~ 
+
+Compiler.Compile 
+	FFTW/FFTWTest.Mod 
+	FFTW/FFTWTestf.Mod ~ 
 
 # free from memory
-SystemTools.Free FFTWTest FFTWTestf.Mod FFTW FFTWf ~
+System.Free FFTWTest FFTWTestf.Mod FFTW FFTWf ~
 
  
 Note: Depending on data type REAL, COMPLEX, LONGREAL or LONGCOMPLEX, 

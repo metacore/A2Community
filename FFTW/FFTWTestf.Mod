@@ -620,7 +620,7 @@ BEGIN
 		Streams.OpenWriter(wr,KernelLog.Send);
 END FFTWTestf.
 
-SystemTools.Free  FFTWTestf FFTWf~
+System.Free  FFTWTestf FFTWf~
 
 
 FFTWTestf.TestfftwExecuteDft1d
@@ -646,7 +646,7 @@ FFTWTestf.TestfftwExecuteComplexDft1d
 4096 20 ~
 
 FFTWTestf.Testfftw1d
-256 20  ~ 
+256 20  
 
 11 100
 16 100
@@ -654,7 +654,7 @@ FFTWTestf.Testfftw1d
 512 20 
 1024 20
 2048 20
-4096 20 
+4096 20 ~
 
 8192 500
 16384 250 
@@ -697,7 +697,7 @@ FFTWTestf.Testfftw1dout
 
 FFTWTestf.Testfftw2d
 19 19 1
-256 256 1 ~ 
+256 256 1 
 1024 1024 5 
 1600 1200 5 ~
 1600 1199 5
