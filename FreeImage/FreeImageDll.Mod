@@ -869,7 +869,6 @@ BEGIN
 	GetProcAddress(lib, "FreeImage_DeInitialise", ADDRESSOF( DeInitialise ));
 *)
 #IF UNIX OR (WIN & AMD64) THEN
-	KernelLog.String("SYSTEM is WIIN64"); KernelLog.Ln; 
 	(* Version routines*)
 	GetProcAddress(lib, "FreeImage_GetVersion", ADDRESSOF( getVersion ));
 	GetProcAddress(lib, "FreeImage_GetCopyrightMessage", ADDRESSOF( getCopyrightMessage ));
