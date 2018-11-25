@@ -172,4 +172,17 @@ TYPE Datatype=MatrixBase.Datatype;
 		RETURN RESULT  
 	END AutoCorrelation;  
 
+	(*filter in the Fourier domain. power of 2 data required. 
+	filter is in frequency domain, is typically in [0.0 ... 1.0] but might have other values *)
+	PROCEDURE Filter*(CONST in, filter: Array ): Array;  
+	VAR  I, nil, R: Array;  
+	BEGIN 
+		IF LEN( RESULT, 0 ) = 0 THEN NEW( RESULT, LEN( in,0 ) ) END;   
+		FFT( in, nil, R, I);  
+		R := R .* filter; 
+		I := I .* filter;
+		IFFT( R, I, RESULT, nil);  
+		RETURN RESULT  
+	END Filter;  
+
 END LinearFFT.
