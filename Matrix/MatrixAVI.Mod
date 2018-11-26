@@ -12,7 +12,7 @@ CONST
 		StreamName="strn";
 		StreamData="movi";
 		Index="idxl";
-	(* MainHeader dwFlags *)	(**)
+	(* MainHeader dwFlags *)	(* *)
 		AVIFHASINDEX=4;
 		AVIFMUSTUSEINDEX=5;
 		AVIFISINTERLEAVED=8;
@@ -485,16 +485,16 @@ BEGIN
 PROCEDURE Test*;
 VAR frames: ARRAY [*,*,*] OF Datatype; i:LONGINT; F:Files.File;
 BEGIN
-	NEW(frames,10,100,100);
-	frames[..4, 30..50,30..50]:=1;
-	frames[5.., 50..80, 50..80]:=1;
-	F:=Store(frames,"demo.avi");
+	NEW(frames,30,100,100);
+	frames[..14, 30..50,30..50]:=1;
+	frames[15.., 50..80, 50..80]:=1;
+	F:=Store(frames,"demoRLE.avi");
 END Test;
 
 BEGIN
 	Comments:=FALSE;
 END MatrixAVI.
 
-SystemTools.Free MatrixAVI ~
+System.Free MatrixAVI ~
 MatrixAVI.Test
 System.State AVI
