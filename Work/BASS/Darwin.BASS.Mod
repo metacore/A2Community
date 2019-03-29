@@ -1,17 +1,19 @@
 MODULE BASS; (** AUTHOR "SAGE"; PURPOSE "BASS 2.4 A2 OS Wrapper module"; *)
 
 IMPORT
-	SYSTEM, Unix, Modules, BASScpu;
-
+	SYSTEM, Unix, Modules, Strings;
+	
 CONST
+
+	PRECEEDING_UNDERSCORE = FALSE;
 
 	(* API version *)
 	BASSVERSION*										= 204H;
 	BASSVERSIONTEXT*								= "2.4";
 
 	(* Use these to test for error from functions that return a DWORD or QWORD *)
-	DW_ERROR*												= LONGINT(-1);	(* -1 (DWORD) *)
-	QW_ERROR*												= HUGEINT(-1);	(* -1 (QWORD) *)
+	DW_ERROR*												= LONGINT(-1);
+	QW_ERROR*												= HUGEINT(-1);
 
 	(* Error codes returned by BASS_ErrorGetCode() *)
 	BASS_OK	*												= 0;	(* all is OK *)
@@ -475,6 +477,35 @@ TYPE
 	HFX = LONGINT;				(* DX8 effect handle *)
 	HPLUGIN = LONGINT;		(* Plugin handle *)
 
+	(* Channel info structure *)
+	BASS_CHANNELINFO* = RECORD
+		freq*: DWORD;					(* default playback rate *)
+		chans*: DWORD;					(* channels *)
+		flags*: SET;						(* BASS_SAMPLE/STREAM/MUSIC/SPEAKER flags *)
+		ctype*: SET;						(* type of channel *)
+		origres*: DWORD;				(* original resolution *)
+		plugin*: HPLUGIN;			(* plugin *)
+		sample*: HSAMPLE;			(* sample *)
+#IF I386 THEN
+#ELSIF AMD64 THEN
+		padding*: DWORD;
+#ELSE
+		unimplemented
+#END
+		filename*: PAnsiChar;	(* filename *)
+	END;
+
+	BASS_PLUGINFORM* = RECORD
+		ctype*: DWORD;				(* channel type *)
+#IF I386 THEN
+#ELSIF AMD64 THEN
+		padding*: DWORD;
+#ELSE
+		unimplemented
+#END
+		name*: PAnsiChar;		(* format description *)
+		exts*: PAnsiChar;		(* file extension filter ( *.ext1;*.ext2;etc...) *)
+	END;
 
 	(* Device info structure *)
 	BASS_DEVICEINFO* = RECORD
@@ -530,10 +561,6 @@ TYPE
 		priority*: DWORD;	(* priority (0=lowest, $ffffffff=highest) *)
 	END;
 
-	(* Channel info structure *)
-	BASS_CHANNELINFO* = BASScpu.BASS_CHANNELINFO;
-
-	BASS_PLUGINFORM* = BASScpu.BASS_PLUGINFORM;
 	(* PBASS_PLUGINFORMS = POINTER TO TBASS_PLUGINFORMS;
 	TBASS_PLUGINFORMS = ARRAY[0..maxInt DIV sizeOf(BASS_PLUGINFORM) - 1] OF BASS_PLUGINFORM; *)
 	PBASS_PLUGINFORMS* = POINTER TO ARRAY OF BASS_PLUGINFORM;
@@ -851,7 +878,7 @@ VAR
 	lib: LONGINT;
 
 CONST
-	bassdll		= "libbass.so";
+	bassdll		= "libbass.dylib";
 
 PROCEDURE BASS_SPEAKER_N*(n: DWORD): DWORD;
 BEGIN
@@ -885,114 +912,124 @@ BEGIN
 	END
 END Cleanup;
 
+PROCEDURE PU(CONST s: ARRAY OF CHAR): Strings.String;
+BEGIN
+	IF PRECEEDING_UNDERSCORE (*SIZEOF(ADDRESS) = 4*) THEN
+		(* On Mac OSX, cdecl names have a preceeding underscore if x86 native backend. *)
+		RETURN Strings.ConcatToNew('_', s)
+	ELSE
+		RETURN Strings.NewString(s)
+	END
+END PU;
+
 PROCEDURE Init;
 BEGIN
 
 	lib := Unix.Dlopen(bassdll, 2 );
 
-	Unix.Dlsym(lib, "BASS_SetConfig", ADDRESSOF(BASS_SetConfig));
-	Unix.Dlsym(lib, "BASS_GetConfig", ADDRESSOF(BASS_GetConfig));
-	Unix.Dlsym(lib, "BASS_SetConfigPtr", ADDRESSOF(BASS_SetConfigPtr));
-	Unix.Dlsym(lib, "BASS_GetConfigPtr", ADDRESSOF(BASS_GetConfigPtr));
-	Unix.Dlsym(lib, "BASS_GetVersion", ADDRESSOF(BASS_GetVersion));
-	Unix.Dlsym(lib, "BASS_ErrorGetCode", ADDRESSOF(BASS_ErrorGetCode));
-	Unix.Dlsym(lib, "BASS_GetDeviceInfo", ADDRESSOF(BASS_GetDeviceInfo));
+	Unix.Dlsym(lib, PU("BASS_SetConfig")^, ADDRESSOF(BASS_SetConfig));
+	Unix.Dlsym(lib, PU("BASS_GetConfig")^, ADDRESSOF(BASS_GetConfig));
+	Unix.Dlsym(lib, PU("BASS_SetConfigPtr")^, ADDRESSOF(BASS_SetConfigPtr));
+	Unix.Dlsym(lib, PU("BASS_GetConfigPtr")^, ADDRESSOF(BASS_GetConfigPtr));
+	Unix.Dlsym(lib, PU("BASS_GetVersion")^, ADDRESSOF(BASS_GetVersion));
+	Unix.Dlsym(lib, PU("BASS_ErrorGetCode")^, ADDRESSOF(BASS_ErrorGetCode));
+	Unix.Dlsym(lib, PU("BASS_GetDeviceInfo")^, ADDRESSOF(BASS_GetDeviceInfo));
 
-	Unix.Dlsym(lib, "BASS_Init", ADDRESSOF(BASS_Init));
+	Unix.Dlsym(lib, PU("BASS_Init")^, ADDRESSOF(BASS_Init));
 
-	Unix.Dlsym(lib, "BASS_SetDevice", ADDRESSOF(BASS_SetDevice));
-	Unix.Dlsym(lib, "BASS_GetDevice", ADDRESSOF(BASS_GetDevice));
-	Unix.Dlsym(lib, "BASS_Free", ADDRESSOF(BASS_Free));
+	Unix.Dlsym(lib, PU("BASS_SetDevice")^, ADDRESSOF(BASS_SetDevice));
+	Unix.Dlsym(lib, PU("BASS_GetDevice")^, ADDRESSOF(BASS_GetDevice));
+	Unix.Dlsym(lib, PU("BASS_Free")^, ADDRESSOF(BASS_Free));
 
-	Unix.Dlsym(lib, "BASS_GetInfo", ADDRESSOF(BASS_GetInfo));
-	Unix.Dlsym(lib, "BASS_Update", ADDRESSOF(BASS_Update));
-	Unix.Dlsym(lib, "BASS_GetCPU", ADDRESSOF(BASS_GetCPU));
-	Unix.Dlsym(lib, "BASS_Start", ADDRESSOF(BASS_Start));
-	Unix.Dlsym(lib, "BASS_Stop", ADDRESSOF(BASS_Stop));
-	Unix.Dlsym(lib, "BASS_Pause", ADDRESSOF(BASS_Pause));
-	Unix.Dlsym(lib, "BASS_SetVolume", ADDRESSOF(BASS_SetVolume));
-	Unix.Dlsym(lib, "BASS_GetVolume", ADDRESSOF(BASS_GetVolume));
+	Unix.Dlsym(lib, PU("BASS_GetInfo")^, ADDRESSOF(BASS_GetInfo));
+	Unix.Dlsym(lib, PU("BASS_Update")^, ADDRESSOF(BASS_Update));
+	Unix.Dlsym(lib, PU("BASS_GetCPU")^, ADDRESSOF(BASS_GetCPU));
+	Unix.Dlsym(lib, PU("BASS_Start")^, ADDRESSOF(BASS_Start));
+	Unix.Dlsym(lib, PU("BASS_Stop")^, ADDRESSOF(BASS_Stop));
+	Unix.Dlsym(lib, PU("BASS_Pause")^, ADDRESSOF(BASS_Pause));
+	Unix.Dlsym(lib, PU("BASS_SetVolume")^, ADDRESSOF(BASS_SetVolume));
+	Unix.Dlsym(lib, PU("BASS_GetVolume")^, ADDRESSOF(BASS_GetVolume));
 
-	Unix.Dlsym(lib, "BASS_PluginLoad", ADDRESSOF(BASS_PluginLoad));
-	Unix.Dlsym(lib, "BASS_PluginFree", ADDRESSOF(BASS_PluginFree));
-	Unix.Dlsym(lib, "BASS_PluginGetInfo", ADDRESSOF(BASS_PluginGetInfo));
-	Unix.Dlsym(lib, "BASS_Set3DFactors", ADDRESSOF(BASS_Set3DFactors));
-	Unix.Dlsym(lib, "BASS_Get3DFactors", ADDRESSOF(BASS_Get3DFactors));
-	Unix.Dlsym(lib, "BASS_Set3DPosition", ADDRESSOF(BASS_Set3DPosition));
-	Unix.Dlsym(lib, "BASS_Get3DPosition", ADDRESSOF(BASS_Get3DPosition));
-	Unix.Dlsym(lib, "BASS_Apply3D", ADDRESSOF(BASS_Apply3D));
+	Unix.Dlsym(lib, PU("BASS_PluginLoad")^, ADDRESSOF(BASS_PluginLoad));
+	Unix.Dlsym(lib, PU("BASS_PluginFree")^, ADDRESSOF(BASS_PluginFree));
+	Unix.Dlsym(lib, PU("BASS_PluginGetInfo")^, ADDRESSOF(BASS_PluginGetInfo));
+	Unix.Dlsym(lib, PU("BASS_Set3DFactors")^, ADDRESSOF(BASS_Set3DFactors));
+	Unix.Dlsym(lib, PU("BASS_Get3DFactors")^, ADDRESSOF(BASS_Get3DFactors));
+	Unix.Dlsym(lib, PU("BASS_Set3DPosition")^, ADDRESSOF(BASS_Set3DPosition));
+	Unix.Dlsym(lib, PU("BASS_Get3DPosition")^, ADDRESSOF(BASS_Get3DPosition));
+	Unix.Dlsym(lib, PU("BASS_Apply3D")^, ADDRESSOF(BASS_Apply3D));
 
-	Unix.Dlsym(lib, "BASS_MusicLoad", ADDRESSOF(BASS_MusicLoad));
-	Unix.Dlsym(lib, "BASS_MusicFree", ADDRESSOF(BASS_MusicFree));
-	Unix.Dlsym(lib, "BASS_SampleLoad", ADDRESSOF(BASS_SampleLoad));
-	Unix.Dlsym(lib, "BASS_SampleCreate", ADDRESSOF(BASS_SampleCreate));
-	Unix.Dlsym(lib, "BASS_SampleFree", ADDRESSOF(BASS_SampleFree));
-	Unix.Dlsym(lib, "BASS_SampleSetData", ADDRESSOF(BASS_SampleSetData));
-	Unix.Dlsym(lib, "BASS_SampleGetData", ADDRESSOF(BASS_SampleGetData));
-	Unix.Dlsym(lib, "BASS_SampleGetInfo", ADDRESSOF(BASS_SampleGetInfo));
-	Unix.Dlsym(lib, "BASS_SampleSetInfo", ADDRESSOF(BASS_SampleSetInfo));
-	Unix.Dlsym(lib, "BASS_SampleGetChannel", ADDRESSOF(BASS_SampleGetChannel));
-	Unix.Dlsym(lib, "BASS_SampleGetChannels", ADDRESSOF(BASS_SampleGetChannels));
-	Unix.Dlsym(lib, "BASS_SampleStop", ADDRESSOF(BASS_SampleStop));
-	Unix.Dlsym(lib, "BASS_StreamCreate", ADDRESSOF(BASS_StreamCreate));
-	Unix.Dlsym(lib, "BASS_StreamCreateFile", ADDRESSOF(BASS_StreamCreateFile));
-	Unix.Dlsym(lib, "BASS_StreamCreateURL", ADDRESSOF(BASS_StreamCreateURL));
-	Unix.Dlsym(lib, "BASS_StreamCreateFileUser", ADDRESSOF(BASS_StreamCreateFileUser));
-	Unix.Dlsym(lib, "BASS_StreamFree", ADDRESSOF(BASS_StreamFree));
-	Unix.Dlsym(lib, "BASS_StreamGetFilePosition", ADDRESSOF(BASS_StreamGetFilePosition));
-	Unix.Dlsym(lib, "BASS_StreamPutData", ADDRESSOF(BASS_StreamPutData));
-	Unix.Dlsym(lib, "BASS_StreamPutFileData", ADDRESSOF(BASS_StreamPutFileData));
-	Unix.Dlsym(lib, "BASS_RecordGetDeviceInfo", ADDRESSOF(BASS_RecordGetDeviceInfo));
-	Unix.Dlsym(lib, "BASS_RecordInit", ADDRESSOF(BASS_RecordInit));
-	Unix.Dlsym(lib, "BASS_RecordSetDevice", ADDRESSOF(BASS_RecordSetDevice));
-	Unix.Dlsym(lib, "BASS_RecordGetDevice", ADDRESSOF(BASS_RecordGetDevice));
-	Unix.Dlsym(lib, "BASS_RecordFree", ADDRESSOF(BASS_RecordFree));
-	Unix.Dlsym(lib, "BASS_RecordGetInfo", ADDRESSOF(BASS_RecordGetInfo));
-	Unix.Dlsym(lib, "BASS_RecordGetInputName", ADDRESSOF(BASS_RecordGetInputName));
-	Unix.Dlsym(lib, "BASS_RecordSetInput", ADDRESSOF(BASS_RecordSetInput));
-	Unix.Dlsym(lib, "BASS_RecordGetInput", ADDRESSOF(BASS_RecordGetInput));
-	Unix.Dlsym(lib, "BASS_RecordStart", ADDRESSOF(BASS_RecordStart));
-	Unix.Dlsym(lib, "BASS_ChannelBytes2Seconds", ADDRESSOF(BASS_ChannelBytes2Seconds));
-	Unix.Dlsym(lib, "BASS_ChannelSeconds2Bytes", ADDRESSOF(BASS_ChannelSeconds2Bytes));
-	Unix.Dlsym(lib, "BASS_ChannelGetDevice", ADDRESSOF(BASS_ChannelGetDevice));
-	Unix.Dlsym(lib, "BASS_ChannelSetDevice", ADDRESSOF(BASS_ChannelSetDevice));
-	Unix.Dlsym(lib, "BASS_ChannelIsActive", ADDRESSOF(BASS_ChannelIsActive));
-	Unix.Dlsym(lib, "BASS_ChannelGetInfo", ADDRESSOF(BASS_ChannelGetInfo));
-	Unix.Dlsym(lib, "BASS_ChannelGetTags", ADDRESSOF(BASS_ChannelGetTags));
-	Unix.Dlsym(lib, "BASS_ChannelFlags", ADDRESSOF(BASS_ChannelFlags));
-	Unix.Dlsym(lib, "BASS_ChannelUpdate", ADDRESSOF(BASS_ChannelUpdate));
-	Unix.Dlsym(lib, "BASS_ChannelLock", ADDRESSOF(BASS_ChannelLock));
-	Unix.Dlsym(lib, "BASS_ChannelPlay", ADDRESSOF(BASS_ChannelPlay));
-	Unix.Dlsym(lib, "BASS_ChannelStop", ADDRESSOF(BASS_ChannelStop));
-	Unix.Dlsym(lib, "BASS_ChannelPause", ADDRESSOF(BASS_ChannelPause));
-	Unix.Dlsym(lib, "BASS_ChannelSetAttribute", ADDRESSOF(BASS_ChannelSetAttribute));
-	Unix.Dlsym(lib, "BASS_ChannelGetAttribute", ADDRESSOF(BASS_ChannelGetAttribute));
-	Unix.Dlsym(lib, "BASS_ChannelSlideAttribute", ADDRESSOF(BASS_ChannelSlideAttribute));
-	Unix.Dlsym(lib, "BASS_ChannelIsSliding", ADDRESSOF(BASS_ChannelIsSliding));
-	Unix.Dlsym(lib, "BASS_ChannelSetAttributeEx", ADDRESSOF(BASS_ChannelSetAttributeEx));
-	Unix.Dlsym(lib, "BASS_ChannelGetAttributeEx", ADDRESSOF(BASS_ChannelGetAttributeEx));
-	Unix.Dlsym(lib, "BASS_ChannelSet3DAttributes", ADDRESSOF(BASS_ChannelSet3DAttributes));
-	Unix.Dlsym(lib, "BASS_ChannelGet3DAttributes", ADDRESSOF(BASS_ChannelGet3DAttributes));
-	Unix.Dlsym(lib, "BASS_ChannelSet3DPosition", ADDRESSOF(BASS_ChannelSet3DPosition));
-	Unix.Dlsym(lib, "BASS_ChannelGet3DPosition", ADDRESSOF(BASS_ChannelGet3DPosition));
-	Unix.Dlsym(lib, "BASS_ChannelGetLength", ADDRESSOF(BASS_ChannelGetLength));
-	Unix.Dlsym(lib, "BASS_ChannelSetPosition", ADDRESSOF(BASS_ChannelSetPosition));
-	Unix.Dlsym(lib, "BASS_ChannelGetPosition", ADDRESSOF(BASS_ChannelGetPosition));
-	Unix.Dlsym(lib, "BASS_ChannelGetLevel", ADDRESSOF(BASS_ChannelGetLevel));
-	Unix.Dlsym(lib, "BASS_ChannelGetLevelEx", ADDRESSOF(BASS_ChannelGetLevelEx));
-	Unix.Dlsym(lib, "BASS_ChannelGetData", ADDRESSOF(BASS_ChannelGetData));
-	Unix.Dlsym(lib, "BASS_ChannelSetSync", ADDRESSOF(BASS_ChannelSetSync));
-	Unix.Dlsym(lib, "BASS_ChannelRemoveSync", ADDRESSOF(BASS_ChannelRemoveSync));
-	Unix.Dlsym(lib, "BASS_ChannelSetDSP", ADDRESSOF(BASS_ChannelSetDSP));
-	Unix.Dlsym(lib, "BASS_ChannelRemoveDSP", ADDRESSOF(BASS_ChannelRemoveDSP));
-	Unix.Dlsym(lib, "BASS_ChannelSetLink", ADDRESSOF(BASS_ChannelSetLink));
-	Unix.Dlsym(lib, "BASS_ChannelRemoveLink", ADDRESSOF(BASS_ChannelRemoveLink));
-	Unix.Dlsym(lib, "BASS_ChannelSetFX", ADDRESSOF(BASS_ChannelSetFX));
-	Unix.Dlsym(lib, "BASS_ChannelRemoveFX", ADDRESSOF(BASS_ChannelRemoveFX));
-	Unix.Dlsym(lib, "BASS_FXSetParameters", ADDRESSOF(BASS_FXSetParameters));
-	Unix.Dlsym(lib, "BASS_FXGetParameters", ADDRESSOF(BASS_FXGetParameters));
-	Unix.Dlsym(lib, "BASS_FXReset", ADDRESSOF(BASS_FXReset));
-	Unix.Dlsym(lib, "BASS_FXSetPriority", ADDRESSOF(BASS_FXSetPriority));
+	Unix.Dlsym(lib, PU("BASS_MusicLoad")^, ADDRESSOF(BASS_MusicLoad));
+	Unix.Dlsym(lib, PU("BASS_MusicFree")^, ADDRESSOF(BASS_MusicFree));
+	Unix.Dlsym(lib, PU("BASS_SampleLoad")^, ADDRESSOF(BASS_SampleLoad));
+	Unix.Dlsym(lib, PU("BASS_SampleCreate")^, ADDRESSOF(BASS_SampleCreate));
+	Unix.Dlsym(lib, PU("BASS_SampleFree")^, ADDRESSOF(BASS_SampleFree));
+	Unix.Dlsym(lib, PU("BASS_SampleSetData")^, ADDRESSOF(BASS_SampleSetData));
+	Unix.Dlsym(lib, PU("BASS_SampleGetData")^, ADDRESSOF(BASS_SampleGetData));
+	Unix.Dlsym(lib, PU("BASS_SampleGetInfo")^, ADDRESSOF(BASS_SampleGetInfo));
+	Unix.Dlsym(lib, PU("BASS_SampleSetInfo")^, ADDRESSOF(BASS_SampleSetInfo));
+	Unix.Dlsym(lib, PU("BASS_SampleGetChannel")^, ADDRESSOF(BASS_SampleGetChannel));
+	Unix.Dlsym(lib, PU("BASS_SampleGetChannels")^, ADDRESSOF(BASS_SampleGetChannels));
+	Unix.Dlsym(lib, PU("BASS_SampleStop")^, ADDRESSOF(BASS_SampleStop));
+	Unix.Dlsym(lib, PU("BASS_StreamCreate")^, ADDRESSOF(BASS_StreamCreate));
+	Unix.Dlsym(lib, PU("BASS_StreamCreateFile")^, ADDRESSOF(BASS_StreamCreateFile));
+	Unix.Dlsym(lib, PU("BASS_StreamCreateURL")^, ADDRESSOF(BASS_StreamCreateURL));
+	Unix.Dlsym(lib, PU("BASS_StreamCreateFileUser")^, ADDRESSOF(BASS_StreamCreateFileUser));
+	Unix.Dlsym(lib, PU("BASS_StreamFree")^, ADDRESSOF(BASS_StreamFree));
+	Unix.Dlsym(lib, PU("BASS_StreamGetFilePosition")^, ADDRESSOF(BASS_StreamGetFilePosition));
+	Unix.Dlsym(lib, PU("BASS_StreamPutData")^, ADDRESSOF(BASS_StreamPutData));
+	Unix.Dlsym(lib, PU("BASS_StreamPutFileData")^, ADDRESSOF(BASS_StreamPutFileData));
+	Unix.Dlsym(lib, PU("BASS_RecordGetDeviceInfo")^, ADDRESSOF(BASS_RecordGetDeviceInfo));
+	Unix.Dlsym(lib, PU("BASS_RecordInit")^, ADDRESSOF(BASS_RecordInit));
+	Unix.Dlsym(lib, PU("BASS_RecordSetDevice")^, ADDRESSOF(BASS_RecordSetDevice));
+	Unix.Dlsym(lib, PU("BASS_RecordGetDevice")^, ADDRESSOF(BASS_RecordGetDevice));
+	Unix.Dlsym(lib, PU("BASS_RecordFree")^, ADDRESSOF(BASS_RecordFree));
+	Unix.Dlsym(lib, PU("BASS_RecordGetInfo")^, ADDRESSOF(BASS_RecordGetInfo));
+	Unix.Dlsym(lib, PU("BASS_RecordGetInputName")^, ADDRESSOF(BASS_RecordGetInputName));
+	Unix.Dlsym(lib, PU("BASS_RecordSetInput")^, ADDRESSOF(BASS_RecordSetInput));
+	Unix.Dlsym(lib, PU("BASS_RecordGetInput")^, ADDRESSOF(BASS_RecordGetInput));
+	Unix.Dlsym(lib, PU("BASS_RecordStart")^, ADDRESSOF(BASS_RecordStart));
+	Unix.Dlsym(lib, PU("BASS_ChannelBytes2Seconds")^, ADDRESSOF(BASS_ChannelBytes2Seconds));
+	Unix.Dlsym(lib, PU("BASS_ChannelSeconds2Bytes")^, ADDRESSOF(BASS_ChannelSeconds2Bytes));
+	Unix.Dlsym(lib, PU("BASS_ChannelGetDevice")^, ADDRESSOF(BASS_ChannelGetDevice));
+	Unix.Dlsym(lib, PU("BASS_ChannelSetDevice")^, ADDRESSOF(BASS_ChannelSetDevice));
+	Unix.Dlsym(lib, PU("BASS_ChannelIsActive")^, ADDRESSOF(BASS_ChannelIsActive));
+	Unix.Dlsym(lib, PU("BASS_ChannelGetInfo")^, ADDRESSOF(BASS_ChannelGetInfo));
+	Unix.Dlsym(lib, PU("BASS_ChannelGetTags")^, ADDRESSOF(BASS_ChannelGetTags));
+	Unix.Dlsym(lib, PU("BASS_ChannelFlags")^, ADDRESSOF(BASS_ChannelFlags));
+	Unix.Dlsym(lib, PU("BASS_ChannelUpdate")^, ADDRESSOF(BASS_ChannelUpdate));
+	Unix.Dlsym(lib, PU("BASS_ChannelLock")^, ADDRESSOF(BASS_ChannelLock));
+	Unix.Dlsym(lib, PU("BASS_ChannelPlay")^, ADDRESSOF(BASS_ChannelPlay));
+	Unix.Dlsym(lib, PU("BASS_ChannelStop")^, ADDRESSOF(BASS_ChannelStop));
+	Unix.Dlsym(lib, PU("BASS_ChannelPause")^, ADDRESSOF(BASS_ChannelPause));
+	Unix.Dlsym(lib, PU("BASS_ChannelSetAttribute")^, ADDRESSOF(BASS_ChannelSetAttribute));
+	Unix.Dlsym(lib, PU("BASS_ChannelGetAttribute")^, ADDRESSOF(BASS_ChannelGetAttribute));
+	Unix.Dlsym(lib, PU("BASS_ChannelSlideAttribute")^, ADDRESSOF(BASS_ChannelSlideAttribute));
+	Unix.Dlsym(lib, PU("BASS_ChannelIsSliding")^, ADDRESSOF(BASS_ChannelIsSliding));
+	Unix.Dlsym(lib, PU("BASS_ChannelSetAttributeEx")^, ADDRESSOF(BASS_ChannelSetAttributeEx));
+	Unix.Dlsym(lib, PU("BASS_ChannelGetAttributeEx")^, ADDRESSOF(BASS_ChannelGetAttributeEx));
+	Unix.Dlsym(lib, PU("BASS_ChannelSet3DAttributes")^, ADDRESSOF(BASS_ChannelSet3DAttributes));
+	Unix.Dlsym(lib, PU("BASS_ChannelGet3DAttributes")^, ADDRESSOF(BASS_ChannelGet3DAttributes));
+	Unix.Dlsym(lib, PU("BASS_ChannelSet3DPosition")^, ADDRESSOF(BASS_ChannelSet3DPosition));
+	Unix.Dlsym(lib, PU("BASS_ChannelGet3DPosition")^, ADDRESSOF(BASS_ChannelGet3DPosition));
+	Unix.Dlsym(lib, PU("BASS_ChannelGetLength")^, ADDRESSOF(BASS_ChannelGetLength));
+	Unix.Dlsym(lib, PU("BASS_ChannelSetPosition")^, ADDRESSOF(BASS_ChannelSetPosition));
+	Unix.Dlsym(lib, PU("BASS_ChannelGetPosition")^, ADDRESSOF(BASS_ChannelGetPosition));
+	Unix.Dlsym(lib, PU("BASS_ChannelGetLevel")^, ADDRESSOF(BASS_ChannelGetLevel));
+	Unix.Dlsym(lib, PU("BASS_ChannelGetLevelEx")^, ADDRESSOF(BASS_ChannelGetLevelEx));
+	Unix.Dlsym(lib, PU("BASS_ChannelGetData")^, ADDRESSOF(BASS_ChannelGetData));
+	Unix.Dlsym(lib, PU("BASS_ChannelSetSync")^, ADDRESSOF(BASS_ChannelSetSync));
+	Unix.Dlsym(lib, PU("BASS_ChannelRemoveSync")^, ADDRESSOF(BASS_ChannelRemoveSync));
+	Unix.Dlsym(lib, PU("BASS_ChannelSetDSP")^, ADDRESSOF(BASS_ChannelSetDSP));
+	Unix.Dlsym(lib, PU("BASS_ChannelRemoveDSP")^, ADDRESSOF(BASS_ChannelRemoveDSP));
+	Unix.Dlsym(lib, PU("BASS_ChannelSetLink")^, ADDRESSOF(BASS_ChannelSetLink));
+	Unix.Dlsym(lib, PU("BASS_ChannelRemoveLink")^, ADDRESSOF(BASS_ChannelRemoveLink));
+	Unix.Dlsym(lib, PU("BASS_ChannelSetFX")^, ADDRESSOF(BASS_ChannelSetFX));
+	Unix.Dlsym(lib, PU("BASS_ChannelRemoveFX")^, ADDRESSOF(BASS_ChannelRemoveFX));
+	Unix.Dlsym(lib, PU("BASS_FXSetParameters")^, ADDRESSOF(BASS_FXSetParameters));
+	Unix.Dlsym(lib, PU("BASS_FXGetParameters")^, ADDRESSOF(BASS_FXGetParameters));
+	Unix.Dlsym(lib, PU("BASS_FXReset")^, ADDRESSOF(BASS_FXReset));
+	Unix.Dlsym(lib, PU("BASS_FXSetPriority")^, ADDRESSOF(BASS_FXSetPriority));
 
 	Modules.InstallTermHandler(Cleanup)
 

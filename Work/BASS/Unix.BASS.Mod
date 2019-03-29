@@ -1,7 +1,7 @@
 MODULE BASS; (** AUTHOR "SAGE"; PURPOSE "BASS 2.4 A2 OS Wrapper module"; *)
 
 IMPORT
-	SYSTEM, KernelLog, Kernel32, Modules, Codecs, Streams, BASScpu;
+	SYSTEM, Unix, Modules;
 
 CONST
 
@@ -10,8 +10,8 @@ CONST
 	BASSVERSIONTEXT*								= "2.4";
 
 	(* Use these to test for error from functions that return a DWORD or QWORD *)
-	DW_ERROR*												= LONGINT(-1);
-	QW_ERROR*												= HUGEINT(-1);
+	DW_ERROR*												= LONGINT(-1);	(* -1 (DWORD) *)
+	QW_ERROR*												= HUGEINT(-1);	(* -1 (QWORD) *)
 
 	(* Error codes returned by BASS_ErrorGetCode() *)
 	BASS_OK	*												= 0;	(* all is OK *)
@@ -464,9 +464,7 @@ TYPE
 	Word = INTEGER;
 	PAnsiChar = ADDRESS;
 	PChar = ADDRESS;
-	PGUID = ADDRESS;
 	PSingle = ADDRESS;
-	HWND = LONGINT;
 	HMUSIC = LONGINT;		(* MOD music handle *)
 	HSAMPLE = LONGINT;		(* sample handle *)
 	HCHANNEL = LONGINT;	(* playing sample's channel handle *)
@@ -476,6 +474,36 @@ TYPE
 	HDSP = LONGINT;			(* DSP handle *)
 	HFX = LONGINT;				(* DX8 effect handle *)
 	HPLUGIN = LONGINT;		(* Plugin handle *)
+
+	(* Channel info structure *)
+	BASS_CHANNELINFO* = RECORD
+		freq*: DWORD;					(* default playback rate *)
+		chans*: DWORD;					(* channels *)
+		flags*: SET;						(* BASS_SAMPLE/STREAM/MUSIC/SPEAKER flags *)
+		ctype*: SET;						(* type of channel *)
+		origres*: DWORD;				(* original resolution *)
+		plugin*: HPLUGIN;			(* plugin *)
+		sample*: HSAMPLE;			(* sample *)
+#IF I386 THEN
+#ELSIF AMD64 THEN
+		padding*: DWORD;
+#ELSE
+		unimplemented
+#END
+		filename*: PAnsiChar;	(* filename *)
+	END;
+
+	BASS_PLUGINFORM* = RECORD
+		ctype*: DWORD;				(* channel type *)
+#IF I386 THEN
+#ELSIF AMD64 THEN
+		padding*: DWORD;
+#ELSE
+		unimplemented
+#END
+		name*: PAnsiChar;		(* format description *)
+		exts*: PAnsiChar;		(* file extension filter ( *.ext1;*.ext2;etc...) *)
+	END;
 
 	(* Device info structure *)
 	BASS_DEVICEINFO* = RECORD
@@ -531,10 +559,6 @@ TYPE
 		priority*: DWORD;	(* priority (0=lowest, $ffffffff=highest) *)
 	END;
 
-	(* Channel info structure *)
-	BASS_CHANNELINFO* = BASScpu.BASS_CHANNELINFO;
-
-	BASS_PLUGINFORM* = BASScpu.BASS_PLUGINFORM;
 	(* PBASS_PLUGINFORMS = POINTER TO TBASS_PLUGINFORMS;
 	TBASS_PLUGINFORMS = ARRAY[0..maxInt DIV sizeOf(BASS_PLUGINFORM) - 1] OF BASS_PLUGINFORM; *)
 	PBASS_PLUGINFORMS* = POINTER TO ARRAY OF BASS_PLUGINFORM;
@@ -553,10 +577,10 @@ TYPE
 	END;
 
 	(* User file stream callback functions *)
-	FILECLOSEPROC* = PROCEDURE {WINAPI} (user: ADDRESS);
-	FILELENPROC* = PROCEDURE {WINAPI} (user: ADDRESS): QWORD;
-	FILEREADPROC* = PROCEDURE {WINAPI} (buffer: ADDRESS; length: DWORD; user: ADDRESS): DWORD;
-	FILESEEKPROC* = PROCEDURE {WINAPI} (offset: QWORD; user: ADDRESS): BOOL;
+	FILECLOSEPROC* = PROCEDURE {C} (user: ADDRESS);
+	FILELENPROC* = PROCEDURE {C} (user: ADDRESS): QWORD;
+	FILEREADPROC* = PROCEDURE {C} (buffer: ADDRESS; length: DWORD; user: ADDRESS): DWORD;
+	FILESEEKPROC* = PROCEDURE {C} (offset: QWORD; user: ADDRESS): BOOL;
 
 	BASS_FILEPROCS* = RECORD
 		close*: FILECLOSEPROC;
@@ -679,7 +703,7 @@ TYPE
 	END;
 
 	(* callback function types *)
-	STREAMPROC* = PROCEDURE {WINAPI} (handle: HSTREAM; buffer: ADDRESS; length: DWORD; user: ADDRESS): DWORD;
+	STREAMPROC* = PROCEDURE {C} (handle: HSTREAM; buffer: ADDRESS; length: DWORD; user: ADDRESS): DWORD;
 	(*		 User stream callback function. NOTE: A stream function should obviously be as
 		quick as possible, other streams (and MOD musics) can't be mixed until
 		it's finished.
@@ -697,14 +721,14 @@ VAR
 	STREAMPROC_PUSH-:	ADDRESS; (* ADDRESS(-1)	push stream *)
 
 TYPE
-	DOWNLOADPROC* = PROCEDURE {WINAPI} (buffer: ADDRESS; length: DWORD; user: ADDRESS);
+	DOWNLOADPROC* = PROCEDURE {C} (buffer: ADDRESS; length: DWORD; user: ADDRESS);
 	(*		 Internet stream download callback function.
 		buffer : Buffer containing the downloaded data... NULL=end of download
 		length : Number of bytes in the buffer
 		user	 : The 'user' parameter value given when calling BASS_StreamCreateURL
  *)
 
-	SYNCPROC* = PROCEDURE {WINAPI} (handle: HSYNC; channel, data: DWORD; user: ADDRESS);
+	SYNCPROC* = PROCEDURE {C} (handle: HSYNC; channel, data: DWORD; user: ADDRESS);
 	(*		 Sync callback function. NOTE: a sync callback function should be very
 		quick as other syncs cannot be processed until it has finished. If the
 		sync is a "mixtime" sync, then other streams and MOD musics can not be
@@ -715,7 +739,7 @@ TYPE
 		user	 : The 'user' parameter given when calling BASS_ChannelSetSync
  *)
 
-	DSPPROC* = PROCEDURE {WINAPI} (handle: HDSP; channel: DWORD; buffer: ADDRESS; length: DWORD; user: ADDRESS);
+	DSPPROC* = PROCEDURE {C} (handle: HDSP; channel: DWORD; buffer: ADDRESS; length: DWORD; user: ADDRESS);
 	(*		 DSP callback function. NOTE: A DSP function should obviously be as quick
 		as possible... other DSP functions, streams and MOD musics can not be
 		processed until it's finished.
@@ -726,7 +750,7 @@ TYPE
 		user	 : The 'user' parameter given when calling BASS_ChannelSetDSP
  *)
 
-	RECORDPROC* = PROCEDURE {WINAPI} (handle: HRECORD; buffer: ADDRESS; length: DWORD; user: ADDRESS): BOOL;
+	RECORDPROC* = PROCEDURE {C} (handle: HRECORD; buffer: ADDRESS; length: DWORD; user: ADDRESS): BOOL;
 	(*		 Recording callback function.
 		handle : The recording handle
 		buffer : Buffer containing the recorded sample data
@@ -738,128 +762,121 @@ TYPE
 VAR
 
 	(* Functions *)
+	BASS_SetConfig-: PROCEDURE {C} (option, value: DWORD): BOOL;
+	BASS_GetConfig-: PROCEDURE {C} (option: DWORD): DWORD;
+	BASS_SetConfigPtr-: PROCEDURE {C} (option: DWORD; value: ADDRESS): BOOL;
+	BASS_GetConfigPtr-: PROCEDURE {C} (option: DWORD): ADDRESS;
+	BASS_GetVersion-: PROCEDURE {C} (): DWORD;
+	BASS_ErrorGetCode-: PROCEDURE {C} (): LONGINT;
+	BASS_GetDeviceInfo-: PROCEDURE {C} (device: DWORD; VAR info: BASS_DEVICEINFO): BOOL;
 
-	BASS_SetConfig-: PROCEDURE {WINAPI} (option, value: DWORD): BOOL;
-	BASS_GetConfig-: PROCEDURE {WINAPI} (option: DWORD): DWORD;
-	BASS_SetConfigPtr-: PROCEDURE {WINAPI} (option: DWORD; value: ADDRESS): BOOL;
-	BASS_GetConfigPtr-: PROCEDURE {WINAPI} (option: DWORD): ADDRESS;
+	BASS_Init-: PROCEDURE {C} (device: LONGINT; freq: DWORD; flags: SET; win: ADDRESS; clsid: ADDRESS): BOOL;
 
-	BASS_GetVersion-: PROCEDURE {WINAPI} (): DWORD;
-	BASS_ErrorGetCode-: PROCEDURE {WINAPI} (): LONGINT;
-	BASS_GetDeviceInfo-: PROCEDURE {WINAPI} (device: DWORD; VAR info: BASS_DEVICEINFO): BOOL;
+	BASS_SetDevice-: PROCEDURE {C} (device: DWORD): BOOL;
+	BASS_GetDevice-: PROCEDURE {C} (): DWORD;
+	BASS_Free-: PROCEDURE {C} (): BOOL;
 
-	BASS_Init-: PROCEDURE {WINAPI} (device: LONGINT; freq: DWORD; flags: SET; win: HWND; clsid: PGUID): BOOL;
+	BASS_GetInfo-: PROCEDURE {C} (VAR info: BASS_INFO): BOOL;
+	BASS_Update-: PROCEDURE {C} (length: DWORD): BOOL;
+	BASS_GetCPU-: PROCEDURE {C} (): REAL;
+	BASS_Start-: PROCEDURE {C} (): BOOL;
+	BASS_Stop-: PROCEDURE {C} (): BOOL;
+	BASS_Pause-: PROCEDURE {C} (): BOOL;
+	BASS_SetVolume-: PROCEDURE {C} (volume: REAL): BOOL;
+	BASS_GetVolume-: PROCEDURE {C} (): REAL;
 
-	BASS_SetDevice-: PROCEDURE {WINAPI} (device: DWORD): BOOL;
-	BASS_GetDevice-: PROCEDURE {WINAPI} (): DWORD;
-	BASS_Free-: PROCEDURE {WINAPI} (): BOOL;
+	BASS_PluginLoad-: PROCEDURE {C} (filename: PChar; flags: SET): HPLUGIN;
+	BASS_PluginFree-: PROCEDURE {C} (handle: HPLUGIN): BOOL;
+	BASS_PluginGetInfo-: PROCEDURE {C} (handle: HPLUGIN): PBASS_PLUGININFO;
 
-	BASS_GetDSoundObject-: PROCEDURE {WINAPI} (obj: DWORD): ADDRESS;
+	BASS_Set3DFactors-: PROCEDURE {C} (distf, rollf, doppf: REAL): BOOL;
+	BASS_Get3DFactors-: PROCEDURE {C} (VAR distf, rollf, doppf: REAL): BOOL;
+	BASS_Set3DPosition-: PROCEDURE {C} (VAR pos, vel, front, top: BASS_3DVECTOR): BOOL;
+	BASS_Get3DPosition-: PROCEDURE {C} (VAR pos, vel, front, top: BASS_3DVECTOR): BOOL;
+	BASS_Apply3D-: PROCEDURE {C};
 
-	BASS_GetInfo-: PROCEDURE {WINAPI} (VAR info: BASS_INFO): BOOL;
-	BASS_Update-: PROCEDURE {WINAPI} (length: DWORD): BOOL;
-	BASS_GetCPU-: PROCEDURE {WINAPI} (): REAL;
-	BASS_Start-: PROCEDURE {WINAPI} (): BOOL;
-	BASS_Stop-: PROCEDURE {WINAPI} (): BOOL;
-	BASS_Pause-: PROCEDURE {WINAPI} (): BOOL;
-	BASS_SetVolume-: PROCEDURE {WINAPI} (volume: REAL): BOOL;
-	BASS_GetVolume-: PROCEDURE {WINAPI} (): REAL;
+	BASS_MusicLoad-: PROCEDURE {C} (mem: BOOL; f: ADDRESS; offset: QWORD; length: DWORD; flags: SET; freq: DWORD): HMUSIC;
+	BASS_MusicFree-: PROCEDURE {C} (handle: HMUSIC): BOOL;
 
-	BASS_PluginLoad-: PROCEDURE {WINAPI} (filename: PChar; flags: SET): HPLUGIN;
-	BASS_PluginFree-: PROCEDURE {WINAPI} (handle: HPLUGIN): BOOL;
-	BASS_PluginGetInfo-: PROCEDURE {WINAPI} (handle: HPLUGIN): PBASS_PLUGININFO;
+	BASS_SampleLoad-: PROCEDURE {C} (mem: BOOL; f: ADDRESS; offset: QWORD; length, max: DWORD; flags: SET): HSAMPLE;
+	BASS_SampleCreate-: PROCEDURE {C} (length, freq, chans, max: DWORD; flags: SET): HSAMPLE;
+	BASS_SampleFree-: PROCEDURE {C} (handle: HSAMPLE): BOOL;
+	BASS_SampleSetData-: PROCEDURE {C} (handle: HSAMPLE; buffer: ADDRESS): BOOL;
+	BASS_SampleGetData-: PROCEDURE {C} (handle: HSAMPLE; buffer: ADDRESS): BOOL;
+	BASS_SampleGetInfo-: PROCEDURE {C} (handle: HSAMPLE; VAR info: BASS_SAMPLE): BOOL;
+	BASS_SampleSetInfo-: PROCEDURE {C} (handle: HSAMPLE; VAR info: BASS_SAMPLE): BOOL;
+	BASS_SampleGetChannel-: PROCEDURE {C} (handle: HSAMPLE; onlynew: BOOL): HCHANNEL;
+	BASS_SampleGetChannels-: PROCEDURE {C} (handle: HSAMPLE; channels: ADDRESS): DWORD;
+	BASS_SampleStop-: PROCEDURE {C} (handle: HSAMPLE): BOOL;
 
-	BASS_Set3DFactors-: PROCEDURE {WINAPI} (distf, rollf, doppf: REAL): BOOL;
-	BASS_Get3DFactors-: PROCEDURE {WINAPI} (VAR distf, rollf, doppf: REAL): BOOL;
-	BASS_Set3DPosition-: PROCEDURE {WINAPI} (VAR pos, vel, front, top: BASS_3DVECTOR): BOOL;
-	BASS_Get3DPosition-: PROCEDURE {WINAPI} (VAR pos, vel, front, top: BASS_3DVECTOR): BOOL;
-	BASS_Apply3D-: PROCEDURE {WINAPI};
+	BASS_StreamCreate-: PROCEDURE {C} (freq, chans: DWORD; flags: SET; proc: STREAMPROC; user: ADDRESS): HSTREAM;
+	BASS_StreamCreateFile-: PROCEDURE {C} (mem: BOOL; f: ADDRESS; offset, length: QWORD; flags: SET): HSTREAM;
+	BASS_StreamCreateURL-: PROCEDURE {C} (url: PChar; offset: DWORD; flags: SET; proc: DOWNLOADPROC; user: ADDRESS):HSTREAM;
+	BASS_StreamCreateFileUser-: PROCEDURE {C} (system, flags: SET; VAR procs: BASS_FILEPROCS; user: ADDRESS): HSTREAM;
+	BASS_StreamFree-: PROCEDURE {C} (handle: HSTREAM): BOOL;
+	BASS_StreamGetFilePosition-: PROCEDURE {C} (handle: HSTREAM; mode: DWORD): QWORD;
+	BASS_StreamPutData-: PROCEDURE {C} (handle: HSTREAM; buffer: ADDRESS; length: DWORD): DWORD;
+	BASS_StreamPutFileData-: PROCEDURE {C} (handle: HSTREAM; buffer: ADDRESS; length: DWORD): DWORD;
 
-	BASS_SetEAXParameters-: PROCEDURE {WINAPI} (env: LONGINT; vol, decay, damp: REAL): BOOL;
-	BASS_GetEAXParameters-: PROCEDURE {WINAPI} (VAR env: DWORD; VAR vol, decay, damp: REAL): BOOL;
+	BASS_RecordGetDeviceInfo-: PROCEDURE {C} (device: DWORD; VAR info: BASS_DEVICEINFO): BOOL;
+	BASS_RecordInit-: PROCEDURE {C} (device: LONGINT):BOOL;
+	BASS_RecordSetDevice-: PROCEDURE {C} (device: DWORD): BOOL;
+	BASS_RecordGetDevice-: PROCEDURE {C} (): DWORD;
+	BASS_RecordFree-: PROCEDURE {C} (): BOOL;
+	BASS_RecordGetInfo-: PROCEDURE {C} (VAR info: BASS_RECORDINFO): BOOL;
+	BASS_RecordGetInputName-: PROCEDURE {C} (input: LONGINT): PAnsiChar;
+	BASS_RecordSetInput-: PROCEDURE {C} (input: LONGINT; flags: SET; volume: REAL): BOOL;
+	BASS_RecordGetInput-: PROCEDURE {C} (input: LONGINT; VAR volume: REAL): DWORD;
+	BASS_RecordStart-: PROCEDURE {C} (freq, chans: DWORD; flags: SET; proc: RECORDPROC; user: ADDRESS): HRECORD;
 
-	BASS_MusicLoad-: PROCEDURE {WINAPI} (mem: BOOL; f: ADDRESS; offset: QWORD; length: DWORD; flags: SET; freq: DWORD): HMUSIC;
-	BASS_MusicFree-: PROCEDURE {WINAPI} (handle: HMUSIC): BOOL;
+	BASS_ChannelBytes2Seconds-: PROCEDURE {C} (handle: DWORD; pos: QWORD): LONGREAL;
+	BASS_ChannelSeconds2Bytes-: PROCEDURE {C} (handle: DWORD; pos: LONGREAL): QWORD;
+	BASS_ChannelGetDevice-: PROCEDURE {C} (handle: DWORD): DWORD;
+	BASS_ChannelSetDevice-: PROCEDURE {C} (handle, device: DWORD): BOOL;
+	BASS_ChannelIsActive-: PROCEDURE {C} (handle: DWORD): DWORD;
+	BASS_ChannelGetInfo-: PROCEDURE {C} (handle: DWORD; VAR info: BASS_CHANNELINFO):BOOL;
+	BASS_ChannelGetTags-: PROCEDURE {C} (handle: HSTREAM; tags: DWORD): PAnsiChar;
+	BASS_ChannelFlags-: PROCEDURE {C} (handle: DWORD; flags: SET; mask: DWORD): DWORD;
+	BASS_ChannelUpdate-: PROCEDURE {C} (handle, length: DWORD): BOOL;
+	BASS_ChannelLock-: PROCEDURE {C} (handle: DWORD; lock: BOOL): BOOL;
+	BASS_ChannelPlay-: PROCEDURE {C} (handle: DWORD; restart: BOOL): BOOL;
+	BASS_ChannelStop-: PROCEDURE {C} (handle: DWORD): BOOL;
+	BASS_ChannelPause-: PROCEDURE {C} (handle: DWORD): BOOL;
 
-	BASS_SampleLoad-: PROCEDURE {WINAPI} (mem: BOOL; f: ADDRESS; offset: QWORD; length, max: DWORD; flags: SET): HSAMPLE;
-	BASS_SampleCreate-: PROCEDURE {WINAPI} (length, freq, chans, max: DWORD; flags: SET): HSAMPLE;
-	BASS_SampleFree-: PROCEDURE {WINAPI} (handle: HSAMPLE): BOOL;
-	BASS_SampleSetData-: PROCEDURE {WINAPI} (handle: HSAMPLE; buffer: ADDRESS): BOOL;
-	BASS_SampleGetData-: PROCEDURE {WINAPI} (handle: HSAMPLE; buffer: ADDRESS): BOOL;
-	BASS_SampleGetInfo-: PROCEDURE {WINAPI} (handle: HSAMPLE; VAR info: BASS_SAMPLE): BOOL;
-	BASS_SampleSetInfo-: PROCEDURE {WINAPI} (handle: HSAMPLE; VAR info: BASS_SAMPLE): BOOL;
-	BASS_SampleGetChannel-: PROCEDURE {WINAPI} (handle: HSAMPLE; onlynew: BOOL): HCHANNEL;
-	BASS_SampleGetChannels-: PROCEDURE {WINAPI} (handle: HSAMPLE; channels: ADDRESS): DWORD;
-	BASS_SampleStop-: PROCEDURE {WINAPI} (handle: HSAMPLE): BOOL;
+	BASS_ChannelSetAttribute-: PROCEDURE {C} (handle, attrib: DWORD; value: REAL): BOOL;
+	BASS_ChannelGetAttribute-: PROCEDURE {C} (handle, attrib: DWORD; VAR value: REAL): BOOL;
+	BASS_ChannelSlideAttribute-: PROCEDURE {C} (handle, attrib: DWORD; value: REAL; time: DWORD): BOOL;
+	BASS_ChannelIsSliding-: PROCEDURE {C} (handle, attrib: DWORD): BOOL;
+	BASS_ChannelSetAttributeEx-: PROCEDURE {C} (handle, attrib: DWORD; value: ADDRESS; size: DWORD): BOOL;
+	BASS_ChannelGetAttributeEx-: PROCEDURE {C} (handle, attrib: DWORD; value: ADDRESS; size: DWORD): DWORD;
+	BASS_ChannelSet3DAttributes-: PROCEDURE {C} (handle: DWORD; mode: LONGINT; min, max: REAL; iangle, oangle, outvol: LONGINT): BOOL;
+	BASS_ChannelGet3DAttributes-: PROCEDURE {C} (handle: DWORD; VAR mode: DWORD; VAR min, max: REAL; VAR iangle, oangle, outvol: DWORD): BOOL;
+	BASS_ChannelSet3DPosition-: PROCEDURE {C} (handle: DWORD; VAR pos, orient, vel: BASS_3DVECTOR): BOOL;
+	BASS_ChannelGet3DPosition-: PROCEDURE {C} (handle: DWORD; VAR pos, orient, vel: BASS_3DVECTOR): BOOL;
+	BASS_ChannelGetLength-: PROCEDURE {C} (handle, mode: DWORD): QWORD;
+	BASS_ChannelSetPosition-: PROCEDURE {C} (handle: DWORD; pos: QWORD; mode: DWORD): BOOL;
+	BASS_ChannelGetPosition-: PROCEDURE {C} (handle, mode: DWORD): QWORD;
+	BASS_ChannelGetLevel-: PROCEDURE {C} (handle: DWORD): DWORD;
+	BASS_ChannelGetLevelEx-: PROCEDURE {C} (handle: DWORD; levels: PSingle; length: REAL; flags: SET): BOOL;
+	BASS_ChannelGetData-: PROCEDURE {C} (handle: DWORD; buffer: ADDRESS; length: DWORD): DWORD;
+	BASS_ChannelSetSync-: PROCEDURE {C} (handle: DWORD; type: SET; param: QWORD; proc: SYNCPROC; user: ADDRESS): HSYNC;
+	BASS_ChannelRemoveSync-: PROCEDURE {C} (handle: DWORD; sync: HSYNC): BOOL;
+	BASS_ChannelSetDSP-: PROCEDURE {C} (handle: DWORD; proc: DSPPROC; user: ADDRESS; priority: LONGINT): HDSP;
 
-	BASS_StreamCreate-: PROCEDURE {WINAPI} (freq, chans: DWORD; flags: SET; proc: STREAMPROC; user: ADDRESS): HSTREAM;
-	BASS_StreamCreateFile-: PROCEDURE {WINAPI} (mem: BOOL; f: ADDRESS; offset, length: QWORD; flags: SET): HSTREAM;
-	BASS_StreamCreateURL-: PROCEDURE {WINAPI} (url: PChar; offset: DWORD; flags: SET; proc: DOWNLOADPROC; user: ADDRESS):HSTREAM;
-	BASS_StreamCreateFileUser-: PROCEDURE {WINAPI} (system, flags: SET; VAR procs: BASS_FILEPROCS; user: ADDRESS): HSTREAM;
-	BASS_StreamFree-: PROCEDURE {WINAPI} (handle: HSTREAM): BOOL;
-	BASS_StreamGetFilePosition-: PROCEDURE {WINAPI} (handle: HSTREAM; mode: DWORD): QWORD;
-	BASS_StreamPutData-: PROCEDURE {WINAPI} (handle: HSTREAM; buffer: ADDRESS; length: DWORD): DWORD;
-	BASS_StreamPutFileData-: PROCEDURE {WINAPI} (handle: HSTREAM; buffer: ADDRESS; length: DWORD): DWORD;
+	BASS_ChannelRemoveDSP-: PROCEDURE {C} (handle: DWORD; dsp: HDSP): BOOL;
+	BASS_ChannelSetLink-: PROCEDURE {C} (handle, chan: DWORD): BOOL;
+	BASS_ChannelRemoveLink-: PROCEDURE {C} (handle, chan: DWORD): BOOL;
+	BASS_ChannelSetFX-: PROCEDURE {C} (handle, type_: DWORD; priority: LONGINT): HFX;
+	BASS_ChannelRemoveFX-: PROCEDURE {C} (handle: DWORD; fx: HFX): BOOL;
+	BASS_FXSetParameters-: PROCEDURE {C} (handle: HFX; par: ADDRESS): BOOL;
+	BASS_FXGetParameters-: PROCEDURE {C} (handle: HFX; par: ADDRESS): BOOL;
+	BASS_FXReset-: PROCEDURE {C} (handle: HFX): BOOL;
+	BASS_FXSetPriority-: PROCEDURE {C} (handle: HFX; priority: LONGINT): BOOL;
 
-	BASS_RecordGetDeviceInfo-: PROCEDURE {WINAPI} (device: DWORD; VAR info: BASS_DEVICEINFO): BOOL;
-	BASS_RecordInit-: PROCEDURE {WINAPI} (device: LONGINT):BOOL;
-	BASS_RecordSetDevice-: PROCEDURE {WINAPI} (device: DWORD): BOOL;
-	BASS_RecordGetDevice-: PROCEDURE {WINAPI} (): DWORD;
-	BASS_RecordFree-: PROCEDURE {WINAPI} (): BOOL;
-	BASS_RecordGetInfo-: PROCEDURE {WINAPI} (VAR info: BASS_RECORDINFO): BOOL;
-	BASS_RecordGetInputName-: PROCEDURE {WINAPI} (input: LONGINT): PAnsiChar;
-	BASS_RecordSetInput-: PROCEDURE {WINAPI} (input: LONGINT; flags: SET; volume: REAL): BOOL;
-	BASS_RecordGetInput-: PROCEDURE {WINAPI} (input: LONGINT; VAR volume: REAL): DWORD;
-	BASS_RecordStart-: PROCEDURE {WINAPI} (freq, chans: DWORD; flags: SET; proc: RECORDPROC; user: ADDRESS): HRECORD;
-
-	BASS_ChannelBytes2Seconds-: PROCEDURE {WINAPI} (handle: DWORD; pos: QWORD): LONGREAL;
-	BASS_ChannelSeconds2Bytes-: PROCEDURE {WINAPI} (handle: DWORD; pos: LONGREAL): QWORD;
-	BASS_ChannelGetDevice-: PROCEDURE {WINAPI} (handle: DWORD): DWORD;
-	BASS_ChannelSetDevice-: PROCEDURE {WINAPI} (handle, device: DWORD): BOOL;
-	BASS_ChannelIsActive-: PROCEDURE {WINAPI} (handle: DWORD): DWORD;
-	BASS_ChannelGetInfo-: PROCEDURE {WINAPI} (handle: DWORD; VAR info: BASS_CHANNELINFO):BOOL;
-	BASS_ChannelGetTags-: PROCEDURE {WINAPI} (handle: HSTREAM; tags: DWORD): PAnsiChar;
-	BASS_ChannelFlags-: PROCEDURE {WINAPI} (handle: DWORD; flags: SET; mask: DWORD): DWORD;
-	BASS_ChannelUpdate-: PROCEDURE {WINAPI} (handle, length: DWORD): BOOL;
-	BASS_ChannelLock-: PROCEDURE {WINAPI} (handle: DWORD; lock: BOOL): BOOL;
-	BASS_ChannelPlay-: PROCEDURE {WINAPI} (handle: DWORD; restart: BOOL): BOOL;
-	BASS_ChannelStop-: PROCEDURE {WINAPI} (handle: DWORD): BOOL;
-	BASS_ChannelPause-: PROCEDURE {WINAPI} (handle: DWORD): BOOL;
-
-	BASS_ChannelSetAttribute-: PROCEDURE {WINAPI} (handle, attrib: DWORD; value: REAL): BOOL;
-	BASS_ChannelGetAttribute-: PROCEDURE {WINAPI} (handle, attrib: DWORD; VAR value: REAL): BOOL;
-	BASS_ChannelSlideAttribute-: PROCEDURE {WINAPI} (handle, attrib: DWORD; value: REAL; time: DWORD): BOOL;
-	BASS_ChannelIsSliding-: PROCEDURE {WINAPI} (handle, attrib: DWORD): BOOL;
-	BASS_ChannelSetAttributeEx-: PROCEDURE {WINAPI} (handle, attrib: DWORD; value: ADDRESS; size: DWORD): BOOL;
-	BASS_ChannelGetAttributeEx-: PROCEDURE {WINAPI} (handle, attrib: DWORD; value: ADDRESS; size: DWORD): DWORD;
-	BASS_ChannelSet3DAttributes-: PROCEDURE {WINAPI} (handle: DWORD; mode: LONGINT; min, max: REAL; iangle, oangle, outvol: LONGINT): BOOL;
-	BASS_ChannelGet3DAttributes-: PROCEDURE {WINAPI} (handle: DWORD; VAR mode: DWORD; VAR min, max: REAL; VAR iangle, oangle, outvol: DWORD): BOOL;
-	BASS_ChannelSet3DPosition-: PROCEDURE {WINAPI} (handle: DWORD; VAR pos, orient, vel: BASS_3DVECTOR): BOOL;
-	BASS_ChannelGet3DPosition-: PROCEDURE {WINAPI} (handle: DWORD; VAR pos, orient, vel: BASS_3DVECTOR): BOOL;
-	BASS_ChannelGetLength-: PROCEDURE {WINAPI} (handle, mode: DWORD): QWORD;
-	BASS_ChannelSetPosition-: PROCEDURE {WINAPI} (handle: DWORD; pos: QWORD; mode: DWORD): BOOL;
-	BASS_ChannelGetPosition-: PROCEDURE {WINAPI} (handle, mode: DWORD): QWORD;
-	BASS_ChannelGetLevel-: PROCEDURE {WINAPI} (handle: DWORD): DWORD;
-	BASS_ChannelGetLevelEx-: PROCEDURE {WINAPI} (handle: DWORD; levels: PSingle; length: REAL; flags: SET): BOOL;
-	BASS_ChannelGetData-: PROCEDURE {WINAPI} (handle: DWORD; buffer: ADDRESS; length: DWORD): DWORD;
-	BASS_ChannelSetSync-: PROCEDURE {WINAPI} (handle: DWORD; type: SET; param: QWORD; proc: SYNCPROC; user: ADDRESS): HSYNC;
-	BASS_ChannelRemoveSync-: PROCEDURE {WINAPI} (handle: DWORD; sync: HSYNC): BOOL;
-	BASS_ChannelSetDSP-: PROCEDURE {WINAPI} (handle: DWORD; proc: DSPPROC; user: ADDRESS; priority: LONGINT): HDSP;
-
-	BASS_ChannelRemoveDSP-: PROCEDURE {WINAPI} (handle: DWORD; dsp: HDSP): BOOL;
-	BASS_ChannelSetLink-: PROCEDURE {WINAPI} (handle, chan: DWORD): BOOL;
-	BASS_ChannelRemoveLink-: PROCEDURE {WINAPI} (handle, chan: DWORD): BOOL;
-	BASS_ChannelSetFX-: PROCEDURE {WINAPI} (handle, type_: DWORD; priority: LONGINT): HFX;
-	BASS_ChannelRemoveFX-: PROCEDURE {WINAPI} (handle: DWORD; fx: HFX): BOOL;
-	BASS_FXSetParameters-: PROCEDURE {WINAPI} (handle: HFX; par: ADDRESS): BOOL;
-	BASS_FXGetParameters-: PROCEDURE {WINAPI} (handle: HFX; par: ADDRESS): BOOL;
-	BASS_FXReset-: PROCEDURE {WINAPI} (handle: HFX): BOOL;
-	BASS_FXSetPriority-: PROCEDURE {WINAPI} (handle: HFX; priority: LONGINT): BOOL;
-
-	lib: Kernel32.HMODULE;
+	lib: LONGINT;
 
 CONST
-	bassdll		= "bass.dll";
+	bassdll		= "libbass.so";
 
 PROCEDURE BASS_SPEAKER_N*(n: DWORD): DWORD;
 BEGIN
@@ -868,203 +885,147 @@ END BASS_SPEAKER_N;
 
 PROCEDURE BASS_SetEAXPreset*(env: LONGINT): BOOL;
 BEGIN
-	CASE env OF
-		EAX_ENVIRONMENT_GENERIC:
-			RETURN BASS_SetEAXParameters(EAX_ENVIRONMENT_GENERIC, 0.5, 1.493, 0.5);
-	|	EAX_ENVIRONMENT_PADDEDCELL:
-			RETURN BASS_SetEAXParameters(EAX_ENVIRONMENT_PADDEDCELL, 0.25, 0.1, 0);
-	|	EAX_ENVIRONMENT_ROOM:
-			RETURN BASS_SetEAXParameters(EAX_ENVIRONMENT_ROOM, 0.417, 0.4, 0.666);
-	|	EAX_ENVIRONMENT_BATHROOM:
-			RETURN BASS_SetEAXParameters(EAX_ENVIRONMENT_BATHROOM, 0.653, 1.499, 0.166);
-	|	EAX_ENVIRONMENT_LIVINGROOM:
-			RETURN BASS_SetEAXParameters(EAX_ENVIRONMENT_LIVINGROOM, 0.208, 0.478, 0);
-	|	EAX_ENVIRONMENT_STONEROOM:
-			RETURN BASS_SetEAXParameters(EAX_ENVIRONMENT_STONEROOM, 0.5, 2.309, 0.888);
-	|	EAX_ENVIRONMENT_AUDITORIUM:
-			RETURN BASS_SetEAXParameters(EAX_ENVIRONMENT_AUDITORIUM, 0.403, 4.279, 0.5);
-	|	EAX_ENVIRONMENT_CONCERTHALL:
-			RETURN BASS_SetEAXParameters(EAX_ENVIRONMENT_CONCERTHALL, 0.5, 3.961, 0.5);
-	|	EAX_ENVIRONMENT_CAVE:
-			RETURN BASS_SetEAXParameters(EAX_ENVIRONMENT_CAVE, 0.5, 2.886, 1.304);
-	|	EAX_ENVIRONMENT_ARENA:
-			RETURN BASS_SetEAXParameters(EAX_ENVIRONMENT_ARENA, 0.361, 7.284, 0.332);
-	|	EAX_ENVIRONMENT_HANGAR:
-			RETURN BASS_SetEAXParameters(EAX_ENVIRONMENT_HANGAR, 0.5, 10.0, 0.3);
-	|	EAX_ENVIRONMENT_CARPETEDHALLWAY:
-			RETURN BASS_SetEAXParameters(EAX_ENVIRONMENT_CARPETEDHALLWAY, 0.153, 0.259, 2.0);
-	|	EAX_ENVIRONMENT_HALLWAY:
-			RETURN BASS_SetEAXParameters(EAX_ENVIRONMENT_HALLWAY, 0.361, 1.493, 0);
-	|	EAX_ENVIRONMENT_STONECORRIDOR:
-			RETURN BASS_SetEAXParameters(EAX_ENVIRONMENT_STONECORRIDOR, 0.444, 2.697, 0.638);
-	|	EAX_ENVIRONMENT_ALLEY:
-			RETURN BASS_SetEAXParameters(EAX_ENVIRONMENT_ALLEY, 0.25, 1.752, 0.776);
-	|	EAX_ENVIRONMENT_FOREST:
-			RETURN BASS_SetEAXParameters(EAX_ENVIRONMENT_FOREST, 0.111, 3.145, 0.472);
-	|	EAX_ENVIRONMENT_CITY:
-			RETURN BASS_SetEAXParameters(EAX_ENVIRONMENT_CITY, 0.111, 2.767, 0.224);
-	|	EAX_ENVIRONMENT_MOUNTAINS:
-			RETURN BASS_SetEAXParameters(EAX_ENVIRONMENT_MOUNTAINS, 0.194, 7.841, 0.472);
-	|	EAX_ENVIRONMENT_QUARRY:
-			RETURN BASS_SetEAXParameters(EAX_ENVIRONMENT_QUARRY, 1, 1.499, 0.5);
-	|	EAX_ENVIRONMENT_PLAIN:
-			RETURN BASS_SetEAXParameters(EAX_ENVIRONMENT_PLAIN, 0.097, 2.767, 0.224);
-	|	EAX_ENVIRONMENT_PARKINGLOT:
-			RETURN BASS_SetEAXParameters(EAX_ENVIRONMENT_PARKINGLOT, 0.208, 1.652, 1.5);
-	|	EAX_ENVIRONMENT_SEWERPIPE:
-			RETURN BASS_SetEAXParameters(EAX_ENVIRONMENT_SEWERPIPE, 0.652, 2.886, 0.25);
-	|	EAX_ENVIRONMENT_UNDERWATER:
-			RETURN BASS_SetEAXParameters(EAX_ENVIRONMENT_UNDERWATER, 1, 1.499, 0);
-	|	EAX_ENVIRONMENT_DRUGGED:
-			RETURN BASS_SetEAXParameters(EAX_ENVIRONMENT_DRUGGED, 0.875, 8.392, 1.388);
-	|	EAX_ENVIRONMENT_DIZZY:
-			RETURN BASS_SetEAXParameters(EAX_ENVIRONMENT_DIZZY, 0.139, 17.234, 0.666);
-	|	EAX_ENVIRONMENT_PSYCHOTIC:
-			RETURN BASS_SetEAXParameters(EAX_ENVIRONMENT_PSYCHOTIC, 0.486, 7.563, 0.806);
-	ELSE
-		RETURN 0
-	END
+	RETURN 0
 END BASS_SetEAXPreset;
 
-PROCEDURE Cleanup;
-VAR
-	bResult: Kernel32.BOOL;
+PROCEDURE BASS_GetDSoundObject*(obj: DWORD): ADDRESS;
 BEGIN
-	IF lib # Kernel32.NULL THEN
-		bResult := Kernel32.FreeLibrary(lib);
-		lib := Kernel32.NULL
+	RETURN NIL
+END BASS_GetDSoundObject;
+
+PROCEDURE BASS_SetEAXParameters*(env: LONGINT; vol, decay, damp: REAL): BOOL;
+BEGIN
+	RETURN 0
+END BASS_SetEAXParameters;
+
+PROCEDURE BASS_GetEAXParameters*(VAR env: DWORD; VAR vol, decay, damp: REAL): BOOL;
+BEGIN
+	RETURN 0
+END BASS_GetEAXParameters;
+
+PROCEDURE Cleanup;
+BEGIN
+	IF lib # 0 THEN
+		Unix.Dlclose(lib); lib := 0
 	END
 END Cleanup;
 
 PROCEDURE Init;
-VAR
-	sFullPath: ARRAY 257 OF CHAR;
-	r: Streams.Reader;
 BEGIN
 
-	r := Codecs.OpenInputStream(bassdll);
-	ASSERT(r # NIL);
-	(* Get full path *)
-	r(Codecs.FileInputStream).f.GetName(sFullPath);
-	KernelLog.String(sFullPath);
+	lib := Unix.Dlopen(bassdll, 2 );
 
-	lib := Kernel32.LoadLibrary(sFullPath);
-	ASSERT(lib # Kernel32.NULL);
+	Unix.Dlsym(lib, "BASS_SetConfig", ADDRESSOF(BASS_SetConfig));
+	Unix.Dlsym(lib, "BASS_GetConfig", ADDRESSOF(BASS_GetConfig));
+	Unix.Dlsym(lib, "BASS_SetConfigPtr", ADDRESSOF(BASS_SetConfigPtr));
+	Unix.Dlsym(lib, "BASS_GetConfigPtr", ADDRESSOF(BASS_GetConfigPtr));
+	Unix.Dlsym(lib, "BASS_GetVersion", ADDRESSOF(BASS_GetVersion));
+	Unix.Dlsym(lib, "BASS_ErrorGetCode", ADDRESSOF(BASS_ErrorGetCode));
+	Unix.Dlsym(lib, "BASS_GetDeviceInfo", ADDRESSOF(BASS_GetDeviceInfo));
 
-	Kernel32.GetProcAddress(lib, "BASS_SetConfig", SYSTEM.VAL(ADDRESS, BASS_SetConfig));
-	Kernel32.GetProcAddress(lib, "BASS_GetConfig", SYSTEM.VAL(ADDRESS, BASS_GetConfig));
-	Kernel32.GetProcAddress(lib, "BASS_SetConfigPtr", SYSTEM.VAL(ADDRESS, BASS_SetConfigPtr));
-	Kernel32.GetProcAddress(lib, "BASS_GetConfigPtr", SYSTEM.VAL(ADDRESS, BASS_GetConfigPtr));
-	Kernel32.GetProcAddress(lib, "BASS_GetVersion", SYSTEM.VAL(ADDRESS, BASS_GetVersion));
-	Kernel32.GetProcAddress(lib, "BASS_ErrorGetCode", SYSTEM.VAL(ADDRESS, BASS_ErrorGetCode));
-	Kernel32.GetProcAddress(lib, "BASS_GetDeviceInfo", SYSTEM.VAL(ADDRESS, BASS_GetDeviceInfo));
+	Unix.Dlsym(lib, "BASS_Init", ADDRESSOF(BASS_Init));
 
-	Kernel32.GetProcAddress(lib, "BASS_Init", SYSTEM.VAL(ADDRESS, BASS_Init));
+	Unix.Dlsym(lib, "BASS_SetDevice", ADDRESSOF(BASS_SetDevice));
+	Unix.Dlsym(lib, "BASS_GetDevice", ADDRESSOF(BASS_GetDevice));
+	Unix.Dlsym(lib, "BASS_Free", ADDRESSOF(BASS_Free));
 
-	Kernel32.GetProcAddress(lib, "BASS_SetDevice", SYSTEM.VAL(ADDRESS, BASS_SetDevice));
-	Kernel32.GetProcAddress(lib, "BASS_GetDevice", SYSTEM.VAL(ADDRESS, BASS_GetDevice));
-	Kernel32.GetProcAddress(lib, "BASS_Free", SYSTEM.VAL(ADDRESS, BASS_Free));
+	Unix.Dlsym(lib, "BASS_GetInfo", ADDRESSOF(BASS_GetInfo));
+	Unix.Dlsym(lib, "BASS_Update", ADDRESSOF(BASS_Update));
+	Unix.Dlsym(lib, "BASS_GetCPU", ADDRESSOF(BASS_GetCPU));
+	Unix.Dlsym(lib, "BASS_Start", ADDRESSOF(BASS_Start));
+	Unix.Dlsym(lib, "BASS_Stop", ADDRESSOF(BASS_Stop));
+	Unix.Dlsym(lib, "BASS_Pause", ADDRESSOF(BASS_Pause));
+	Unix.Dlsym(lib, "BASS_SetVolume", ADDRESSOF(BASS_SetVolume));
+	Unix.Dlsym(lib, "BASS_GetVolume", ADDRESSOF(BASS_GetVolume));
 
-	Kernel32.GetProcAddress(lib, "BASS_GetDSoundObject", SYSTEM.VAL(ADDRESS, BASS_GetDSoundObject));
+	Unix.Dlsym(lib, "BASS_PluginLoad", ADDRESSOF(BASS_PluginLoad));
+	Unix.Dlsym(lib, "BASS_PluginFree", ADDRESSOF(BASS_PluginFree));
+	Unix.Dlsym(lib, "BASS_PluginGetInfo", ADDRESSOF(BASS_PluginGetInfo));
+	Unix.Dlsym(lib, "BASS_Set3DFactors", ADDRESSOF(BASS_Set3DFactors));
+	Unix.Dlsym(lib, "BASS_Get3DFactors", ADDRESSOF(BASS_Get3DFactors));
+	Unix.Dlsym(lib, "BASS_Set3DPosition", ADDRESSOF(BASS_Set3DPosition));
+	Unix.Dlsym(lib, "BASS_Get3DPosition", ADDRESSOF(BASS_Get3DPosition));
+	Unix.Dlsym(lib, "BASS_Apply3D", ADDRESSOF(BASS_Apply3D));
 
-	Kernel32.GetProcAddress(lib, "BASS_GetInfo", SYSTEM.VAL(ADDRESS, BASS_GetInfo));
-	Kernel32.GetProcAddress(lib, "BASS_Update", SYSTEM.VAL(ADDRESS, BASS_Update));
-	Kernel32.GetProcAddress(lib, "BASS_GetCPU", SYSTEM.VAL(ADDRESS, BASS_GetCPU));
-	Kernel32.GetProcAddress(lib, "BASS_Start", SYSTEM.VAL(ADDRESS, BASS_Start));
-	Kernel32.GetProcAddress(lib, "BASS_Stop", SYSTEM.VAL(ADDRESS, BASS_Stop));
-	Kernel32.GetProcAddress(lib, "BASS_Pause", SYSTEM.VAL(ADDRESS, BASS_Pause));
-	Kernel32.GetProcAddress(lib, "BASS_SetVolume", SYSTEM.VAL(ADDRESS, BASS_SetVolume));
-	Kernel32.GetProcAddress(lib, "BASS_GetVolume", SYSTEM.VAL(ADDRESS, BASS_GetVolume));
-	Kernel32.GetProcAddress(lib, "BASS_PluginLoad", SYSTEM.VAL(ADDRESS, BASS_PluginLoad));
-	Kernel32.GetProcAddress(lib, "BASS_PluginFree", SYSTEM.VAL(ADDRESS, BASS_PluginFree));
-	Kernel32.GetProcAddress(lib, "BASS_PluginGetInfo", SYSTEM.VAL(ADDRESS, BASS_PluginGetInfo));
-	Kernel32.GetProcAddress(lib, "BASS_Set3DFactors", SYSTEM.VAL(ADDRESS, BASS_Set3DFactors));
-	Kernel32.GetProcAddress(lib, "BASS_Get3DFactors", SYSTEM.VAL(ADDRESS, BASS_Get3DFactors));
-	Kernel32.GetProcAddress(lib, "BASS_Set3DPosition", SYSTEM.VAL(ADDRESS, BASS_Set3DPosition));
-	Kernel32.GetProcAddress(lib, "BASS_Get3DPosition", SYSTEM.VAL(ADDRESS, BASS_Get3DPosition));
-	Kernel32.GetProcAddress(lib, "BASS_Apply3D", SYSTEM.VAL(ADDRESS, BASS_Apply3D));
-
-	Kernel32.GetProcAddress(lib, "BASS_SetEAXParameters", SYSTEM.VAL(ADDRESS, BASS_SetEAXParameters));
-	Kernel32.GetProcAddress(lib, "BASS_GetEAXParameters", SYSTEM.VAL(ADDRESS, BASS_GetEAXParameters));
-
-	Kernel32.GetProcAddress(lib, "BASS_MusicLoad", SYSTEM.VAL(ADDRESS, BASS_MusicLoad));
-	Kernel32.GetProcAddress(lib, "BASS_MusicFree", SYSTEM.VAL(ADDRESS, BASS_MusicFree));
-	Kernel32.GetProcAddress(lib, "BASS_SampleLoad", SYSTEM.VAL(ADDRESS, BASS_SampleLoad));
-	Kernel32.GetProcAddress(lib, "BASS_SampleCreate", SYSTEM.VAL(ADDRESS, BASS_SampleCreate));
-	Kernel32.GetProcAddress(lib, "BASS_SampleFree", SYSTEM.VAL(ADDRESS, BASS_SampleFree));
-	Kernel32.GetProcAddress(lib, "BASS_SampleSetData", SYSTEM.VAL(ADDRESS, BASS_SampleSetData));
-	Kernel32.GetProcAddress(lib, "BASS_SampleGetData", SYSTEM.VAL(ADDRESS, BASS_SampleGetData));
-	Kernel32.GetProcAddress(lib, "BASS_SampleGetInfo", SYSTEM.VAL(ADDRESS, BASS_SampleGetInfo));
-	Kernel32.GetProcAddress(lib, "BASS_SampleSetInfo", SYSTEM.VAL(ADDRESS, BASS_SampleSetInfo));
-	Kernel32.GetProcAddress(lib, "BASS_SampleGetChannel", SYSTEM.VAL(ADDRESS, BASS_SampleGetChannel));
-	Kernel32.GetProcAddress(lib, "BASS_SampleGetChannels", SYSTEM.VAL(ADDRESS, BASS_SampleGetChannels));
-	Kernel32.GetProcAddress(lib, "BASS_SampleStop", SYSTEM.VAL(ADDRESS, BASS_SampleStop));
-	Kernel32.GetProcAddress(lib, "BASS_StreamCreate", SYSTEM.VAL(ADDRESS, BASS_StreamCreate));
-	Kernel32.GetProcAddress(lib, "BASS_StreamCreateFile", SYSTEM.VAL(ADDRESS, BASS_StreamCreateFile));
-	Kernel32.GetProcAddress(lib, "BASS_StreamCreateURL", SYSTEM.VAL(ADDRESS, BASS_StreamCreateURL));
-	Kernel32.GetProcAddress(lib, "BASS_StreamCreateFileUser", SYSTEM.VAL(ADDRESS, BASS_StreamCreateFileUser));
-	Kernel32.GetProcAddress(lib, "BASS_StreamFree", SYSTEM.VAL(ADDRESS, BASS_StreamFree));
-	Kernel32.GetProcAddress(lib, "BASS_StreamGetFilePosition", SYSTEM.VAL(ADDRESS, BASS_StreamGetFilePosition));
-	Kernel32.GetProcAddress(lib, "BASS_StreamPutData", SYSTEM.VAL(ADDRESS, BASS_StreamPutData));
-	Kernel32.GetProcAddress(lib, "BASS_StreamPutFileData", SYSTEM.VAL(ADDRESS, BASS_StreamPutFileData));
-	Kernel32.GetProcAddress(lib, "BASS_RecordGetDeviceInfo", SYSTEM.VAL(ADDRESS, BASS_RecordGetDeviceInfo));
-	Kernel32.GetProcAddress(lib, "BASS_RecordInit", SYSTEM.VAL(ADDRESS, BASS_RecordInit));
-	Kernel32.GetProcAddress(lib, "BASS_RecordSetDevice", SYSTEM.VAL(ADDRESS, BASS_RecordSetDevice));
-	Kernel32.GetProcAddress(lib, "BASS_RecordGetDevice", SYSTEM.VAL(ADDRESS, BASS_RecordGetDevice));
-	Kernel32.GetProcAddress(lib, "BASS_RecordFree", SYSTEM.VAL(ADDRESS, BASS_RecordFree));
-	Kernel32.GetProcAddress(lib, "BASS_RecordGetInfo", SYSTEM.VAL(ADDRESS, BASS_RecordGetInfo));
-	Kernel32.GetProcAddress(lib, "BASS_RecordGetInputName", SYSTEM.VAL(ADDRESS, BASS_RecordGetInputName));
-	Kernel32.GetProcAddress(lib, "BASS_RecordSetInput", SYSTEM.VAL(ADDRESS, BASS_RecordSetInput));
-	Kernel32.GetProcAddress(lib, "BASS_RecordGetInput", SYSTEM.VAL(ADDRESS, BASS_RecordGetInput));
-	Kernel32.GetProcAddress(lib, "BASS_RecordStart", SYSTEM.VAL(ADDRESS, BASS_RecordStart));
-	Kernel32.GetProcAddress(lib, "BASS_ChannelBytes2Seconds", SYSTEM.VAL(ADDRESS, BASS_ChannelBytes2Seconds));
-	Kernel32.GetProcAddress(lib, "BASS_ChannelSeconds2Bytes", SYSTEM.VAL(ADDRESS, BASS_ChannelSeconds2Bytes));
-	Kernel32.GetProcAddress(lib, "BASS_ChannelGetDevice", SYSTEM.VAL(ADDRESS, BASS_ChannelGetDevice));
-	Kernel32.GetProcAddress(lib, "BASS_ChannelSetDevice", SYSTEM.VAL(ADDRESS, BASS_ChannelSetDevice));
-	Kernel32.GetProcAddress(lib, "BASS_ChannelIsActive", SYSTEM.VAL(ADDRESS, BASS_ChannelIsActive));
-	Kernel32.GetProcAddress(lib, "BASS_ChannelGetInfo", SYSTEM.VAL(ADDRESS, BASS_ChannelGetInfo));
-	Kernel32.GetProcAddress(lib, "BASS_ChannelGetTags", SYSTEM.VAL(ADDRESS, BASS_ChannelGetTags));
-	Kernel32.GetProcAddress(lib, "BASS_ChannelFlags", SYSTEM.VAL(ADDRESS, BASS_ChannelFlags));
-	Kernel32.GetProcAddress(lib, "BASS_ChannelUpdate", SYSTEM.VAL(ADDRESS, BASS_ChannelUpdate));
-	Kernel32.GetProcAddress(lib, "BASS_ChannelLock", SYSTEM.VAL(ADDRESS, BASS_ChannelLock));
-	Kernel32.GetProcAddress(lib, "BASS_ChannelPlay", SYSTEM.VAL(ADDRESS, BASS_ChannelPlay));
-	Kernel32.GetProcAddress(lib, "BASS_ChannelStop", SYSTEM.VAL(ADDRESS, BASS_ChannelStop));
-	Kernel32.GetProcAddress(lib, "BASS_ChannelPause", SYSTEM.VAL(ADDRESS, BASS_ChannelPause));
-	Kernel32.GetProcAddress(lib, "BASS_ChannelSetAttribute", SYSTEM.VAL(ADDRESS, BASS_ChannelSetAttribute));
-	Kernel32.GetProcAddress(lib, "BASS_ChannelGetAttribute", SYSTEM.VAL(ADDRESS, BASS_ChannelGetAttribute));
-	Kernel32.GetProcAddress(lib, "BASS_ChannelSlideAttribute", SYSTEM.VAL(ADDRESS, BASS_ChannelSlideAttribute));
-	Kernel32.GetProcAddress(lib, "BASS_ChannelIsSliding", SYSTEM.VAL(ADDRESS, BASS_ChannelIsSliding));
-	Kernel32.GetProcAddress(lib, "BASS_ChannelSetAttributeEx", SYSTEM.VAL(ADDRESS, BASS_ChannelSetAttributeEx));
-	Kernel32.GetProcAddress(lib, "BASS_ChannelGetAttributeEx", SYSTEM.VAL(ADDRESS, BASS_ChannelGetAttributeEx));
-	Kernel32.GetProcAddress(lib, "BASS_ChannelSet3DAttributes", SYSTEM.VAL(ADDRESS, BASS_ChannelSet3DAttributes));
-	Kernel32.GetProcAddress(lib, "BASS_ChannelGet3DAttributes", SYSTEM.VAL(ADDRESS, BASS_ChannelGet3DAttributes));
-	Kernel32.GetProcAddress(lib, "BASS_ChannelSet3DPosition", SYSTEM.VAL(ADDRESS, BASS_ChannelSet3DPosition));
-	Kernel32.GetProcAddress(lib, "BASS_ChannelGet3DPosition", SYSTEM.VAL(ADDRESS, BASS_ChannelGet3DPosition));
-	Kernel32.GetProcAddress(lib, "BASS_ChannelGetLength", SYSTEM.VAL(ADDRESS, BASS_ChannelGetLength));
-	Kernel32.GetProcAddress(lib, "BASS_ChannelSetPosition", SYSTEM.VAL(ADDRESS, BASS_ChannelSetPosition));
-	Kernel32.GetProcAddress(lib, "BASS_ChannelGetPosition", SYSTEM.VAL(ADDRESS, BASS_ChannelGetPosition));
-	Kernel32.GetProcAddress(lib, "BASS_ChannelGetLevel", SYSTEM.VAL(ADDRESS, BASS_ChannelGetLevel));
-	Kernel32.GetProcAddress(lib, "BASS_ChannelGetLevelEx", SYSTEM.VAL(ADDRESS, BASS_ChannelGetLevelEx));
-	Kernel32.GetProcAddress(lib, "BASS_ChannelGetData", SYSTEM.VAL(ADDRESS, BASS_ChannelGetData));
-	Kernel32.GetProcAddress(lib, "BASS_ChannelSetSync", SYSTEM.VAL(ADDRESS, BASS_ChannelSetSync));
-	Kernel32.GetProcAddress(lib, "BASS_ChannelRemoveSync", SYSTEM.VAL(ADDRESS, BASS_ChannelRemoveSync));
-	Kernel32.GetProcAddress(lib, "BASS_ChannelSetDSP", SYSTEM.VAL(ADDRESS, BASS_ChannelSetDSP));
-	Kernel32.GetProcAddress(lib, "BASS_ChannelRemoveDSP", SYSTEM.VAL(ADDRESS, BASS_ChannelRemoveDSP));
-	Kernel32.GetProcAddress(lib, "BASS_ChannelSetLink", SYSTEM.VAL(ADDRESS, BASS_ChannelSetLink));
-	Kernel32.GetProcAddress(lib, "BASS_ChannelRemoveLink", SYSTEM.VAL(ADDRESS, BASS_ChannelRemoveLink));
-	Kernel32.GetProcAddress(lib, "BASS_ChannelSetFX", SYSTEM.VAL(ADDRESS, BASS_ChannelSetFX));
-	Kernel32.GetProcAddress(lib, "BASS_ChannelRemoveFX", SYSTEM.VAL(ADDRESS, BASS_ChannelRemoveFX));
-	Kernel32.GetProcAddress(lib, "BASS_FXSetParameters", SYSTEM.VAL(ADDRESS, BASS_FXSetParameters));
-	Kernel32.GetProcAddress(lib, "BASS_FXGetParameters", SYSTEM.VAL(ADDRESS, BASS_FXGetParameters));
-	Kernel32.GetProcAddress(lib, "BASS_FXReset", SYSTEM.VAL(ADDRESS, BASS_FXReset));
-	Kernel32.GetProcAddress(lib, "BASS_FXSetPriority", SYSTEM.VAL(ADDRESS, BASS_FXSetPriority));
+	Unix.Dlsym(lib, "BASS_MusicLoad", ADDRESSOF(BASS_MusicLoad));
+	Unix.Dlsym(lib, "BASS_MusicFree", ADDRESSOF(BASS_MusicFree));
+	Unix.Dlsym(lib, "BASS_SampleLoad", ADDRESSOF(BASS_SampleLoad));
+	Unix.Dlsym(lib, "BASS_SampleCreate", ADDRESSOF(BASS_SampleCreate));
+	Unix.Dlsym(lib, "BASS_SampleFree", ADDRESSOF(BASS_SampleFree));
+	Unix.Dlsym(lib, "BASS_SampleSetData", ADDRESSOF(BASS_SampleSetData));
+	Unix.Dlsym(lib, "BASS_SampleGetData", ADDRESSOF(BASS_SampleGetData));
+	Unix.Dlsym(lib, "BASS_SampleGetInfo", ADDRESSOF(BASS_SampleGetInfo));
+	Unix.Dlsym(lib, "BASS_SampleSetInfo", ADDRESSOF(BASS_SampleSetInfo));
+	Unix.Dlsym(lib, "BASS_SampleGetChannel", ADDRESSOF(BASS_SampleGetChannel));
+	Unix.Dlsym(lib, "BASS_SampleGetChannels", ADDRESSOF(BASS_SampleGetChannels));
+	Unix.Dlsym(lib, "BASS_SampleStop", ADDRESSOF(BASS_SampleStop));
+	Unix.Dlsym(lib, "BASS_StreamCreate", ADDRESSOF(BASS_StreamCreate));
+	Unix.Dlsym(lib, "BASS_StreamCreateFile", ADDRESSOF(BASS_StreamCreateFile));
+	Unix.Dlsym(lib, "BASS_StreamCreateURL", ADDRESSOF(BASS_StreamCreateURL));
+	Unix.Dlsym(lib, "BASS_StreamCreateFileUser", ADDRESSOF(BASS_StreamCreateFileUser));
+	Unix.Dlsym(lib, "BASS_StreamFree", ADDRESSOF(BASS_StreamFree));
+	Unix.Dlsym(lib, "BASS_StreamGetFilePosition", ADDRESSOF(BASS_StreamGetFilePosition));
+	Unix.Dlsym(lib, "BASS_StreamPutData", ADDRESSOF(BASS_StreamPutData));
+	Unix.Dlsym(lib, "BASS_StreamPutFileData", ADDRESSOF(BASS_StreamPutFileData));
+	Unix.Dlsym(lib, "BASS_RecordGetDeviceInfo", ADDRESSOF(BASS_RecordGetDeviceInfo));
+	Unix.Dlsym(lib, "BASS_RecordInit", ADDRESSOF(BASS_RecordInit));
+	Unix.Dlsym(lib, "BASS_RecordSetDevice", ADDRESSOF(BASS_RecordSetDevice));
+	Unix.Dlsym(lib, "BASS_RecordGetDevice", ADDRESSOF(BASS_RecordGetDevice));
+	Unix.Dlsym(lib, "BASS_RecordFree", ADDRESSOF(BASS_RecordFree));
+	Unix.Dlsym(lib, "BASS_RecordGetInfo", ADDRESSOF(BASS_RecordGetInfo));
+	Unix.Dlsym(lib, "BASS_RecordGetInputName", ADDRESSOF(BASS_RecordGetInputName));
+	Unix.Dlsym(lib, "BASS_RecordSetInput", ADDRESSOF(BASS_RecordSetInput));
+	Unix.Dlsym(lib, "BASS_RecordGetInput", ADDRESSOF(BASS_RecordGetInput));
+	Unix.Dlsym(lib, "BASS_RecordStart", ADDRESSOF(BASS_RecordStart));
+	Unix.Dlsym(lib, "BASS_ChannelBytes2Seconds", ADDRESSOF(BASS_ChannelBytes2Seconds));
+	Unix.Dlsym(lib, "BASS_ChannelSeconds2Bytes", ADDRESSOF(BASS_ChannelSeconds2Bytes));
+	Unix.Dlsym(lib, "BASS_ChannelGetDevice", ADDRESSOF(BASS_ChannelGetDevice));
+	Unix.Dlsym(lib, "BASS_ChannelSetDevice", ADDRESSOF(BASS_ChannelSetDevice));
+	Unix.Dlsym(lib, "BASS_ChannelIsActive", ADDRESSOF(BASS_ChannelIsActive));
+	Unix.Dlsym(lib, "BASS_ChannelGetInfo", ADDRESSOF(BASS_ChannelGetInfo));
+	Unix.Dlsym(lib, "BASS_ChannelGetTags", ADDRESSOF(BASS_ChannelGetTags));
+	Unix.Dlsym(lib, "BASS_ChannelFlags", ADDRESSOF(BASS_ChannelFlags));
+	Unix.Dlsym(lib, "BASS_ChannelUpdate", ADDRESSOF(BASS_ChannelUpdate));
+	Unix.Dlsym(lib, "BASS_ChannelLock", ADDRESSOF(BASS_ChannelLock));
+	Unix.Dlsym(lib, "BASS_ChannelPlay", ADDRESSOF(BASS_ChannelPlay));
+	Unix.Dlsym(lib, "BASS_ChannelStop", ADDRESSOF(BASS_ChannelStop));
+	Unix.Dlsym(lib, "BASS_ChannelPause", ADDRESSOF(BASS_ChannelPause));
+	Unix.Dlsym(lib, "BASS_ChannelSetAttribute", ADDRESSOF(BASS_ChannelSetAttribute));
+	Unix.Dlsym(lib, "BASS_ChannelGetAttribute", ADDRESSOF(BASS_ChannelGetAttribute));
+	Unix.Dlsym(lib, "BASS_ChannelSlideAttribute", ADDRESSOF(BASS_ChannelSlideAttribute));
+	Unix.Dlsym(lib, "BASS_ChannelIsSliding", ADDRESSOF(BASS_ChannelIsSliding));
+	Unix.Dlsym(lib, "BASS_ChannelSetAttributeEx", ADDRESSOF(BASS_ChannelSetAttributeEx));
+	Unix.Dlsym(lib, "BASS_ChannelGetAttributeEx", ADDRESSOF(BASS_ChannelGetAttributeEx));
+	Unix.Dlsym(lib, "BASS_ChannelSet3DAttributes", ADDRESSOF(BASS_ChannelSet3DAttributes));
+	Unix.Dlsym(lib, "BASS_ChannelGet3DAttributes", ADDRESSOF(BASS_ChannelGet3DAttributes));
+	Unix.Dlsym(lib, "BASS_ChannelSet3DPosition", ADDRESSOF(BASS_ChannelSet3DPosition));
+	Unix.Dlsym(lib, "BASS_ChannelGet3DPosition", ADDRESSOF(BASS_ChannelGet3DPosition));
+	Unix.Dlsym(lib, "BASS_ChannelGetLength", ADDRESSOF(BASS_ChannelGetLength));
+	Unix.Dlsym(lib, "BASS_ChannelSetPosition", ADDRESSOF(BASS_ChannelSetPosition));
+	Unix.Dlsym(lib, "BASS_ChannelGetPosition", ADDRESSOF(BASS_ChannelGetPosition));
+	Unix.Dlsym(lib, "BASS_ChannelGetLevel", ADDRESSOF(BASS_ChannelGetLevel));
+	Unix.Dlsym(lib, "BASS_ChannelGetLevelEx", ADDRESSOF(BASS_ChannelGetLevelEx));
+	Unix.Dlsym(lib, "BASS_ChannelGetData", ADDRESSOF(BASS_ChannelGetData));
+	Unix.Dlsym(lib, "BASS_ChannelSetSync", ADDRESSOF(BASS_ChannelSetSync));
+	Unix.Dlsym(lib, "BASS_ChannelRemoveSync", ADDRESSOF(BASS_ChannelRemoveSync));
+	Unix.Dlsym(lib, "BASS_ChannelSetDSP", ADDRESSOF(BASS_ChannelSetDSP));
+	Unix.Dlsym(lib, "BASS_ChannelRemoveDSP", ADDRESSOF(BASS_ChannelRemoveDSP));
+	Unix.Dlsym(lib, "BASS_ChannelSetLink", ADDRESSOF(BASS_ChannelSetLink));
+	Unix.Dlsym(lib, "BASS_ChannelRemoveLink", ADDRESSOF(BASS_ChannelRemoveLink));
+	Unix.Dlsym(lib, "BASS_ChannelSetFX", ADDRESSOF(BASS_ChannelSetFX));
+	Unix.Dlsym(lib, "BASS_ChannelRemoveFX", ADDRESSOF(BASS_ChannelRemoveFX));
+	Unix.Dlsym(lib, "BASS_FXSetParameters", ADDRESSOF(BASS_FXSetParameters));
+	Unix.Dlsym(lib, "BASS_FXGetParameters", ADDRESSOF(BASS_FXGetParameters));
+	Unix.Dlsym(lib, "BASS_FXReset", ADDRESSOF(BASS_FXReset));
+	Unix.Dlsym(lib, "BASS_FXSetPriority", ADDRESSOF(BASS_FXSetPriority));
 
 	Modules.InstallTermHandler(Cleanup)
+
 END Init;
 
 BEGIN
 	STREAMPROC_DUMMY	:= SYSTEM.VAL(ADDRESS, 0);	(* ADDRESS(0)	"dummy" stream *)
 	STREAMPROC_PUSH	:= SYSTEM.VAL(ADDRESS, -1); (* ADDRESS(-1)	push stream *)
-	Init;
+	Init
 END BASS.
 

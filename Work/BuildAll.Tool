@@ -12,7 +12,7 @@ and add this to Configuration.XML:
 
 *** A2 sources improvements and small modifications ("Branch") ***
 
-Compiler.Compile -p=Win32G
+Compiler.Compile -p=Win32
 
 	Branch/WMTextView.Mod
 	Branch/PETTrees.Mod
@@ -20,15 +20,15 @@ Compiler.Compile -p=Win32G
 
 *** Bindings ***
 
-Compiler.Compile -p=Win32G
+Compiler.Compile -p=Win32
 
-	Bindings/BASS/I386.BASScpu.Mod
-	Bindings/BASS/Win32.BASS.Mod
+	BASS/Windows.BASS.Mod
+	
 	Bindings/Win32.Pipe.Mod ~
 
 *** Libraries ***
 
-Compiler.Compile -p=Win32G
+Compiler.Compile -p=Win32
 
 	Libs/AAGraphics.Mod
 	Libs/CanvasTools.Mod
@@ -43,7 +43,7 @@ Compiler.Compile -p=Win32G
 
 *** Components ***
 
-Compiler.Compile -p=Win32G
+Compiler.Compile -p=Win32
 
 	Components/WMChart.Mod
 	Components/WMComboBox.Mod
@@ -53,13 +53,13 @@ Compiler.Compile -p=Win32G
 
 *** Dialogs ***
 
-Compiler.Compile -p=Win32G
+Compiler.Compile -p=Win32
 
 	Dialogs/WMColorPicker.Mod ~
 
 *** Examples ***
 
-Compiler.Compile -p=Win32G
+Compiler.Compile -p=Win32
 
 	Examples/RegExp/RegExpNFA.Mod
 	Examples/RegExp/RegExpMaps.Mod
@@ -71,7 +71,7 @@ Compiler.Compile -p=Win32G
 
 *** Tools ***
 
-Compiler.Compile -p=Win32G
+Compiler.Compile -p=Win32
 
 	Tools/ImportCollector.Mod
 	Tools/ImportGraph.Mod
@@ -79,22 +79,25 @@ Compiler.Compile -p=Win32G
 
 *** Demos ***
 
-Compiler.Compile -p=Win32G
+Compiler.Compile -p=Win32
 
 	Demos/WMAStar.Mod
 	Demos/WMAStarSet.Mod
+
+	Demos/WMFM.Mod
+	Demos/WMRaycaster.Mod
+	Demos/WMRaycasterMaze.Mod
+	Demos/WMColorLines.Mod
+	Demos/WMXmas.Mod
+	Demos/WMBass3DTest.Mod
+	Demos/WMBassDSPTest.Mod
+	
 	Demos/VisualContainer/VCTypes.Mod
 	Demos/VisualContainer/VCPoly.Mod
 	Demos/VisualContainer/VCBase.Mod
 	Demos/VisualContainer/VCObjects.Mod
-	Demos/VisualContainer/WMVC.Mod
-	Demos/WMBass3DTest.Mod
-	Demos/WMBassDSPTest.Mod
-	Demos/WMColorLines.Mod
-	Demos/WMFM.Mod
-	Demos/WMRaycaster.Mod
-	Demos/WMRaycasterMaze.Mod
-	Demos/WMXmas.Mod ~
+	Demos/VisualContainer/WMVC.Mod	
+	 ~
 
 Run demos
 
