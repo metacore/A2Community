@@ -94,7 +94,7 @@ BEGIN
 	IF ~FileExists(fileName) THEN
 		fileName := GenerateFilename(path, "I386.", moduleName);
 		IF ~FileExists(fileName) THEN
-			fileName := GenerateFilename(path, "Win32.", moduleName);
+			fileName := GenerateFilename(path, "Windows.", moduleName);
 			IF ~FileExists(fileName) THEN
 				fileName := GenerateFilename(path, "Unix.", moduleName);
 				IF ~FileExists(fileName) THEN
@@ -154,7 +154,7 @@ BEGIN
 	IF Strings.EndsWith(".Mod", name^) THEN
 		name^[Strings.Length(name^) - 4] := 0X
 	END;
-	IF mapModules.Contains(name) OR setModulesNotFound.Contains(name) THEN
+	IF (name^ = "SYSTEM") OR mapModules.Contains(name) OR setModulesNotFound.Contains(name) THEN
 		RETURN
 	END;
 	module := ParseModule(name^);
