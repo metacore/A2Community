@@ -258,4 +258,4 @@ ImportGraph.Generate -f=ImportGraphWMTextView.dot
 ImportGraph.Generate -f=ImportGraphWMEditors.dot 
 	WMEditors ~
 
-SystemTools.Free ImportGraph ~
+System.Free ImportGraph ~

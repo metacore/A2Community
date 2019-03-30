@@ -39,14 +39,14 @@ CONST
 	BASS_ERROR_NONET*							= 32;	(* no internet connection could be opened *)
 	BASS_ERROR_CREATE*							= 33;	(* couldn't create the file *)
 	BASS_ERROR_NOFX*								= 34;	(* effects are not available *)
-	BASS_ERROR_NOTAVAIL*					= 37;	(* requested data is not available *)
-	BASS_ERROR_DECODE*							= 38;	(* the channel is/isn't a "decoding channel" *)
-	BASS_ERROR_DX*									= 39;	(* a sufficient DirectX version is not installed *)
-	BASS_ERROR_TIMEOUT*						= 40;	(* connection timedout *)
-	BASS_ERROR_FILEFORM*					= 41;	(* unsupported file format *)
-	BASS_ERROR_SPEAKER*						= 42;	(* unavailable speaker *)
-	BASS_ERROR_VERSION*						= 43;	(* invalid BASS version (used by add-ons) *)
-	BASS_ERROR_CODEC*							= 44;	(* codec is not available/supported *)
+	BASS_ERROR_NOTAVAIL*					= 37;	 (* requested data is not available *)
+	BASS_ERROR_DECODE*							= 38;	 (* the channel is/isn't a "decoding channel" *)
+	BASS_ERROR_DX*									= 39;	 (* a sufficient DirectX version is not installed *)
+	BASS_ERROR_TIMEOUT*						= 40;	 (* connection timedout *)
+	BASS_ERROR_FILEFORM*					= 41; 	(* unsupported file format *)
+	BASS_ERROR_SPEAKER*						= 42;	 (* unavailable speaker *)
+	BASS_ERROR_VERSION*						= 43;	 (* invalid BASS version (used by add-ons) *)
+	BASS_ERROR_CODEC*							= 44;	 (* codec is not available/supported *)
 	BASS_ERROR_ENDED*							= 45;	(* the channel/file has ended *)
 	BASS_ERROR_BUSY*								= 46;	(* the device is busy *)
 	BASS_ERROR_UNKNOWN*						= -1;	(* some other mystery problem *)
@@ -397,9 +397,9 @@ CONST
 	BASS_TAG_WMA*							= 8; (* WMA tags : series of null-terminated UTF-8 strings *)
 	BASS_TAG_VENDOR*						= 9; (* OGG encoder : UTF-8 string *)
 	BASS_TAG_LYRICS3*					= 10; (* Lyric3v2 tag : ASCII string *)
-	BASS_TAG_CA_CODEC*	 				= 11;	(* CoreAudio codec info : TAG_CA_CODEC structure *)
-	BASS_TAG_MF*								= 13;	(* Media Foundation tags : series of null-terminated UTF-8 strings *)
-	BASS_TAG_WAVEFORMAT*			= 14;	(* WAVE format : WAVEFORMATEEX structure *)
+	BASS_TAG_CA_CODEC*	 				= 11;	 (* CoreAudio codec info : TAG_CA_CODEC structure *)
+	BASS_TAG_MF*								= 13;	 (* Media Foundation tags : series of null-terminated UTF-8 strings *)
+	BASS_TAG_WAVEFORMAT*			= 14;	 (* WAVE format : WAVEFORMATEEX structure *)
 	BASS_TAG_RIFF_INFO*				= 100H; (* RIFF "INFO" tags : series of null-terminated ANSI strings *)
 	BASS_TAG_RIFF_BEXT*				= 101H; (* RIFF/BWF "bext" tags : TAG_BEXT structure *)
 	BASS_TAG_RIFF_CART*				= 102H; (* RIFF/BWF "cart" tags : TAG_CART structure *)
@@ -457,7 +457,7 @@ CONST
 TYPE
 
 	DWORD = LONGINT;
-	BOOL = LONGINT;
+	BOOL* = LONGINT;
 	QWORD = HUGEINT;
 	Byte = CHAR;
 	AnsiChar = CHAR;

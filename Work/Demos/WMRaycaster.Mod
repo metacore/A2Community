@@ -3,7 +3,7 @@ MODULE WMRaycaster; (** AUTHOR "Yaroslav Romanchenko (SAGE)"; PURPOSE "Lode's Co
 IMPORT
 	SYSTEM, Events, PreciseTimer, Modules, Inputs, Strings, Commands, Raster, Files,
 	WMWindowManager, Rectangles := WMRectangles,
-	Math := Math, Graphics := WMGraphics;
+	Math, Graphics := WMGraphics;
 
 CONST
 
@@ -12,7 +12,7 @@ CONST
 	EventSubclass = 3;
 	moduleName = "Test";
 
-	THREADS = 4;
+	THREADS = 8;
 	SCREEN_WIDTH = 640;
 	SCREEN_HEIGHT = 480;
 
@@ -850,7 +850,7 @@ BEGIN
 END WMRaycaster.
 
 WMRaycaster.Open ~
-SystemTools.Free WMRaycaster ~
+System.Free WMRaycaster ~
 
 Pentium(R) Dual-Core CPU T4200 @ 2.00 GHz:
 

@@ -359,11 +359,6 @@ BEGIN
 	RETURN Strings.ConcatToNew(a1, a2)
 END "+";
 
-OPERATOR "+" (s: String; CONST a: ARRAY OF CHAR): String;
-BEGIN
-	RETURN Strings.ConcatToNew(s^, a)
-END "+";
-
 PROCEDURE DialogPos(VAR x, y: LONGINT; win: WMWindowManager.Window; dlgWidth, dlgHeight: LONGINT);
 VAR
 	manager: WMWindowManager.WindowManager;
@@ -405,4 +400,4 @@ BEGIN
 END WMColorLines.
 
 WMColorLines.Open ~
-SystemTools.Free WMColorLines ~
+System.Free WMColorLines ~

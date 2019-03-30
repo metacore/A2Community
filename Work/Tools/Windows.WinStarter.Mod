@@ -2,7 +2,7 @@ MODULE WinStarter;   (** fof , source Win32.Windows.Mod+Win32.Displays.Mod+Win32
 
 IMPORT SYSTEM, Kernel32, User32, Modules, KernelLog, GDI32, Displays, Strings,
 	AosInputs := Inputs, Commands, Objects,WinFS, Options,
-	WMWindowManager, WindowManager, WMRectangles;
+	WMWindowManager, WindowManager;
 
 CONST
 	dbgDisableReleaseMsg = TRUE;
@@ -251,7 +251,7 @@ VAR
 	BEGIN
 		str := "";
 		create.win.hWnd :=
-			User32.CreateWindowEx( 0, create.className, str, Kernel32.SetToDW(create.style), create.x, create.y, create.w, create.h,
+			User32.CreateWindowEx( 0, create.className, str, create.style, create.x, create.y, create.w, create.h,
 													   create.win.hWndParent, create.hMenu, Kernel32.hInstance,
 													   SYSTEM.VAL( User32.LParam, create ) );
 		IF User32.WSMaximize IN create.style THEN
@@ -783,7 +783,7 @@ VAR
 	VAR pos: User32.WindowPos;
 	BEGIN
 		SYSTEM.MOVE( lParam, ADDRESSOF( pos ), SIZEOF( User32.WindowPos ) );
-		IF ~(User32.SWPNoMove IN Kernel32.DWToSet(pos.flags)) THEN
+		IF ~(User32.SWPNoMove IN pos.flags) THEN
 			IF (pos.x < -disp.width) & (pos.y < -disp.height) THEN Minimize( win )
 			ELSIF (pos.x >= 0) & (pos.y >= 0) THEN Restore( win )
 			END
@@ -953,7 +953,7 @@ VAR
 	VAR str: ARRAY 32 OF CHAR;
 		ret: Kernel32.ATOM;
 	BEGIN
-		dummyClass.cbSize := SIZEOF( User32.WndClassEx );  dummyClass.style := Kernel32.SetToDW({});  dummyClass.lpfnWndProc := DummyProc;
+		dummyClass.cbSize := SIZEOF( User32.WndClassEx );  dummyClass.style := {};  dummyClass.lpfnWndProc := DummyProc;
 		dummyClass.cbClsExtra := 0;  dummyClass.cbWndExtra := 4;  dummyClass.hInstance := Kernel32.hInstance;
 		dummyClass.hIcon := Kernel32.NULL;  dummyClass.hIconSm := Kernel32.NULL;  dummyClass.hCursor := Kernel32.NULL;
 		dummyClass.hbrBackground := Kernel32.NULL;  dummyClass.lpszMenuName := Kernel32.NULL;
@@ -961,7 +961,7 @@ VAR
 		ret := User32.RegisterClassEx( dummyClass );
 
 		windowClass.cbSize := SIZEOF( User32.WndClassEx );
-		windowClass.style := Kernel32.SetToDW({7});   (* Cs_parentdc: INTEGER is 128  = 2^7 *)
+		windowClass.style := {7};   (* Cs_parentdc: INTEGER is 128  = 2^7 *)
 		windowClass.lpfnWndProc := WindowProc;  windowClass.cbClsExtra := 0;  windowClass.cbWndExtra := 4;
 		windowClass.hInstance := Kernel32.hInstance;  str := "Console";  windowClass.hIcon := User32.LoadIcon( Kernel32.hInstance, str );
 		str := "Console.Small";  windowClass.hIconSm := User32.LoadIcon( Kernel32.hInstance, str );  windowClass.hCursor := Kernel32.NULL;
@@ -1128,6 +1128,7 @@ VAR
 		x, y, w, h, locFrameX, locFrameY: LONGINT;
 		border: LONGINT;  rect: User32.Rect;   (*ALEX 2005.11.30*)
 		hDC: User32.HDC;
+		ret: Kernel32.BOOL;
 	CONST SMCYMaximized = 62;  SMCXMaximized = 61;
 	BEGIN
 
@@ -1253,8 +1254,8 @@ VAR
 			
 			create.finished := FALSE;
 			CreateWin( create );
-			User32.SetWindowText(root.hWnd, windowTitle);
-			User32.BringWindowToTop( root.hWnd );  User32.SetForegroundWindow( root.hWnd );
+			ret := User32.SetWindowText(root.hWnd, windowTitle);
+			ret := User32.BringWindowToTop( root.hWnd );  ret := User32.SetForegroundWindow( root.hWnd );
 			Displays.registry.Add( disp, res );
 			ASSERT ( res = 0 );
 			IF fullscreen THEN
@@ -1277,20 +1278,20 @@ VAR
 			create.y := y;  create.w := w;  create.h := h + User32.GetSystemMetrics( User32.SMCYCaption );
 			create.finished := FALSE;
 			CreateWin( create );
-			User32.SetWindowText(root.hWnd, windowTitle);
-			User32.BringWindowToTop( root.hWnd );  disp.Update;
-			User32.SetForegroundWindow( root.hWnd );
+			ret := User32.SetWindowText(root.hWnd, windowTitle);
+			ret := User32.BringWindowToTop( root.hWnd );  disp.Update;
+			ret := User32.SetForegroundWindow( root.hWnd );
 		ELSE
 			KernelLog.Enter;  KernelLog.String( "Display: Display already open, window still open" );  KernelLog.Exit;
-			IF minimized IN root.state THEN User32.ShowWindow( root.hWnd, User32.SWRestore );  END;
+			IF minimized IN root.state THEN ret := User32.ShowWindow( root.hWnd, User32.SWRestore );  END;
 
-			User32.BringWindowToTop( root.hWnd );  User32.SetForegroundWindow( root.hWnd );
+			ret := User32.BringWindowToTop( root.hWnd );  ret := User32.SetForegroundWindow( root.hWnd );
 		END;
 
 		hDC := User32.GetDC(0);
 		disp.unit := GDI32.GetDeviceCaps(hDC,GDI32.LogPixelsX);
 		disp.unit := ENTIER((36000.0*disp.unit)/25.4);
-		User32.ReleaseDC(0,hDC);
+		ret := User32.ReleaseDC(0,hDC);
 	END DoInstall;
 
 	PROCEDURE Install*(context : Commands.Context); (** ["H"] [ width [height] ] ["FULLSCREEN"] [ x [y] ] *)

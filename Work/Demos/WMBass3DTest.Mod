@@ -739,7 +739,9 @@ VAR
 	x, y, res: LONGINT;
 	manager: WMWindowManager.WindowManager;
 BEGIN
+
 	IF (window = NIL) & BASS_CheckVersion(ctx) THEN
+	
 		context := ctx;
 		bBASSInitialized := FALSE;
 		bEAXSupported := FALSE;
@@ -768,27 +770,26 @@ BEGIN
 				RETURN NIL
 			END;
 
-		  IF BASS.BASS_Init(-1, 44100, BASS.BASS_DEVICE_3D, 0, NIL) = 0 THEN
-		    context.out.String("Can't initialize output device"); context.out.Ln;
-		    context.out.Update;
-		    RETURN NIL
-		  END;
+			IF BASS.BASS_Init(-1, 44100, BASS.BASS_DEVICE_3D, 0, NIL) = 0 THEN
+				context.out.String("Can't initialize output device"); context.out.Ln;
+				context.out.Update;
+				RETURN NIL
+			END;
 
 			context.out.String("BASS initialized"); context.out.Ln;
 			context.out.Update;
-		  bBASSInitialized := TRUE;
+			bBASSInitialized := TRUE;
 
-		  (* Use meters as distance unit, real world rolloff, real doppler effect *)
-		  res := BASS.BASS_Set3DFactors(1.0, 1.0, 1.0);
+			(* Use meters as distance unit, real world rolloff, real doppler effect *)
+			res := BASS.BASS_Set3DFactors(1.0, 1.0, 1.0);
 
-		  bEAXSupported := FALSE;
-		  IF BASS.BASS_SetEAXParameters(-1, 0.0, -1.0, -1.0) # 0 THEN
-	    	bEAXSupported := TRUE;
+			bEAXSupported := BASS.BASS_SetEAXParameters(-1, 0.0, -1.0, -1.0) # 0;
+			IF bEAXSupported THEN
 				context.out.String("EAX supported"); context.out.Ln
-	    ELSE
+			ELSE
 				context.out.String("EAX not supported"); context.out.Ln
-	    END;
-	    context.out.Update;
+			END;
+			context.out.Update;
 
 			(* Initialize form and wire event handlers *)
 			window.FormInit;

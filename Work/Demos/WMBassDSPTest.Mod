@@ -381,7 +381,7 @@ VAR
 	root: WMComponents.VisualComponent;
 	x, y, res: LONGINT;
 	manager: WMWindowManager.WindowManager;
-
+	ret: BASS.BOOL;
 BEGIN
 	IF (window = NIL) & BASS_CheckVersion(ctx) THEN
 		context := ctx;
@@ -401,12 +401,12 @@ BEGIN
 				RETURN NIL
 			END;
 
-			BASS.BASS_SetConfig(BASS.BASS_CONFIG_FLOATDSP, 1);
-		  IF BASS.BASS_Init(-1, 44100, {}, 0, NIL) = 0 THEN
-		    context.out.String("Can't initialize output device"); context.out.Ln;
-		    context.out.Update;
-		    RETURN NIL
-		  END;
+			ret := BASS.BASS_SetConfig(BASS.BASS_CONFIG_FLOATDSP, 1);
+			IF BASS.BASS_Init(-1, 44100, {}, 0, NIL) = 0 THEN
+				context.out.String("Can't initialize output device"); context.out.Ln;
+				context.out.Update;
+				RETURN NIL
+			END;
 
 			context.out.String("BASS initialized"); context.out.Ln;
 			context.out.Update;
@@ -415,7 +415,7 @@ BEGIN
 		  floatable := {};
 		  res := BASS.BASS_StreamCreate(44100, 2, BASS.BASS_SAMPLE_FLOAT, NIL, 0);
 			IF res > 0 THEN
-				BASS.BASS_StreamFree(res);
+				ret := BASS.BASS_StreamFree(res);
 				floatable := BASS.BASS_SAMPLE_FLOAT;
 				context.out.String("Floating-point samples supported"); context.out.Ln;
 				context.out.Update;

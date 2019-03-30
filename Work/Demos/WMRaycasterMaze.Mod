@@ -12,7 +12,7 @@ Maze generation tutorial:
 IMPORT
 	SYSTEM, PreciseTimer, Modules, Inputs, Strings (*:= Utilities*), Commands, Raster,
 	WMWindowManager, Rectangles := WMRectangles,
-	Math := Math, Graphics := WMGraphics, Random;
+	Math, Graphics := WMGraphics, Random;
 	
 CONST
 

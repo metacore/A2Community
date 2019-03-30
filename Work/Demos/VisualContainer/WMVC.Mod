@@ -677,6 +677,6 @@ BEGIN
 END WMVC.
 
 WMVC.Open ~
-SystemTools.Free WMVC VCObjects VCBase VCPoly VCTypes FloatAA Generics ~
+System.Free WMVC VCObjects VCBase VCPoly VCTypes FloatAA Generics ~
 
 

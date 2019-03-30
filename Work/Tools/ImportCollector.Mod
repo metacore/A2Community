@@ -421,6 +421,6 @@ ImportCollector.Collect
 	WinStarter DisplayNull Traps FileTrapWriter SystemVersion PNGDecoder ~
 
 
-SystemTools.Free ImportCollector ~
+System.Free ImportCollector ~
 
 
