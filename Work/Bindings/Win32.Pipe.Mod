@@ -21,11 +21,12 @@ END;
 StartupInfo = Kernel32.StartupInfo;
 ProcessInformation = Kernel32.ProcessInformation;
 HANDLE* = Kernel32.HANDLE;
+BOOL = Kernel32.BOOL;
 
 VAR
 
-	CreatePipe-:PROCEDURE{WINAPI}(VAR hReadPipe, hWritePipe: HANDLE; CONST lpPipeAttributes: SecurityAttributes; nSize: LONGINT): LONGINT;
-	TerminateProcess-:PROCEDURE{WINAPI}(hProcess: HANDLE; exitcode: LONGINT): LONGINT;
+	CreatePipe-:PROCEDURE{WINAPI}(VAR hReadPipe, hWritePipe: HANDLE; CONST lpPipeAttributes: SecurityAttributes; nSize: LONGINT): BOOL;
+	TerminateProcess-:PROCEDURE{WINAPI}(hProcess: HANDLE; exitcode: LONGINT): BOOL;
 TYPE
 	ChildProcess* = OBJECT
 	VAR
@@ -38,11 +39,14 @@ TYPE
 		Buffer,buf:ARRAY 1024 OF CHAR;
 		bytesRead,head:LONGINT;
 		tail:LONGINT;
+		bResult: BOOL;
+		
 		PROCEDURE &Init*(name,workdir:ARRAY OF CHAR);
 		VAR
 			Buffer: ARRAY 1024 OF CHAR;
 			BytesRead: LONGINT;
 			tmp1,tmp2:HANDLE;
+			
 		BEGIN
 			alive := TRUE;
 			COPY(name,cmdLine);
@@ -51,8 +55,8 @@ TYPE
 		    SA.bInheritHandle := True;
 		    SA.lpSecurityDescriptor := NIL;
 
-			CreatePipe(FChildStdoutRd, FChildStdoutWr, SA, 0);
-			CreatePipe(FChildStdinRd, FChildStdinWr, SA, 0);
+			bResult := CreatePipe(FChildStdoutRd, FChildStdoutWr, SA, 0);
+			bResult := CreatePipe(FChildStdinRd, FChildStdinWr, SA, 0);
 
 			SI.cb := SIZEOF(StartupInfo);
 			SI.dwFlags := {StartFUseShowWindow} + {StartFUseStdHandles};
@@ -127,7 +131,7 @@ TYPE
 		PROCEDURE Close*;
 		BEGIN{EXCLUSIVE}
 			alive:=FALSE;
-			TerminateProcess(PI.hProcess,0);
+			bResult := TerminateProcess(PI.hProcess,0);
 		END Close;
 		
 	BEGIN{ACTIVE}
@@ -153,10 +157,10 @@ TYPE
 				END;
 			END;
 		UNTIL (~alive);
-		Kernel32.WaitForSingleObject(PI.hProcess, Kernel32.Infinite);
-		Kernel32.CloseHandle(PI.hThread);
-		Kernel32.CloseHandle(PI.hProcess);
-		Kernel32.CloseHandle(FChildStdoutRd);
+		bResult := Kernel32.WaitForSingleObject(PI.hProcess, Kernel32.Infinite);
+		bResult := Kernel32.CloseHandle(PI.hThread);
+		bResult := Kernel32.CloseHandle(PI.hProcess);
+		bResult := Kernel32.CloseHandle(FChildStdoutRd);
 	END ChildProcess;
 
 VAR

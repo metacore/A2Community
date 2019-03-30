@@ -33,6 +33,8 @@ CONST
 TYPE
 	String = ADDRESS;
 	WideString = ADDRESS;
+	
+	BOOL = Kernel32.BOOL;
 
 	RARHeaderData* = RECORD
 		ArcName* : ARRAY 260 OF CHAR;
@@ -115,9 +117,12 @@ VAR
 	mod:LONGINT;
 
 PROCEDURE Cleanup;
+VAR
+	bResult: BOOL;
 BEGIN
 	IF mod # Kernel32.NULL THEN
-		Kernel32.FreeLibrary(mod); mod := Kernel32.NULL
+		bResult := Kernel32.FreeLibrary(mod);
+		mod := Kernel32.NULL
 	END
 END Cleanup;
 

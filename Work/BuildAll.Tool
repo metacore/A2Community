@@ -22,9 +22,12 @@ Compiler.Compile -p=Win32
 
 Compiler.Compile -p=Win32
 
-	BASS/Windows.BASS.Mod
-	
-	Bindings/Win32.Pipe.Mod ~
+	Bindings/BASS/Windows.BASS.Mod
+	Bindings/Win32.Pipe.Mod
+	Bindings/UnRAR.Mod ~
+
+Compiler.Compile -p=Unix32
+	BASS/Unix.BASS.Mod ~
 
 *** Libraries ***
 
@@ -84,6 +87,12 @@ Compiler.Compile -p=Win32
 	Demos/WMAStar.Mod
 	Demos/WMAStarSet.Mod
 
+	Demos/VisualContainer/VCTypes.Mod
+	Demos/VisualContainer/VCPoly.Mod
+	Demos/VisualContainer/VCBase.Mod
+	Demos/VisualContainer/VCObjects.Mod
+	Demos/VisualContainer/WMVC.Mod	
+
 	Demos/WMFM.Mod
 	Demos/WMRaycaster.Mod
 	Demos/WMRaycasterMaze.Mod
@@ -91,12 +100,6 @@ Compiler.Compile -p=Win32
 	Demos/WMXmas.Mod
 	Demos/WMBass3DTest.Mod
 	Demos/WMBassDSPTest.Mod
-	
-	Demos/VisualContainer/VCTypes.Mod
-	Demos/VisualContainer/VCPoly.Mod
-	Demos/VisualContainer/VCBase.Mod
-	Demos/VisualContainer/VCObjects.Mod
-	Demos/VisualContainer/WMVC.Mod	
 	 ~
 
 Run demos
