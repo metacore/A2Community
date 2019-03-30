@@ -23,11 +23,11 @@ Compiler.Compile -p=Win32
 Compiler.Compile -p=Win32
 
 	Bindings/BASS/Windows.BASS.Mod
-	Bindings/Win32.Pipe.Mod
-	Bindings/UnRAR.Mod ~
+	Bindings/Windows.Pipe.Mod
+	Bindings/Windows.UnRAR.Mod ~
 
 Compiler.Compile -p=Unix32
-	BASS/Unix.BASS.Mod ~
+	Bindings/BASS/Unix.BASS.Mod ~
 
 *** Libraries ***
 
@@ -37,7 +37,7 @@ Compiler.Compile -p=Win32
 	Libs/CanvasTools.Mod
 
 	Libs/MathUtils.Mod
-	Libs/Win32.PreciseTimer.Mod
+	Libs/Windows.PreciseTimer.Mod
 
 	Libs/Generics.Mod
 
@@ -78,7 +78,7 @@ Compiler.Compile -p=Win32
 
 	Tools/ImportCollector.Mod
 	Tools/ImportGraph.Mod
-	Tools/WinStarter.Mod ~
+	Tools/Windows.WinStarter.Mod ~
 
 *** Demos ***
 
