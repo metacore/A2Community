@@ -137,5 +137,5 @@ BEGIN
 	Modules.InstallTermHandler(Cleanup);
 END WMAAGraphicsExample.
 
-SystemTools.Free WMAAGraphicsExample ~
+System.Free WMAAGraphicsExample ~
 WMAAGraphicsExample.Open ~

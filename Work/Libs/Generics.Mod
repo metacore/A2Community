@@ -78,6 +78,8 @@ TYPE
 		
 		(* Abstract method for array construction. Should be implemented in derived object *) 
 		PROCEDURE ArrayConstruct*(iArraySize: LONGINT; VAR pArray: ANY; VAR addrArray: ADDRESS);
+		BEGIN
+			HALT(100)
 		END ArrayConstruct;
 
 		PROCEDURE &NewContainer*(iItemSize: LONGINT);
@@ -2309,13 +2311,12 @@ TYPE
 		WHILE treeIterator.GetNext(item) DO
 			context.out.Int(item.key, 0); context.out.Char(' ');
 			IF treeIterator.HasNext() THEN
-				context.out.String("has more  ")
+				context.out.String("has more")
 			ELSE
 				context.out.String("this one was the last")
-			END
-		END;
-
-		context.out.Ln
+			END;
+			context.out.Ln
+		END
 
 	END TreeIteratorTest;
 
