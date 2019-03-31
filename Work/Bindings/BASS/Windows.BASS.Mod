@@ -953,11 +953,9 @@ BEGIN
 END BASS_SetEAXPreset;
 
 PROCEDURE Cleanup;
-VAR
-	bResult: Kernel32.BOOL;
 BEGIN
 	IF lib # Kernel32.NULL THEN
-		bResult := Kernel32.FreeLibrary(lib);
+		IGNORE Kernel32.FreeLibrary(lib);
 		lib := Kernel32.NULL
 	END
 END Cleanup;

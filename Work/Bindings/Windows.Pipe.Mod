@@ -21,7 +21,7 @@ END;
 StartupInfo = Kernel32.StartupInfo;
 ProcessInformation = Kernel32.ProcessInformation;
 HANDLE* = Kernel32.HANDLE;
-BOOL = Kernel32.BOOL;
+BOOL  = Kernel32.BOOL;
 
 VAR
 
@@ -39,7 +39,6 @@ TYPE
 		Buffer,buf:ARRAY 1024 OF CHAR;
 		bytesRead,head:LONGINT;
 		tail:LONGINT;
-		bResult: BOOL;
 		
 		PROCEDURE &Init*(name,workdir:ARRAY OF CHAR);
 		VAR
@@ -55,8 +54,8 @@ TYPE
 		    SA.bInheritHandle := True;
 		    SA.lpSecurityDescriptor := NIL;
 
-			bResult := CreatePipe(FChildStdoutRd, FChildStdoutWr, SA, 0);
-			bResult := CreatePipe(FChildStdinRd, FChildStdinWr, SA, 0);
+			IGNORE CreatePipe(FChildStdoutRd, FChildStdoutWr, SA, 0);
+			IGNORE CreatePipe(FChildStdinRd, FChildStdinWr, SA, 0);
 
 			SI.cb := SIZEOF(StartupInfo);
 			SI.dwFlags := {StartFUseShowWindow} + {StartFUseStdHandles};
@@ -131,7 +130,7 @@ TYPE
 		PROCEDURE Close*;
 		BEGIN{EXCLUSIVE}
 			alive:=FALSE;
-			bResult := TerminateProcess(PI.hProcess,0);
+			IGNORE TerminateProcess(PI.hProcess,0);
 		END Close;
 		
 	BEGIN{ACTIVE}
@@ -157,10 +156,10 @@ TYPE
 				END;
 			END;
 		UNTIL (~alive);
-		bResult := Kernel32.WaitForSingleObject(PI.hProcess, Kernel32.Infinite);
-		bResult := Kernel32.CloseHandle(PI.hThread);
-		bResult := Kernel32.CloseHandle(PI.hProcess);
-		bResult := Kernel32.CloseHandle(FChildStdoutRd);
+		IGNORE Kernel32.WaitForSingleObject(PI.hProcess, Kernel32.Infinite);
+		IGNORE Kernel32.CloseHandle(PI.hThread);
+		IGNORE Kernel32.CloseHandle(PI.hProcess);
+		IGNORE Kernel32.CloseHandle(FChildStdoutRd);
 	END ChildProcess;
 
 VAR
