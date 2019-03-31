@@ -60,32 +60,36 @@ TYPE
 	(* Type for use in Tree constrictor parameters *)
 	PTreeItem* = POINTER TO TreeItem;
 
-	ArrayGenerator = PROCEDURE {DELEGATE} (iArraySize: LONGINT; VAR pArray: ANY; VAR addrArray: ADDRESS);
-
 	LessComparer = PROCEDURE {DELEGATE} (pA, pB: PItem): BOOLEAN;
 
 	(** Abstract container *)
 	Container = OBJECT
 	VAR
-		genArray: ArrayGenerator;
 
-		iItemSize,
+		(* Size of one item *)
+		iItemSize: LONGINT;
+		
+		(* Size of base container (array)  *)
 		iSize: LONGINT;
-
+		(* Untyped pointer to array *)
 		pArray: ANY;
+		(* Address of array *)
 		addrArray: ADDRESS;
+		
+		(* Abstract method for array construction. Should be implemented in derived object *) 
+		PROCEDURE ArrayConstruct*(iArraySize: LONGINT; VAR pArray: ANY; VAR addrArray: ADDRESS);
+		END ArrayConstruct;
 
-		PROCEDURE &Create(iItemSize: LONGINT; genArray: ArrayGenerator);
+		PROCEDURE &NewContainer*(iItemSize: LONGINT);
 		BEGIN
-			ASSERT((iItemSize > 0) & (genArray # NIL));
+			ASSERT(iItemSize > 0);
 			SELF.iItemSize := iItemSize;
-			SELF.genArray := genArray;
 			iSize := INITIAL_SIZE;
-			genArray(iSize, pArray, addrArray);
+			ArrayConstruct(iSize, pArray, addrArray);
 			Clear
-		END Create;
+		END NewContainer;
 
-		PROCEDURE Grow;
+		PROCEDURE Grow*;
 		VAR
 			pOld: ANY;
 			addrOld: ADDRESS;
@@ -95,10 +99,11 @@ TYPE
 			addrOld := addrArray;
 			iOldSize := iSize;
 			iSize := iSize * 2;
-			genArray(iSize, pArray, addrArray);
+			ArrayConstruct(iSize, pArray, addrArray);
 			SYSTEM.MOVE(addrOld, addrArray, iOldSize * iItemSize)
 		END Grow;
 
+		(* Abstract *)		
 		PROCEDURE Clear*;
 		END Clear;
 
@@ -167,7 +172,7 @@ TYPE
 			RETURN iTail - iHead
 		END Count;
 
-		PROCEDURE Grow;
+		PROCEDURE Grow*;
 		VAR
 			pOld: ANY;
 			addrOld: ADDRESS;
@@ -182,7 +187,7 @@ TYPE
 				pOld := pArray;
 				addrOld := addrArray;
 				iSize := iSize * 2;
-				genArray(iSize, pArray, addrArray);
+				ArrayConstruct(iSize, pArray, addrArray);
 				SYSTEM.MOVE(addrOld + iHead * iItemSize, addrArray, iCount * iItemSize)
 			ELSE (* may for now simply shift *)
 				FOR i := 0 TO iCount - 1 DO
@@ -245,9 +250,9 @@ TYPE
 		(* temporary Item storage for Swap operation during sorting *)
 		bufTempItem: POINTER TO ARRAY OF CHAR;
 
-		PROCEDURE &Init*(iItemSize: LONGINT; genArray: ArrayGenerator; pCompA, pCompB: PItem; comp: LessComparer; options: SET);
+		PROCEDURE &NewVector*(iItemSize: LONGINT; pCompA, pCompB: PItem; comp: LessComparer; options: SET);
 		BEGIN
-			Create(iItemSize, genArray);
+			NewContainer(iItemSize);
 			SELF.pCompA := pCompA;
 			SELF.pCompB := pCompB;
 			SELF.comp := comp;
@@ -255,7 +260,7 @@ TYPE
 			bSorted := {SORTED} * options # {};
 			ASSERT(~bSorted OR (bSorted & (comp # NIL) & (pCompA # NIL) & (pCompB # NIL)));
 			NEW(bufTempItem, iItemSize)
-		END Init;
+		END NewVector;
 
 		PROCEDURE Clear*;
 		BEGIN
@@ -542,15 +547,15 @@ TYPE
 
 		iterator: TreeIterator;
 
-		PROCEDURE &Init*(iItemSize: LONGINT; genArray: ArrayGenerator; pCompA, pCompB: PTreeItem; less: LessComparer);
+		PROCEDURE &NewTree*(iItemSize: LONGINT; pCompA, pCompB: PTreeItem; less: LessComparer);
 		BEGIN
 			ASSERT((less # NIL) & (pCompA # NIL) & (pCompB # NIL));
 			NEW(queue);
-			Create(iItemSize, genArray);
+			NewContainer(iItemSize);
 			SELF.pCompA := pCompA;
 			SELF.pCompB := pCompB;
 			SELF.less := less
-		END Init;
+		END NewTree;
 
 		PROCEDURE Clear*;
 		BEGIN
@@ -1183,14 +1188,14 @@ TYPE
 			iPos := 0
 		END Clear;
 
-		PROCEDURE &Init*(iItemSize: LONGINT; genArray: ArrayGenerator; pCompA, pCompB: PItem; comp: LessComparer);
+		PROCEDURE &NewHeap*(iItemSize: LONGINT; pCompA, pCompB: PItem; comp: LessComparer);
 		BEGIN
-			Create(iItemSize, genArray);
+			NewContainer(iItemSize);
 			SELF.pCompA := pCompA;
 			SELF.pCompB := pCompB;
 			SELF.comp := comp;
 			NEW(bufTempItem, iItemSize)
-		END Init;
+		END NewHeap;
 
 		PROCEDURE Count*(): LONGINT;
 		BEGIN
@@ -1365,13 +1370,13 @@ TYPE
 
 		PROCEDURE &New*;
 		BEGIN
-			Create(SIZEOF(LongintItem), ArrayGen)
+			NewContainer(SIZEOF(LongintItem))
 		END New;
 
-		PROCEDURE ArrayGen(iArraySize: LONGINT; VAR pArray: ANY; VAR addrArray: ADDRESS);
+		PROCEDURE ArrayConstruct(iArraySize: LONGINT; VAR pArray: ANY; VAR addrArray: ADDRESS);
 		BEGIN
 			NEW(array, iArraySize); pArray := array; addrArray := ADDRESSOF(array^[0])
-		END ArrayGen;
+		END ArrayConstruct;
 
 		PROCEDURE Push*(value: LONGINT);
 		VAR
@@ -1409,13 +1414,13 @@ TYPE
 
 		PROCEDURE &New*;
 		BEGIN
-			Create(SIZEOF(LongintItem), ArrayGen)
+			NewContainer(SIZEOF(LongintItem))
 		END New;
 
-		PROCEDURE ArrayGen(iArraySize: LONGINT; VAR pArray: ANY; VAR addrArray: ADDRESS);
+		PROCEDURE ArrayConstruct(iArraySize: LONGINT; VAR pArray: ANY; VAR addrArray: ADDRESS);
 		BEGIN
 			NEW(array, iArraySize); pArray := array; addrArray := ADDRESSOF(array^[0])
-		END ArrayGen;
+		END ArrayConstruct;
 
 		PROCEDURE Push*(value: LONGINT);
 		VAR
@@ -1457,13 +1462,13 @@ TYPE
 		BEGIN
 			NEW(pCompA);
 			NEW(pCompB);
-			Init(SIZEOF(LongintItem), ArrayGen, pCompA, pCompB, LongintItemLess, options)
+			NewVector(SIZEOF(LongintItem), pCompA, pCompB, LongintItemLess, options)
 		END New;
 
-		PROCEDURE ArrayGen(iArraySize: LONGINT; VAR pArray: ANY; VAR addrArray: ADDRESS);
+		PROCEDURE ArrayConstruct(iArraySize: LONGINT; VAR pArray: ANY; VAR addrArray: ADDRESS);
 		BEGIN
 			NEW(array, iArraySize); pArray := array; addrArray := ADDRESSOF(array^[0])
-		END ArrayGen;
+		END ArrayConstruct;
 
 		PROCEDURE Add*(value: LONGINT): LONGINT;
 		VAR
@@ -1517,13 +1522,13 @@ TYPE
 		BEGIN
 			NEW(pCompA);
 			NEW(pCompB);
-			Init(SIZEOF(LongintSetItem), ArrayGen, pCompA, pCompB, LongintSetItemLess)
+			NewTree(SIZEOF(LongintSetItem), pCompA, pCompB, LongintSetItemLess)
 		END New;
 
-		PROCEDURE ArrayGen(iArraySize: LONGINT; VAR pArray: ANY; VAR addrArray: ADDRESS);
+		PROCEDURE ArrayConstruct(iArraySize: LONGINT; VAR pArray: ANY; VAR addrArray: ADDRESS);
 		BEGIN
 			NEW(array, iArraySize); pArray := array; addrArray := ADDRESSOF(array^[0])
-		END ArrayGen;
+		END ArrayConstruct;
 
 		PROCEDURE Insert*(key: LONGINT);
 		VAR
@@ -1573,13 +1578,13 @@ TYPE
 		BEGIN
 			NEW(pCompA);
 			NEW(pCompB);
-			Init(SIZEOF(LongintVectorItem), ArrayGen, pCompA, pCompB, LongintVectorItemLess, options)
+			NewVector(SIZEOF(LongintVectorItem), pCompA, pCompB, LongintVectorItemLess, options)
 		END New;
 
-		PROCEDURE ArrayGen(iArraySize: LONGINT; VAR pArray: ANY; VAR addrArray: ADDRESS);
+		PROCEDURE ArrayConstruct(iArraySize: LONGINT; VAR pArray: ANY; VAR addrArray: ADDRESS);
 		BEGIN
 			NEW(array, iArraySize); pArray := array; addrArray := ADDRESSOF(array^[0])
-		END ArrayGen;
+		END ArrayConstruct;
 
 		PROCEDURE Add*(value: LongintVector): LONGINT;
 		VAR
@@ -1633,13 +1638,13 @@ TYPE
 		BEGIN
 			NEW(pCompA);
 			NEW(pCompB);
-			Init(SIZEOF(LongintVectorSetItem), ArrayGen, pCompA, pCompB, LongintVectorSetItemLess)
+			NewTree(SIZEOF(LongintVectorSetItem), pCompA, pCompB, LongintVectorSetItemLess)
 		END New;
 
-		PROCEDURE ArrayGen(iArraySize: LONGINT; VAR pArray: ANY; VAR addrArray: ADDRESS);
+		PROCEDURE ArrayConstruct(iArraySize: LONGINT; VAR pArray: ANY; VAR addrArray: ADDRESS);
 		BEGIN
 			NEW(array, iArraySize); pArray := array; addrArray := ADDRESSOF(array^[0])
-		END ArrayGen;
+		END ArrayConstruct;
 		
 		PROCEDURE Insert*(key: LongintVector);
 		VAR
@@ -1688,13 +1693,13 @@ TYPE
 
 		PROCEDURE &New*;
 		BEGIN
-			Create(SIZEOF(StringItem), ArrayGen)
+			NewContainer(SIZEOF(StringItem))
 		END New;
 
-		PROCEDURE ArrayGen(iArraySize: LONGINT; VAR pArray: ANY; VAR addrArray: ADDRESS);
+		PROCEDURE ArrayConstruct(iArraySize: LONGINT; VAR pArray: ANY; VAR addrArray: ADDRESS);
 		BEGIN
 			NEW(array, iArraySize); pArray := array; addrArray := ADDRESSOF(array^[0])
-		END ArrayGen;
+		END ArrayConstruct;
 
 		PROCEDURE Push*(value: String);
 		VAR
@@ -1732,13 +1737,13 @@ TYPE
 
 		PROCEDURE &New*;
 		BEGIN
-			Create(SIZEOF(StringItem), ArrayGen)
+			NewContainer(SIZEOF(StringItem))
 		END New;
 
-		PROCEDURE ArrayGen(iArraySize: LONGINT; VAR pArray: ANY; VAR addrArray: ADDRESS);
+		PROCEDURE ArrayConstruct(iArraySize: LONGINT; VAR pArray: ANY; VAR addrArray: ADDRESS);
 		BEGIN
 			NEW(array, iArraySize); pArray := array; addrArray := ADDRESSOF(array^[0])
-		END ArrayGen;
+		END ArrayConstruct;
 
 		PROCEDURE Push*(value: String);
 		VAR
@@ -1780,13 +1785,13 @@ TYPE
 		BEGIN
 			NEW(pCompA);
 			NEW(pCompB);
-			Init(SIZEOF(StringItem), ArrayGen, pCompA, pCompB, StringItemLess, options)
+			NewVector(SIZEOF(StringItem), pCompA, pCompB, StringItemLess, options)
 		END New;
 
-		PROCEDURE ArrayGen(iArraySize: LONGINT; VAR pArray: ANY; VAR addrArray: ADDRESS);
+		PROCEDURE ArrayConstruct(iArraySize: LONGINT; VAR pArray: ANY; VAR addrArray: ADDRESS);
 		BEGIN
 			NEW(array, iArraySize); pArray := array; addrArray := ADDRESSOF(array^[0])
-		END ArrayGen;
+		END ArrayConstruct;
 
 		PROCEDURE Add*(value: String): LONGINT;
 		VAR
@@ -1840,13 +1845,13 @@ TYPE
 		BEGIN
 			NEW(pCompA);
 			NEW(pCompB);
-			Init(SIZEOF(StringSetItem), ArrayGen, pCompA, pCompB, StringSetItemLess)
+			NewTree(SIZEOF(StringSetItem), pCompA, pCompB, StringSetItemLess)
 		END New;
 
-		PROCEDURE ArrayGen(iArraySize: LONGINT; VAR pArray: ANY; VAR addrArray: ADDRESS);
+		PROCEDURE ArrayConstruct(iArraySize: LONGINT; VAR pArray: ANY; VAR addrArray: ADDRESS);
 		BEGIN
 			NEW(array, iArraySize); pArray := array; addrArray := ADDRESSOF(array^[0])
-		END ArrayGen;
+		END ArrayConstruct;
 
 		PROCEDURE Insert*(key: String);
 		VAR
@@ -1914,13 +1919,13 @@ TYPE
 		BEGIN
 			NEW(pCompA);
 			NEW(pCompB);
-			Init(SIZEOF(ObjectMapItem), ArrayGen, pCompA, pCompB, StringSetItemLess)
+			NewTree(SIZEOF(ObjectMapItem), pCompA, pCompB, StringSetItemLess)
 		END New;
 
-		PROCEDURE ArrayGen(iArraySize: LONGINT; VAR pArray: ANY; VAR addrArray: ADDRESS);
+		PROCEDURE ArrayConstruct(iArraySize: LONGINT; VAR pArray: ANY; VAR addrArray: ADDRESS);
 		BEGIN
 			NEW(array, iArraySize); pArray := array; addrArray := ADDRESSOF(array^[0])
-		END ArrayGen;
+		END ArrayConstruct;
 
 		PROCEDURE Insert*(key: String; obj: ANY);
 		VAR
@@ -2420,4 +2425,4 @@ Generics.TestVectors ~
 Generics.TreeTest ~
 Generics.TreeIteratorTest ~
 
-SystemTools.Free Generics ~
+System.Free Generics ~

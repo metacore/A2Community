@@ -20,13 +20,13 @@ TYPE
 		BEGIN
 			NEW(pCompA);
 			NEW(pCompB);
-			Init(SIZEOF(DFAStateNumMapItem), ArrayGen, pCompA, pCompB, Less)
+			NewTree(SIZEOF(DFAStateNumMapItem), pCompA, pCompB, Less)
 		END New;
 
-		PROCEDURE ArrayGen(iArraySize: LONGINT; VAR pArray: ANY; VAR addrArray: ADDRESS);
+		PROCEDURE ArrayConstruct(iArraySize: LONGINT; VAR pArray: ANY; VAR addrArray: ADDRESS);
 		BEGIN
 			NEW(array, iArraySize); pArray := array; addrArray := ADDRESSOF(array^[0])
-		END ArrayGen;
+		END ArrayConstruct;
 
 		PROCEDURE Less(pA, pB: Generics.PItem): BOOLEAN;
 		BEGIN
@@ -82,13 +82,13 @@ TYPE
 		BEGIN
 			NEW(pCompA);
 			NEW(pCompB);
-			Init(SIZEOF(TransitionMapItem), ArrayGen, pCompA, pCompB, Less)
+			NewTree(SIZEOF(TransitionMapItem), pCompA, pCompB, Less)
 		END New;
 
-		PROCEDURE ArrayGen(iArraySize: LONGINT; VAR pArray: ANY; VAR addrArray: ADDRESS);
+		PROCEDURE ArrayConstruct(iArraySize: LONGINT; VAR pArray: ANY; VAR addrArray: ADDRESS);
 		BEGIN
 			NEW(array, iArraySize); pArray := array; addrArray := ADDRESSOF(array^[0])
-		END ArrayGen;
+		END ArrayConstruct;
 		
 		PROCEDURE Less(pA, pB: Generics.PItem): BOOLEAN;
 		BEGIN

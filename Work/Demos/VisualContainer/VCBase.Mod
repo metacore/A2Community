@@ -22,13 +22,13 @@ TYPE
 
 		PROCEDURE &New*;
 		BEGIN
-			Init(SIZEOF(Point2fItem), ArrayGen, NIL, NIL, NIL, {})
+			NewVector(SIZEOF(Point2fItem), NIL, NIL, NIL, {})
 		END New;
 
-		PROCEDURE ArrayGen(iArraySize: LONGINT; VAR pArray: ANY; VAR addrArray: ADDRESS);
+		PROCEDURE ArrayConstruct(iArraySize: LONGINT; VAR pArray: ANY; VAR addrArray: ADDRESS);
 		BEGIN
 			NEW(array, iArraySize); pArray := array; addrArray := ADDRESSOF(array^[0])
-		END ArrayGen;
+		END ArrayConstruct;
 
 		PROCEDURE Add*(x, y: REAL);
 		VAR

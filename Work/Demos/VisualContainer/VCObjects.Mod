@@ -280,13 +280,13 @@ TYPE
 		BEGIN
 			NEW(pCompA);
 			NEW(pCompB);
-			Init(SIZEOF(VisualObjectItem), ArrayGen, pCompA, pCompB, Compare, {})
+			NewVector(SIZEOF(VisualObjectItem), pCompA, pCompB, Compare, {})
 		END New;
 
-		PROCEDURE ArrayGen(iArraySize: LONGINT; VAR pArray: ANY; VAR addrArray: ADDRESS);
+		PROCEDURE ArrayConstruct(iArraySize: LONGINT; VAR pArray: ANY; VAR addrArray: ADDRESS);
 		BEGIN
 			NEW(array, iArraySize); pArray := array; addrArray := ADDRESSOF(array^[0])
-		END ArrayGen;
+		END ArrayConstruct;
 
 		PROCEDURE Compare(pA, pB: Generics.PItem): BOOLEAN;
 		VAR

@@ -75,13 +75,13 @@ TYPE
 		BEGIN
 			NEW(pCompA);
 			NEW(pCompB);
-			Init(SIZEOF(NodeItem), ArrayGen, pCompA, pCompB, Less)
+			NewHeap(SIZEOF(NodeItem), pCompA, pCompB, Less)
 		END New;
 
-		PROCEDURE ArrayGen(iArraySize: LONGINT; VAR pArray: ANY; VAR addrArray: ADDRESS);
+		PROCEDURE ArrayConstruct(iArraySize: LONGINT; VAR pArray: ANY; VAR addrArray: ADDRESS);
 		BEGIN
 			NEW(array, iArraySize); pArray := array; addrArray := ADDRESSOF(array^[0])
-		END ArrayGen;
+		END ArrayConstruct;
 		
 		PROCEDURE Less(pA, pB: Generics.PItem): BOOLEAN;
 		BEGIN
@@ -133,13 +133,13 @@ TYPE
 		BEGIN
 			NEW(pCompA);
 			NEW(pCompB);
-			Init(SIZEOF(NodeTreeItem), ArrayGen, pCompA, pCompB, Less)
+			NewTree(SIZEOF(NodeTreeItem), pCompA, pCompB, Less)
 		END New;
 
-		PROCEDURE ArrayGen(iArraySize: LONGINT; VAR pArray: ANY; VAR addrArray: ADDRESS);
+		PROCEDURE ArrayConstruct(iArraySize: LONGINT; VAR pArray: ANY; VAR addrArray: ADDRESS);
 		BEGIN
 			NEW(array, iArraySize); pArray := array; addrArray := ADDRESSOF(array^[0])
-		END ArrayGen;
+		END ArrayConstruct;
 		
 		PROCEDURE Less(pA, pB: Generics.PItem): BOOLEAN;
 		BEGIN
