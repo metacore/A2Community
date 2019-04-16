@@ -7,6 +7,10 @@ CONST
 	lut=2;
 	rgb=3;
 	heat=4;
+	(*display modes*)
+	Default*=0;
+	SumIntensity*=1;
+	MaxIntensity*=2;
 
 (*! to do: improve current limitation to subtensor[0,?] display. Generalize to 1D, 2D and 5D+ data. implement lookup table display*)
  
@@ -26,6 +30,7 @@ TYPE Data*= OBJECT (Models.Model)
 TYPE TYPE Panel*= OBJECT (WMStandardComponents.ImagePanel) (*! tbd: convert some local variables to properties. move some local variables to model .  tbd: serialization*)
 		VAR data*:Data; (*is also in model property*)
 		orientation-: WMProperties.Int32Property;
+		displayMode-:WMProperties.Int32Property;
 		type, offset*, mx0,my0,mx1,my1,
 		current*, cur3:LONGINT; 
 		max,min, gain*:LONGREAL; 
@@ -36,8 +41,8 @@ TYPE TYPE Panel*= OBJECT (WMStandardComponents.ImagePanel) (*! tbd: convert some
 	BEGIN
 		Init^;
 		SetGenerator("WMArrayPanels.GenPanel");
-		
 		NEW(SELF.orientation, NIL, Strings.NewString("orientation"), Strings.NewString("")); properties.Add(SELF.orientation);
+		NEW(displayMode, NIL, Strings.NewString("displayMode"), Strings.NewString("default, sum, max")); properties.Add(displayMode);
 		SELF.orientation.Set(0);
 		NEW(img0);
 		NEW(data);
@@ -254,9 +259,23 @@ TYPE TYPE Panel*= OBJECT (WMStandardComponents.ImagePanel) (*! tbd: convert some
 		ELSIF LEN(data.m,0)>0 THEN 
 			IF DIM(data.m)=4 THEN m:=ALIAS OF data.m[cur3 MOD LEN(data.m,0),?] ELSE m:=ALIAS OF data.m END;
 			IF DIM(data.m)=2 THEN MatrixRaster.LRealToImage(data.m[*,*], offset, gain, img0);
-			ELSIF orient=0 THEN MatrixRaster.LRealToImage(m[current MOD len[0],*,*], offset, gain, img0);
-			ELSIF orient=1 THEN MatrixRaster.LRealToImage(m[..,current MOD len[1],..], offset, gain, img0);
-			ELSE 					MatrixRaster.LRealToImage(m[..,..,current MOD len[2]], offset, gain, img0);
+			ELSE
+				IF displayMode.Get()=Default THEN
+					IF orient=0 THEN MatrixRaster.LRealToImage(m[current MOD len[0],*,*], offset, gain, img0);
+					ELSIF orient=1 THEN MatrixRaster.LRealToImage(m[..,current MOD len[1],..], offset, gain, img0);
+					ELSE 					MatrixRaster.LRealToImage(m[..,..,current MOD len[2]], offset, gain, img0);
+					END;
+				ELSIF displayMode.Get()=SumIntensity THEN
+					IF orient=0 THEN MatrixRaster.LRealToImage(SUM(m,0), offset, gain/LEN(m,0), img0);
+					ELSIF orient=1 THEN MatrixRaster.LRealToImage(SUM(m,1) , offset, gain/LEN(m,1), img0);
+					ELSE 					MatrixRaster.LRealToImage(SUM(m,2), offset, gain/LEN(m,2), img0);
+					END;
+				ELSIF displayMode.Get()=MaxIntensity THEN
+					IF orient=0 THEN MatrixRaster.LRealToImage(MAX(m,0), offset, gain, img0);
+					ELSIF orient=1 THEN MatrixRaster.LRealToImage(MAX(m,1) , offset, gain, img0);
+					ELSE 					MatrixRaster.LRealToImage(MAX(m,2), offset, gain, img0);
+					END;
+				END;
 			END;
 		ELSE 
 		END;
@@ -265,6 +284,8 @@ TYPE TYPE Panel*= OBJECT (WMStandardComponents.ImagePanel) (*! tbd: convert some
 	PROCEDURE PropertyChanged*(sender, property : ANY);
 		BEGIN
 			IF property = model THEN RecacheProperties; (*implicit invalidate in RecacheProperties*)
+			ELSIF property=orientation THEN RecacheProperties;
+			ELSIF property=displayMode THEN RecacheProperties
 			ELSE	PropertyChanged^(sender, property)
 			END
 		END PropertyChanged;
@@ -304,6 +325,48 @@ BEGIN
 	IF title="" THEN title:="Matrix" END;
 	COPY(title, str);
 END GenerateName;
+
+OPERATOR "SUM"*(CONST t:Tensor; dim: LONGINT):Tensor; (*implementation limitation: 3D*)
+VAR res: Tensor;i:LONGINT;
+BEGIN
+	IF dim=0 THEN 
+		NEW(res, LEN(t)[1..]); FOR i:=0 TO LEN(t,0)-1 DO res:=res+t[i,*,*] END;
+	ELSIF dim=1 THEN
+		NEW(res, LEN(t,0), LEN(t,2)); FOR i:=0 TO LEN(t,1)-1 DO res:=res+t[*,i,*] END;
+	ELSE
+		NEW(res, LEN(t)[..1]); FOR i:=0 TO LEN(t,2)-1 DO res:=res+t[*,*,i] END;		
+	END;
+	RETURN res;
+END "SUM";
+
+
+OPERATOR "MAX"*(CONST t:Tensor; dim: LONGINT):Tensor; (*implementation limitation: 3D*)
+VAR res: Tensor;i:LONGINT; a,b: LONGINT;
+BEGIN
+	IF dim=0 THEN 
+		NEW(res, LEN(t)[1..]); 
+		FOR a:=0 TO LEN(t,1)-1 DO
+			FOR b:=0 TO LEN(t,2)-1 DO
+				res[a,b]:=MAX(t[*,a,b])
+			END;
+		END;
+	ELSIF dim=1 THEN
+		NEW(res, LEN(t,0), LEN(t,2)); 
+		FOR a:=0 TO LEN(t,0)-1 DO
+			FOR b:=0 TO LEN(t,2)-1 DO
+				res[a,b]:=MAX(t[a,*,b])
+			END;
+		END;
+	ELSE
+		NEW(res, LEN(t)[..1]); 
+		FOR a:=0 TO LEN(t,0)-1 DO
+			FOR b:=0 TO LEN(t,1)-1 DO
+				res[a,b]:=MAX(t[a,b,*])
+			END;
+		END;
+	END;
+	RETURN res;
+END "MAX";
 	
 PROCEDURE GenPanel*() : XML.Element;
 VAR
