@@ -50,7 +50,6 @@ Compiler.Compile -p=Win32
 
 	Components/WMChart.Mod
 	Components/WMComboBox.Mod
-	Components/WMDropDownLists.Mod
 	Components/WMLCD.Mod
 	Components/WMLEDLadder.Mod ~
 
