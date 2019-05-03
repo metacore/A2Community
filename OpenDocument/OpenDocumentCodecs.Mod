@@ -504,7 +504,7 @@ TYPE	TextEncoder* = OBJECT(Codecs.TextEncoder)
 			
 			(*doc.WriteContent:=NIL;*)
 			doc.AddStandardFiles;
-			doc.AddFile(contentfile,"content.xml",0,0,res); 
+			doc.AddFile(contentfile,"content.xml", OpenDocument.ZipLevel, OpenDocument.ZipStrategy, res); 
 			doc.AddSignatureFile;
 
 			doc.Write(out);
@@ -673,7 +673,7 @@ TYPE	TextEncoder* = OBJECT(Codecs.TextEncoder)
 			Files.OpenWriter(w,contentfile,0);
 		(*here is the action: WriteTextInternal(text, w, res);*)
 			doc.AddStandardFiles;
-			doc.AddFile(contentfile,"content.xml",0,0,res); 
+			doc.AddFile(contentfile,"content.xml", OpenDocument.ZipLevel, OpenDocument.ZipStrategy, res); 
 			doc.Write(out);
 			out.Update;
 		END WriteText;
@@ -749,7 +749,7 @@ BEGIN
 		out.String('</office:document-content>'); out.Ln;
 		out.Update;
 	doc.AddStandardFiles;
-	doc.AddFile(contentfile,"content.xml",0,0,res); 
+	doc.AddFile(contentfile,"content.xml", OpenDocument.ZipLevel, OpenDocument.ZipStrategy, res); 
 	doc.Write(out);
 	out.Update;
 	

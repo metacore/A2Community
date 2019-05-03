@@ -53,6 +53,9 @@ CONST Generator*="A2 OpenDocument Generator 0.3";
 	SuffixPresentation*="odp"; 	MimeTypePresentation*="application/vnd.oasis.opendocument.presentation";
 	SuffixDatabase*="odb"; 		MimeTypeDatabase*="application/vnd.oasis.opendocument.database";
 	SuffixGraphics*="odg"; 		MimeTypeGraphics*="application/vnd.oasis.opendocument.graphics";
+	
+	ZipLevel* = Zip.BestCompression;
+	ZipStrategy* = Zip.DefaultStrategy;
 
 TYPE Collection=RECORD END;
 
@@ -334,11 +337,11 @@ TYPE Document*=OBJECT
 		PROCEDURE AddStandardFiles*;
 		VAR res:LONGINT; f:Files.File; w:Files.Writer;
 		BEGIN
-			f:=Files.New("mimetype"); IF f#NIL THEN Files.OpenWriter(w,f,0); w.String(mimetype); w.Update; AddFile(f,"mimetype",0,0,res) END;	
-			f:=Files.New("styles.xml"); IF f#NIL THEN Files.OpenWriter(w,f,0); styles.Write(w,NIL,0); w.Update; AddFile(f,"styles.xml",0,0,res) END;
-			f:=Files.New("meta.xml"); IF f#NIL THEN Files.OpenWriter(w,f,0); meta.Write(w,NIL,0); w.Update; AddFile(f,"meta.xml",0,0,res) END;
-			f:=Files.New("settings.xml"); IF f#NIL THEN Files.OpenWriter(w,f,0); settings.Write(w,NIL,0); w.Update; AddFile(f,"settings.xml",0,0,res) END;
-			f:=Files.New("manifest.xml"); IF f#NIL THEN Files.OpenWriter(w,f,0); manifest.Write(w,NIL,0); w.Update; AddFile(f,"META-INF/manifest.xml",0,0,res) END;			
+			f:=Files.New("mimetype"); IF f#NIL THEN Files.OpenWriter(w,f,0); w.String(mimetype); w.Update; AddFile(f,"mimetype",ZipLevel,ZipStrategy,res) END;	
+			f:=Files.New("styles.xml"); IF f#NIL THEN Files.OpenWriter(w,f,0); styles.Write(w,NIL,0); w.Update; AddFile(f,"styles.xml",ZipLevel,ZipStrategy,res) END;
+			f:=Files.New("meta.xml"); IF f#NIL THEN Files.OpenWriter(w,f,0); meta.Write(w,NIL,0); w.Update; AddFile(f,"meta.xml",ZipLevel,ZipStrategy,res) END;
+			f:=Files.New("settings.xml"); IF f#NIL THEN Files.OpenWriter(w,f,0); settings.Write(w,NIL,0); w.Update; AddFile(f,"settings.xml",ZipLevel,ZipStrategy,res) END;
+			f:=Files.New("manifest.xml"); IF f#NIL THEN Files.OpenWriter(w,f,0); manifest.Write(w,NIL,0); w.Update; AddFile(f,"META-INF/manifest.xml",ZipLevel,ZipStrategy,res) END;			
 		END AddStandardFiles;
 		
 		PROCEDURE AddSignatureFile*;
@@ -346,7 +349,7 @@ TYPE Document*=OBJECT
 		BEGIN
 			f:=Files.New("documentsignatures.xml"); 
 			signatures:=Signatures();
-			IF f#NIL THEN Files.OpenWriter(w,f,0); signatures.Write(w,NIL,0); w.Update; AddFile(f,"META-INF/documentsignatures.xml",0,0,res) END;	
+			IF f#NIL THEN Files.OpenWriter(w,f,0); signatures.Write(w,NIL,0); w.Update; AddFile(f,"META-INF/documentsignatures.xml",ZipLevel,ZipStrategy,res) END;	
 		END AddSignatureFile;
 		
 			(* writing first to file, then to ZIP archive; zip is Rider based, not writer/reader based*)
@@ -796,10 +799,14 @@ TYPE Document*=OBJECT
 		"office:settings"
 		*)
 		PROCEDURE Settings():XML.Document;
-		VAR doc: XML.Document; xmlDecl: XML.XMLDecl;
+		VAR doc: XML.Document; xmlDecl: XML.XMLDecl; root: XML.Element;
 		BEGIN
 			NEW(doc); 
 			NEW(xmlDecl); xmlDecl.SetVersion(OpenDocumentVersion); xmlDecl.SetEncoding(DefaultEncoding); doc.AddContent(xmlDecl);
+			NEW(root); root.SetName("office:document-settings"); root.SetAttributeValue("xmlns:office", "urn:oasis:names:tc:opendocument:xmlns:office:1.0");
+			root.SetAttributeValue("xmlns:xlink", "http://www.w3.org/1999/xlink"); root.SetAttributeValue("xmlns:config", "urn:oasis:names:tc:opendocument:xmlns:config:1.0");
+			root.SetAttributeValue("xmlns:ooo", "http://openoffice.org/2004/office"); root.SetAttributeValue("office:version", "1.2");
+			doc.AddContent(root);
 			RETURN doc
 		END Settings;
 		

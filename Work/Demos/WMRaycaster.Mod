@@ -13,11 +13,15 @@ CONST
 	moduleName = "Test";
 
 	THREADS = 8;
+	(*
 	SCREEN_WIDTH = 640;
 	SCREEN_HEIGHT = 480;
+	*)
+	SCREEN_WIDTH = 1024;
+	SCREEN_HEIGHT = 768;
 
-	BENCHMARK = FALSE;
-	TESTS = 50;
+	BENCHMARK = TRUE;
+	TESTS = 500;
 
 	DATA_FILE = "WMRaycaster.zip";
 	DATA_PATH = "pics/";
@@ -164,7 +168,9 @@ TYPE
 	BEGIN
 		SELF.w := w;
 		SELF.td := td;
-		w.IncActiveThreads
+		
+		(* w.IncActiveThreads *)
+		
 	END New;
 
 	PROCEDURE Render;
@@ -341,7 +347,9 @@ TYPE
 			END;
 			Render;
 		END;
+		(*
 		w.DecActiveThreads
+		*)
 	END RenderThread;
 
 	RaycasterWindow* = OBJECT(WMWindowManager.BufferWindow)
@@ -391,7 +399,8 @@ TYPE
 	PROCEDURE Terminate;
 	BEGIN
 		BEGIN {EXCLUSIVE}
-			AWAIT(nActiveThreads = 0)
+			(* AWAIT(nActiveThreads = 0) *)
+			AWAIT(nBucketsComputed >= nBucketsX + THREADS)
 		END;
 	END Terminate;
 
@@ -469,7 +478,10 @@ TYPE
 		PROCEDURE ThreadsRun;
 		BEGIN
 			nBucketsComputed := 0;
-			nActiveThreads := 0;
+			
+			(* nActiveThreads := 0; *)
+			nActiveThreads := nThreadsTotal;
+			
 			FOR iThread := 0 TO nThreadsTotal - 1 DO
 				NEW(td);
 				td.id := iThread;
@@ -477,15 +489,20 @@ TYPE
 				NEW(threads^[iThread], SELF, td)
 			END;
 			BEGIN {EXCLUSIVE}
-				AWAIT(nActiveThreads = 0)
+				(* AWAIT(nActiveThreads = 0) *)
+				AWAIT(nBucketsComputed >= nBucketsX + THREADS)
 			END;
+			
 		END ThreadsRun;
 
 		PROCEDURE RenderFrame(bBenchmark: BOOLEAN);
+		VAR
+			f: LONGREAL;
 		BEGIN
 			NEW(threads, nThreadsTotal);
 
 			nBucketsX := nThreadsTotal * 4;
+			
 			nBucketSizeX := SCREEN_WIDTH DIV nBucketsX;
 
 			IF bBenchmark THEN
@@ -510,10 +527,18 @@ TYPE
 			END;
 
 			IF bBenchmark THEN
-				Strings.FloatToStr(PreciseTimer.GetTime(PreciseTimer.GetTicks() - tTest) / TESTS, 0, 4, 0, str);
+				(* Time and FPS *)
+				f := PreciseTimer.GetTime(PreciseTimer.GetTicks() - tTest) / TESTS;
+				Strings.FloatToStr(f, 0, 5, 0, str); Strings.TrimLeft(str, 20X);
 				context.out.String(", time elapsed: ");
 				context.out.String(str);
+				f := 1 / f;
+				Strings.FloatToStr(f, 0, 1, 0, str); Strings.TrimLeft(str, 20X);
+				context.out.String(" (FPS: ");
+				context.out.String(str);
+				context.out.String(")");
 				context.out.Ln;
+				
 				context.out.String("nThreadComputedBuckets: [");
 				FOR iThread := 0 TO nThreadsTotal - 1 DO
 					IF iThread # 0 THEN
@@ -860,3 +885,13 @@ nThreadsTotal: 2, nBucketsX: 8, bucketSizeX: 80, time elapsed:   0.0058
 nThreadComputedBuckets: [4, 4]
 nThreadsTotal: 4, nBucketsX: 16, bucketSizeX: 40, time elapsed:   0.0060
 nThreadComputedBuckets: [0, 8, 8, 0]
+
+
+nThreadsTotal: 1, nBucketsX: 4, bucketSizeX: 384, time elapsed: 0.01533 (FPS: 65.2)
+nThreadComputedBuckets: [4]
+nThreadsTotal: 2, nBucketsX: 8, bucketSizeX: 192, time elapsed: 0.00861 (FPS: 116.2)
+nThreadComputedBuckets: [4, 4]
+nThreadsTotal: 4, nBucketsX: 16, bucketSizeX: 96, time elapsed: 0.00452 (FPS: 221.1)
+nThreadComputedBuckets: [3, 4, 5, 4]
+nThreadsTotal: 8, nBucketsX: 32, bucketSizeX: 48, time elapsed: 0.00333 (FPS: 300.3)
+nThreadComputedBuckets: [4, 4, 4, 4, 4, 4, 4, 4]
