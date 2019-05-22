@@ -38,11 +38,11 @@ Compiler.Compile -p=Win32
 
 	Libs/MathUtils.Mod
 	Libs/Windows.PreciseTimer.Mod
-
-	Libs/Generics.Mod
-
+	
 	(* deprecated *)
-	Libs/Containers.Mod ~
+	Libs/Containers.Mod
+
+	Libs/Generics.Mod ~
 
 *** Components ***
 
@@ -77,6 +77,8 @@ Compiler.Compile -p=Win32
 
 	Tools/ImportCollector.Mod
 	Tools/ImportGraph.Mod
+	Tools/PascalScanner.Mod
+	Tools/PascalProjectCombine.Mod
 	Tools/Windows.WinStarter.Mod ~
 
 *** Demos ***
