@@ -6,7 +6,7 @@ VERSION 1.1
 *)
 IMPORT 
 	SYSTEM,
-	KernelLog, WMComponents, Commands, Options,
+	KernelLog, WMComponents, Commands,
 	Modules,WM := WMWindowManager, 
 	WMGraphics, WMRectangles, Strings,
 	WMStandardComponents,
@@ -263,7 +263,8 @@ TYPE
 			
 			adr:=SELF;
 
-			font:=WMGraphics.GetFont("Courier", 12, {});
+(*			font:=WMGraphics.GetFont("Courier", 12, {});*)
+			font:=WMGraphics.GetFont("Vera", 14, {});
 			fillColor.Set (clrBackGround);
 (*			textColor:=LONGINT(0FFFF00FFH);*)
 
@@ -271,7 +272,8 @@ TYPE
 			selectionColor:=clrSelection;
 			
 			SetNameAsString(Strings.NewString("MemPanel"));
-			SetFont(WMGraphics.GetFont((*"Courier"*)"Courier", 12, {0}));
+(*			SetFont(WMGraphics.GetFont((*"Courier"*)"Courier", 12, {0}));*)
+			SetFont(WMGraphics.GetFont((*"Courier"*)"VeraMo", 12, {}));
 
 			cursor:=0;
 (*			KernelLog.String("fontHeight= ");KernelLog.Int(fontHeight,0); KernelLog.Ln; 
@@ -880,33 +882,30 @@ VAR
 
 (** Standard multiple windows controlled by number, non-restorable. *)
 PROCEDURE Open* (context : Commands.Context); (** [Options] {filename['@'position]} ~ *)
-VAR
-	winstance: Window;
-	options: Options.Options;
-	moduleName, fileName, msg: ARRAY 257 OF CHAR;
-	module: Modules.Module;
-	res: LONGINT;
+VAR winstance : Window;
+	filename : ARRAY 256 OF CHAR;
+
 BEGIN
-	NEW(winstance);
-	NEW(options);
-	options.Add("f", "file", Options.String);
-	options.Add("m", "module", Options.String);
-	IF options.Parse(context.arg, context.out) THEN
-		IF options.GetString("file", fileName) THEN
-			IF fileName # "" THEN winstance.Load(fileName) END
-		ELSIF options.GetString("module", moduleName) THEN
-			module := Modules.ThisModule(moduleName, res, msg);
-			IF res # Modules.Ok THEN
-				context.out.String(msg); context.out.Ln; RETURN
-			END;
-			winstance.memPanel.SetLimit(ADDRESSOF(module.refs[0]), LEN(module.refs));
-			winstance.memPanel.SetAdrViewMode(TRUE)
-		END
-	END;
+	NEW (winstance);
+	
 (*	winstance.DisableUpdate;
 	winstance.EnableUpdate;*)
-END Open;
+	WHILE context.arg.GetString(filename) DO
+		Strings.Trim(filename,' ');
+		KernelLog.String("filename= "); KernelLog.String(filename);  KernelLog.Ln;
+		IF  filename # "" THEN winstance.Load(filename);  END
+	END;
 
+END Open;
+PROCEDURE Test*;
+VAR winstance : Window;
+
+BEGIN 
+	NEW (winstance);
+	winstance.memPanel.SetAdrViewMode(TRUE);
+	winstance.memPanel.SetLimit(ADDRESSOF(winstance.memPanel.font), 4096);
+
+END Test;
 PROCEDURE IncCount;	(* E *)
 BEGIN {EXCLUSIVE}
 	INC (nofWindows);
@@ -936,25 +935,20 @@ BEGIN
 	manager := WM.GetDefaultManager();
 
 	Modules.InstallTermHandler(Cleanup)
-END WMHexEditor.
+END WMHexEditor.Open~
 
-WMHexEditor.Open -f=WMHexEditor.GofW ~
-WMHexEditor.Open -m=WMHexEditor ~
-
-SystemTools.Free WMHexEditor~
-
-
-
+SystemTools.Free  WMHexEditor~
 
 WMDebugger.Open  WMHexEditor.Mod~
 
 SystemTools.Free WMDebugger BtMenus BtDTraps BtDbgPanel I386Decoder2 BtDecoder WMComboBox WMHexEditor ~
 
 WMHexEditor.Open~		
-
+WMHexEditor.Test~	
 -b=AMD --warnings --objectFile=Generic --newObjectFile --mergeSections --symbolFileExtension=".SymW"  objectFileExtension=.GofW
 
 
 
 FSTools.CloseFiles A2.exe ~
 WMKeyCode.Open ~
+WMHexEditor.Open rugby.wav ~
