@@ -11,13 +11,8 @@ TYPE
 		active*:BOOLEAN;
 		next*:BrkPnt;
 	END;
-	DebugHandler* = PROCEDURE {DELEGATE} ( VAR int: Kernel32.Context;  VAR exc: Kernel32.ExceptionRecord;  VAR handled: BOOLEAN );
 
 	
-VAR
-	brkPnt*:BPList;
-	exceptionhandler: Objects.ExceptionHandler; (*Save system handler here*)
-	debughandler:DebugHandler;
 TYPE
 
 	BPList* = OBJECT
@@ -202,57 +197,15 @@ END NewObjectFile;
 (* Debbuger exception handler. *)
 PROCEDURE Exception( VAR int: Kernel32.Context;  VAR exc: Kernel32.ExceptionRecord;  VAR handled: BOOLEAN );
 BEGIN  (* interrupts off *)
-		handled := FALSE;
-		IF Trace THEN KernelLog.String("Debug exception handler! "); KernelLog.Ln; END;
-		IF debughandler#NIL THEN
-			debughandler(int,exc,handled);
-			IF Trace THEN KernelLog.String("user complit! "); KernelLog.Ln; END;
-		END;
-		IF (~handled)&(exceptionhandler#NIL) THEN
-			IF Trace THEN KernelLog.String("do system! "); KernelLog.Ln; END;
-			exceptionhandler(int,exc,handled);
-		END;
-FINALLY
-		(* if trap occurs in this procedure, then go on working right here *)
-(*		KernelLog.String("Houston, we have a problem!"); KernelLog.Ln; *)
 END Exception;
-
-PROCEDURE Install*;
-VAR
-	adr:ADDRESS;
-BEGIN
-	HALT(18);
-(*! TODO	GetProcedure('Traps', 'Exception',adr);*)
-	exceptionhandler:=SYSTEM.VAL(Objects.ExceptionHandler,adr);
-	Objects.InstallExceptionHandler( Exception );
-END Install;
-
-(** *)
-PROCEDURE InstallDbgHandler*(hndlr:DebugHandler);
-BEGIN
-	debughandler:=hndlr;
-	Install();
-END InstallDbgHandler;
-
-PROCEDURE RemoveDbgHandler*();
-BEGIN
-	debughandler:=NIL;
-END RemoveDbgHandler;
 
 (** Termination handler. Removes the window from the display space when the module is unloaded. *)
 PROCEDURE Cleanup;	(* K *)
 BEGIN
-		IF exceptionhandler#NIL THEN
-			Objects.InstallExceptionHandler( exceptionhandler );
-			KernelLog.String( "Traps: TrapHandler Restored!" );  KernelLog.Ln;
-		ELSE
-			KernelLog.String( "Not need to restore traps handler !" );  KernelLog.Ln;
-		END;
 END Cleanup;
 
 BEGIN
 	Modules.InstallTermHandler(Cleanup);
-	NEW(brkPnt);
 END DebuggerBase.
 
 
