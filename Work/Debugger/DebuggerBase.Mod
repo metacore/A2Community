@@ -1,6 +1,6 @@
 (**  AUTHOR "BohdanT"; PURPOSE "Debugger base";  **)
 MODULE DebuggerBase;
-IMPORT SYSTEM, Kernel32, Objects, Modules, Reflection, KernelLog;
+IMPORT (*SYSTEM, Kernel32, Objects, Modules,*)  KernelLog;
 CONST
 	Trace = FALSE;
 TYPE
@@ -19,10 +19,9 @@ TYPE
 	VAR
 		list*,
 		tmp*:BrkPnt;
-		active:BOOLEAN;
+		active*:BOOLEAN;
 		PROCEDURE &Init*;
 		BEGIN
-			(*	KernelLog.String("brkPnt = active"); KernelLog.Ln; *)
 			active:=TRUE; 
 		END Init;
 
@@ -120,18 +119,9 @@ TYPE
 		END DumpList;
 		
 		PROCEDURE SetBrk*(bp:BrkPnt);
-		BEGIN
-			IF active THEN
-(*				KernelLog.String("active"); KernelLog.Ln; *)
-				SYSTEM.GET(bp.adr, bp.c);
-				SYSTEM.PUT(bp.adr, 0CCX);
-			END
 		END SetBrk;
 
 		PROCEDURE ClrBrk*(bp:BrkPnt);
-		BEGIN
-(*				KernelLog.String("clear "); KernelLog.Ln; *)
-				SYSTEM.PUT(bp.adr, bp.c);
 		END ClrBrk;
 		
 		PROCEDURE ChgState*(state:BOOLEAN);
@@ -170,34 +160,7 @@ TYPE
 		END ChgState;
 
 	END BPList;
- 
 
-
-
-
-PROCEDURE FindEIPByModulePC*(CONST modn:ARRAY OF CHAR;PC:LONGINT):LONGINT;
-VAR
-	m : Modules.Module; 
-BEGIN
-	m := Modules.root;
-	WHILE (m # NIL) & (m.name # modn) DO m := m.next END;
-	IF m # NIL THEN
-	   RETURN PC+SYSTEM.ADR(m.code[0]);
-        ELSE
-          RETURN -1;
-        END;
-END FindEIPByModulePC;
-
-PROCEDURE NewObjectFile*(refs: Modules.Bytes): BOOLEAN;
-BEGIN
-	RETURN (refs # NIL) & (LEN(refs) >0) & (refs[0]=0FFX);
-END NewObjectFile;
-
-
-(* Debbuger exception handler. *)
-PROCEDURE Exception( VAR int: Kernel32.Context;  VAR exc: Kernel32.ExceptionRecord;  VAR handled: BOOLEAN );
-BEGIN  (* interrupts off *)
-END Exception;
 
 (** Termination handler. Removes the window from the display space when the module is unloaded. *)
 PROCEDURE Cleanup;	(* K *)
@@ -205,7 +168,7 @@ BEGIN
 END Cleanup;
 
 BEGIN
-	Modules.InstallTermHandler(Cleanup);
+	(*Modules.InstallTermHandler(Cleanup);*)
 END DebuggerBase.
 
 

@@ -10,7 +10,32 @@ VAR
 	debughandler:DebugHandler;
 	exceptionhandler: Objects.ExceptionHandler; (*Save system handler here*)
 VAR
-	brkPnt*:DebuggerBase.BPList;
+	brkPnt*:BPList;
+TYPE	
+	BPList* = OBJECT(DebuggerBase.BPList)
+	VAR
+		list*,
+		tmp*:DebuggerBase.BrkPnt;
+		PROCEDURE &Init*;
+		BEGIN
+			Init^;
+		END Init;
+		
+		PROCEDURE SetBrk*(bp:DebuggerBase.BrkPnt);
+		BEGIN
+			IF active THEN
+(*				KernelLog.String("active"); KernelLog.Ln; *)
+				SYSTEM.GET(bp.adr, bp.c);
+				SYSTEM.PUT(bp.adr, 0CCX);
+			END
+		END SetBrk;
+
+		PROCEDURE ClrBrk*(bp:DebuggerBase.BrkPnt);
+		BEGIN
+(*				KernelLog.String("clear "); KernelLog.Ln; *)
+				SYSTEM.PUT(bp.adr, bp.c);
+		END ClrBrk;
+	END BPList;
 
 PROCEDURE FindEIPByModulePC*(CONST modn:ARRAY OF CHAR;PC:LONGINT):LONGINT;
 VAR
