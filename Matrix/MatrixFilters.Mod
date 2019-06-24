@@ -182,13 +182,13 @@ TYPE
 			VAR 
 			coeff*: Vector;
 			origin*:LONGINT;
-			PROCEDURE InitFIR*(coeff:Vector; origin:LONGINT); BEGIN SELF.coeff:=coeff; SELF.origin:=origin END InitFIR;
+			PROCEDURE InitFIR*(CONST coeff:Vector; origin:LONGINT); BEGIN SELF.coeff:=coeff; SELF.origin:=origin END InitFIR;
 		END FIRFilter;
 		
 		IIRFilter*=OBJECT(Filter)
 			VAR poles*: Vector; 
 			gain*: Datatype;
-			PROCEDURE InitIIR*(poles:Vector; gain:Datatype); BEGIN SELF.poles:=poles; SELF.gain:=gain END InitIIR;
+			PROCEDURE InitIIR*(CONST poles:Vector; gain:Datatype); BEGIN SELF.poles:=poles; SELF.gain:=gain END InitIIR;
 		END IIRFilter;
 		
 		Convolver*=OBJECT
@@ -224,14 +224,14 @@ TYPE
 			verifiedBoundaries*:SET
 		END WaveletFamily;
 
-PROCEDURE CreateFIRFilter*(coeff:Vector; origin:LONGINT):FIRFilter;
+PROCEDURE CreateFIRFilter*(CONST coeff:Vector; origin:LONGINT):FIRFilter;
 VAR FIR:FIRFilter;
 BEGIN
 	NEW(FIR); FIR.coeff:=coeff; FIR.origin:=origin;	
 	RETURN FIR;
 END CreateFIRFilter;
 
-PROCEDURE CreateIIRFilter*(poles:Vector; gain:Datatype):IIRFilter;
+PROCEDURE CreateIIRFilter*(CONST poles:Vector; gain:Datatype):IIRFilter;
 VAR IIR:IIRFilter;
 BEGIN
 	NEW(IIR); IIR.poles:=poles; IIR.gain:=gain;
@@ -431,9 +431,9 @@ PROCEDURE  CreateSplineFilter* (name: LONGINT):Filter;
 				NEW(coeff,1); coeff[0]  :=  1;
 				(*apply the Haar filter*)
 				NEW(coeffB,LEN(coeff)+1);
-				coeffB[0]:=coeff[0]/2; coeffB[LEN(coeffB)-1]:=coeff[LEN(coeff)-1]/2;
-				FOR i:=0 TO LEN (coeff)-2 DO coeffB[i+1]:=(coeff[i]+coeff[i+1])/2; END;
-				FIR:=CreateFIRFilter(coeffB,LEN(coeffB) DIV 2-1);
+				coeffB[0]:=coeff[0]/2; coeffB[LEN(coeffB,0)-1]:=coeff[LEN(coeff,0)-1]/2;
+				FOR i:=0 TO LEN(coeff,0)-2 DO coeffB[i+1]:=(coeff[i]+coeff[i+1])/2; END;
+				FIR:=CreateFIRFilter(coeffB,LEN(coeffB,0) DIV 2-1);
 				RETURN FIR
 			| LeastSquareSplineCentered1Down2:	(*first order spline*)
 					NEW(coeff,41);
@@ -469,9 +469,9 @@ PROCEDURE  CreateSplineFilter* (name: LONGINT):Filter;
 				
 					(*apply the Haar filter*)
 					NEW(coeffB,LEN(coeff)+1);
-					coeffB[0]:=coeff[0]/2; coeffB[LEN(coeffB)-1]:=coeff[LEN(coeff)-1]/2;
-					FOR i:=0 TO LEN (coeff)-2 DO coeffB[i+1]:=(coeff[i]+coeff[i+1])/2; END;
-					FIR:=CreateFIRFilter(coeffB,LEN(coeffB) DIV 2-1);
+					coeffB[0]:=coeff[0]/2; coeffB[LEN(coeffB,0)-1]:=coeff[LEN(coeff,0)-1]/2;
+					FOR i:=0 TO LEN(coeff,0)-2 DO coeffB[i+1]:=(coeff[i]+coeff[i+1])/2; END;
+					FIR:=CreateFIRFilter(coeffB,LEN(coeffB,0) DIV 2-1);
 				RETURN FIR
 			| LeastSquareSplineCentered2Down2:	(*quadratic spline*)
 				NEW(coeff,41);
@@ -506,9 +506,9 @@ PROCEDURE  CreateSplineFilter* (name: LONGINT):Filter;
 				(*FIR:=CreateFIRFilter(coeff,20);*)
 					(*apply the Haar filter*)
 					NEW(coeffB,LEN(coeff)+1);
-					coeffB[0]:=coeff[0]/2; coeffB[LEN(coeffB)-1]:=coeff[LEN(coeff)-1]/2;
-					FOR i:=0 TO LEN (coeff)-2 DO coeffB[i+1]:=(coeff[i]+coeff[i+1])/2; END;
-					FIR:=CreateFIRFilter(coeffB,LEN(coeffB) DIV 2-1);
+					coeffB[0]:=coeff[0]/2; coeffB[LEN(coeffB,0)-1]:=coeff[LEN(coeff,0)-1]/2;
+					FOR i:=0 TO LEN(coeff,0)-2 DO coeffB[i+1]:=(coeff[i]+coeff[i+1])/2; END;
+					FIR:=CreateFIRFilter(coeffB,LEN(coeffB,0) DIV 2-1);
 				RETURN FIR
 			| LeastSquareSplineCentered3Down2: (*cubic spline*)
 				NEW(coeff,41);
@@ -543,9 +543,9 @@ PROCEDURE  CreateSplineFilter* (name: LONGINT):Filter;
 
 					(*apply the Haar filter*)
 					NEW(coeffB,LEN(coeff)+1);
-					coeffB[0]:=coeff[0]/2; coeffB[LEN(coeffB)-1]:=coeff[LEN(coeff)-1]/2;
-					FOR i:=0 TO LEN (coeff)-2 DO coeffB[i+1]:=(coeff[i]+coeff[i+1])/2; END;
-					FIR:=CreateFIRFilter(coeffB,LEN(coeffB) DIV 2-1);
+					coeffB[0]:=coeff[0]/2; coeffB[LEN(coeffB,0)-1]:=coeff[LEN(coeff,0)-1]/2;
+					FOR i:=0 TO LEN(coeff,0)-2 DO coeffB[i+1]:=(coeff[i]+coeff[i+1])/2; END;
+					FIR:=CreateFIRFilter(coeffB,LEN(coeffB,0) DIV 2-1);
 					RETURN FIR
 			| LeastSquareSplineCentered4Down2: (*4th degree spline*)
 				NEW(coeff,41);
@@ -580,9 +580,9 @@ PROCEDURE  CreateSplineFilter* (name: LONGINT):Filter;
 				(*FIR:=CreateFIRFilter(coeff,20);*)
 					(*apply the Haar filter*)
 					NEW(coeffB,LEN(coeff)+1);
-					coeffB[0]:=coeff[0]/2; coeffB[LEN(coeffB)-1]:=coeff[LEN(coeff)-1]/2;
-					FOR i:=0 TO LEN (coeff)-2 DO coeffB[i+1]:=(coeff[i]+coeff[i+1])/2; END;
-					FIR:=CreateFIRFilter(coeffB,LEN(coeffB) DIV 2-1);
+					coeffB[0]:=coeff[0]/2; coeffB[LEN(coeffB,0)-1]:=coeff[LEN(coeff,0)-1]/2;
+					FOR i:=0 TO LEN(coeff,0)-2 DO coeffB[i+1]:=(coeff[i]+coeff[i+1])/2; END;
+					FIR:=CreateFIRFilter(coeffB,LEN(coeffB,0) DIV 2-1);
 				RETURN FIR
 	(*Centered Least Square Filters: here are the symmetric ones. use the standard upsampling procedures from DSPConvolve.Mod*)
 	
@@ -592,16 +592,16 @@ PROCEDURE  CreateSplineFilter* (name: LONGINT):Filter;
 				FOR i:=1 TO mid DO coeff[mid+i] := coeff[mid-i]; END;
 				NEW(coeffB,LEN(coeff)+1);
 				(*apply the Haar filter*)
-				coeffB[0]:=coeff[0]/2; coeffB[LEN(coeffB)-1]:=coeff[LEN(coeff)-1]/2;
-				FOR i:=0 TO LEN (coeff)-2 DO coeffB[i]:=(coeff[i]+coeff[i+1])/2; END;
+				coeffB[0]:=coeff[0]/2; coeffB[LEN(coeffB,0)-1]:=coeff[LEN(coeff,0)-1]/2;
+				FOR i:=0 TO LEN(coeff,0)-2 DO coeffB[i]:=(coeff[i]+coeff[i+1])/2; END;
 				FIR:=CreateFIRFilter(coeffB,mid);
 				RETURN FIR
 			| LeastSquareSplineCentered1Up2: (*1 order spline*)
 				NEW(coeff,3); coeff[0]:=0.5; coeff[1]:=1; coeff[2]:=0.5; 
 				NEW(coeffB,LEN(coeff)+1);
 				(*apply the Haar filter*)
-				coeffB[0]:=coeff[0]/2; coeffB[LEN(coeffB)-1]:=coeff[LEN(coeff)-1]/2;
-				FOR i:=0 TO LEN (coeff)-2 DO coeffB[i]:=(coeff[i]+coeff[i+1])/2; END;
+				coeffB[0]:=coeff[0]/2; coeffB[LEN(coeffB,0)-1]:=coeff[LEN(coeff,0)-1]/2;
+				FOR i:=0 TO LEN(coeff,0)-2 DO coeffB[i]:=(coeff[i]+coeff[i+1])/2; END;
 				FIR:=CreateFIRFilter(coeffB,mid);
 				RETURN FIR
 			| LeastSquareSplineCentered2Up2: (*2 order spline*)
@@ -622,8 +622,8 @@ PROCEDURE  CreateSplineFilter* (name: LONGINT):Filter;
 				FOR i:=1 TO mid DO coeff[mid+i] := coeff[mid-i]; END;
 				NEW(coeffB,LEN(coeff)+1);
 				(*apply the Haar filter*)
-				coeffB[0]:=coeff[0]/2; coeffB[LEN(coeffB)-1]:=coeff[LEN(coeff)-1]/2;
-				FOR i:=0 TO LEN (coeff)-2 DO coeffB[i]:=(coeff[i]+coeff[i+1])/2; END;
+				coeffB[0]:=coeff[0]/2; coeffB[LEN(coeffB,0)-1]:=coeff[LEN(coeff,0)-1]/2;
+				FOR i:=0 TO LEN(coeff,0)-2 DO coeffB[i]:=(coeff[i]+coeff[i+1])/2; END;
 				FIR:=CreateFIRFilter(coeffB,mid);
 				RETURN FIR
 			|LeastSquareSplineCentered3Up2: (*cubic spline*)
@@ -648,8 +648,8 @@ PROCEDURE  CreateSplineFilter* (name: LONGINT):Filter;
 					FOR i:=1 TO mid DO coeff[mid+i] := coeff[mid-i]; END;
 					NEW(coeffB,LEN(coeff)+1);
 					(*apply the Haar filter*)
-					coeffB[0]:=coeff[0]/2; coeffB[LEN(coeffB)-1]:=coeff[LEN(coeff)-1]/2;
-					FOR i:=0 TO LEN (coeff)-2 DO coeffB[i]:=(coeff[i]+coeff[i+1])/2; END;
+					coeffB[0]:=coeff[0]/2; coeffB[LEN(coeffB,0)-1]:=coeff[LEN(coeff,0)-1]/2;
+					FOR i:=0 TO LEN(coeff,0)-2 DO coeffB[i]:=(coeff[i]+coeff[i+1])/2; END;
 					FIR:=CreateFIRFilter(coeffB,mid);
 					RETURN FIR
 			|LeastSquareSplineCentered4Up2: (*4th order spline*)
@@ -678,8 +678,8 @@ PROCEDURE  CreateSplineFilter* (name: LONGINT):Filter;
 					FOR i:=1 TO mid DO coeff[mid+i] := coeff[mid-i]; END;
 					NEW(coeffB,LEN(coeff)+1);
 					(*apply the Haar filter*)
-					coeffB[0]:=coeff[0]/2; coeffB[LEN(coeffB)-1]:=coeff[LEN(coeff)-1]/2;
-					FOR i:=0 TO LEN (coeff)-2 DO coeffB[i]:=(coeff[i]+coeff[i+1])/2; END;
+					coeffB[0]:=coeff[0]/2; coeffB[LEN(coeffB,0)-1]:=coeff[LEN(coeff,0)-1]/2;
+					FOR i:=0 TO LEN(coeff,0)-2 DO coeffB[i]:=(coeff[i]+coeff[i+1])/2; END;
 					FIR:=CreateFIRFilter(coeffB,mid);
 				RETURN FIR	
 
