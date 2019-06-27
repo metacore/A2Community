@@ -250,6 +250,7 @@ TYPE
 
 	END Convolver;  
 
+BEGIN
 END LinearConvolve.
 
 fofPC.Compile \s *

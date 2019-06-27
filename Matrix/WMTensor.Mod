@@ -5,6 +5,10 @@ CONST 	signed=1;
 		lut=2;
 		rgb=3;
 		heat=4;
+		
+		Frontal*=0;
+		Sagittal*=1;
+		Horizontal*=2;
 
 (*! to do: improve current limitation to subtensor[0,?] display. Generalize to 1D, 2D and 5D+ data*)
  
@@ -27,7 +31,8 @@ TYPE Window*= OBJECT (WM.BufferWindow) (* or could use WM.DoubleBufferWindow or 
 
 	PROCEDURE &Initialize*(CONST m: Tensor; CONST title: ARRAY OF CHAR; orientation:LONGINT);
 	BEGIN
-		ASSERT(DIM(m) IN {3,4}, 200);
+		ASSERT(DIM(m) IN {2, 3,4}, 200);
+		ASSERT(LEN(m)>0, 201);
 		SELF.orientation:=orientation;
 		IF LEN(m)>0 THEN
 			IF ~exists THEN 
@@ -455,5 +460,5 @@ WMTensor.RemoveWindows ~ (*close and remove all stack windows*)
 WMTensor.RemoveWindows 5 ~ (* close and remove a number of stack windows*)
 WMTensor.Test
 
-SystemTools.FreeDownTo WMTensor~
+System.FreeDownTo WMTensor~
 

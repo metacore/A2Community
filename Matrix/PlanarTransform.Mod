@@ -7,6 +7,7 @@ IMPORT PlanarBase, LinearConvolve, Wavelets, Filters:=LinearFilters, MatrixBSpli
 TYPE 
 	Datatype* = PlanarBase.Datatype;  Dataarray* = ARRAY [ * ] OF Datatype;  
 	Rect* = ARRAY [ * , * ] OF Datatype;  
+	(*SplineCurve* = ARRAY [ 2 , * ] OF Datatype;  ;*)
 	Cube* = ARRAY [ * , * , * ] OF Datatype;  
 	Signal* = ARRAY [ * ] OF Datatype;  
 
@@ -25,6 +26,19 @@ CONST
 		IF (LEN(out,0)=0) & (LEN(in,0)#0) THEN NEW( out, LEN(in,0),LEN(in,1)) END;
 		Filter2D( in, out, Filters.CreateSplineFilter( Filters.InverseBSpline0 + splinedegree ), directions, mirrorH );  
 	END fromSpline2D;  
+	(*
+	PROCEDURE toSplineCurve*( CONST in: Rect;  VAR out: Rect;  splinedegree: INTEGER;  boundary: LONGINT );  
+	BEGIN 
+		IF (LEN(out,0)=0) & (LEN(in,0)#0) THEN NEW( out, LEN(in,0),LEN(in,1)) END;
+		Filter2D( in, out, Filters.CreateSplineFilter( Filters.DirectBSpline0 + splinedegree ), directions, mirrorH );  
+	END toSplineCurve;  
+
+	PROCEDURE fromSplineCurve*( CONST in: Rect;  VAR out: Rect;  splinedegree: INTEGER;  boundary: LONGINT );  
+	BEGIN 
+		IF (LEN(out,0)=0) & (LEN(in,0)#0) THEN NEW( out, LEN(in,0),LEN(in,1)) END;
+		Filter2D( in, out, Filters.CreateSplineFilter( Filters.InverseBSpline0 + splinedegree ), directions, mirrorH );  
+	END fromSplineCurve;  
+*)
 
 	PROCEDURE Filter2D*( CONST data: Rect;  VAR resdata: Rect;  filter: Filters.Filter;  directions: SET;  boundary: INTEGER );  
 	VAR convolver: LinearConvolve.Convolver;  
