@@ -1,5 +1,93 @@
 MODULE MatrixRaster ;	(**  AUTHOR "Patrick Hunziker"; PURPOSE "visualize Matrix contents";  **)
-IMPORT Raster , Reals, SYSTEM, WM:=WMWindowManager, Strings, RasterPixelFormats;
+IMPORT Raster , Reals, SYSTEM, Files, WMGraphics, Rand:=Random, WM:=WMWindowManager, Strings, RasterPixelFormats;
+
+CONST Random=0;
+
+VAR rand:Rand.Generator;
+
+TYPE Enumerator*=OBJECT(Files.Enumerator) (*extract single or multiple images from file directory using path, mask; yield tensor data *)
+		VAR currentImg*: WMGraphics.Image;
+			array: ARRAY [?] OF INTEGER;
+			w*,h*, depth*:LONGINT;
+			scale*: LONGINT;
+			
+		PROCEDURE &Init*;
+		BEGIN
+			w:=100; h:=100;
+		END Init;
+		
+		PROCEDURE GetImage*(VAR name:ARRAY OF CHAR; VAR flags:SET; VAR time, date, size: LONGINT ):WMGraphics.Image; (*get next image*)
+		BEGIN
+			currentImg:=NIL;
+			WHILE HasMoreEntries() & (currentImg=NIL) DO
+				IF GetEntry(name, flags, time, date, size) THEN
+					currentImg:=WMGraphics.LoadImage(name, FALSE)
+				ELSE 
+					name:=""; flags:={}; time:=0; date:=0; size:=0;
+				END;
+			END;
+			RETURN currentImg
+		END GetImage;
+
+		PROCEDURE SetRoiSize*(w,h, scale: LONGINT);
+		BEGIN
+			SELF.w:=w; SELF.h:=h; 
+			ASSERT(scale=1, 300);SELF.scale:=scale;
+		END SetRoiSize;
+		
+		PROCEDURE GetBGR*(img: Raster.Image): ARRAY [?] OF INTEGER; (* yield [BGR,height, width] of current image.   *)
+		BEGIN
+			(*! implementation limitation: scaling not yet implemented *)
+			ImageToArray(img, array); (*img is BGRA, array is [4,..,..] OF INTEGER*)
+			RETURN array [0..2,?];
+			(*	RETURN array[0,*,*] + array[1,*,*] + array[2,*,*]; (*grayscale*)			*)
+		END GetBGR;
+
+		PROCEDURE GetGray*(img: Raster.Image): ARRAY [?] OF INTEGER; (* yield [height, width].  of current image*)
+		BEGIN
+			(*! implementation limitation: scaling not yet implemented *)
+			ImageToArray(img, array); (*img is BGRA, array is [4,..,..] OF INTEGER*)
+			RETURN array[0,*,*] + array[1,*,*] + array[2,*,*]; (*grayscale*)
+		END GetGray;
+
+
+		PROCEDURE GetRoiBGR*(img: Raster.Image; x,y:LONGINT): ARRAY [?] OF INTEGER; (* yield ROI[BGR,h,w] of current image;  use "Random" for random position within window*)
+		BEGIN
+			IF x=0 THEN x:= rand.Dice(img.width-w) END; (*! implementation limitation: scaling not yet implemented *)
+			IF y=0 THEN y:= rand.Dice(img.height-h) END;
+			ImageToArray(img, array); (*img is BGRA, array is [4,..,..] OF INTEGER*)
+			RETURN array [0..2,y..y+h-1, x..x+w-1];
+		END GetRoiBGR;
+
+		PROCEDURE GetRoiGray*(img: Raster.Image; x,y:LONGINT): ARRAY [?] OF INTEGER; (* yield ROI[h,w] of current Image.  use "Random" for random position within window*)
+		BEGIN
+			IF x=0 THEN x:= rand.Dice(img.width-w) END; (*! implementation limitation: scaling not yet implemented *)
+			IF y=0 THEN y:= rand.Dice(img.height-h) END;
+			ImageToArray(img, array); (*img is BGRA, array is [4,..,..] OF INTEGER*)
+			RETURN array[0,*,*] + array[1,*,*] + array[2,*,*]; (*BGR to grayscale*)
+		END GetRoiGray;
+		
+		PROCEDURE GetRoiStackRandom*(img: Raster.Image; depth, colorPlanes: LONGINT): ARRAY [?] OF INTEGER; (* from an image, extract a stack of ROIs with random positions  *)
+		VAR i:LONGINT;
+		BEGIN
+			SELF.depth:=depth;
+			IF colorPlanes=1 THEN 
+				IF LEN(RESULT)#[depth,h,w] THEN NEW(RESULT,[depth,h,w]) END;
+				FOR i:=0 TO depth-1 DO
+					RESULT[i,?]:=GetRoiGray(img, Random, Random);
+				END;
+			ELSIF LEN(RESULT)#[depth,colorPlanes, h,w] THEN 
+				NEW(RESULT,[depth,colorPlanes, h,w]); (* BGR *)
+				FOR i:=0 TO depth-1 DO
+					RESULT[i,?]:=GetRoiBGR(img, Random, Random);
+				END;
+			END;
+			RETURN RESULT
+		END GetRoiStackRandom;
+		
+	END Enumerator;
+
+
 
 PROCEDURE SIntToImage*(CONST data:ARRAY [*,*] OF SHORTINT; VAR palette: ARRAY [*,*] OF LONGINT; im:Raster.Image); (*palette values in range 0..10000H*)
 VAR F:Raster.Format; pal:Raster.Palette; i,x,y:LONGINT;
@@ -373,6 +461,7 @@ VAR
 	res, w, h, x : LONGINT;
 	
 BEGIN
+	 
 	
 	NEW(s,100,100); s[50..80,40..90]:=100;
 	NEW(i,100,100); i[50..80,40..90]:=100; 
@@ -422,7 +511,8 @@ BEGIN
 	*)
 END Test;
 
-
+BEGIN
+	NEW(rand);
 END MatrixRaster.
 
 System.FreeDownTo
