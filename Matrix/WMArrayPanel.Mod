@@ -261,9 +261,9 @@ TYPE TYPE Panel*= OBJECT (WMStandardComponents.ImagePanel) (*! tbd: convert some
 			IF DIM(data.m)=2 THEN MatrixRaster.LRealToImage(data.m[*,*], offset, gain, img0);
 			ELSE
 				IF displayMode.Get()=Default THEN
-					IF orient=0 THEN MatrixRaster.LRealToImage(m[current MOD len[0],*,*], offset, gain, img0);
-					ELSIF orient=1 THEN MatrixRaster.LRealToImage(m[..,current MOD len[1],..], offset, gain, img0);
-					ELSE 					MatrixRaster.LRealToImage(m[..,..,current MOD len[2]], offset, gain, img0);
+					IF orient=0 THEN MatrixRaster.LRealToImage(m[current MOD LEN(m)[0],*,*], offset, gain, img0);
+					ELSIF orient=1 THEN MatrixRaster.LRealToImage(m[..,current MOD LEN(m)[1],..], offset, gain, img0);
+					ELSE 					MatrixRaster.LRealToImage(m[..,..,current MOD LEN(m)[2]], offset, gain, img0);
 					END;
 				ELSIF displayMode.Get()=SumIntensity THEN
 					IF orient=0 THEN MatrixRaster.LRealToImage(SUM(m,0), offset, gain/LEN(m,0), img0);
