@@ -412,7 +412,8 @@ END AddWindow;
 *)
 
 PROCEDURE AddWindow*(CONST tensor: ARRAY [?] OF LONGREAL; CONST title: ARRAY OF CHAR);
-VAR window:WMComponents.FormWindow; w,h:SIZE;
+VAR window:WMComponents.FormWindow; 
+	w,h:SIZE;
 	panel:Panel;
 BEGIN
 	IF DIM(tensor)>1 THEN w:=LEN(tensor)[DIM(tensor)-1]; h:=LEN(tensor)[DIM(tensor)-2];
@@ -421,11 +422,12 @@ BEGIN
 	NEW(window, LONGINT(w), LONGINT(h), FALSE); 
 	window.SetTitle(Strings.NewString(title));
 	INCL(window.flags, WM.FlagStorable); (* allow storing of data interactively, through right-click on navigator icon*)
-	WM.DefaultAddWindow(window);
 	panel:=GetPanel(tensor);
+	panel.alignment.Set(WMComponents.AlignClient);
 	COPY(title, panel.title); COPY(title, panel.baseTitle);
 	window.SetContent(panel);
 	window.form.fillColor.Set(008888FFH);(*background*)
+	WM.DefaultAddWindow(window);
 END AddWindow;
 
 
@@ -448,12 +450,13 @@ BEGIN
 	NEW(window, 400,400, FALSE); 
 	window.SetTitle(Strings.NewString("tensor window"));
 	INCL(window.flags, WM.FlagStorable); (* allow storing of data interactively, through right-click on navigator icon*)
-	WM.DefaultAddWindow(window);
+	panel.alignment.Set(WMComponents.AlignClient);
 	window.SetContent(panel);
 	window.form.fillColor.Set(008888FFH);(*background*)
+	WM.DefaultAddWindow(window);
 	
 	LOOP		
-		tensor[10..15,..,..]:= MatrixUtilities.Random([1,5,100,120],MatrixUtilities.Uniform);
+		tensor[10..15,..,..]:= MatrixUtilities.Random([6,100,120],MatrixUtilities.Uniform);
 		panel.SetArray(tensor);
 	END;
 	
