@@ -1,7 +1,7 @@
 MODULE MatrixRaster ;	(**  AUTHOR "Patrick Hunziker"; PURPOSE "visualize Matrix contents";  **)
 IMPORT Raster , Reals, SYSTEM, Files, WMGraphics, Rand:=Random, WM:=WMWindowManager, Strings, RasterPixelFormats;
 
-CONST Random=0;
+CONST Random*=-1;
 
 VAR rand:Rand.Generator;
 
@@ -51,35 +51,43 @@ TYPE Enumerator*=OBJECT(Files.Enumerator) (*extract single or multiple images fr
 		END GetGray;
 
 
-		PROCEDURE GetRoiBGR*(img: Raster.Image; x,y:LONGINT): ARRAY [?] OF INTEGER; (* yield ROI[BGR,h,w] of current image;  use "Random" for random position within window*)
+		PROCEDURE GetRoiBGR*(img: Raster.Image; VAR x,y:LONGINT): ARRAY [?] OF INTEGER; (* yield ROI[BGR,h,w] of current image;  use "Random" for random position within window*)
 		BEGIN
-			IF x=0 THEN x:= rand.Dice(img.width-w) END; (*! implementation limitation: scaling not yet implemented *)
-			IF y=0 THEN y:= rand.Dice(img.height-h) END;
+			IF x=Random THEN x:= rand.Dice(img.width-w) END; (*! implementation limitation: scaling not yet implemented *)
+			IF y=Random THEN y:= rand.Dice(img.height-h) END;
 			ImageToArray(img, array); (*img is BGRA, array is [4,..,..] OF INTEGER*)
 			RETURN array [0..2,y..y+h-1, x..x+w-1];
 		END GetRoiBGR;
 
-		PROCEDURE GetRoiGray*(img: Raster.Image; x,y:LONGINT): ARRAY [?] OF INTEGER; (* yield ROI[h,w] of current Image.  use "Random" for random position within window*)
+		PROCEDURE GetRoiGray*(img: Raster.Image; VAR x,y:LONGINT): ARRAY [?] OF INTEGER; (* yield ROI[h,w] of current Image.  use "Random" for random position within window*)
 		BEGIN
-			IF x=0 THEN x:= rand.Dice(img.width-w) END; (*! implementation limitation: scaling not yet implemented *)
-			IF y=0 THEN y:= rand.Dice(img.height-h) END;
+			IF x=Random THEN x:= rand.Dice(img.width-w) END; (*! implementation limitation: scaling not yet implemented *)
+			IF y=Random THEN y:= rand.Dice(img.height-h) END;
 			ImageToArray(img, array); (*img is BGRA, array is [4,..,..] OF INTEGER*)
 			RETURN array[0,*,*] + array[1,*,*] + array[2,*,*]; (*BGR to grayscale*)
 		END GetRoiGray;
 		
-		PROCEDURE GetRoiStackRandom*(img: Raster.Image; depth, colorPlanes: LONGINT): ARRAY [?] OF INTEGER; (* from an image, extract a stack of ROIs with random positions  *)
-		VAR i:LONGINT;
+		(* from an image, extract a stack of ROIs with random positions, that are also returned  *)
+		PROCEDURE GetRoiStackRandom*(img: Raster.Image; depth, colorPlanes: LONGINT; VAR positions: ARRAY [*,*] OF LONGINT): ARRAY [?] OF INTEGER; 
+		VAR i, x,y:LONGINT;
 		BEGIN
 			SELF.depth:=depth;
+			IF LEN(positions)#[depth,2] THEN NEW(positions, depth, 2) END;
 			IF colorPlanes=1 THEN 
 				IF LEN(RESULT)#[depth,h,w] THEN NEW(RESULT,[depth,h,w]) END;
 				FOR i:=0 TO depth-1 DO
-					RESULT[i,?]:=GetRoiGray(img, Random, Random);
+					x:=positions[i,0]; y:=positions[i,1];
+					RESULT[i,?]:=GetRoiGray(img, x, y);
+					positions[i,0]:=x; positions[i,1]:=y;
 				END;
-			ELSIF LEN(RESULT)#[depth,colorPlanes, h,w] THEN 
-				NEW(RESULT,[depth,colorPlanes, h,w]); (* BGR *)
+			ELSE
+				IF LEN(RESULT)#[depth,colorPlanes, h,w] THEN 
+					NEW(RESULT,[depth,colorPlanes, h,w]); (* BGR *)
+				END;
 				FOR i:=0 TO depth-1 DO
-					RESULT[i,?]:=GetRoiBGR(img, Random, Random);
+					x:=positions[i,0]; y:=positions[i,1];
+					RESULT[i,?]:=GetRoiBGR(img, x, y);
+					positions[i,0]:=x; positions[i,1]:=y;
 				END;
 			END;
 			RETURN RESULT
