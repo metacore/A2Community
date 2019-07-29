@@ -64,7 +64,7 @@ TYPE Enumerator*=OBJECT(Files.Enumerator) (*extract single or multiple images fr
 			IF x=Random THEN x:= rand.Dice(img.width-w) END; (*! implementation limitation: scaling not yet implemented *)
 			IF y=Random THEN y:= rand.Dice(img.height-h) END;
 			ImageToArray(img, array); (*img is BGRA, array is [4,..,..] OF INTEGER*)
-			RETURN array[0,*,*] + array[1,*,*] + array[2,*,*]; (*BGR to grayscale*)
+			RETURN array[0,y..y+h-1, x..x+w-1] + array[1,y..y+h-1, x..x+w-1] + array[2,y..y+h-1, x..x+w-1]; (*BGR to grayscale*) (*!! ROI IS MISSING*)
 		END GetRoiGray;
 		
 		(* from an image, extract a stack of ROIs with random positions, that are also returned  *)
@@ -76,26 +76,24 @@ TYPE Enumerator*=OBJECT(Files.Enumerator) (*extract single or multiple images fr
 			IF colorPlanes=1 THEN 
 				IF LEN(RESULT)#[depth,h,w] THEN NEW(RESULT,[depth,h,w]) END;
 				FOR i:=0 TO depth-1 DO
-					x:=positions[i,0]; y:=positions[i,1];
-					RESULT[i,?]:=GetRoiGray(img, x, y);
-					positions[i,0]:=x; positions[i,1]:=y;
+					(*x:=positions[i,0]; y:=positions[i,1];*)
+					RESULT[i,?]:=GetRoiGray(img, positions[i,0], positions[i,1]);
+					(*positions[i,0]:=x; positions[i,1]:=y;*)
 				END;
 			ELSE
 				IF LEN(RESULT)#[depth,colorPlanes, h,w] THEN 
 					NEW(RESULT,[depth,colorPlanes, h,w]); (* BGR *)
 				END;
 				FOR i:=0 TO depth-1 DO
-					x:=positions[i,0]; y:=positions[i,1];
-					RESULT[i,?]:=GetRoiBGR(img, x, y);
-					positions[i,0]:=x; positions[i,1]:=y;
+					(*x:=positions[i,0]; y:=positions[i,1];*)
+					RESULT[i,?]:=GetRoiBGR(img, positions[i,0], positions[i,1]);
+					(*positions[i,0]:=x; positions[i,1]:=y;*)
 				END;
 			END;
 			RETURN RESULT
 		END GetRoiStackRandom;
 		
 	END Enumerator;
-
-
 
 PROCEDURE SIntToImage*(CONST data:ARRAY [*,*] OF SHORTINT; VAR palette: ARRAY [*,*] OF LONGINT; im:Raster.Image); (*palette values in range 0..10000H*)
 VAR F:Raster.Format; pal:Raster.Palette; i,x,y:LONGINT;
