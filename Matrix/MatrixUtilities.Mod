@@ -995,6 +995,7 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 			IF datatypeString='LR' THEN	datatype:=DatatypeLR;
 			ELSIF datatypeString='R' THEN	datatype:=DatatypeR;
 			ELSIF datatypeString='LInt' THEN	datatype:=DatatypeLInt;
+			ELSIF datatypeString='Int' THEN	datatype:=DatatypeInt;
 			ELSIF (datatypeString='C') OR (datatypeString='UInt8') THEN datatype:=DatatypeUInt8
 			ELSIF (datatypeString='HInt') THEN datatype:=DatatypeHInt
 			ELSE HALT(202);
