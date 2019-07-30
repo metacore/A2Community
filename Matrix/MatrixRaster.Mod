@@ -16,7 +16,7 @@ TYPE Enumerator*=OBJECT(Files.Enumerator) (*extract single or multiple images fr
 			w:=100; h:=100;
 		END Init;
 
-		PROCEDURE GetImage*(VAR name:ARRAY OF CHAR; VAR flags:SET; VAR time, date, size: LONGINT ):WMGraphics.Image; (*get next image*)
+		PROCEDURE GetImage*(VAR name:ARRAY OF CHAR; VAR flags:SET; VAR time, date: LONGINT; VAR size: Files.Size ):WMGraphics.Image; (*get next image*)
 		BEGIN
 			currentImg:=NIL;
 			WHILE HasMoreEntries() & (currentImg=NIL) DO
