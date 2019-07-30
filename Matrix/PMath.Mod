@@ -19,7 +19,7 @@ END log;
 
 PROCEDURE power*(base,exponent:LONGREAL):REAL;
 BEGIN
-	IF ABS(base)<Eps THEN RETURN 0 
+	IF ABS(base)<Eps THEN RETURN 0
 	ELSE RETURN SHORT(MathL.exp(exponent*MathL.ln(base)));
 	END;
 END power;
@@ -172,13 +172,13 @@ PROCEDURE fastExp(x:LONGREAL):LONGREAL; (*  decreasingly accurate for increasing
 			x:=x*x; x:=x*x; x:=x*x; x:=x*x;
 			x:=x*x; x:=x*x; x:=x*x; x:=x*x;
 			x:=x*x; x:=x*x;
-			
+
 			x:=x*x; x:=x*x; x:=x*x; x:=x*x;
 			x:=x*x; x:=x*x; x:=x*x; x:=x*x;
 			x:=x*x; x:=x*x;
 			*)
 			RETURN x
-		ELSE 
+		ELSE
 			RETURN MathL.exp(x)
 		END;
 	END fastExp;
@@ -200,7 +200,7 @@ VAR abs, exp, expM, exp2xM1, res: LONGREAL;
 BEGIN
 	abs := ABS( x );
 	IF abs < 1 THEN exp2xM1 := MathL.exp( 2 * abs ) - 1;  res := sign( x ) * exp2xM1 / (2 + exp2xM1)
-	ELSIF abs < expNegligibleL THEN 
+	ELSIF abs < expNegligibleL THEN
 		exp := MathL.exp( x );  expM := MathL.exp( -x );  res := (exp - expM) / (exp + expM)
 	ELSE res := sign( x )
 	END;
@@ -208,23 +208,23 @@ BEGIN
 END tanhL;
 
 PROCEDURE logistic*( x: REAL): REAL;  (* logistic function as nonlinear element for unit response *)
-BEGIN 
+BEGIN
 	IF x >= expNegligible THEN RETURN 1
 	ELSIF (-x) > expNegligible THEN RETURN 0
-	ELSE RETURN 1 / (1 + Math.exp( -x ));  
-	END;  
-END logistic;  
+	ELSE RETURN 1 / (1 + Math.exp( -x ));
+	END;
+END logistic;
 
 PROCEDURE logisticL*( x: LONGREAL): LONGREAL;  (* logistic function as nonlinear element for unit response *)
-BEGIN 
+BEGIN
 	IF x >= expNegligibleL THEN RETURN 1
 	ELSIF (-x) > expNegligibleL THEN RETURN 0
-	ELSE RETURN 1 / (1 + MathL.exp( -x ));  
-	END;  
-END logisticL;  
+	ELSE RETURN 1 / (1 + MathL.exp( -x ));
+	END;
+END logisticL;
 
 (*
-PROCEDURE tanhL*(x:LONGREAL):LONGREAL; 
+PROCEDURE tanhL*(x:LONGREAL):LONGREAL;
 VAR e:LONGREAL;
 BEGIN
 	e:=MathL.exp(2*x);
@@ -241,7 +241,7 @@ PROCEDURE max*(CONST Data:ARRAY OF LONGINT):LONGINT;
 VAR res,len,i:LONGINT;
 BEGIN
 	len:=LEN(Data);
-	IF LEN(Data)=0 THEN res:= 0 
+	IF LEN(Data)=0 THEN res:= 0
 	ELSE res:=Data[0];
 		FOR i:=1 TO len-1 DO IF Data[i]>res THEN res:=Data[i] END END
 	END;
@@ -252,7 +252,7 @@ PROCEDURE min*(CONST Data:ARRAY OF LONGINT):LONGINT;
 VAR res,len,i:LONGINT;
 BEGIN
 	len:=LEN(Data);
-	IF LEN(Data)=0 THEN res:= 0 
+	IF LEN(Data)=0 THEN res:= 0
 	ELSE res:=Data[0];
 		FOR i:=1 TO len-1 DO IF Data[i]<res THEN res:=Data[i] END END
 	END;
@@ -260,33 +260,33 @@ BEGIN
 END min;
 
 PROCEDURE Max*(x,y:LONGINT):LONGINT;
-BEGIN IF x>=y THEN RETURN x ELSE RETURN y END 
+BEGIN IF x>=y THEN RETURN x ELSE RETURN y END
 END Max;
 
 PROCEDURE Min*(x,y:LONGINT):LONGINT;
-BEGIN IF x<=y THEN RETURN x ELSE RETURN y END 
+BEGIN IF x<=y THEN RETURN x ELSE RETURN y END
 END Min;
 
 PROCEDURE Clamp*(x,min,max:LONGINT):LONGINT;
-BEGIN 
+BEGIN
 	RETURN MIN(max, MAX(min,x))
 END Clamp;
 
 
 PROCEDURE RMax*(x,y:LONGREAL):LONGREAL;
-BEGIN IF x>=y THEN RETURN x ELSE RETURN y END 
+BEGIN IF x>=y THEN RETURN x ELSE RETURN y END
 END RMax;
 
 PROCEDURE rMax*(x,y:REAL):REAL;
-BEGIN IF x>=y THEN RETURN x ELSE RETURN y END 
+BEGIN IF x>=y THEN RETURN x ELSE RETURN y END
 END rMax;
 
 PROCEDURE RMin*(x,y:LONGREAL):LONGREAL;
-BEGIN IF x<=y THEN RETURN x ELSE RETURN y END 
+BEGIN IF x<=y THEN RETURN x ELSE RETURN y END
 END RMin;
 
 PROCEDURE rMin*(x,y:REAL):REAL;
-BEGIN IF x<y THEN RETURN x ELSE RETURN y END 
+BEGIN IF x<y THEN RETURN x ELSE RETURN y END
 END rMin;
 
 PROCEDURE rescaleInt*(x,minIn,maxIn,minOut,maxOut:INTEGER):INTEGER;
@@ -309,9 +309,9 @@ VAR i,cnt:SHORTINT;
 BEGIN
 	i:=wordlengthlongint-1;
 	cnt:=0;
-	WHILE i>=0 DO 
-		IF BIT.BIT(n,i) THEN INC(cnt); END; 
-		DEC(i) 
+	WHILE i>=0 DO
+		IF BIT.BIT(n,i) THEN INC(cnt); END;
+		DEC(i)
 	END;
 	IF cnt=1 THEN RETURN TRUE ELSE RETURN FALSE END;
 END IsPowerOf2;
@@ -321,7 +321,7 @@ END IsPowerOf2;
 VAR number,n:LONGINT;
 BEGIN
 	n:=0; number:=i;
-	IF i>=2 THEN REPEAT number:=number DIV 2; INC(n) UNTIL number<1; 
+	IF i>=2 THEN REPEAT number:=number DIV 2; INC(n) UNTIL number<1;
 		RETURN round(power(2,n-1))
 	ELSIF i>=1 THEN RETURN 1
 	ELSE RETURN 0
@@ -364,12 +364,12 @@ PROCEDURE ASCIIHex2SInt(c:CHAR):SHORTINT;
 PROCEDURE ASCIIHexInt*(CONST A:ARRAY OF CHAR):INTEGER;
 VAR res,i,len:INTEGER;
 BEGIN
-	len:=SHORT(LEN(A)); 
+	len:=SHORT(LEN(A));
 	IF len>4 THEN len:=4 END;
 	res:=0;
 	FOR i:=0 TO len-1 DO
 		IF A[i]=0X THEN i:=len
-		ELSE res:=BIT.IOR(ASCIIHex2SInt(A[i]), BIT.ILSH(res,4) ); 
+		ELSE res:=BIT.IOR(ASCIIHex2SInt(A[i]), BIT.ILSH(res,4) );
 		END;
 	END;
 	RETURN res
@@ -378,19 +378,19 @@ END ASCIIHexInt;
 PROCEDURE ASCIIHexLInt*(CONST A:ARRAY OF CHAR):LONGINT;
 VAR res,i,len:LONGINT;
 BEGIN
-	len:=LEN(A); 
+	len:=LEN(A);
 	IF len>8 THEN len:=8 END;
 	res:=0;
 	FOR i:=0 TO len-1 DO
 		IF A[i]=0X THEN i:=len
-		ELSE res:=BIT.LOR(ASCIIHex2SInt(A[i]), ASH(res,4) ); 
+		ELSE res:=BIT.LOR(ASCIIHex2SInt(A[i]), ASH(res,4) );
 		END;
 	END;
 	RETURN res
 END ASCIIHexLInt;
 
 PROCEDURE eps*():REAL;
-VAR x,y:REAL; 
+VAR x,y:REAL;
 BEGIN
 	x:=0.5;
 	WHILE (1-x<1)&(1-x>0) DO y:=x; x:=x/2 END;
@@ -398,7 +398,7 @@ BEGIN
 END eps;
 
 PROCEDURE epsL*():LONGREAL;
-VAR x,y:LONGREAL; 
+VAR x,y:LONGREAL;
 BEGIN
 	x:=0.5;
 	WHILE (1-x<1)&(1-x>0) DO y:=x; x:=x/2 END;
@@ -412,7 +412,7 @@ BEGIN
 	ELSIF x<0 THEN RETURN Math.arctan(y/x)+Math.pi
 	ELSIF (x=0) & (y>0) THEN RETURN Math.pi/2
 	ELSIF (x=0) & (y<0) THEN RETURN 3*Math.pi/2
-	ELSE (*( x=0) & (y=0) *) RETURN 0 (*or RETURN NaN ?*) 
+	ELSE (*( x=0) & (y=0) *) RETURN 0 (*or RETURN NaN ?*)
 	END
 END arctan2;
 
@@ -424,7 +424,7 @@ BEGIN
 	ELSIF x<0 THEN RETURN MathL.arctan(y/x)+MathL.pi
 	ELSIF (x=0) & (y>0) THEN RETURN MathL.pi/2
 	ELSIF (x=0) & (y<0) THEN RETURN 3*MathL.pi/2
-	ELSE (*( x=0) & (y=0) *) RETURN 0 (*or RETURN NaN ?*) 
+	ELSE (*( x=0) & (y=0) *) RETURN 0 (*or RETURN NaN ?*)
 	END
 END arctan2L;
 
@@ -432,7 +432,7 @@ BEGIN
 	Comments:=FALSE;
 
 	OneDivLn10:=1/Math.ln(10);
-	NaN:= Reals.NaN(1);   
+	NaN:= Reals.NaN(1);
 	NaNL:=Reals.NaN(1);
 	Inf:=Reals.NaN(0);
 	InfL:=Reals.NaN(0);

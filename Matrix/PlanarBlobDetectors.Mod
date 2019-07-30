@@ -5,11 +5,11 @@ MODULE PlanarBlobDetectors; (** AUTHOR "Patrick Hunziker"; PURPOSE "Blob detecti
 
 IMPORT PlanarNabla, WMMatrix;
 
-TYPE 
+TYPE
 	ScalarField=PlanarNabla.ScalarField;
 
 (** Laplacian of Gaussian is a classic blob detector. *)
-(* Laplacian of Gaussian: apply after some weighted window function, e.g. a Gaussian or Spline Window, and sampling strategy. 
+(* Laplacian of Gaussian: apply after some weighted window function, e.g. a Gaussian or Spline Window, and sampling strategy.
 Support of Window Defines the Responsivity of the operator. Use sampling modes from PlanarNabla.Mod *)
 (*! not yet finished: support width. Best used in a scale-space setup, i.e. multiresolution or multiple Gauss Support *)
 PROCEDURE LaplacianOfGaussian*(CONST p:ScalarField; sampling:LONGINT):ScalarField;
@@ -37,7 +37,7 @@ BEGIN
 	NEW(window, LaplacianOfGaussian(in, PlanarNabla.centered), "LOG 4"); window.AddWindow;
 	in:=0; in[49..50, 49..50]:=1;
 	NEW(window, LaplacianOfGaussian(in, PlanarNabla.centered), "LOG 2"); window.AddWindow;
-	
+
 END Test;
 
 

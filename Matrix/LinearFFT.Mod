@@ -36,7 +36,7 @@ TYPE Datatype=MatrixBase.Datatype;
 		END;
 		RETURN rev
 	END ReverseBits;
-	
+
 	PROCEDURE Transform(fullAngle: Datatype; nSamples: LONGINT; CONST realIn, imagIn: Array;  VAR  realOut, imagOut: Array); (*SSE2 would allow much faster version*)
 		VAR
 			angle, alpha, beta, ar, ai, tr, ti, tmp: Datatype;
@@ -82,8 +82,8 @@ TYPE Datatype=MatrixBase.Datatype;
 
 	PROCEDURE FFT*(CONST realIn, imagIn: Array; VAR realOut, imagOut: Array);
 	BEGIN
-		IF LEN(realOut,0) = 0 THEN NEW( realOut, LEN( realIn,0) ) END;  
-		IF LEN( imagOut ) = 0 THEN NEW( imagOut, LEN( realIn,0) ) END;  
+		IF LEN(realOut,0) = 0 THEN NEW( realOut, LEN( realIn,0) ) END;
+		IF LEN( imagOut ) = 0 THEN NEW( imagOut, LEN( realIn,0) ) END;
 		Transform(2*Mathe.pi, LEN(realIn,0), realIn, imagIn, realOut, imagOut)
 	END FFT;
 
@@ -114,75 +114,75 @@ TYPE Datatype=MatrixBase.Datatype;
 		VAR nSamples: LONGINT;
 	BEGIN
 		nSamples:=LEN(realIn,0);
-		IF LEN(realOut,0) = 0 THEN NEW( realOut, LEN(realIn,0) ) END;  
-		IF LEN( imagOut ) = 0 THEN NEW( imagOut, LEN(realIn,0) ) END;  
+		IF LEN(realOut,0) = 0 THEN NEW( realOut, LEN(realIn,0) ) END;
+		IF LEN( imagOut ) = 0 THEN NEW( imagOut, LEN(realIn,0) ) END;
 		Transform(-2*Mathe.pi, nSamples, realIn, imagIn, realOut, imagOut);
 		realOut[0..nSamples-1] := realOut[0..nSamples-1] / nSamples;
 		imagOut[0..nSamples-1] := imagOut[0..nSamples-1] / nSamples;
 	END IFFT;
-	
-	
-	PROCEDURE PowerSpectrum*(CONST in: Array ): Array;  
+
+
+	PROCEDURE PowerSpectrum*(CONST in: Array ): Array;
 	VAR nil, R, I: Array;
-	BEGIN 
-		IF LEN( RESULT ) = 0 THEN NEW( RESULT, LEN(in,0) ) END;  
-		FFT( in, nil, R, I );  
-		RESULT := R .* R;  
-		RESULT := RESULT + I .* I;  
-		RETURN RESULT;  
-	END PowerSpectrum;  
+	BEGIN
+		IF LEN( RESULT ) = 0 THEN NEW( RESULT, LEN(in,0) ) END;
+		FFT( in, nil, R, I );
+		RESULT := R .* R;
+		RESULT := RESULT + I .* I;
+		RETURN RESULT;
+	END PowerSpectrum;
 
  (** convolution is multiplication in the Fourier domain:  (a+bi )*(c+di) = (ac-bd), i*(bc+ad) *)
-	PROCEDURE Convolution*( CONST in1, in2: Array;  VAR outR, outI: Array );   
-	VAR R1, I1, R2, I2, nil, tmpR, tmpI: Array;  
-	BEGIN 
-		FFT( in1, nil, R1, I1 );  
-		FFT( in2, nil, R2, I2 );  
+	PROCEDURE Convolution*( CONST in1, in2: Array;  VAR outR, outI: Array );
+	VAR R1, I1, R2, I2, nil, tmpR, tmpI: Array;
+	BEGIN
+		FFT( in1, nil, R1, I1 );
+		FFT( in2, nil, R2, I2 );
 		LinearMath.ComplexMultiplication(R1,I1,R2,I2,tmpR,tmpI);
-		IFFT( tmpR, tmpI, outR, outI ); 
-	END Convolution;  
-	
+		IFFT( tmpR, tmpI, outR, outI );
+	END Convolution;
+
 	(** deconvolution is division in Fourier domain:  (a+bi )/(c+di) = (ac+bd)/(c*c+d*d), i*(bc-ad)/(c*c+d*d) *)
-	PROCEDURE DeConvolution*( CONST in1, in2: Array;  VAR outR, outI: Array );   
+	PROCEDURE DeConvolution*( CONST in1, in2: Array;  VAR outR, outI: Array );
 	VAR R1, I1, R2, I2, nil, tmpR, tmpI,rsqr: Array; i:LONGINT;
-	BEGIN 
-		FFT( in1, nil, R1, I1 );  
-		FFT(in2, nil, R2, I2 );  
+	BEGIN
+		FFT( in1, nil, R1, I1 );
+		FFT(in2, nil, R2, I2 );
 		LinearMath.ComplexDivision(R1,I1,R2,I2,tmpR,tmpI);
-		IFFT( tmpR, tmpI, outR, outI ); 
-	END DeConvolution;  
+		IFFT( tmpR, tmpI, outR, outI );
+	END DeConvolution;
 
 	 (** crosscorrelation is multiplication in the Fourier domain of the complex conjugate*)
-	PROCEDURE CrossCorrelation*( CONST in1, in2: Array;  VAR outR, outI: Array );   
-	VAR R1, I1, R2, I2, tmpR,tmpI,nil: Array; 
-	BEGIN 
-		FFT( in1, nil, R1, I1 );  
-		FFT( in2, nil, R2, I2 );  
+	PROCEDURE CrossCorrelation*( CONST in1, in2: Array;  VAR outR, outI: Array );
+	VAR R1, I1, R2, I2, tmpR,tmpI,nil: Array;
+	BEGIN
+		FFT( in1, nil, R1, I1 );
+		FFT( in2, nil, R2, I2 );
 		LinearMath.ComplexMultiplication(R1,I1,R2,-I2,tmpR,tmpI);
 		IFFT(tmpR,tmpI,outR,outI);
-	END CrossCorrelation;  
+	END CrossCorrelation;
 
-	PROCEDURE AutoCorrelation*(CONST in: Array ): Array;  
-	VAR  I, nil,autocorr: Array;  
-	BEGIN 
-		IF LEN( RESULT, 0 ) = 0 THEN NEW( RESULT, LEN( in,0 ) ) END;   
-		FFT( in, nil, autocorr, I);  
-		autocorr := autocorr .* autocorr; autocorr:=autocorr + I .*  I; (*plus sign because this is multiply by complex conjugate*)  
-		IFFT( autocorr, nil, RESULT, I);  
-		RETURN RESULT  
-	END AutoCorrelation;  
+	PROCEDURE AutoCorrelation*(CONST in: Array ): Array;
+	VAR  I, nil,autocorr: Array;
+	BEGIN
+		IF LEN( RESULT, 0 ) = 0 THEN NEW( RESULT, LEN( in,0 ) ) END;
+		FFT( in, nil, autocorr, I);
+		autocorr := autocorr .* autocorr; autocorr:=autocorr + I .*  I; (*plus sign because this is multiply by complex conjugate*)
+		IFFT( autocorr, nil, RESULT, I);
+		RETURN RESULT
+	END AutoCorrelation;
 
-	(*filter in the Fourier domain. power of 2 data required. 
+	(*filter in the Fourier domain. power of 2 data required.
 	filter is in frequency domain, is typically in [0.0 ... 1.0] but might have other values *)
-	PROCEDURE Filter*(CONST in, filter: Array ): Array;  
-	VAR  I, nil, R: Array;  
-	BEGIN 
-		IF LEN( RESULT, 0 ) = 0 THEN NEW( RESULT, LEN( in,0 ) ) END;   
-		FFT( in, nil, R, I);  
-		R := R .* filter; 
+	PROCEDURE Filter*(CONST in, filter: Array ): Array;
+	VAR  I, nil, R: Array;
+	BEGIN
+		IF LEN( RESULT, 0 ) = 0 THEN NEW( RESULT, LEN( in,0 ) ) END;
+		FFT( in, nil, R, I);
+		R := R .* filter;
 		I := I .* filter;
-		IFFT( R, I, RESULT, nil);  
-		RETURN RESULT  
-	END Filter;  
+		IFFT( R, I, RESULT, nil);
+		RETURN RESULT
+	END Filter;
 
 END LinearFFT.

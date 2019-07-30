@@ -1,11 +1,11 @@
 MODULE MatrixPrincipalComponents;   (**  AUTHOR "Patrick Hunziker"; PURPOSE "Principal Component Analysis";  **)
 
-IMPORT MatrixBase, MatrixSVD, Util:= MatrixUtilities, MathL;  
+IMPORT MatrixBase, MatrixSVD, Util:= MatrixUtilities, MathL;
 
-TYPE 
-	Datatype = MatrixBase.Datatype;  
-	Matrix = MatrixBase.Matrix;  
-	Vector = MatrixBase.Vector;  
+TYPE
+	Datatype = MatrixBase.Datatype;
+	Matrix = MatrixBase.Matrix;
+	Vector = MatrixBase.Vector;
 
 (*precondition:
 see Wikipedia: Principal_Component_Analysis
@@ -22,19 +22,19 @@ TYPE PCA*= OBJECT (MatrixBase.Solver)
 		initialized, ytdone:BOOLEAN;
 		PROCEDURE &Init*(CONST XT: Matrix);
 		BEGIN
-			ytdone:=FALSE; 
-			IF LEN(XT,0)=0 THEN 
+			ytdone:=FALSE;
+			IF LEN(XT,0)=0 THEN
 				initialized:=FALSE; RETURN
 			ELSE
 				X:=XT`;
-				NEW(svd,X); 
+				NEW(svd,X);
 				svd.SortDescending;
 				initialized:=TRUE;
 			END;
 		END Init;
-		
+
 		(* computing PCA through SVD. as an alternative, see iterative computation, http://http://en.wikipedia.org/wiki/Principal_components_analysis *)
-		PROCEDURE PrincipalComponents*():Matrix; (*  returns YT *) 
+		PROCEDURE PrincipalComponents*():Matrix; (*  returns YT *)
 		BEGIN
 			ASSERT(initialized);
 			IF ytdone THEN RETURN YT
@@ -45,18 +45,18 @@ TYPE PCA*= OBJECT (MatrixBase.Solver)
 				RETURN YT
 			END;
 		END PrincipalComponents;
-		
+
 		PROCEDURE LargestComponents*(M:LONGINT): Matrix; (*returns Y with reduced size (not YT ! )*)
 		BEGIN
 			ASSERT(initialized & (M#0));
 			(*HALT(200); (* would work if sorting was plugged in *)
 			SL:=svd.w[..M-1];  (*? or IDENTITYlm*svd.w*)
 			Y:=SL*svd.vt;*)
-			SL:=svd.wSorted[..M-1];  
+			SL:=svd.wSorted[..M-1];
 			Y:=SL*svd.vtSorted;
 			RETURN Y
 		END LargestComponents;
-		
+
 		PROCEDURE Axes*():Matrix; (* principal axes with unit length *)
 		VAR axislengths,unit: Vector; nullmatrix: Matrix; i:LONGINT; scale: Datatype;
 		BEGIN
@@ -74,7 +74,7 @@ TYPE PCA*= OBJECT (MatrixBase.Solver)
 			END;
 			RETURN U;
 		END Axes;
-		
+
 	END PCA;
 
 	PROCEDURE Test*;
@@ -93,12 +93,12 @@ TYPE PCA*= OBJECT (MatrixBase.Solver)
 		U:=pca.Axes();
 		Util.OutMatrix(U);
 		(*Util.OutMatrix(U*U`);*) (*why not orthonormal ?*)
-		
+
 		Util.OutVector( (C.*C)*[1,1,1,1,1,1]);  (*check rowwise variance*)
 		Util.OutVector( [1,1,1,1,1,1]*(C.*C)); (*check columnwise variance*)
 		Util.OutVector( [1,1,1,1,1,1]*(U.*U)); (*check columnwise unit vector length*)
 	END Test;
-		
+
 END MatrixPrincipalComponents.
 
 SystemTools.Free MatrixPrincipalComponents ~

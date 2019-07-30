@@ -2,10 +2,10 @@ MODULE StatisticsHistograms; (** AUTHOR "Patrick Hunziker"; PURPOSE "Histograms"
 
 IMPORT KernelLog, MatrixBase,MatrixUtilities;
 
-TYPE 
+TYPE
 	Volume= ARRAY [*,*,*] OF MatrixBase.Datatype;
 	Data= ARRAY [?] OF MatrixBase.Datatype;
-	
+
 PROCEDURE LinearHistogram*(CONST data: MatrixBase.Vector; bins: LONGINT; VAR histogram: MatrixBase.Vector);
 VAR max,min:LONGREAL; i,index :LONGINT;
 BEGIN

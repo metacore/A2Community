@@ -2,11 +2,11 @@ MODULE MLConvNet2D; (** AUTHOR "Patrick Hunziker"; PURPOSE "convolutional neural
 (*Literature
 generics: LeCun, Bengio, Hinton: Deep Learning. Nature 2015
 
-specifics for convolutional neural networks: 
+specifics for convolutional neural networks:
 Jake Bouvrie, Notes on Convolutional Neural Networks. 2006
 David Stutz, Understanding Convolutional Neural Networks: good tutorial
-Quoc V. Le: A Tutorial on Deep Learning Part 1: Backpropagation etc 
-Quoc V. Le: A Tutorial on Deep Learning Part 2: Autoencoders, Convolutional Neural Networks and Recurrent Neural Networks 
+Quoc V. Le: A Tutorial on Deep Learning Part 1: Backpropagation etc
+Quoc V. Le: A Tutorial on Deep Learning Part 2: Autoencoders, Convolutional Neural Networks and Recurrent Neural Networks
 https://www.tensorflow.org/tutorials/deep_cnn : a great ressource for implementation strategies and optional features
 *)
 
@@ -33,7 +33,7 @@ TYPE
 OPERATOR "SUM"(m:Dataset; dimension:LONGINT):Dataset;
 VAR len:IntVector; i:LONGINT;
 BEGIN
-	ASSERT(dimension<LEN(LEN(m),0));  
+	ASSERT(dimension<LEN(LEN(m),0));
 	NEW(len, LEN(m)-1);
 	FOR i:=0 TO dimension-1 DO
 		len[i]:=LEN(m,i);
@@ -98,35 +98,35 @@ END TanhDerivative;
 
 (*!to do: ReduceAbsMax() ?*)
 PROCEDURE ReduceMax*( CONST g: Matrix; VAR map: Util.BoolMatrix ): Matrix;  (* select MAX of each 2*2 group.*)(*? note that map can contain >1 TRUEs in quad field if values are same - MAY BE problematic on backprop ?*)
-	BEGIN 
+	BEGIN
 		(*ASSERT(MAX(LEN(g) DIV 2)=0); *)(*implementation limitation: even dimensions*)
-		IF (LEN( RESULT, 0 ) # ((LEN( g, 0 ) + 1) DIV 2)) OR (LEN( RESULT, 1 ) # ((LEN( g, 1 ) + 1) DIV 2)) THEN NEW( RESULT, (LEN( g, 0 ) + 1) DIV 2, (LEN( g, 1 ) + 1) DIV 2 ) END;  
+		IF (LEN( RESULT, 0 ) # ((LEN( g, 0 ) + 1) DIV 2)) OR (LEN( RESULT, 1 ) # ((LEN( g, 1 ) + 1) DIV 2)) THEN NEW( RESULT, (LEN( g, 0 ) + 1) DIV 2, (LEN( g, 1 ) + 1) DIV 2 ) END;
 		IF (LEN(map)#LEN(g)) THEN NEW(map,LEN(g)) END;
-		RESULT[.. (LEN( g, 0 ) + 1) DIV 2 - 1, .. (LEN( g, 1 ) + 1) DIV 2 - 1] := g[.. BY 2, .. BY 2];  
-		RESULT[.. (LEN( g, 0 ) + 0) DIV 2 - 1, .. (LEN( g, 1 ) + 1) DIV 2 - 1] := MAX(RESULT[.. (LEN( g, 0 ) + 0) DIV 2 - 1, .. (LEN( g, 1 ) + 1) DIV 2 - 1], g[1.. BY 2, .. BY 2]);  
-		RESULT[.. (LEN( g, 0 ) + 1) DIV 2 - 1, .. (LEN( g, 1 ) + 0) DIV 2 - 1] := MAX(RESULT[.. (LEN( g, 0 ) + 1) DIV 2 - 1, .. (LEN( g, 1 ) + 0) DIV 2 - 1], g[.. BY 2, 1.. BY 2]);  
-		RESULT[.. (LEN( g, 0 ) + 0) DIV 2 - 1, .. (LEN( g, 1 ) + 0) DIV 2 - 1] := MAX(RESULT[.. (LEN( g, 0 ) + 0) DIV 2 - 1, .. (LEN( g, 1 ) + 0) DIV 2 - 1], g[1.. BY 2, 1.. BY 2]);  
-		
+		RESULT[.. (LEN( g, 0 ) + 1) DIV 2 - 1, .. (LEN( g, 1 ) + 1) DIV 2 - 1] := g[.. BY 2, .. BY 2];
+		RESULT[.. (LEN( g, 0 ) + 0) DIV 2 - 1, .. (LEN( g, 1 ) + 1) DIV 2 - 1] := MAX(RESULT[.. (LEN( g, 0 ) + 0) DIV 2 - 1, .. (LEN( g, 1 ) + 1) DIV 2 - 1], g[1.. BY 2, .. BY 2]);
+		RESULT[.. (LEN( g, 0 ) + 1) DIV 2 - 1, .. (LEN( g, 1 ) + 0) DIV 2 - 1] := MAX(RESULT[.. (LEN( g, 0 ) + 1) DIV 2 - 1, .. (LEN( g, 1 ) + 0) DIV 2 - 1], g[.. BY 2, 1.. BY 2]);
+		RESULT[.. (LEN( g, 0 ) + 0) DIV 2 - 1, .. (LEN( g, 1 ) + 0) DIV 2 - 1] := MAX(RESULT[.. (LEN( g, 0 ) + 0) DIV 2 - 1, .. (LEN( g, 1 ) + 0) DIV 2 - 1], g[1.. BY 2, 1.. BY 2]);
+
 		map[.. BY 2, .. BY 2] := g[.. BY 2, .. BY 2] .= RESULT[.. (LEN( g, 0 ) + 1) DIV 2 - 1, .. (LEN( g, 1 ) + 1) DIV 2 - 1];
 		map[1.. BY 2, .. BY 2] := g[1.. BY 2, .. BY 2] .=RESULT[.. (LEN( g, 0 ) + 0) DIV 2 - 1, .. (LEN( g, 1 ) + 1) DIV 2 - 1];
 		map[.. BY 2, 1.. BY 2] := g[.. BY 2, 1.. BY 2] .= RESULT[.. (LEN( g, 0 ) + 1) DIV 2 - 1, .. (LEN( g, 1 ) + 0) DIV 2 - 1];
 		map[1.. BY 2, 1.. BY 2] := g[1.. BY 2, 1.. BY 2] .= RESULT[.. (LEN( g, 0 ) + 0) DIV 2 - 1, .. (LEN( g, 1 ) + 0) DIV 2 - 1];
-		
+
 		RETURN RESULT
-	END ReduceMax;  
+	END ReduceMax;
 
 
 PROCEDURE ExpandMax*( CONST g: Matrix; VAR map: Util.BoolMatrix ): Dataset;  (* select MAX of each 2*2 group.*)(*? note that map can contain >1 TRUEs in quad field if values are same*)
-	BEGIN 
+	BEGIN
 		(*precondition: correct dimensions*)
 		IF LEN(RESULT)#LEN(map) THEN NEW(RESULT,LEN(map)) END;
 		RESULT[.. BY 2, .. BY 2] := Util.ApplyMask(g, map[.. BY 1, .. BY 2], 0);
-		RESULT[1.. BY 2, .. BY 2] := Util.ApplyMask(g, map[1.. BY 2, .. BY 2], 0);  
-		RESULT[.. BY 2, 1.. BY 2] := Util.ApplyMask(g, map[.. BY 2, 1.. BY 2], 0);  
-		RESULT[1.. BY 2, 1.. BY 2] := Util.ApplyMask(g, map[1.. BY 2, 1.. BY 2], 0);  	
+		RESULT[1.. BY 2, .. BY 2] := Util.ApplyMask(g, map[1.. BY 2, .. BY 2], 0);
+		RESULT[.. BY 2, 1.. BY 2] := Util.ApplyMask(g, map[.. BY 2, 1.. BY 2], 0);
+		RESULT[1.. BY 2, 1.. BY 2] := Util.ApplyMask(g, map[1.. BY 2, 1.. BY 2], 0);
 		RETURN RESULT
-	END ExpandMax;  
-	
+	END ExpandMax;
+
 PROCEDURE Rot180(CONST m:Dataset):Dataset;(* tbd: accelerated in library*)
 VAR j,i:LONGINT; x:Datatype;
 BEGIN
@@ -156,23 +156,23 @@ END GenTestFilter;
 
 TYPE
 	Layer* = OBJECT
-		VAR 
+		VAR
 			prior,next: Layer;
 			x, y, delta, dIn: Dataset;
 			show:BOOLEAN;
 			window: WMMatrix.Window;
-	
+
 		PROCEDURE Propagate*(CONST in: Dataset) ; (* returns activations of this*)
 		END Propagate;
-		
+
 		PROCEDURE Backprop*(CONST deltaNext:Dataset);
-		END Backprop;	
+		END Backprop;
 	END Layer;
 
 TYPE PoolLayer*= OBJECT(Layer)
 		PROCEDURE Downsample(CONST in:Dataset):Dataset;
 		END Downsample;
-		
+
 		PROCEDURE Upsample(CONST delta:Dataset):Dataset;
 		END Upsample;
 	END PoolLayer;
@@ -181,19 +181,19 @@ TYPE  MaxPoolLayer*= OBJECT(PoolLayer)
 		VAR xSmall, z: Dataset;
 			map: Util.BoolMatrix;
 			beta, dBeta, bias, dBias:Datatype;
-		
+
 		PROCEDURE &New;
 		BEGIN
-			beta:= 1.0; 
+			beta:= 1.0;
 			bias:= 0.0;
 			show:=TRUE;
 		END New;
-		
+
 		PROCEDURE DeltaFromDNext(CONST dNext: Dataset);
 		BEGIN
 			delta:=dNext;
 		END DeltaFromDNext;
-		
+
 		PROCEDURE AdaptWeights;
 		BEGIN
 			(* (*from http://cogprints.org/5869/1/cnn_tutorial.pdf  - is it necessary that this layer has bias and scale ?*)
@@ -201,7 +201,7 @@ TYPE  MaxPoolLayer*= OBJECT(PoolLayer)
 			dBeta:=SUM(z .* delta)
 			*)
 		END AdaptWeights;
-		
+
 		PROCEDURE Downsample(CONST x:Dataset):Dataset;
 		BEGIN
 			 IF LEN(map)#LEN(x) THEN NEW(map, LEN(x)) END;
@@ -210,24 +210,24 @@ TYPE  MaxPoolLayer*= OBJECT(PoolLayer)
 			 z:=xSmall; (*z := beta .* xSmall + bias;*)
 			 RETURN z
 		END Downsample;
-		
+
 		PROCEDURE Upsample(CONST delta:Dataset):Dataset;
 		BEGIN
 			RESULT:=ExpandMax(delta, map); (*? need handling bias and weights ?*)
 			RETURN RESULT
 		END Upsample;
-		
-		PROCEDURE Propagate*(CONST in: Dataset) ; 
+
+		PROCEDURE Propagate*(CONST in: Dataset) ;
 		BEGIN
-			x:=in; 
+			x:=in;
 			y:=Downsample(x);
-			IF show THEN 
+			IF show THEN
 				IF window=NIL THEN NEW(window, y, "maxPool"); window.AddWindow;
 				ELSE window.SetImage( y)
 				END;
 			END;
 		END Propagate;
-		
+
 		PROCEDURE Backprop(CONST dNext:Dataset);
 		BEGIN
 			DeltaFromDNext(dNext);
@@ -245,24 +245,24 @@ TYPE ConvLayer*=OBJECT(Layer)
 			NonLinear, NonLinearDerivative: Function;
 			convolver, convolver1, convolver2: EulFftwConvolve.MultiKernelConvolver2d_LR;
 			weightWindow, dWeightWindow: WMMatrix.Window;
-			
-		
+
+
 		PROCEDURE &New(CONST filtersize:IntVector; nonLinear, nonLinearDerivative: Function);
 		BEGIN
 			SELF.filtersize:=filtersize;
 			show:=TRUE;
 			bias:=0;
-			
+
 			InitWeights(filtersize);
-			
+
 			NEW(convolver);  IF convolver.SetOutputShape(EulFftwConvolve.Valid) THEN END;
 			NEW(convolver1); IF convolver1.SetOutputShape(EulFftwConvolve.Valid) THEN  END;
 			NEW(convolver2); IF  convolver2.SetOutputShape(EulFftwConvolve.Full) THEN  END;
-			
+
 			NonLinear:=nonLinear;
 			NonLinearDerivative:=nonLinearDerivative;
-		END New;	
-		
+		END New;
+
 		PROCEDURE InitWeights(filtersize: IntVector); (* see Stutz, formulae 16,17*)
 		VAR w0: Datatype;
 		BEGIN
@@ -272,13 +272,13 @@ TYPE ConvLayer*=OBJECT(Layer)
 			w:=Util.Random(filtersize, Util.Uniform);
 			w:=w-0.5;
 			w:= 2*w0 * w; (* see Stutz, formulae 16,17*)
-			IF show THEN 
-				NEW(weightWindow, w, "w"); weightWindow.AddWindow; 
-				NEW(dWeightWindow, w, "dw"); dWeightWindow.AddWindow; 
+			IF show THEN
+				NEW(weightWindow, w, "w"); weightWindow.AddWindow;
+				NEW(dWeightWindow, w, "dw"); dWeightWindow.AddWindow;
 			END;
 		END InitWeights;
-		
-		
+
+
 		PROCEDURE Propagate(CONST x: Dataset); (* returns activations of this*)
 		VAR tmp0: Dataset;
 		BEGIN
@@ -286,20 +286,20 @@ TYPE ConvLayer*=OBJECT(Layer)
 			size:=LEN(x);
 			IF convolver.SetKernels(w) THEN ztmp := convolver.Convolve(x); z:=ztmp+bias; END; (*z := Convolve(x, w, VALID)+bias;*)
 			IF NonLinear#NIL THEN y := ALL(z, NonLinear); ELSE y:=z END;
-			IF show THEN 
-				IF window=NIL THEN NEW(window, y, "conv"); window.AddWindow; 
+			IF show THEN
+				IF window=NIL THEN NEW(window, y, "conv"); window.AddWindow;
 				ELSE window.SetImage(y);
 				END;
 			END;
 		END Propagate;
-		
+
 		PROCEDURE DeltaFromError(CONST error:Dataset);
 		BEGIN
 			tmp:= ALL(z, NonLinearDerivative);
 			delta:= error .* tmp  ; (* last element *) (* delta:= 2* error .* delta  ; ? *)
 			(* according to Quoc, the factor is 2(y-target), corresponding i.e. the derivative of of square(y-target) ...; originates from differentiation dE/dy *)
 		END DeltaFromError;
-		
+
 		PROCEDURE DeltaFromDNext(CONST dNext (*, betaNext*): Dataset);
 		BEGIN
 			IF NonLinearDerivative#NIL THEN tmp:=ALL(z, NonLinearDerivative); delta:= tmp  .* dNext;
@@ -307,7 +307,7 @@ TYPE ConvLayer*=OBJECT(Layer)
 			END;
 			(*delta:=betaNext * delta;*) (*?*)
 		END DeltaFromDNext;
-		
+
 		(* Notes on Convolutional Neural Networks. Jake Bouvrie, 2006 *)
 		PROCEDURE AdaptWeights;
 		BEGIN
@@ -315,28 +315,28 @@ TYPE ConvLayer*=OBJECT(Layer)
 			dBias:=step*dBias;
 			bias := bias - dBias ; (* with or without scaling ??? see Quoc Le, tutorial 1, page 8 *)
 			delta:=delta-dBias; (*? this is min addition , works- is it justified to change the delta by this gradient ?*)
-			
+
 			IF convolver1.SetKernels(Rot180(delta)) THEN dw:=Rot180(convolver1.Convolve(x)) END; (*dw :=	Rot180(Convolve1(x, Rot180(delta),VALID)); *)
 			dw:=step*dw;
 			w:=w - dw;
-			IF weightWindow#NIL THEN weightWindow.SetImage(w) END; 
-			IF dWeightWindow#NIL THEN dWeightWindow.SetImage(dw) END; 
+			IF weightWindow#NIL THEN weightWindow.SetImage(w) END;
+			IF dWeightWindow#NIL THEN dWeightWindow.SetImage(dw) END;
 		END AdaptWeights;
-		
+
 		PROCEDURE 	Backprop(CONST dNext:Dataset);
 		BEGIN
 			DeltaFromDNext(dNext);
 			AdaptWeights;  (*? should backpropagation occur before or after weight update ?*)
 			IF convolver2.SetKernels(Rot180(w)) THEN (*dIn:=Convolve2(delta, Rot180(w), FULL); *)(*? beta, bias ?*)
 				dIn:=convolver2.Convolve(delta);
-			END;		
+			END;
 		END Backprop;
 
 	END ConvLayer;
 
 TYPE NormalizeLayer*= OBJECT(Layer)(*! not yet ready -  TBD*)
 		VAR beta, bias, ss: Datatype;
-		
+
 		PROCEDURE Propagate*(CONST in: Dataset):Dataset ; (* returns activations of this*) (*how to handle ?*)
 		BEGIN
 			bias:=SUM(in)/PROD(LEN(in);
@@ -345,28 +345,28 @@ TYPE NormalizeLayer*= OBJECT(Layer)(*! not yet ready -  TBD*)
 			beta:=1/Mathe.sqrt(ss)/LEN(y,0)/LEN(y,1);
 			y:= beta * y ;
 			y:= y + bias; (*backpropagate bias ?*)
-		END Propagate;	
-		
+		END Propagate;
+
 		PROCEDURE Backprop*(CONST deltaNext:Dataset);
-		BEGIN	
+		BEGIN
 			dIn:=1/beta * deltaNext;
 			dIn:= dIn+bias
-		END Backprop;	
-		
+		END Backprop;
+
 	END NormalizeLayer;
-	
+
 TYPE Network= OBJECT
 	VAR layers, last:Layer; (*linked list of layers*)
-		error: Dataset;	
+		error: Dataset;
 		log: Streams.Writer;
-		
+
 		PROCEDURE Append*(l:Layer);
 		BEGIN
 			IF layers=NIL THEN layers:=l; last:=l; l.next:=NIL; l.prior:=NIL;
 			ELSE last.next:=l; l.prior:=last; last:=l;
 			END;
 		END Append;
-		
+
 		PROCEDURE TrainingRound(CONST data, target: Dataset);
 		VAR thisLayer:Layer;
 		BEGIN
@@ -385,7 +385,7 @@ TYPE Network= OBJECT
 			END;
 			IF log#NIL THEN log.String("round"); log.Ln; log.Update END;
 		END TrainingRound;
-		
+
 		PROCEDURE Evaluate(CONST data:Dataset):Dataset;
 		VAR thisLayer:Layer;
 		BEGIN
@@ -398,7 +398,7 @@ TYPE Network= OBJECT
 			END;
 			RETURN thisLayer.y
 		END Evaluate;
-		
+
 	END Network;
 
 (*
@@ -410,7 +410,7 @@ BEGIN
 	NEW(data,256,256);
 	data[100..110,150..160]:=1;
 	NEW(result,256,256);
-	NEW(analyzer, Wavelets.Haar, Wavelets.default, data); 
+	NEW(analyzer, Wavelets.Haar, Wavelets.default, data);
 	analyzer.Analyze;
 	result:=analyzer.data;
 	NEW(window, data, "data"); window.AddWindow;
@@ -418,7 +418,7 @@ BEGIN
 END Do0;
 
 PROCEDURE Do4*(context:Commands.Context);
-VAR 
+VAR
 	raw: ARRAY [?] OF INTEGER;
 	data,result,result1,result2,result3: PlanarWavelets.Matrix;
 	analyzer: PlanarWavelets.Analyzer;
@@ -432,12 +432,12 @@ BEGIN
 		NEW(raw,w,h);
 		MatrixUtilities.ReadInt8(r, raw);
 		data:=raw[..,..];
-	
+
 		NEW(analyzer, Wavelets.Haar, Wavelets.default, data);
 		(*NEW(analyzer, Wavelets.Cubicspline, Wavelets.periodicH, data);*)
 		analyzer.AnalyzePacket(2);
-		NEW( window, analyzer.data,  "Hologram - Wavelet"); window.AddWindow; 
-		
+		NEW( window, analyzer.data,  "Hologram - Wavelet"); window.AddWindow;
+
 	END;
 END Do4;
 
@@ -451,9 +451,9 @@ BEGIN
 	NEW(data,256,256);
 	data[100..110,150..160]:=1;
 	NEW(result,256,256);
-	NEW(analyzer, Wavelets.Haar, Wavelets.default, data); 
+	NEW(analyzer, Wavelets.Haar, Wavelets.default, data);
 	analyzer.Analyze;
-	
+
 	(*redundant; just to show where things are*)
 	NEW(map, 4, LEN(data,0) DIV 2, LEN(data,1) DIV 2);
 	map[0]:=analyzer.data[..LEN(data,0)DIV 2-1, .. LEN(data,1)DIV 2-1];
@@ -469,9 +469,9 @@ BEGIN
 	NEW(window, analyzer.data[LEN(data,0)DIV 2 .., .. LEN(data,1) DIV 2-1],"w2"); window.AddWindow;
 	NEW(window, analyzer.data[LEN(data,0) DIV 2 .., LEN(data,1) DIV 2 ..],"w3"); window.AddWindow;
 	*)
-	
-	
-	
+
+
+
 END Do;
 
 PROCEDURE Do1*;
@@ -486,26 +486,26 @@ BEGIN
 	NEW(data,256,256);
 	data[100..110,150..160]:=1;
 	NEW(result,256,256);
-	
+
 	NEW(map, nFilters, LEN(data,0), LEN(data,1));
-	
+
 	filter:=Filters.CreateFIRFilter([0.7,0.7],1);
 	filter1:=Filters.CreateSplineFilter(Filters.MomentCubic1);
 	filter2:=Filters.CreateSplineFilter(Filters.MomentCubic2);
 
 	ASSERT(filter#NIL);
 	ASSERT(filter1#NIL);
-	
+
 (*apply filter bank*)
 	map[0]:=data;
-	PlanarTransform.Filter2D(data, map[1], filter, {0}, Filters.finite); 
-	PlanarTransform.Filter2D(data, map[2], filter, {1}, Filters.finite); 
-	PlanarTransform.Filter2D(data, map[3], filter, {0,1}, Filters.finite); 
-	PlanarTransform.Filter2D(data, map[4], filter1, {0}, Filters.finite); 
-	PlanarTransform.Filter2D(data, map[5], filter1, {1}, Filters.finite); 
-	PlanarTransform.Filter2D(data, map[6], filter2, {0}, Filters.finite); 
-	PlanarTransform.Filter2D(data, map[7], filter2, {1}, Filters.finite); 
-	
+	PlanarTransform.Filter2D(data, map[1], filter, {0}, Filters.finite);
+	PlanarTransform.Filter2D(data, map[2], filter, {1}, Filters.finite);
+	PlanarTransform.Filter2D(data, map[3], filter, {0,1}, Filters.finite);
+	PlanarTransform.Filter2D(data, map[4], filter1, {0}, Filters.finite);
+	PlanarTransform.Filter2D(data, map[5], filter1, {1}, Filters.finite);
+	PlanarTransform.Filter2D(data, map[6], filter2, {0}, Filters.finite);
+	PlanarTransform.Filter2D(data, map[7], filter2, {1}, Filters.finite);
+
 	NEW(window, map[0], "00"); window.AddWindow;
 	NEW(window, map[1], "01"); window.AddWindow;
 	NEW(window, map[2], "10"); window.AddWindow;
@@ -514,10 +514,10 @@ BEGIN
 	NEW(window, map[5], "20"); window.AddWindow;
 	NEW(window, map[6], "03"); window.AddWindow;
 	NEW(window, map[7], "30"); window.AddWindow;
-	
+
 (*nonlinear transform*)
-	map:=ALL(map, RectifiedLinear); 
-	
+	map:=ALL(map, RectifiedLinear);
+
 	NEW(window, map[0], "100"); window.AddWindow;
 	NEW(window, map[1], "101"); window.AddWindow;
 	NEW(window, map[2], "110"); window.AddWindow;
@@ -526,8 +526,8 @@ BEGIN
 	NEW(window, map[5], "120"); window.AddWindow;
 	NEW(window, map[6], "103"); window.AddWindow;
 	NEW(window, map[7], "130"); window.AddWindow;
-	
-	
+
+
 (* MAX pooling *)
 	NEW(map1, nFilters, LEN(data,0) DIV 2, LEN(data,1) DIV 2);
 	map1[0]:=PlanarTransform.ReduceMax(map[0]);
@@ -537,7 +537,7 @@ BEGIN
 	map1[4]:=PlanarTransform.ReduceMax(map[4]);
 	map1[5]:=PlanarTransform.ReduceMax(map[5]);
 	map1[6]:=PlanarTransform.ReduceMax(map[6]);
-	
+
 	NEW(window, map1[0], "200"); window.AddWindow;
 	NEW(window, map1[1], "201"); window.AddWindow;
 	NEW(window, map1[2], "210"); window.AddWindow;
@@ -549,7 +549,7 @@ BEGIN
 (*BackProp Error*)
 
 (*adjust filter*)
-	
+
 END Do1;
 *)
 
@@ -577,31 +577,31 @@ BEGIN
 	data[120..130, 60..80]:=1.0;
 	data[140..150, 100..120]:=1.0;
 	NEW(window, data, "data"); window.AddWindow;
-	
+
 	NEW(net);
 	(*NEW(cl, [10,10], RectifiedLinear, RectifiedLinearDerivative); *)
-	NEW(cl, [20,30], Tanh, TanhDerivative); 
+	NEW(cl, [20,30], Tanh, TanhDerivative);
 	net.Append(cl);
 	NEW(ml); net.Append(ml);
-	
+
 	(*NEW(cl, [10,10], RectifiedLinear, RectifiedLinearDerivative); ml.Connect(cl);*)
 	NEW(cl, [10,15], Tanh, TanhDerivative); net.Append(cl);
 	NEW(ml); net.Append(ml);
-	
+
 	NEW(cl, [10,15], Linear, LinearDerivative); net.Append(cl);
 	NEW(ml); net.Append(ml);
-	
+
 	result:=net.Evaluate(data);
 	NEW(resultWindow, result, "output"); resultWindow.maxInterpolation := WMGraphics.ScaleBox;  resultWindow.AddWindow;
-		
+
 	(*target:=Util.RandomMatrix(LEN(result,0),LEN(result,1),Util.Uniform);*)
 	NEW(target, LEN(result,0),LEN(result,1));
 	target[..BY 2,..]:=1.0; target[1,0]:=-0.01; (* force signed display *)
 	NEW(window, target, "target"); window.maxInterpolation := WMGraphics.ScaleBox; window.AddWindow;
 	FOR i:=0 TO rounds-1 DO
 		net.TrainingRound(data,target);
-		
-		e:=SUM(ABS(net.error)); 
+
+		e:=SUM(ABS(net.error));
 		IF i MOD (rounds DIV 100)=0 THEN
 			context.out.Int(i,0); context.out.String("   "); context.out.Float(e,12); context.out.Ln; context.out.Update;
 		END;
@@ -624,9 +624,9 @@ BEGIN
 	NEW(data, 256,256); data[60..80, 80..100]:=1.0;
 	(*NEW(filter, 64,64); filter[20..30,20..30]:=1.0;*)
 	filter:=GenTestFilter([64,64]);
-	NEW(convolver); 
+	NEW(convolver);
 	result:=convolver.Convolve(data,filter,VALID);
-		
+
 	NEW(window, data, "data"); window.AddWindow;
 	NEW(window, filter, "filter"); window.AddWindow;
 	NEW(window, result, "result"); window.AddWindow;
@@ -637,7 +637,7 @@ VAR convolver: EulFftwConvolve.MultiKernelConvolver2d_LR;
 	data, filter, result: Dataset;
 	window:WMMatrix.Window;
 BEGIN
-	NEW(data, 256,256); 
+	NEW(data, 256,256);
 	data[60..80, 80..100]:=1.0;
 	data[90..100, 20..30]:=1.0;
 	data[20..30, 60..80]:=1.0;
@@ -647,9 +647,9 @@ BEGIN
 	filter:=GenTestFilter([64,64]);
 	NEW(convolver); convolver.SetInputSize(256,256);
 	IF convolver.SetKernels(filter) & convolver.SetOutputShape(EulFftwConvolve.Valid) THEN result := convolver.Convolve(data);
-	ELSE HALT(200) 
+	ELSE HALT(200)
 	END;
-	
+
 	NEW(window, data, "data"); window.AddWindow;
 	NEW(window, filter, "filter"); window.AddWindow;
 	NEW(window, result, "result"); window.AddWindow;
@@ -657,7 +657,7 @@ END TestConvolveEul;
 
 END MLConvNet2D.
 
-(* 
+(*
 Testing:
 note that maps display scalar values, with white=only positive, and red/blue indicating positive and negative values *)
 MLConvNet2D.TestTraining 10000 ~

@@ -1,19 +1,19 @@
 MODULE LinearIIRConvolveLongReal ;	(**  AUTHOR "Patrick Hunziker"; PURPOSE "";  **)
 IMPORT math:=MathL;
-CONST	finite* = 0;  periodic* = 1;  mirrorH* = 2;  mirrorW* = 3;  antimirrorH* = 4;  antimirrorW* = 5;  
+CONST	finite* = 0;  periodic* = 1;  mirrorH* = 2;  mirrorW* = 3;  antimirrorH* = 4;  antimirrorW* = 5;
 	OneDivLn10= 0.434294483456101D0;
 		(*tolerance=-15.9;*) (*log10(eps) LONGREAL*)
 		tolerance=-7.2;
-		
+
 TYPE Datatype=LONGREAL;
 
 PROCEDURE ConvolveFinite*(CONST in: ARRAY [*] OF Datatype; VAR out: ARRAY [*] OF Datatype; CONST poles: ARRAY [*] OF Datatype; gain: Datatype);
-(**	Discrete recursive convolution:           
-				signal has finite support LEN(in,0) 
-				kernel is given by its real poles  
-		Preconditions: 
+(**	Discrete recursive convolution:
+				signal has finite support LEN(in,0)
+				kernel is given by its real poles
+		Preconditions:
 				input and output may use the same array*)
-VAR i,j:LONGINT; pole:Datatype;										
+VAR i,j:LONGINT; pole:Datatype;
 BEGIN
 	ASSERT(LEN(poles,0)>0,100);
 	ASSERT(LEN(in,0)<=LEN(out),101);
@@ -23,18 +23,18 @@ BEGIN
 		pole:=poles[i];
 		FOR j:=1 TO LEN(in,0)-1 		DO out[j]:=out[j]+out[j-1]*pole END;
 		j:=LEN(in,0)-2;
-		FOR j:=LEN(in,0)-2 TO 0 BY -1 DO out[j]:=out[j]+out[j+1]*pole END; 
+		FOR j:=LEN(in,0)-2 TO 0 BY -1 DO out[j]:=out[j]+out[j+1]*pole END;
 	END;
 END ConvolveFinite;
 
 (*
 PROCEDURE ConvolveFiniteB*(CONST in: ARRAY [*] OF Datatype; VAR out: ARRAY [*] OF Datatype; CONST poles: ARRAY [*] OF Datatype; gain: Datatype);
-(**	Discrete recursive convolution:           
-				signal has finite support LEN(in,0) 
-				kernel is given by its real poles  
-		Preconditions: 
+(**	Discrete recursive convolution:
+				signal has finite support LEN(in,0)
+				kernel is given by its real poles
+		Preconditions:
 				input and output may use the same array*)
-VAR i,j:LONGINT; pole:Datatype;										
+VAR i,j:LONGINT; pole:Datatype;
 BEGIN
 	ASSERT(LEN(poles,0)>0,100);
 	ASSERT(LEN(in,0)<=LEN(out),101);
@@ -45,21 +45,21 @@ BEGIN
 		FOR j:=1 TO LEN(in,0)-1 		DO out[j]:=out[j]+out[j-1]*pole END;(*original version*)
 		(*out[1..]:=out[1..] + [..LEN(out-1)] * pole;  *) (*not correctg: loop above is dependent on itself, leading to a data collision in this kind of parallelization*)
 		j:=LEN(in,0)-2;
-		FOR j:=LEN(in,0)-2 TO 0 BY -1 DO out[j]:=out[j]+out[j+1]*pole END; 
-		
+		FOR j:=LEN(in,0)-2 TO 0 BY -1 DO out[j]:=out[j]+out[j+1]*pole END;
+
 	END;
 END ConvolveFiniteB;
 *)
 
 PROCEDURE ConvolveMirror*(CONST in: ARRAY [*] OF Datatype; VAR out: ARRAY [*] OF Datatype; CONST poles: ARRAY [*] OF Datatype; gain: Datatype );
-(**	Discrete recursive convolution:           
-				signal has infinite, periodic support  2*LEN(in,0) 
+(**	Discrete recursive convolution:
+				signal has infinite, periodic support  2*LEN(in,0)
 				data [LEN(in,0)..2*LEN(in,0)-1] = mirror image of data[0..LEN(in,0)-1]
-				kernel is given by its real poles  
-		Preconditions: 
-				input and output may use the same array *) 
+				kernel is given by its real poles
+		Preconditions:
+				input and output may use the same array *)
 
-VAR i,j,k,n,n2:LONGINT; 
+VAR i,j,k,n,n2:LONGINT;
 	x0,pole:Datatype;
 BEGIN
 	ASSERT(LEN(in,0)<=LEN(out),101);
@@ -71,12 +71,12 @@ BEGIN
 	FOR i:=0 TO LEN(poles,0)-1 DO
 		pole:=poles[i];
 		j:=ENTIER(tolerance/math.ln(ABS(pole))*OneDivLn10)+1;
-		k:=j-n2*(j DIV n2); 
+		k:=j-n2*(j DIV n2);
 		j:=j-k;
-		IF k< n THEN x0:=out[k] 
+		IF k< n THEN x0:=out[k]
 		ELSE
 			x0:=out[n2-k];
-			FOR k:=n2-k+1 TO n-1 DO x0:=pole*x0+out[k] END; 
+			FOR k:=n2-k+1 TO n-1 DO x0:=pole*x0+out[k] END;
 		END;
 		FOR k:=n-1 TO 0 BY -1 	DO x0:=pole*x0+out[k] END;
 		WHILE j>0 DO
@@ -84,8 +84,8 @@ BEGIN
 			FOR k:=n-2 TO 0 BY -1 DO x0:=pole*x0+out[k] END;
 			j:=j-n2;
 		END;
-		out[0]:=x0; 
-		x0:=out[n-1]; 
+		out[0]:=x0;
+		x0:=out[n-1];
 		FOR k:=1 TO n-1 		DO out[k]:=out[k]+out[k-1]*pole END;
 		out[n-1]:=(2*out[n-1]-x0)/(1-pole*pole);
 		FOR k:=n-2 TO 0 BY -1 DO out[k]:=out[k]+out[k+1]*pole END;
@@ -93,13 +93,13 @@ BEGIN
 END ConvolveMirror;
 
 PROCEDURE ConvolvePeriodic*(CONST in: ARRAY [*] OF Datatype; VAR out: ARRAY [*] OF Datatype; CONST poles: ARRAY [*] OF Datatype; gain: Datatype);
-(**	Discrete recursive convolution:           
-				signal has infinite, periodic support  LEN(in,0) 
+(**	Discrete recursive convolution:
+				signal has infinite, periodic support  LEN(in,0)
 				for any x: signal[x]=signal[x MOD LEN(in,0)]
-				kernel is given by its real poles  
-		Preconditions: 
+				kernel is given by its real poles
+		Preconditions:
 				input and output may use the same array*)
-VAR i,j,k,n,k0:LONGINT; 
+VAR i,j,k,n,k0:LONGINT;
 	x0,x1,pole:Datatype;
 BEGIN
 	ASSERT(LEN(poles,0)>0,100);
@@ -131,7 +131,7 @@ BEGIN
 		FOR j:=0 TO n-2 			DO out[j+1]:=out[j+1]+out[j]*pole END;
 		out[n-1]:=(out[n-1]+x1-x0)/(1-pole*pole);
 		FOR j:=n-2 TO 0 BY -1	DO out[j]:=out[j]+out[j+1]*pole END;
-	END;	
+	END;
 END ConvolvePeriodic;
 
 

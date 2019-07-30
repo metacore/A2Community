@@ -1,7 +1,7 @@
 MODULE TensorFovea; (** AUTHOR "Patrick Hunziker"; PURPOSE "Foveal data patterns with central high res and peripheral blur"; *)
 
-(* 
-currently foveal image structure is a small 2*2 core of inner blocks (each block has "block size" ), 
+(*
+currently foveal image structure is a small 2*2 core of inner blocks (each block has "block size" ),
 surrounded by multiple concentric shells of 12 blocks of same size as inner block => doubling side length at each shell
 *)
 
@@ -13,7 +13,7 @@ TYPE Array* = ARRAY [?] OF Datatype;
 	Matrix* = ARRAY [*,*] OF Datatype;
 	Image* = Array (*Matrix*); (** foveal images have high central resolution and peripheral blur. They are stored as with size 12 in the last dimension due to special structure *)
 
-VAR rand:Random.Generator; 
+VAR rand:Random.Generator;
 	oldName: Files.FileName;
 
 PROCEDURE Prod(CONST a: ARRAY [*] OF SIZE): SIZE;
@@ -34,7 +34,7 @@ END Mean;
 PROCEDURE Sample(CONST m: Matrix):Datatype;
 VAR x,y: SIZE;
 BEGIN
-	IF LEN(m,1)<=1 THEN x:=0 ELSE x:=rand.Dice(LEN(m,1)) END; 
+	IF LEN(m,1)<=1 THEN x:=0 ELSE x:=rand.Dice(LEN(m,1)) END;
 	IF LEN(m,0)<=1 THEN y:=0 ELSE y:=rand.Dice(LEN(m,0)) END;
 	IF LEN(m,1)*LEN(m,0)>0 THEN RETURN m[y, x] ELSE RETURN 0 END;(*catch zero size subblocks*)
 END Sample;
@@ -48,8 +48,8 @@ BEGIN
 	x:=centerX;
 	y:=centerY;
 	img[0, 0..2]:=Mean(m[y..y+len-1, x-len..x-1]); (* rotating from 9 o clock, clockwise*)
-	img[0, 3..5]:=Mean(m[y..y+len-1, x..x+len-1]); 
-	img[0, 6..8]:=Mean(m[y-len..y-1, x..x+len-1]); 
+	img[0, 3..5]:=Mean(m[y..y+len-1, x..x+len-1]);
+	img[0, 6..8]:=Mean(m[y-len..y-1, x..x+len-1]);
 	img[0, 9..11]:=Mean(m[y-len..y-1, x-len..x-1]); (* core *)(*to do: blocks instead of fixed pixel size*)
 	FOR i:=0 TO shells-1 DO
 		img[i+1, 0] := Mean(m[y+0*len..y+1*len-1, x-2*len..x-1*len-1]); (* performance: could substitute Mean() by simple sampling *)
@@ -80,11 +80,11 @@ BEGIN
 	x:=centerX;
 	y:=centerY;
 	img[0, 0..2]:=Mean(m[y..y+len-1, x-len..x-1]); (* rotating from 9 o clock, clockwise*)
-	img[0, 3..5]:=Mean(m[y..y+len-1, x..x+len-1]); 
-	img[0, 6..8]:=Mean(m[y-len..y-1, x..x+len-1]); 
+	img[0, 3..5]:=Mean(m[y..y+len-1, x..x+len-1]);
+	img[0, 6..8]:=Mean(m[y-len..y-1, x..x+len-1]);
 	img[0, 9..11]:=Mean(m[y-len..y-1, x-len..x-1]); (* core *)(*to do: blocks instead of fixed pixel size*)
 	FOR i:=0 TO shells-1 DO
-		
+
 		img[2*i+1, 0] := Mean(m[y+0*len..y+1*len-1, x-2*len+slen..x-1*len-1]); (* performance: could substitute Mean() by simple sampling *)
 		img[2*i+1, 1] := Mean(m[y+1*len..y+2*len-1, x-2*len+slen..x-1*len-1]);
 		img[2*i+1, 2] := Mean(m[y+1*len..y+1*len+slen-1, x-1*len..x+0*len-1]);
@@ -98,7 +98,7 @@ BEGIN
 		img[2*i+1,10] := Mean(m[y-2*len+slen..y-1*len-1, x-2*len..x-1*len-1]); (*! there is some indexing problem here ...*)
 		img[2*i+1,11] := Mean(m[y-1*len..y+0*len-1, x-2*len+slen..x-1*len-1]);
 
-		img[2*i+2, 0] := Mean(m[y+0*len..y+1*len-1, x-2*len..x-2*len+slen-1]); 
+		img[2*i+2, 0] := Mean(m[y+0*len..y+1*len-1, x-2*len..x-2*len+slen-1]);
 		img[2*i+2, 1] := Mean(m[y+1*len..y+2*len-1, x-2*len..x-2*len+slen-1]);
 		img[2*i+2, 2] := Mean(m[y+1*len+slen..y+2*len-1, x-1*len..x+0*len-1]);
 		img[2*i+2, 3] := Mean(m[y+1*len+slen..y+2*len-1, x+0*len..x+1*len-1]);
@@ -128,12 +128,12 @@ BEGIN
 	y:=centerY;
 	FOR layer:=0 TO LEN(m,0)-1 DO
 		img[layer, 0, 0..2]:=Mean(m[layer, y..y+len-1, x-len..x-1]); (* rotating from 9 o clock, clockwise*)
-		img[layer, 0, 3..5]:=Mean(m[layer, y..y+len-1, x..x+len-1]); 
-		img[layer, 0, 6..8]:=Mean(m[layer, y-len..y-1, x..x+len-1]); 
+		img[layer, 0, 3..5]:=Mean(m[layer, y..y+len-1, x..x+len-1]);
+		img[layer, 0, 6..8]:=Mean(m[layer, y-len..y-1, x..x+len-1]);
 		img[layer, 0, 9..11]:=Mean(m[layer, y-len..y-1, x-len..x-1]); (* core *)(*to do: blocks instead of fixed pixel size*)
 		len:=innerBlockSize;
-		slen:=len DIV 2;		
-		FOR i:=0 TO shells-1 DO	
+		slen:=len DIV 2;
+		FOR i:=0 TO shells-1 DO
 			img[layer, 2*i+1, 0] := Mean(m[layer, y+0*len..y+1*len-1, x-2*len+slen..x-1*len-1]); (* performance: could substitute Mean() by simple sampling *)
 			img[layer, 2*i+1, 1] := Mean(m[layer, y+1*len..y+2*len-1, x-2*len+slen..x-1*len-1]);
 			img[layer, 2*i+1, 2] := Mean(m[layer, y+1*len..y+1*len+slen-1, x-1*len..x+0*len-1]);
@@ -146,8 +146,8 @@ BEGIN
 			img[layer, 2*i+1, 9] := Mean(m[layer, y-2*len+slen..y-1*len-1, x-1*len..x+0*len-1]);
 			img[layer, 2*i+1,10] := Mean(m[layer, y-2*len+slen..y-1*len-1, x-2*len..x-1*len-1]); (*! there is some indexing problem here ...*)
 			img[layer, 2*i+1,11] := Mean(m[layer, y-1*len..y+0*len-1, x-2*len+slen..x-1*len-1]);
- 
-			img[layer, 2*i+2, 0] := Mean(m[layer, y+0*len..y+1*len-1, x-2*len..x-2*len+slen-1]); 
+
+			img[layer, 2*i+2, 0] := Mean(m[layer, y+0*len..y+1*len-1, x-2*len..x-2*len+slen-1]);
 			img[layer, 2*i+2, 1] := Mean(m[layer, y+1*len..y+2*len-1, x-2*len..x-2*len+slen-1]);
 			img[layer, 2*i+2, 2] := Mean(m[layer, y+1*len+slen..y+2*len-1, x-1*len..x+0*len-1]);
 			img[layer, 2*i+2, 3] := Mean(m[layer, y+1*len+slen..y+2*len-1, x+0*len..x+1*len-1]);
@@ -177,13 +177,13 @@ BEGIN
 	y:=centerY;
 	FOR layer:=0 TO LEN(m,0)-1 DO
 		img[layer, 0, 0..2]:=Mean(m[layer, y..y+len-1, x-len..x-1]); (* rotating from 9 o clock, clockwise*)
-		img[layer, 0, 3..5]:=Mean(m[layer, y..y+len-1, x..x+len-1]); 
-		img[layer, 0, 6..8]:=Mean(m[layer, y-len..y-1, x..x+len-1]); 
+		img[layer, 0, 3..5]:=Mean(m[layer, y..y+len-1, x..x+len-1]);
+		img[layer, 0, 6..8]:=Mean(m[layer, y-len..y-1, x..x+len-1]);
 		img[layer, 0, 9..11]:=Mean(m[layer, y-len..y-1, x-len..x-1]); (* core *)(*to do: blocks instead of fixed pixel size*)
 		len:=innerBlockSize;
-		slen:=len DIV 2;		
-		FOR i:=0 TO shells-1 DO	
-			img[layer, 2*i+1, 0] := Sample(m[layer, y+0*len..y+1*len-1, x-2*len+slen..x-1*len-1]);  
+		slen:=len DIV 2;
+		FOR i:=0 TO shells-1 DO
+			img[layer, 2*i+1, 0] := Sample(m[layer, y+0*len..y+1*len-1, x-2*len+slen..x-1*len-1]);
 			img[layer, 2*i+1, 1] := Sample(m[layer, y+1*len..y+2*len-1, x-2*len+slen..x-1*len-1]);
 			img[layer, 2*i+1, 2] := Sample(m[layer, y+1*len..y+1*len+slen-1, x-1*len..x+0*len-1]);
 			img[layer, 2*i+1, 3] := Sample(m[layer, y+1*len..y+1*len+slen-1, x+0*len..x+1*len-1]);
@@ -195,8 +195,8 @@ BEGIN
 			img[layer, 2*i+1, 9] := Sample(m[layer, y-2*len+slen..y-1*len-1, x-1*len..x+0*len-1]);
 			img[layer, 2*i+1,10] := Sample(m[layer, y-2*len+slen..y-1*len-1, x-2*len..x-1*len-1]); (*! there is some indexing problem here ...*)
 			img[layer, 2*i+1,11] := Sample(m[layer, y-1*len..y+0*len-1, x-2*len+slen..x-1*len-1]);
- 
-			img[layer, 2*i+2, 0] := Sample(m[layer, y+0*len..y+1*len-1, x-2*len..x-2*len+slen-1]); 
+
+			img[layer, 2*i+2, 0] := Sample(m[layer, y+0*len..y+1*len-1, x-2*len..x-2*len+slen-1]);
 			img[layer, 2*i+2, 1] := Sample(m[layer, y+1*len..y+2*len-1, x-2*len..x-2*len+slen-1]);
 			img[layer, 2*i+2, 2] := Sample(m[layer, y+1*len+slen..y+2*len-1, x-1*len..x+0*len-1]);
 			img[layer, 2*i+2, 3] := Sample(m[layer, y+1*len+slen..y+2*len-1, x+0*len..x+1*len-1]);
@@ -225,12 +225,12 @@ BEGIN
 	x:=centerX;
 	y:=centerY;
 	img[0, 0..2]:=Mean(m[y..y+len-1, x-len..x-1]); (* rotating from 9 o clock, clockwise*)
-	img[0, 3..5]:=Mean(m[y..y+len-1, x..x+len-1]); 
-	img[0, 6..8]:=Mean(m[y-len..y-1, x..x+len-1]); 
+	img[0, 3..5]:=Mean(m[y..y+len-1, x..x+len-1]);
+	img[0, 6..8]:=Mean(m[y-len..y-1, x..x+len-1]);
 	img[0, 9..11]:=Mean(m[y-len..y-1, x-len..x-1]); (* core *)(*to do: blocks instead of fixed pixel size*)
 	FOR i:=0 TO shells-1 DO
-		
-		img[2*i+1, 0] := Sample(m[y+0*len..y+1*len-1, x-2*len+slen..x-1*len-1]); 
+
+		img[2*i+1, 0] := Sample(m[y+0*len..y+1*len-1, x-2*len+slen..x-1*len-1]);
 		img[2*i+1, 1] := Sample(m[y+1*len..y+2*len-1, x-2*len+slen..x-1*len-1]);
 		img[2*i+1, 2] := Sample(m[y+1*len..y+1*len+slen-1, x-1*len..x+0*len-1]);
 		img[2*i+1, 3] := Sample(m[y+1*len..y+1*len+slen-1, x+0*len..x+1*len-1]);
@@ -243,7 +243,7 @@ BEGIN
 		img[2*i+1,10] := Sample(m[y-2*len+slen..y-1*len-1, x-2*len..x-1*len-1]);
 		img[2*i+1,11] := Sample(m[y-1*len..y+0*len-1, x-2*len+slen..x-1*len-1]);
 
-		img[2*i+2, 0] := Sample(m[y+0*len..y+1*len-1, x-2*len..x-2*len+slen-1]); 
+		img[2*i+2, 0] := Sample(m[y+0*len..y+1*len-1, x-2*len..x-2*len+slen-1]);
 		img[2*i+2, 1] := Sample(m[y+1*len..y+2*len-1, x-2*len..x-2*len+slen-1]);
 		img[2*i+2, 2] := Sample(m[y+1*len+slen..y+2*len-1, x-1*len..x+0*len-1]);
 		img[2*i+2, 3] := Sample(m[y+1*len+slen..y+2*len-1, x+0*len..x+1*len-1]);
@@ -272,8 +272,8 @@ BEGIN
 	x:=centerX;
 	y:=centerY;
 	img[0, 0..2]:=Sample(m[y..y+len-1, x-len..x-1]); (* rotating from 9 o clock, clockwise*)
-	img[0, 3..5]:=Sample(m[y..y+len-1, x..x+len-1]); 
-	img[0, 6..8]:=Sample(m[y-len..y-1, x..x+len-1]); 
+	img[0, 3..5]:=Sample(m[y..y+len-1, x..x+len-1]);
+	img[0, 6..8]:=Sample(m[y-len..y-1, x..x+len-1]);
 	img[0, 9..11]:=Sample(m[y-len..y-1, x-len..x-1]); (* core *)(*to do: blocks instead of fixed pixel size*)
 	FOR i:=0 TO shells-1 DO
 		img[i+1, 0] := Sample(m[y+0*len..y+1*len-1, x-2*len..x-1*len-1]); (* performance: could substitute Mean() by simple sampling *)
@@ -305,11 +305,11 @@ BEGIN
 	x:=size DIV 2;
 	y:=size DIV 2;
 	m[y..y+len-1, x-len..x-1]:=Mean(img[0, 0..2]); (* rotating from 9 o clock, clockwise*)
-	m[y..y+len-1, x..x+len-1]:=Mean(img[0, 3..5]); 
-	m[y-len..y-1, x..x+len-1]:=Mean(img[0, 6..8]); 
+	m[y..y+len-1, x..x+len-1]:=Mean(img[0, 3..5]);
+	m[y-len..y-1, x..x+len-1]:=Mean(img[0, 6..8]);
 	m[y-len..y-1, x-len..x-1]:=Mean(img[0, 9..11]); (* core *)(*to do: blocks instead of fixed pixel size*)
 	FOR i:=0 TO shells-1 DO
-		m[y+0*len..y+1*len-1, x-2*len..x-1*len-1] := img[i+1, 0]; 
+		m[y+0*len..y+1*len-1, x-2*len..x-1*len-1] := img[i+1, 0];
 		m[y+1*len..y+2*len-1, x-2*len..x-1*len-1] := img[i+1, 1];
 		m[y+1*len..y+2*len-1, x-1*len..x+0*len-1] := img[i+1, 2];
 		m[y+1*len..y+2*len-1, x+0*len..x+1*len-1] := img[i+1, 3];
@@ -339,8 +339,8 @@ BEGIN
 	x:=size DIV 2;
 	y:=size DIV 2;
 	m[y..y+len-1, x-len..x-1]:=Mean(img[0, 0..2]); (* rotating from 9 o clock, clockwise*)
-	m[y..y+len-1, x..x+len-1]:=Mean(img[0, 3..5]); 
-	m[y-len..y-1, x..x+len-1]:=Mean(img[0, 6..8]); 
+	m[y..y+len-1, x..x+len-1]:=Mean(img[0, 3..5]);
+	m[y-len..y-1, x..x+len-1]:=Mean(img[0, 6..8]);
 	m[y-len..y-1, x-len..x-1]:=Mean(img[0, 9..11]); (* core *)(*to do: blocks instead of fixed pixel size*)
 	FOR i:=0 TO shells-1 DO
 		m[y+0*len..y+1*len-1, x-2*len+slen..x-1*len-1] := img[2*i+1, 0]; (* performance: could substitute Mean() by simple sampling *)
@@ -354,9 +354,9 @@ BEGIN
 		m[y-2*len+slen..y-1*len-1, x+0*len..x+1*len-1] := img[2*i+1, 8];
 		m[y-2*len+slen..y-1*len-1, x-1*len..x+0*len-1] := img[2*i+1, 9];
 		m[y-2*len+slen..y-1*len-1, x-2*len..x-1*len-1] := img[2*i+1, 10];
-		m[y-1*len..y+0*len-1, x-2*len+slen..x-1*len-1] := img[2*i+1, 11];      
+		m[y-1*len..y+0*len-1, x-2*len+slen..x-1*len-1] := img[2*i+1, 11];
 
-		m[y+0*len..y+1*len-1, x-2*len..x-2*len+slen-1] := img[2*i+2, 0]; 
+		m[y+0*len..y+1*len-1, x-2*len..x-2*len+slen-1] := img[2*i+2, 0];
 		m[y+1*len..y+2*len-1, x-2*len..x-2*len+slen-1] := img[2*i+2, 1];
 		m[y+1*len+slen..y+2*len-1, x-1*len..x+0*len-1] := img[2*i+2, 2];
 		m[y+1*len+slen..y+2*len-1, x+0*len..x+1*len-1] := img[2*i+2, 3];
@@ -387,8 +387,8 @@ BEGIN
 	y:=size DIV 2;
 	FOR layer:=0 TO LEN(img,0)-1 DO
 		m[layer, y..y+len-1, x-len..x-1]:=Mean(img[layer, 0, 0..2]); (* rotating from 9 o clock, clockwise*)
-		m[layer, y..y+len-1, x..x+len-1]:=Mean(img[layer, 0, 3..5]); 
-		m[layer, y-len..y-1, x..x+len-1]:=Mean(img[layer, 0, 6..8]); 
+		m[layer, y..y+len-1, x..x+len-1]:=Mean(img[layer, 0, 3..5]);
+		m[layer, y-len..y-1, x..x+len-1]:=Mean(img[layer, 0, 6..8]);
 		m[layer, y-len..y-1, x-len..x-1]:=Mean(img[layer, 0, 9..11]); (* core *)(*to do: blocks instead of fixed pixel size*)
 		len:=innerBlockSize;
 		slen:=len DIV 2;
@@ -404,9 +404,9 @@ BEGIN
 			m[layer, y-2*len+slen..y-1*len-1, x+0*len..x+1*len-1] := img[layer, 2*i+1, 8];
 			m[layer, y-2*len+slen..y-1*len-1, x-1*len..x+0*len-1] := img[layer, 2*i+1, 9];
 			m[layer, y-2*len+slen..y-1*len-1, x-2*len..x-1*len-1] := img[layer, 2*i+1, 10];
-			m[layer, y-1*len..y+0*len-1, x-2*len+slen..x-1*len-1] := img[layer, 2*i+1, 11];      
+			m[layer, y-1*len..y+0*len-1, x-2*len+slen..x-1*len-1] := img[layer, 2*i+1, 11];
 
-			m[layer, y+0*len..y+1*len-1, x-2*len..x-2*len+slen-1] := img[layer, 2*i+2, 0]; 
+			m[layer, y+0*len..y+1*len-1, x-2*len..x-2*len+slen-1] := img[layer, 2*i+2, 0];
 			m[layer, y+1*len..y+2*len-1, x-2*len..x-2*len+slen-1] := img[layer, 2*i+2, 1];
 			m[layer, y+1*len+slen..y+2*len-1, x-1*len..x+0*len-1] := img[layer, 2*i+2, 2];
 			m[layer, y+1*len+slen..y+2*len-1, x+0*len..x+1*len-1] := img[layer, 2*i+2, 3];
@@ -449,7 +449,7 @@ VAR img, recon, fovea: Matrix;
 BEGIN
 	NEW(img, 512, 512);
 	FOR i:=2 TO LEN(img,0)-3 BY 10 DO
-		img[i-2..i+2, i-2..i+2] := 1; 
+		img[i-2..i+2, i-2..i+2] := 1;
 	END;
 	fovea:=GetFovea2(img, 256, 256, 1, 6);
 	recon:=ReconstructFovea2(fovea, 1, 6);
@@ -467,18 +467,18 @@ BEGIN
 	FOR i:=2 TO LEN(img,1)-3 BY 10 DO
 		img[*,i-2..i+2, i-2..i+2] := 1;
 	END;
-	img[1,?]:=img[0,?] /2; 
+	img[1,?]:=img[0,?] /2;
 	fovea:=GetFoveaA2(img, 256, 256, 1, 6);
 	recon:=ReconstructFoveaA2(fovea, 1, 6);
-	
-	WMArrayPanel.AddWindow(img, "img"); 
-	WMArrayPanel.AddWindow(fovea, "fovea"); 
-	WMArrayPanel.AddWindow(recon, "recon"); 
+
+	WMArrayPanel.AddWindow(img, "img");
+	WMArrayPanel.AddWindow(fovea, "fovea");
+	WMArrayPanel.AddWindow(recon, "recon");
 END TestA;
 
 
 PROCEDURE Test1*(context:Commands.Context);
-VAR 
+VAR
 	raster3 : ARRAY [*,*,*] OF INTEGER;
 	raster, recon, fovea: Matrix;
 	im,fo, re: WMMatrix.Window;
@@ -490,13 +490,13 @@ BEGIN
 	img:=WMGraphics.LoadImage(name, FALSE);
 	MatrixRaster.ImageToArray(img, raster3);
 	raster:=raster3[1,*,*];
-	len:=LEN(raster,0); 
+	len:=LEN(raster,0);
 	x:=len DIV 2 -64 + rand.Dice(128);
 	y:=len DIV 2 -64 + rand.Dice(128);
 	fovea:=GetFovea(raster, x, y, 1, 7); (* compressed averaging sampling*)
 	(*fovea:=GetFoveaSampled(raster, x, y, 2, 6);*) (*compressed random sampling*)
 	recon:=ReconstructFovea(fovea, 1, 7);
-	IF name#oldName THEN 
+	IF name#oldName THEN
 		NEW(im, raster, "raster"); im.AddWindow;
 		NEW(fo, fovea, "fovea"); fo.AddWindow;
 	END;
@@ -505,7 +505,7 @@ BEGIN
 END Test1;
 
 PROCEDURE Test2*(context:Commands.Context);
-VAR 
+VAR
 	raster3 : ARRAY [*,*,*] OF INTEGER;
 	raster, recon, fovea: Matrix;
 	im,fo, re: WMMatrix.Window;
@@ -517,12 +517,12 @@ BEGIN
 	img:=WMGraphics.LoadImage(name, FALSE);
 	MatrixRaster.ImageToArray(img, raster3);
 	raster:=raster3[1,*,*];
-	len:=LEN(raster,0); 
+	len:=LEN(raster,0);
 	x:=len DIV 2 -64 + rand.Dice(128);
 	y:=len DIV 2 -64 + rand.Dice(128);
 	fovea:=GetFovea2(raster, x, y, 1, 7); (* compressed averaging sampling*)
 	recon:=ReconstructFovea2(fovea, 1, 7);
-	IF name#oldName THEN 
+	IF name#oldName THEN
 		NEW(im, raster, "raster"); im.AddWindow;
 		NEW(fo, fovea, "fovea"); fo.AddWindow;
 	END;
@@ -531,7 +531,7 @@ BEGIN
 END Test2;
 
 PROCEDURE TestA2*(context:Commands.Context);
-VAR 
+VAR
 	raster3 : ARRAY [*,*,*] OF INTEGER;
 	raster, recon, fovea: Tensor;
 	img: WMGraphics.Image;
@@ -542,12 +542,12 @@ BEGIN
 	img:=WMGraphics.LoadImage(name, FALSE);
 	MatrixRaster.ImageToArray(img, raster3);
 	raster:=raster3[*,*,*];
-	len:=LEN(raster,1); 
+	len:=LEN(raster,1);
 	x:=len DIV 2 -64 + rand.Dice(128);
 	y:=len DIV 2 -64 + rand.Dice(128);
 	fovea:=GetFoveaA2(raster, x, y, 1, 7); (* compressed averaging sampling*)
 	recon:=ReconstructFoveaA2(fovea, 1, 7);
-	IF name#oldName THEN 
+	IF name#oldName THEN
 		WMArrayPanel.AddWindow(raster,"raster");
 		WMArrayPanel.AddWindow(fovea, "fovea");
 	END;
@@ -557,7 +557,7 @@ END TestA2;
 
 
 PROCEDURE TestSampled2*(context:Commands.Context);
-VAR 
+VAR
 	raster3 : ARRAY [*,*,*] OF INTEGER;
 	raster, recon, fovea: Matrix;
 	im,fo, re: WMMatrix.Window;
@@ -569,12 +569,12 @@ BEGIN
 	img:=WMGraphics.LoadImage(name, FALSE);
 	MatrixRaster.ImageToArray(img, raster3);
 	raster:=raster3[1,*,*];
-	len:=LEN(raster,0); 
+	len:=LEN(raster,0);
 	x:=len DIV 2 -64 + rand.Dice(128);
 	y:=len DIV 2 -64 + rand.Dice(128);
 	fovea:=GetFoveaSampled2(raster, x, y, 2, 6); (*compressed random sampling*)
 	recon:=ReconstructFovea2(fovea, 2, 6);
-	IF name#oldName THEN 
+	IF name#oldName THEN
 		NEW(im, raster, "raster"); im.AddWindow;
 		NEW(fo, fovea, "fovea"); fo.AddWindow;
 	END;
@@ -583,7 +583,7 @@ BEGIN
 END TestSampled2;
 
 PROCEDURE Test3*(context:Commands.Context);
-VAR 
+VAR
 	raster3 : ARRAY [*,*,*] OF INTEGER;
 	raster, recon, fovea: Matrix;
 	im,fo, re: WMMatrix.Window;
@@ -599,19 +599,19 @@ BEGIN
 	img:=WMGraphics.LoadImage(name, FALSE);
 	MatrixRaster.ImageToArray(img, raster3);
 	raster:=raster3[1,*,*];
-	len:=LEN(raster,0); 
-	domainSize:=2*blockSize; 
+	len:=LEN(raster,0);
+	domainSize:=2*blockSize;
 	FOR i:=0 TO shells-1 DO domainSize:=domainSize*2 END;
 	ASSERT(domainSize <= LEN(raster),200);
-	
-	x:=domainSize DIV 2 + rand.Dice(LEN(raster,1)-domainSize); 
+
+	x:=domainSize DIV 2 + rand.Dice(LEN(raster,1)-domainSize);
 	y:=domainSize DIV 2 + rand.Dice(LEN(raster,0)-domainSize);
-	
+
 	IF mode="" THEN fovea:=GetFovea2(raster, x, y, blockSize, shells); (* compressed averaging sampling*)
-	ELSE fovea:=GetFoveaSampled2(raster, x, y, blockSize, shells); 
+	ELSE fovea:=GetFoveaSampled2(raster, x, y, blockSize, shells);
 	END;
 	recon:=ReconstructFovea2(fovea, blockSize, shells);
-	IF name#oldName THEN 
+	IF name#oldName THEN
 		NEW(im, raster, "raster"); im.AddWindow;
 		NEW(fo, fovea, "fovea"); fo.AddWindow;
 	END;

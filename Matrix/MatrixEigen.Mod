@@ -1,79 +1,79 @@
 MODULE MatrixEigen;   (**  AUTHOR "Patrick Hunziker"; PURPOSE "";  **)
 
-IMPORT Math := MathL, MatrixBase, MatrixPolynomEq, MatrixStandardSolvers, MatrixSVD, MatrixUtilities, Out:=KernelLog;  
+IMPORT Math := MathL, MatrixBase, MatrixPolynomEq, MatrixStandardSolvers, MatrixSVD, MatrixUtilities, Out:=KernelLog;
 
-TYPE 
-	Datatype = MatrixBase.Datatype;  Matrix = MatrixBase.Matrix;  Vector = MatrixBase.Vector;  
+TYPE
+	Datatype = MatrixBase.Datatype;  Matrix = MatrixBase.Matrix;  Vector = MatrixBase.Vector;
 
-CONST 
+CONST
 
-	PROCEDURE sqr( x: Datatype ): Datatype;  
-	BEGIN 
-		RETURN x * x;  
-	END sqr;  
+	PROCEDURE sqr( x: Datatype ): Datatype;
+	BEGIN
+		RETURN x * x;
+	END sqr;
 
 	PROCEDURE Eigenvalue22*( CONST A: Matrix ): Vector;   (*limitation: real case; add check for entry conditions*)
-	VAR L: Vector;  l0, l1: Datatype;  
-	BEGIN 
-		ASSERT( (LEN( A ) = 2) & (LEN( A, 1 ) = 2), 100 );  NEW( L, 2 );  l0 := (A[0, 0] + A[1, 1]) / 2 + Math.sqrt( sqr( A[0, 0] + A[1, 1] ) / 4 + A[0, 1] * A[1, 0] - A[0, 0] * A[1, 1] );  
-		l1 := (A[0, 0] + A[1, 1]) / 2 - Math.sqrt( sqr( A[0, 0] + A[1, 1] ) / 4 + A[0, 1] * A[1, 0] - A[0, 0] * A[1, 1] );  
-		IF ABS( l0 ) > ABS( l1 ) THEN L[0] := l0;  L[1] := l1 ELSE L[0] := l1;  L[1] := l0 END;  
+	VAR L: Vector;  l0, l1: Datatype;
+	BEGIN
+		ASSERT( (LEN( A ) = 2) & (LEN( A, 1 ) = 2), 100 );  NEW( L, 2 );  l0 := (A[0, 0] + A[1, 1]) / 2 + Math.sqrt( sqr( A[0, 0] + A[1, 1] ) / 4 + A[0, 1] * A[1, 0] - A[0, 0] * A[1, 1] );
+		l1 := (A[0, 0] + A[1, 1]) / 2 - Math.sqrt( sqr( A[0, 0] + A[1, 1] ) / 4 + A[0, 1] * A[1, 0] - A[0, 0] * A[1, 1] );
+		IF ABS( l0 ) > ABS( l1 ) THEN L[0] := l0;  L[1] := l1 ELSE L[0] := l1;  L[1] := l0 END;
 		RETURN L
-	END Eigenvalue22;  
-(*	
+	END Eigenvalue22;
+(*
 	PROCEDURE eigenvalue33*(a11,a12,a13,a21,a22,a23,a31,a32,a33:Datatype):Vector;
 	VAR detA: Datatype;
 	BEGIN
 		detA := a11 * a22 * a33 + a12 * a23 * a31 + a13 * a21 * a32 - a11 * a23 * a32 - a12 * a21 * a33 - a13 * a31 * a22;
-		RETURN MatrixPolynomEq.Cubic( -(a11 + a22 + a33), 
-															   +(a11 * a22 + a22 * a33 + a11 * a33 - a12 * a21 - a13 * a31 - a23 * a32), 
+		RETURN MatrixPolynomEq.Cubic( -(a11 + a22 + a33),
+															   +(a11 * a22 + a22 * a33 + a11 * a33 - a12 * a21 - a13 * a31 - a23 * a32),
 															   -detA );
 	END eigenvalue33;
 *)
 	PROCEDURE Eigenvalue33*( CONST A: Matrix ): Vector;   (*limitation: real case; add check for entry conditions*)
-	VAR a, b, c, d, e, f, g, h, i, detA: Datatype;  
-	BEGIN 
-		ASSERT( (LEN( A ) = 3) & (LEN( A, 1 ) = 3), 100 );  a := A[0, 0];  b := A[0, 1];  c := A[0, 2];  d := A[1, 0];  e := A[1, 1];  f := A[1, 2];  g := A[2, 0];  h := A[2, 1];  i := A[2, 2];  
-		detA := a * e * i + b * f * g + c * d * h - a * f * h - b * d * i - c * g * e;  RETURN MatrixPolynomEq.Cubic( -(a + e + i), +(a * e + e * i + a * i - b * d - c * g - f * h), 
+	VAR a, b, c, d, e, f, g, h, i, detA: Datatype;
+	BEGIN
+		ASSERT( (LEN( A ) = 3) & (LEN( A, 1 ) = 3), 100 );  a := A[0, 0];  b := A[0, 1];  c := A[0, 2];  d := A[1, 0];  e := A[1, 1];  f := A[1, 2];  g := A[2, 0];  h := A[2, 1];  i := A[2, 2];
+		detA := a * e * i + b * f * g + c * d * h - a * f * h - b * d * i - c * g * e;  RETURN MatrixPolynomEq.Cubic( -(a + e + i), +(a * e + e * i + a * i - b * d - c * g - f * h),
 		-detA );   (* sign changed: impact ?? *)
-	END Eigenvalue33;  
+	END Eigenvalue33;
 
-	PROCEDURE Eigenvalue44*( CONST A: Matrix ): Vector;  
+	PROCEDURE Eigenvalue44*( CONST A: Matrix ): Vector;
 	  (*not yet implemented. base on MatrixPolynomialEq.Mod - solution of quartic equation*)
-	END Eigenvalue44;  
+	END Eigenvalue44;
 
-	PROCEDURE Eigenvalues*( CONST A: Matrix ): Vector;  
-	BEGIN 
+	PROCEDURE Eigenvalues*( CONST A: Matrix ): Vector;
+	BEGIN
 		IF (LEN( A, 0 ) = 1) & (LEN( A, 1 ) = 1) THEN HALT( 100 )
 		ELSIF (LEN( A, 0 ) = 2) & (LEN( A, 1 ) <= 2) THEN RETURN Eigenvalue22( A )
 		ELSIF (LEN( A, 0 ) = 3) & (LEN( A, 1 ) <= 3) THEN RETURN Eigenvalue33( A )
 			(*ELSIF (LEN(A,0) = 4) & (LEN(A,1) <= 4) THEN RETURN Eigenvalue44(A)*)  (*To Do: use direct solving of quartic equation for 4*4 matrix instead of iterative solution *)
-		ELSE 
+		ELSE
 			RETURN QREigen( A );   (*SLOW because not yet optimized*)
-		END;  
-	END Eigenvalues;  
+		END;
+	END Eigenvalues;
 
 	PROCEDURE QREigen( CONST A0: Matrix ): Vector;   (*QR method with shift, see below. This implementation is by far not optimal (improve convergence analysis, use householder)*)
-	VAR A, M: Matrix;  s: Datatype;  i, j: LONGINT;  qr: MatrixStandardSolvers.QR;  dummy: ARRAY [ * , * ] OF Datatype;  
-		res: Vector;  
-	BEGIN 
-		A := A0;  NEW( qr, dummy );  
-		FOR j := 0 TO 10 * LEN( A, 0 ) DO 
-			NEW( M, LEN( A, 0 ), LEN( A, 1 ) );  s := A[LEN( A, 0 ) - 1, LEN( A, 0 ) - 1];  
-			FOR i := 0 TO LEN( A,0 ) - 1 DO M[i, i] := s;  END;  
-			qr.Init( A - M );  A := qr.R * qr.Q + M;  
-		END;  
-		NEW( res, LEN( A, 0 ) );  
-		FOR i := 0 TO LEN( A, 0 ) - 1 DO res[i] := A[i, i];  END;  
-		RETURN res;  
-	END QREigen;  
+	VAR A, M: Matrix;  s: Datatype;  i, j: LONGINT;  qr: MatrixStandardSolvers.QR;  dummy: ARRAY [ * , * ] OF Datatype;
+		res: Vector;
+	BEGIN
+		A := A0;  NEW( qr, dummy );
+		FOR j := 0 TO 10 * LEN( A, 0 ) DO
+			NEW( M, LEN( A, 0 ), LEN( A, 1 ) );  s := A[LEN( A, 0 ) - 1, LEN( A, 0 ) - 1];
+			FOR i := 0 TO LEN( A,0 ) - 1 DO M[i, i] := s;  END;
+			qr.Init( A - M );  A := qr.R * qr.Q + M;
+		END;
+		NEW( res, LEN( A, 0 ) );
+		FOR i := 0 TO LEN( A, 0 ) - 1 DO res[i] := A[i, i];  END;
+		RETURN res;
+	END QREigen;
 
 (* work in progress- not to be used
 
 (* see http://math.fullerton.edu/mathews/n2003/QRMethodMod.html and Wikipedia: QR algorithm
- The [Graphics:Images/QRmethodMod_gr_90.gif] method works much faster on special matrices, preferably:  
-        (i)   symmetric  tri-diagonal,  
-        (ii)  Hessenberg matrices,  
+ The [Graphics:Images/QRmethodMod_gr_90.gif] method works much faster on special matrices, preferably:
+        (i)   symmetric  tri-diagonal,
+        (ii)  Hessenberg matrices,
         (iii) symmetric  band matrices.  *)
 
 	PROCEDURE DropEigenvalue(CONST A:Matrix):Matrix;
@@ -85,13 +85,13 @@ CONST
 		LOOP
 			IF i>=LEN(A) THEN EXIT END;
 			v:=A[i]; v[i]:=0;
-			IF v +* v < threshold THEN 
-				Out.String("Eigenvalue removed from line: "); Out.Int(i,5); Out.String("  "); MatrixUtilities.OutVector(A[i]); 
+			IF v +* v < threshold THEN
+				Out.String("Eigenvalue removed from line: "); Out.Int(i,5); Out.String("  "); MatrixUtilities.OutVector(A[i]);
 				NEW(B, LEN(A,0)-1, LEN(A,1)-1);
-				
+
 				IF i>0  THEN B[..i-1,..i-1]:=A[..i-1,..i-1]; END;
-				IF (i>0)&(i<LEN(A,0)-1) THEN 
-					B[..i-1,i..max-1]:=A[..i-1,i+1..max]; 
+				IF (i>0)&(i<LEN(A,0)-1) THEN
+					B[..i-1,i..max-1]:=A[..i-1,i+1..max];
 					B[i..max-1,..i-1]:=A[i+1..max,..i-1];
 				END;
 				IF i<LEN(A,0)-1 THEN B[i..max-1,i..max-1]:=A[i+1..max,i+1..max]; END;
@@ -103,7 +103,7 @@ CONST
 		RETURN B
 	END DropEigenvalue;
 
-	PROCEDURE QREigen (CONST A: Matrix); 
+	PROCEDURE QREigen (CONST A: Matrix);
 	(* works for real symmetric matrices; still slow: eliminate one eigenvalue when it is found and reduce matrix size at each step*)
 	(*to do: use householder reduction to hessenberg form or similar as first step*)
 	VAR qr: MatrixStandardSolvers.QR; svd: MatrixSVD.Solver; dummy,A0, A1,Q,R: Matrix; k:LONGINT; (*needs work*)
@@ -113,11 +113,11 @@ CONST
 		R:=A0;
 		WHILE k<10*LEN(A,0) DO
 			IF k MOD 1 = 0 THEN MatrixUtilities.OutMatrix(A0); END;
-			
+
 			qr.Init(A0);
 			A1:=qr.Q`* A0 * qr.Q;
 			A0:=A1;
-			
+
 			(*
 			(*how to reduce matrix size*)
 			qr.Init(A0);
@@ -125,18 +125,18 @@ CONST
 			A0:=dummy; A0:=DropEigenvalue(A1); (* to add: bookkeeping of indices of Eigenvalues *)
 			A1:=dummy; A1:=A0;
 			*)
-			
+
 			(*
 			R:=A0;
 			MatrixTransforms.Householder(R);
-			Q:= (compute from A and R); 
+			Q:= (compute from A and R);
 			A1:=Q`*A0 * Q;
 			A0:=A1;
 			*)
 			INC(k);
 		END;
 		NEW(svd,A);
-		
+
 		MatrixUtilities.OutMatrix(svd.u);
 		MatrixUtilities.OutMatrix(svd.w);
 		MatrixUtilities.OutMatrix(svd.vt);
@@ -146,18 +146,18 @@ CONST
 *)
 
 
-	PROCEDURE Test*;  
-	VAR svd: MatrixSVD.Solver;  A: Matrix;  
-	BEGIN 
-		A := [[4, 1, 3, -2], [1, -2, 4, 1], [3, 4, 1, 2], [-2, 1, 2, 3]];  Out.String( "Eigenvalues by QR method : " );  Out.Ln;  MatrixUtilities.OutVector( QREigen( A ) );  Out.Ln;  
+	PROCEDURE Test*;
+	VAR svd: MatrixSVD.Solver;  A: Matrix;
+	BEGIN
+		A := [[4, 1, 3, -2], [1, -2, 4, 1], [3, 4, 1, 2], [-2, 1, 2, 3]];  Out.String( "Eigenvalues by QR method : " );  Out.Ln;  MatrixUtilities.OutVector( QREigen( A ) );  Out.Ln;
 
-		Out.String( "Singular Values by SVD (differ in sign from eigenvalues for symmetric pos definite matrices): " );  Out.Ln;  
+		Out.String( "Singular Values by SVD (differ in sign from eigenvalues for symmetric pos definite matrices): " );  Out.Ln;
 
-		NEW( svd, A );  
+		NEW( svd, A );
 
-		MatrixUtilities.OutMatrix( svd.w );  Out.String( "Orthogonality check of u * ut in SVD: " );  Out.Ln;  MatrixUtilities.OutMatrix( svd.u * svd.u` );  
-	
-	END Test;  
+		MatrixUtilities.OutMatrix( svd.w );  Out.String( "Orthogonality check of u * ut in SVD: " );  Out.Ln;  MatrixUtilities.OutMatrix( svd.u * svd.u` );
+
+	END Test;
 
 END MatrixEigen.
 
@@ -166,9 +166,9 @@ fofPC.Compile \s * ~
 fofPC.Compile \f * ~
 OFormatter.Format *
 
-For symmetric and Hermitian matrices, the eigenvalues and singular values are closely related. 
-A nonnegative eigenvalue,  is also a singularvalue. 
-The correspo nding vectors are equal to each other, u = v = x. 
+For symmetric and Hermitian matrices, the eigenvalues and singular values are closely related.
+A nonnegative eigenvalue,  is also a singularvalue.
+The correspo nding vectors are equal to each other, u = v = x.
 A negative eigenvalue, lambda < 0, must reverse its sign to become a singular value, |s|.
 One of the corresponding singular vectors is the negative of the other.
 

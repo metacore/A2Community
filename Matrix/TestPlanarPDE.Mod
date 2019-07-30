@@ -1,95 +1,95 @@
-MODULE TestPlanarPDE;  
+MODULE TestPlanarPDE;
 
-(**  
+(**
 	PURPOSE "Tests partial differential equations for 2D"
 	AUTHOR: "Patrick Hunziker; email patrick.hunziker@swissnano.org"
 	DATE 2009-2-12
 **)
 
-IMPORT PlanarPDE, WMMatrix;  
-	
-TYPE 
-	Datatype = PlanarPDE.Datatype;  
-	Grid = PlanarPDE.Grid;  
-		
-	PROCEDURE TestDiffusion*;  
-	CONST size = 200;  
-	VAR d,dm1, p: Grid;  i: LONGINT;  c: Datatype;  
-		D,P:WMMatrix.Window; 
+IMPORT PlanarPDE, WMMatrix;
+
+TYPE
+	Datatype = PlanarPDE.Datatype;
+	Grid = PlanarPDE.Grid;
+
+	PROCEDURE TestDiffusion*;
+	CONST size = 200;
+	VAR d,dm1, p: Grid;  i: LONGINT;  c: Datatype;
+		D,P:WMMatrix.Window;
 		diffusion: PlanarPDE.Diffusion;
-	BEGIN 
-		NEW( d, size, size );  d[90..109] := 1;  d[.. , 90..109] := 1;  NEW( p, size, size );  
-		NEW( diffusion );  
-		NEW( D, d, "d" );  D.AddWindow;  
+	BEGIN
+		NEW( d, size, size );  d[90..109] := 1;  d[.. , 90..109] := 1;  NEW( p, size, size );
+		NEW( diffusion );
+		NEW( D, d, "d" );  D.AddWindow;
 		NEW( P, p, "p" );  P.AddWindow;
-		FOR i := 0 TO 100 DO 
-			diffusion.SolveMultigrid( d, p, 1, 1, 1, 0.1,16, 16, NIL );  
+		FOR i := 0 TO 100 DO
+			diffusion.SolveMultigrid( d, p, 1, 1, 1, 0.1,16, 16, NIL );
 			P.SetImage( p);
 			d:=p; p:=0;
-		END;  
-	END TestDiffusion;  
+		END;
+	END TestDiffusion;
 
-	PROCEDURE TestLaplace*;  
-	CONST size = 200;  threshold = 1;  
-	VAR d: Grid;  laplace: PlanarPDE.Laplace;  
-	BEGIN 
-		NEW( d, size, size );  d[45..55] := 1;  d[.. , 45..55] := -1;   
-		NEW( laplace );  laplace.SolveMultigrid( d, threshold, 32, 20, 200, NIL );  
+	PROCEDURE TestLaplace*;
+	CONST size = 200;  threshold = 1;
+	VAR d: Grid;  laplace: PlanarPDE.Laplace;
+	BEGIN
+		NEW( d, size, size );  d[45..55] := 1;  d[.. , 45..55] := -1;
+		NEW( laplace );  laplace.SolveMultigrid( d, threshold, 32, 20, 200, NIL );
 		WMMatrix.AddWindow(d,"d");
-	END TestLaplace;  
+	END TestLaplace;
 
-	PROCEDURE TestConstrainedLaplace*;  
-	CONST size = 200;  threshold = 1;  
+	PROCEDURE TestConstrainedLaplace*;
+	CONST size = 200;  threshold = 1;
 	VAR d,c: Grid;  b: PlanarPDE.BooleanMap;
 		con:PlanarPDE.Constraint;
-		laplace: PlanarPDE.Laplace;  
-	BEGIN 
-		NEW( d, size, size ); 
+		laplace: PlanarPDE.Laplace;
+	BEGIN
+		NEW( d, size, size );
 		NEW( c, size, size); c[45..55] := 1;  c[.. , 45..55] := -1;   c[100.. , 145..155] := 1;
 		NEW( b, size, size); b[45..55] := TRUE;  b[.. , 45..55] := TRUE;   b[100.. , 145..155] := TRUE;
 		NEW(con); con.Set(c,b);
-		NEW( laplace );  laplace.SolveMultigrid( d, threshold, 32, 20, 200, con.Constrain );  
+		NEW( laplace );  laplace.SolveMultigrid( d, threshold, 32, 20, 200, con.Constrain );
 		WMMatrix.AddWindow(d,"d");
-	END TestConstrainedLaplace;  
+	END TestConstrainedLaplace;
 
-	PROCEDURE TestPoisson*;  
-	CONST size = 200;  threshold = 1;  
-	VAR d, p: Grid;  poisson: PlanarPDE.Poisson;  
-	BEGIN 
-		NEW( d, size, size );  d[45..55] := 1;  d[.. , 45..55] := 1;   NEW( p, size, size );  
-		NEW( poisson );  poisson.SolveMultigrid( d, p, 0.01, threshold, 20, 10, NIL );  
+	PROCEDURE TestPoisson*;
+	CONST size = 200;  threshold = 1;
+	VAR d, p: Grid;  poisson: PlanarPDE.Poisson;
+	BEGIN
+		NEW( d, size, size );  d[45..55] := 1;  d[.. , 45..55] := 1;   NEW( p, size, size );
+		NEW( poisson );  poisson.SolveMultigrid( d, p, 0.01, threshold, 20, 10, NIL );
 		WMMatrix.AddWindow(d,"d");
 		WMMatrix.AddWindow(p,"p");
-	END TestPoisson;  
-	
-	PROCEDURE TestWave*;  
-	CONST size = 128;  
-	VAR d,dm1, p: Grid;  i: LONGINT;  c: Datatype;  
-		D,P:WMMatrix.Window; 
-		wave: PlanarPDE.Wave;
-	BEGIN 
-		NEW( dm1, size, size );  dm1[..,15..18] := 1;  dm1[ 15..18] := 1;  
-		NEW( d, size, size );  d[..,17..20] := 1;  d[ 17..20] := 1;  
-		NEW( p, size, size);  
-		c := 1;  
+	END TestPoisson;
 
-		NEW(wave); 
-		NEW( D, d, "d" );  D.AddWindow;  
+	PROCEDURE TestWave*;
+	CONST size = 128;
+	VAR d,dm1, p: Grid;  i: LONGINT;  c: Datatype;
+		D,P:WMMatrix.Window;
+		wave: PlanarPDE.Wave;
+	BEGIN
+		NEW( dm1, size, size );  dm1[..,15..18] := 1;  dm1[ 15..18] := 1;
+		NEW( d, size, size );  d[..,17..20] := 1;  d[ 17..20] := 1;
+		NEW( p, size, size);
+		c := 1;
+
+		NEW(wave);
+		NEW( D, d, "d" );  D.AddWindow;
 		NEW( P, p, "p" );  P.AddWindow;
-		FOR i := 0 TO 200 DO 
+		FOR i := 0 TO 200 DO
 			wave.SolveMultigrid( dm1,d, p, c, 1,  1, 1, 16, 30, 10,  NIL );  (*dm1[@-1], d[@0] => p[@+1]*)
 			P.SetImage( p);
 			dm1:=d; d:=p;
-		END;  
-	END TestWave;  
+		END;
+	END TestWave;
 
 END TestPlanarPDE.
 
-System.Free TestPlanarPDE  PlanarPDE PlanarNabla PlanarBase ~ 
+System.Free TestPlanarPDE  PlanarPDE PlanarNabla PlanarBase ~
 
 TestPlanarPDE.TestLaplace
 TestPlanarPDE.TestConstrainedLaplace
 TestPlanarPDE.TestPoisson
 TestPlanarPDE.TestDiffusion
 TestPlanarPDE.TestWave
- 
+

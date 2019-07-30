@@ -38,35 +38,35 @@ BEGIN
 	IF a#b THEN END;
 	NEW(A,size); NEW(B,size); NEW(C,size); NEW(P,size); NEW(R,size); NEW(I,size);
 	CMath.SetComplexArray(A,[0,1,2,3,4,5,6,7,8,7,6,5,4,3,2,1],[4,3,2,2,4,5,6,7,8,7,6,5,4,3,4,4]);
-	
+
 	B:=A+1;
-	
+
 	(*
 	CMath.GetComplexArray(A, R,I);
 	CMath.Out(A, 2,10, 0); Log.Ln;
 	CMath.Out(B, 2, 10, 0);
-	
+
 	Util.CMath.OutVector(R);
 	Util.CMath.OutVector(I);
 	*)
-	
+
 	c:=CMath.Complex(1.5,1.5);
 	CMath.Out(c,12,6,0);
-	
+
 	A:=B;
 	A:=P;
 	P:=A;
-	
+
 	A:=B+C;
 	A:=B-C;
 	A:=B.*C;
-	A:=B./C;	
+	A:=B./C;
 
 	A:= B*y;
 	A:= y*C;
 	A:= B/y;
-	A:= y/C;	
-	
+	A:= y/C;
+
 END Demo;
 
 END TestComplexMathL.

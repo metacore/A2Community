@@ -1,5 +1,5 @@
 MODULE LinearFIRConvolveLongReal;	(** Patrick Hunziker & dk(assembler)   **)
-(** implements basic FIR convolutions for convolve, convolve+downsample, convolve+upsample *) 
+(** implements basic FIR convolutions for convolve, convolve+downsample, convolve+upsample *)
 
 IMPORT Util:=MatrixUtilities;
 
@@ -16,13 +16,13 @@ END Convolve;
 (*
 PROCEDURE Convolve*(CONST filter:ARRAY[*]  OF LONGREAL; VAR data,result:ARRAY [*] OF LONGREAL);
 VAR diffrlfl :LONGINT;
-CODE {SYSTEM.i386, SYSTEM.FPU}	
+CODE {SYSTEM.i386, SYSTEM.FPU}
 		;28[EBP] : LEN(filter)
 		; 20[EBP] : LEN(data,0)
 		;12[EBP] : LEN(result,0)
-		
+
 		MOV EBX, 20[EBP]  ; LEN(data,0)
-		MOV EDX, 12[EBP]  ; LEN(result,0) 
+		MOV EDX, 12[EBP]  ; LEN(result,0)
 		CMP EBX, EDX
 		JG endif
 		MOV EBX, 12[EBP] ; reslen:=LEN(data,0)
@@ -30,14 +30,14 @@ CODE {SYSTEM.i386, SYSTEM.FPU}
 		MOV EDX, 28[EBP] ;
 		SUB EBX, EDX
 		MOV diffrlfl[EBP], EBX ;  reslen - LEN(filter)
-	
+
 		MOV EDI, data[EBP] ; EDI := ADDRESSOF(data[0]);
 		MOV ESI, filter[EBP];  ESI := ADDRESSOF(filter[0]);
 		MOV EDX, result[EBP]  ;EDX := ADDRESSOF(result[0]);
- 
+
 		MOV EAX, 0 ; d := 0
 		JMP conditionOL
-	outerloop:	
+	outerloop:
 		MOV ECX, 0 ;f := 0
 		FLDZ
 		JMP conditionIL
@@ -48,7 +48,7 @@ CODE {SYSTEM.i386, SYSTEM.FPU}
 		FADDP
 		INC ECX ; INC(f)
 	conditionIL:
-		 CMP ECX, 28[EBP] ;  f < LEN(filter) ? 
+		 CMP ECX, 28[EBP] ;  f < LEN(filter) ?
 		 JL innerloop;
 		FSTP QWORD  0[EDX][EAX*8]
 		WAIT
@@ -60,7 +60,7 @@ CODE {SYSTEM.i386, SYSTEM.FPU}
 END Convolve;
 *)
 
-PROCEDURE ConvolveDown2*(CONST filter:ARRAY[*]  OF LONGREAL;  CONST data:ARRAY [*] OF LONGREAL;VAR result:ARRAY [*] OF LONGREAL; shift:LONGINT);	
+PROCEDURE ConvolveDown2*(CONST filter:ARRAY[*]  OF LONGREAL;  CONST data:ARRAY [*] OF LONGREAL;VAR result:ARRAY [*] OF LONGREAL; shift:LONGINT);
 VAR d,filterlen,datalen,resPos:LONGINT;
 BEGIN
 	(** precondition: shift IN {0,1} ; this is used for even/odd algorithm variants *)
@@ -77,7 +77,7 @@ END ConvolveDown2;
 (*
 PROCEDURE ConvolveDown2*(CONST filter:ARRAY[*]  OF LONGREAL; VAR data,result:ARRAY [*] OF LONGREAL; shift:LONGINT);
 VAR diffdlfl :LONGINT;
-CODE {SYSTEM.i386, SYSTEM.FPU}	
+CODE {SYSTEM.i386, SYSTEM.FPU}
 		;32[EBP] : LEN(filter)
 		;24[EBP] : LEN(data,0)
 		;16[EBP] : LEN(result,0)
@@ -87,39 +87,39 @@ CODE {SYSTEM.i386, SYSTEM.FPU}
 		MOV EDX, 16[EBP];  LEN(result,0)
 		CMP EDX, EBX  ; LEN(result,0) < LEN(data,0) DIV 2 ?
 		JNL else
-		MOV EBX, 16[EBP] 
+		MOV EBX, 16[EBP]
 		SHL EBX,1 ; datalen := 2* LEN(result,0)
 		JMP endif
 	else:
 		MOV EBX, 24[EBP] ; datalen := LEN(data,0)
 	endif:
-		MOV EDX, 32[EBP] ; 
+		MOV EDX, 32[EBP] ;
 		SUB EBX, EDX ; diffdlfl := datalen - LEN(filter)
 		MOV diffdlfl[EBP], EBX
-	
+
 		MOV EDI, data[EBP] ; EDI := ADDRESSOF(data[0])
 		MOV ESI, filter[EBP] ; ESI := ADDRESSOF(filter[0])
 		MOV EDX, result[EBP] ;EXI := ADDRESSOF(result[0])
-		
-		
-		MOV EAX, shift[EBP]; d := shift		
+
+
+		MOV EAX, shift[EBP]; d := shift
 		MOV ECX, EAX
 		SHL ECX,3
-		ADD EDI, ECX ; data[d] := data[0 + shift] 
-				
+		ADD EDI, ECX ; data[d] := data[0 + shift]
+
 		JMP conditionOL
-	outerloop:	
+	outerloop:
 		MOV ECX, 0 ;f := 0
 		FLDZ
 		JMP conditionIL
-	innerloop:		
+	innerloop:
 		FLD QWORD 0[EDI][ECX*8]
 		FLD QWORD 0[ESI][ECX*8]
 		FMULP
 		FADDP
 		INC ECX ; INC(f)
 	conditionIL:
-		CMP ECX, 32[EBP]; f < LEN(filter) ?		
+		CMP ECX, 32[EBP]; f < LEN(filter) ?
 		JL innerloop
 
 		MOV ECX, EAX
@@ -130,15 +130,15 @@ CODE {SYSTEM.i386, SYSTEM.FPU}
 		ADD EDI, 16  ;EDI := ADDRESSOF(data[0 + d])
 	conditionOL:
 		CMP EAX, diffdlfl[EBP] ; d < reslen - LEN(filter)
-		JLE outerloop		
+		JLE outerloop
 endouterloop:
-		
+
 END ConvolveDown2;
 *)
 
-PROCEDURE ConvolveUp2*(CONST filter:ARRAY[*]  OF LONGREAL; CONST data: ARRAY [*] OF LONGREAL;VAR result:ARRAY [*] OF LONGREAL; shift:LONGINT);	
-	(** upsampling by 2 and convolution with filter; admissible types should include all basic Oberon number types *) 
-VAR f,d,filterlen,reslen,filterstart:LONGINT; 
+PROCEDURE ConvolveUp2*(CONST filter:ARRAY[*]  OF LONGREAL; CONST data: ARRAY [*] OF LONGREAL;VAR result:ARRAY [*] OF LONGREAL; shift:LONGINT);
+	(** upsampling by 2 and convolution with filter; admissible types should include all basic Oberon number types *)
+VAR f,d,filterlen,reslen,filterstart:LONGINT;
 BEGIN
 	(** precondition: shift IN {0,1} ; this is used for even/odd algorithm variants *)
 	(* in simpler, slow variant, upsampling (shifted by shift) into a temp array is followed by standard FIRConvolve*)
@@ -172,40 +172,40 @@ CODE {SYSTEM.i386, SYSTEM.FPU}
 		MOV EDX, 32[EBP] ; EDX := LEN(filter)
 		SUB EBX, EDX ; EBX := reslen - filterlen
 		MOV diffrlfl[EBP], EBX
-	
+
 		MOV EDI, data[EBP] ; EDI := ADDRESSOF(data[0])
 		MOV ESI, filter[EBP] ; ESI := ADDRESSOF(filter[0])
 		MOV EDX, result[EBP] ;EXI := ADDRESSOF(result[0])
-		
+
 		MOV EAX, 0; d := 0
 		JMP conditionOL
-	outerloop:	
+	outerloop:
 		FLDZ
 		MOV ECX, shift[EBP]
 		ADD ECX, EAX
 		AND ECX, 00000001H ; IF ODD(d+shift) THEN filterstart:=1 ELSE filterstart:=0 END;
 		JMP conditionIL
 	innerloop:
-		MOV EBX, EAX		
+		MOV EBX, EAX
 		 ADD EBX, ECX
 		SAR EBX, 1	; index := d+ f DIV 2
 		FLD QWORD 0[EDI][EBX*8]
-		FLD QWORD 0[ESI][ECX*8]	
+		FLD QWORD 0[ESI][ECX*8]
 		FMULP
-		FADDP			
+		FADDP
 		 ADD ECX, 2 ; INC(f, 2)
 	conditionIL:
 		CMP ECX, 32[EBP]; f < LEN(filter) ?
 		JL innerloop
-	
+
 		FSTP QWORD 0[EDX][EAX * 8]
-		WAIT		
+		WAIT
 		INC EAX ; INC(d)
 	conditionOL:
 		CMP EAX, diffrlfl[EBP] ; d <  reslen - filterlen ?
 		JLE outerloop
 endouterloop:
-		
+
 END ConvolveUp2;
 *)
 
@@ -215,7 +215,7 @@ System.Free FIRConvolveReal ~
 Decoder.Decode FIRConvolveReal~
 
 ------------------------
-System.Log output: 
+System.Log output:
 
 
 Builder.Compile *

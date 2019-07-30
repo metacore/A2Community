@@ -12,36 +12,36 @@ CONST x=0; y=1;
 	entier*=4;
 	nearestneighbour*=8;
 
-TYPE 
+TYPE
 	Scalar* = PlanarBase.Datatype;
 	Line = ARRAY [*] OF Scalar;
 	Vector = Line;
 	ScalarField* = ARRAY [*,*] OF Scalar;
 	VectorField* = RECORD x*,y*: ScalarField END;
 	TensorField* = RECORD xx*,xy*, yx*, yy*: ScalarField END;
-	
+
 PROCEDURE dx* (CONST sf:ScalarField; sampling:LONGINT): ScalarField; (* to do: place result directly in return variable *)
 VAR res:ScalarField;
 BEGIN
 	IF LEN(RESULT)=0 THEN NEW(RESULT, LEN(sf,0), LEN(sf,1)); END;
 	CASE sampling OF
-		centered: 
-			RESULT[.. , 1..LEN( RESULT, 1 ) - 2] := 0.5 * sf[.. , 2..LEN( RESULT, 1 ) - 1];  
-			RESULT[.. , 1..LEN( RESULT, 1 ) - 2] := RESULT[.. , 1..LEN( RESULT, 1 ) - 2] - 0.5 * sf[.. , 0..LEN( RESULT, 1 ) - 3]; 
+		centered:
+			RESULT[.. , 1..LEN( RESULT, 1 ) - 2] := 0.5 * sf[.. , 2..LEN( RESULT, 1 ) - 1];
+			RESULT[.. , 1..LEN( RESULT, 1 ) - 2] := RESULT[.. , 1..LEN( RESULT, 1 ) - 2] - 0.5 * sf[.. , 0..LEN( RESULT, 1 ) - 3];
 			RESULT[.., 0]:= sf[..,1]-sf[..,0]; RESULT[..,LEN(RESULT,1)-1]:=sf[.. ,LEN( sf, 1 ) - 1]-sf[.. ,LEN( sf, 1 ) - 2]; (*boundary handling; costly in terms of cache misses*)
 		| linear, spline2:
 			(*discrete filtered version*)
 			HALT(100);
 			(*
-			filter := MatrixFilters.CreateFIRFilter( [-0.5, 0, 0.5], 1 );  PlanarTransform.Filter2D( g, g1, filter, {1}, MatrixFilters.mirrorH );  
+			filter := MatrixFilters.CreateFIRFilter( [-0.5, 0, 0.5], 1 );  PlanarTransform.Filter2D( g, g1, filter, {1}, MatrixFilters.mirrorH );
 			*)
 			(*spline version*)
 			(*
-				PlanarTransform.Filter2D( g, g1,    DSPFilters.CreateSplineFilter( DSPFilters.DirectBSpline3 ),    {1}, DSPFilters.mirrorH );  
+				PlanarTransform.Filter2D( g, g1,    DSPFilters.CreateSplineFilter( DSPFilters.DirectBSpline3 ),    {1}, DSPFilters.mirrorH );
 				PlanarTransform.Filter2D( g1, g1,    DSPFilters.CreateSplineFilter( DSPFilters.SplineDerivative ),    {1}, DSPFilters.mirrorH );   (*maps back one spline degree*)
-				PlanarTransform.Filter2D( g1, g1,  DSPFilters.CreateSplineFilter( DSPFilters.InverseBSpline2 ),   {1}, DSPFilters.mirrorH );  
+				PlanarTransform.Filter2D( g1, g1,  DSPFilters.CreateSplineFilter( DSPFilters.InverseBSpline2 ),   {1}, DSPFilters.mirrorH );
 			*)
-		| spline3: 
+		| spline3:
 				(*HALT (100);*) (*ADD DIRECT B-Spline transform. does not work - probably the problem of SAME in/out variable in the Filter2D() procedure below*)
 				(*PlanarTransform.Filter2D( sf, RESULT, DSPFilters.CreateSplineFilter( DSPFilters.DirectBSpline0 + SHORT(sampling) ), {1}, DSPFilters.mirrorH ); *)
 				(*PlanarTransform.Filter2D( sf, RESULT,MatrixFilters.CreateSplineFilter( MatrixFilters.CubicSplineDifferentiator), {1}, MatrixFilters.mirrorH );*)
@@ -56,22 +56,22 @@ VAR res:ScalarField;
 BEGIN
 	IF LEN(RESULT)=0 THEN NEW(RESULT, LEN(sf,0), LEN(sf,1)) END;
 	CASE sampling OF
-		centered: 
-			RESULT[1..LEN( RESULT, 0 ) - 2, .. ] := 0.5 * sf[2..LEN( RESULT, 0 ) - 1, .. ];  
-			RESULT[1..LEN( RESULT, 0 ) - 2, .. ] := RESULT[1..LEN( RESULT, 0 ) - 2, .. ] - 0.5 * sf[0..LEN( RESULT, 0 ) - 3, .. ]; 
+		centered:
+			RESULT[1..LEN( RESULT, 0 ) - 2, .. ] := 0.5 * sf[2..LEN( RESULT, 0 ) - 1, .. ];
+			RESULT[1..LEN( RESULT, 0 ) - 2, .. ] := RESULT[1..LEN( RESULT, 0 ) - 2, .. ] - 0.5 * sf[0..LEN( RESULT, 0 ) - 3, .. ];
 			RESULT[0, ..]:= sf[1,..]-sf[0,..]; RESULT[LEN(RESULT,0)-1,..]:=sf[LEN( sf, 0 ) - 1,..]-sf[LEN( sf, 0 ) - 2,..]; (*boundary handling*)
 		| linear, spline2:
 			(*discrete version*)
 			(*
-			filter := MatrixFilters.CreateFIRFilter( [-0.5, 0, 0.5], 1 );  PlanarTransform.Filter2D( g, g1, filter, {0}, MatrixFilters.mirrorH );  
+			filter := MatrixFilters.CreateFIRFilter( [-0.5, 0, 0.5], 1 );  PlanarTransform.Filter2D( g, g1, filter, {0}, MatrixFilters.mirrorH );
 			*)
 			(*spline version*)
 			(*
-			PlanarTransform.Filter2D( g, g1,    DSPFilters.CreateSplineFilter( DSPFilters.DirectBSpline3 ),    {0}, DSPFilters.mirrorH );  
+			PlanarTransform.Filter2D( g, g1,    DSPFilters.CreateSplineFilter( DSPFilters.DirectBSpline3 ),    {0}, DSPFilters.mirrorH );
 			PlanarTransform.Filter2D( g1, g1,    DSPFilters.CreateSplineFilter( DSPFilters.SplineDerivative ),    {0}, DSPFilters.mirrorH );   (*maps back one spline degree*)
-			PlanarTransform.Filter2D( g1, g1,    DSPFilters.CreateSplineFilter( DSPFilters.InverseBSpline2 ),   {0}, DSPFilters.mirrorH );  
+			PlanarTransform.Filter2D( g1, g1,    DSPFilters.CreateSplineFilter( DSPFilters.InverseBSpline2 ),   {0}, DSPFilters.mirrorH );
 			*)
-		| spline3: 
+		| spline3:
 				(*HALT (100);*) (*ADD direct  B-Spline transform. does not work - probably the problem of SAME in/out variable in the Filter2D() procedure below*)
 				(*PlanarTransform.Filter2D( sf, dx, DSPFilters.CreateSplineFilter( DSPFilters.DirectBSpline0 + SHORT(sampling) ), {0}, DSPFilters.mirrorH );*)
 				(*PlanarTransform.Filter2D( sf, RESULT, MatrixFilters.CreateSplineFilter( MatrixFilters.CubicSplineDifferentiator), {0}, MatrixFilters.mirrorH );*)
@@ -93,20 +93,20 @@ BEGIN
 END Grad;
 
 (* u dot grad sf *)
-PROCEDURE DirectionalDerivative*(CONST sf:ScalarField; CONST u: VectorField; sampling:LONGINT):ScalarField; 
+PROCEDURE DirectionalDerivative*(CONST sf:ScalarField; CONST u: VectorField; sampling:LONGINT):ScalarField;
 BEGIN
 	(*directional derivative is derivative along u; corresponds to inner product of partial derivative with vector u = <d/dx, d/dy> * <ux, uy>  *)
 	RETURN dx(sf, sampling) .* u.x + dy(sf, sampling) .* u.y
 END DirectionalDerivative;
 
-(** Divergence : nabla dot vf*) 
+(** Divergence : nabla dot vf*)
 PROCEDURE Div*(CONST vf:VectorField; sampling:LONGINT):ScalarField; (* to do: place result directly in return variable *)
 BEGIN
 	RETURN dx(vf.x,sampling) + dy(vf.y, sampling);
 END Div;
 
 (** Rotation - Rot=Curl ; nabla cross vf
-is a vector field in general, but in 2D, it only consists of an "z", component, i.e. a scalar value*) 
+is a vector field in general, but in 2D, it only consists of an "z", component, i.e. a scalar value*)
 PROCEDURE Rot* (CONST vf: VectorField; sampling:LONGINT): ScalarField;  (* to do: place result directly in return variable *)
 BEGIN
 	RETURN dx(vf.y, sampling) - dy(vf.x, sampling)
@@ -116,21 +116,21 @@ END Rot;
 see  http://en.wikipedia.org/wiki/Laplace_operator *)
 PROCEDURE Laplacian*(CONST sf:ScalarField; sampling:LONGINT): ScalarField;
 BEGIN
- RETURN dx(dx(sf, sampling),sampling) + dy(dy(sf, sampling),sampling) 
+ RETURN dx(dx(sf, sampling),sampling) + dy(dy(sf, sampling),sampling)
 END Laplacian;
 
 
 
 (** http://en.wikipedia.org/wiki/Del   - not yet implemented *)
-(* Del can also be applied to a vector field with the result being a tensor. 
-The tensor derivative of a vector field \vec{v} is a 9-term second-rank tensor, but can be denoted simply as \nabla \otimes \vec{v} , where \otimes represents the dyadic product. 
+(* Del can also be applied to a vector field with the result being a tensor.
+The tensor derivative of a vector field \vec{v} is a 9-term second-rank tensor, but can be denoted simply as \nabla \otimes \vec{v} , where \otimes represents the dyadic product.
 This quantity is equivalent to the Jacobian matrix of the vector field with respect to space.
-For a small displacement \delta \vec{r}, the change in the vector field is given by:   \delta \vec{v} = (\nabla \otimes \vec{v}) \sdot \delta \vec{r} 
+For a small displacement \delta \vec{r}, the change in the vector field is given by:   \delta \vec{v} = (\nabla \otimes \vec{v}) \sdot \delta \vec{r}
 
 PROCEDURE TensorDerivative*();
 END TensorDerivative;
-In a sense, both the gradient and Jacobian are "first derivatives"  £ the former the first derivative of a scalar function of several variables, 
-the latter the first derivative of a vector function of several variables. 
+In a sense, both the gradient and Jacobian are "first derivatives"  £ the former the first derivative of a scalar function of several variables,
+the latter the first derivative of a vector function of several variables.
 In general, the gradient can be regarded as a special version of the Jacobian: it is the Jacobian of a scalar function of several variables.
 *)
 PROCEDURE Jacobian*(CONST vf:VectorField; sampling:LONGINT):TensorField; (** == TensorDerivative *)
@@ -143,9 +143,9 @@ BEGIN
 	RETURN jac
 END Jacobian;
 
-(* 
-The Hessian matrix (or simply the Hessian) is the square matrix of second-order partial derivatives of a scalar function; 
-that is, it describes the local curvature of a function of many variables. 
+(*
+The Hessian matrix (or simply the Hessian) is the square matrix of second-order partial derivatives of a scalar function;
+that is, it describes the local curvature of a function of many variables.
 It corresponds to the Jacobian of the gradient , which in a sense is the "second derivative" of the scalar function of several variables in question.
 *)
 
@@ -162,40 +162,40 @@ BEGIN
 END VectorLaplacian;
 
 (*
-Hessian for a vector-valued function: the array of second partial derivatives is not a two-dimensional matrix of size n \times n, 
-but rather a tensor of order 3. 
+Hessian for a vector-valued function: the array of second partial derivatives is not a two-dimensional matrix of size n \times n,
+but rather a tensor of order 3.
 This can be thought of as a multi-dimensional array with dimensions m \times n \times n, which degenerates to the usual Hessian matrix for m = 1.
 *)
 
 PROCEDURE VectorHessian*(CONST vf: VectorField; sampling:LONGINT): TensorField; (* HALT: this is not yet correct, because tensor has diffferent shape than current tensorfield ! *)
 END VectorHessian;
 
-(** Nabla in cylindrical coordinates, see http://en.wikipedia.org/wiki/Del_in_cylindrical_and_spherical_coordinates 
+(** Nabla in cylindrical coordinates, see http://en.wikipedia.org/wiki/Del_in_cylindrical_and_spherical_coordinates
 Data precondition: Scalarfield[phi,r]; unit grid for r and phi; r0 for center of rotation *)
 
 PROCEDURE r(len, r0:LONGINT): Line;
 VAR line:Line; i:LONGINT;
 BEGIN
-	NEW(line,len); 
-	FOR i:=0 TO len-1 DO line[i]:= i-r0 END; 
+	NEW(line,len);
+	FOR i:=0 TO len-1 DO line[i]:= i-r0 END;
 	RETURN line;
 END r;
 
 PROCEDURE invr(len, r0:LONGINT): Line;
 VAR line:Line; i:LONGINT;
 BEGIN
-	NEW(line,len); 
+	NEW(line,len);
 	FOR i:=r0 TO len-1 DO line[i]:= 1/MAX(1,i-r0) END; (*CAVE: singularity at r=0 *)
-	FOR i:=0 TO r0-1 DO line[i]:= 1/(i-r0) END; 
+	FOR i:=0 TO r0-1 DO line[i]:= 1/(i-r0) END;
 	RETURN line;
 END invr;
 
 PROCEDURE invr2(len, r0:LONGINT): Line;
 VAR line:Line; i:LONGINT;
 BEGIN
-	NEW(line,len); 
+	NEW(line,len);
 	FOR i:=r0 TO len-1 DO line[i]:= 1/MAX(1,i-r0)/MAX(1,i-r0) END; (*CAVE: singularity at r=0 *)
-	FOR i:=0 TO r0-1 DO line[i]:= 1/(i-r0)/(i-r0) END; 
+	FOR i:=0 TO r0-1 DO line[i]:= 1/(i-r0)/(i-r0) END;
 	RETURN line;
 END invr2;
 
@@ -223,12 +223,12 @@ BEGIN
 	RESULT:= dx(f,sampling) ;
 	f:= dy(vy, sampling);
 	f:= f / phi;
-	RESULT:= RESULT + f; 
+	RESULT:= RESULT + f;
 	scalefieldbylinex(RESULT, invr(LEN(f,1), r0));
 	RETURN RESULT
 END CylDiv;
 
-(** Rotation *) 
+(** Rotation *)
 PROCEDURE CylRot* (CONST vx,vy: ScalarField; r0: LONGINT; phi: Scalar; sampling:LONGINT): ScalarField; (*is the sign correct ?*) (* to do: place result directly in return variable *)
 VAR f: ScalarField;
 BEGIN
@@ -236,7 +236,7 @@ BEGIN
 	RESULT:= dx(f,sampling) ;
 	f:= dy(vx, sampling);
 	f:= f/phi;
-	RESULT:= RESULT - dy(vx, sampling); 
+	RESULT:= RESULT - dy(vx, sampling);
 	scalefieldbylinex(RESULT, invr(LEN(f,1), r0));
 	RETURN RESULT
 END CylRot;

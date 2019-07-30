@@ -112,9 +112,9 @@ TYPE
 			IF (LEN( dout,1)#LEN(weights,1)) OR (LEN(dout,0)#LEN(in,0)) THEN NEW(dout,LEN(in,0), LEN(weights,1)) END;
 
 			out := in * weights;
-			IF type = sigmoid THEN 
+			IF type = sigmoid THEN
 				out:=ALL(out,function)  (*apply sigmoid to activations*)
-			ELSIF type = softmax THEN 
+			ELSIF type = softmax THEN
 				SoftMax(out);
 			END;
 
@@ -149,7 +149,7 @@ TYPE
 			out := in * weights;
 			IF next # NIL THEN
 				IF type = sigmoid THEN
-					(*out:=All1(out,function) *) out:=ALL(out,function) 
+					(*out:=All1(out,function) *) out:=ALL(out,function)
 				END;
 				RETURN next.evaluate( out );   (*propagate input values recursively*)
 			ELSE
@@ -560,7 +560,7 @@ TYPE
 			FOR episode := 0 TO trainingEpisodes - 1 DO
 				(* propagate InMatrix through network, use deviation from TargetMatrix for backpropagation of error, report backpropagated ErrorMatrix*)
 				ErrorMatrix := Layers.round( InMatrix, TargetMatrix );
-				
+
 				IF showError & (episode MOD (trainingEpisodes DIV 100) = 0) THEN
 					Out.String("training ... residual "); Util.OutFloat(Layers.last.Error,20,13,0);
 					IF LEN(ValidationIn,0)>0 THEN
@@ -1461,7 +1461,7 @@ PROCEDURE TruncateStochastic(CONST m:Dataset):Dataset; (* version may depend on 
 		typeVector[0]:=sigmoid;
 		typeVector[1]:=linear;
 		(*Net.Build( layerVector, typeVector);*)
-		Net.Build2( layerVector, typeVector, w01); (*todo: temporary*) 
+		Net.Build2( layerVector, typeVector, w01); (*todo: temporary*)
 
 		(* train the network*)
 		Net.Learn( samples, target);

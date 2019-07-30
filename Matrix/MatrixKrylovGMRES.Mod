@@ -1,313 +1,313 @@
-(**  
+(**
 	DESCRIPTION:
 		Generalized Minimum Residual solver of linear systems of equations
 	AUTHOR: Alexey Morozov
-	 
+
 **)
-MODULE KrylovGMRES;  
+MODULE KrylovGMRES;
 
-IMPORT MatrixBase, Math := MathL, Streams;  
+IMPORT MatrixBase, Math := MathL, Streams;
 
-TYPE 
-	Datatype = MatrixBase.Datatype;  
+TYPE
+	Datatype = MatrixBase.Datatype;
 	Matrix = MatrixBase.Matrix;
 	Vector = MatrixBase.Vector;
 
-	MatrixToVectorProc* = PROCEDURE {DELEGATE} ( CONST X: Vector; VAR Y: Vector );  
-	
+	MatrixToVectorProc* = PROCEDURE {DELEGATE} ( CONST X: Vector; VAR Y: Vector );
+
 	Solver* = OBJECT (MatrixBase.Solver)
 	VAR Tolerance*: Datatype;   (* tolerance of solution accuracy *)
 		nMaxIterations*, nIterations-: LONGINT;   (* maximum number of iterations and number of done iterations *)
 		nRestart*: LONGINT;   (* GMRES will restart every nRestart iterations *)
 		(* Total number of iterations = nMaxIterations*nRestart *)
 		SysMatrix: Matrix;   (* copy of system matrix *)
-		Tracer*: Streams.Writer;  
-		Tiny: Datatype;  
-		
-		q: Matrix;  
-		h: POINTER TO ARRAY OF POINTER TO ARRAY OF Datatype;  
-		b1: Vector;  
-		c, s: Vector;  
-		y, t: Vector;  
-		
-		PROCEDURE & Init( CONST A: Matrix );  
-		VAR i: LONGINT;  
-		BEGIN 
-			handleError := MatrixBase.HandleError;  res := MatrixBase.OK;  
-			
-			IF LEN( A ) = 0 THEN NEW( h, 0 );  RETURN;  
-			END;  
-			IF LEN( A ) # LEN( A, 1 ) THEN 
-				res := MatrixBase.NOTSQUARE;  handleError( res, 'MINRES: matrix is not square!' );  RETURN;  
-			END;  
-			
-			SysMatrix := A;  nRestart := LEN( A,0 );  
-			
+		Tracer*: Streams.Writer;
+		Tiny: Datatype;
+
+		q: Matrix;
+		h: POINTER TO ARRAY OF POINTER TO ARRAY OF Datatype;
+		b1: Vector;
+		c, s: Vector;
+		y, t: Vector;
+
+		PROCEDURE & Init( CONST A: Matrix );
+		VAR i: LONGINT;
+		BEGIN
+			handleError := MatrixBase.HandleError;  res := MatrixBase.OK;
+
+			IF LEN( A ) = 0 THEN NEW( h, 0 );  RETURN;
+			END;
+			IF LEN( A ) # LEN( A, 1 ) THEN
+				res := MatrixBase.NOTSQUARE;  handleError( res, 'MINRES: matrix is not square!' );  RETURN;
+			END;
+
+			SysMatrix := A;  nRestart := LEN( A,0 );
+
 			(* allocate arrays for further needs *)
-			NEW( q, nRestart + 1, LEN( A,0 ) );  NEW( y, LEN( A,0 ) );  NEW( t, LEN( A,0 ) );  
-			NEW( h, nRestart );  
-			FOR i := 0 TO nRestart - 1 DO NEW( h[i], i + 1 );  END;  
-			NEW( b1, nRestart );  NEW( c, nRestart );  NEW( s, nRestart );  
-			
+			NEW( q, nRestart + 1, LEN( A,0 ) );  NEW( y, LEN( A,0 ) );  NEW( t, LEN( A,0 ) );
+			NEW( h, nRestart );
+			FOR i := 0 TO nRestart - 1 DO NEW( h[i], i + 1 );  END;
+			NEW( b1, nRestart );  NEW( c, nRestart );  NEW( s, nRestart );
+
 			(* initial guess/solution *)
-			NEW( x, LEN( A,0 ) );  
-			
+			NEW( x, LEN( A,0 ) );
+
 			(* parameters by default *)
 			Tolerance := 1.0 / 1000000.0;   (* tolerance of solution residual *)
 			nMaxIterations := 10;   (* maximum number of iterations *)
-			
-			Tiny := 10.0 * MatrixBase.EPS;  
-		END Init;  
 
-		PROCEDURE Solve*( CONST b: Vector ): Vector;  
-		VAR i: LONGINT;  
-		BEGIN 
-			IF LEN( b ) # LEN( SysMatrix ) THEN 
-				res := MatrixBase.SIZEMISMATCH;  handleError( res, 'MINRES: matrix-vector size missmatch!' );  RETURN x;  
-			END;  
-			
+			Tiny := 10.0 * MatrixBase.EPS;
+		END Init;
+
+		PROCEDURE Solve*( CONST b: Vector ): Vector;
+		VAR i: LONGINT;
+		BEGIN
+			IF LEN( b ) # LEN( SysMatrix ) THEN
+				res := MatrixBase.SIZEMISMATCH;  handleError( res, 'MINRES: matrix-vector size missmatch!' );  RETURN x;
+			END;
+
 			(* if necessary reallocate all arrays *)
-			IF nRestart + 1 > LEN( q ) THEN 
-				NEW( q, nRestart + 1, LEN( b,0 ) );  NEW( y, LEN( b,0 ) );  NEW( t, LEN( b,0 ) );  
-				NEW( h, nRestart );  
-				FOR i := 0 TO nRestart - 1 DO NEW( h[i], i + 1 );  END;  
-				NEW( b1, nRestart );  NEW( c, nRestart );  NEW( s, nRestart );  
-			END;  
-			
+			IF nRestart + 1 > LEN( q ) THEN
+				NEW( q, nRestart + 1, LEN( b,0 ) );  NEW( y, LEN( b,0 ) );  NEW( t, LEN( b,0 ) );
+				NEW( h, nRestart );
+				FOR i := 0 TO nRestart - 1 DO NEW( h[i], i + 1 );  END;
+				NEW( b1, nRestart );  NEW( c, nRestart );  NEW( s, nRestart );
+			END;
+
 			(* solve system *)
-			RETURN GMRES( SysMatrix, b, x, Tolerance, nMaxIterations, nRestart );  
-		END Solve;  
+			RETURN GMRES( SysMatrix, b, x, Tolerance, nMaxIterations, nRestart );
+		END Solve;
 
-		PROCEDURE SolveNoCopy*( VAR A: Matrix;CONST b: Vector ): Vector;  
-		VAR i: LONGINT;  
-		BEGIN 
-			IF LEN( A ) = 0 THEN RETURN x;  END;  
-			IF LEN( A ) # LEN( A, 1 ) THEN 
-				res := MatrixBase.NOTSQUARE;  handleError( res, 'MINRES: matrix is not square!' );  RETURN x;  
-			END;  
-			IF LEN( b ) # LEN( A ) THEN 
-				res := MatrixBase.SIZEMISMATCH;  handleError( res, 'MINRES: matrix-vector size missmatch!' );  RETURN x;  
-			END;  
-			
+		PROCEDURE SolveNoCopy*( VAR A: Matrix;CONST b: Vector ): Vector;
+		VAR i: LONGINT;
+		BEGIN
+			IF LEN( A ) = 0 THEN RETURN x;  END;
+			IF LEN( A ) # LEN( A, 1 ) THEN
+				res := MatrixBase.NOTSQUARE;  handleError( res, 'MINRES: matrix is not square!' );  RETURN x;
+			END;
+			IF LEN( b ) # LEN( A ) THEN
+				res := MatrixBase.SIZEMISMATCH;  handleError( res, 'MINRES: matrix-vector size missmatch!' );  RETURN x;
+			END;
+
 			(* if necessary reallocate all arrays *)
-			IF LEN( b ) > LEN( x ) THEN 
-				NEW( x, LEN( b,0 ) );  
+			IF LEN( b ) > LEN( x ) THEN
+				NEW( x, LEN( b,0 ) );
 				x := 0;   (* did NEW do it before or not?! *)
-			END;  
-			IF nRestart + 1 > LEN( q ) THEN 
-				NEW( q, nRestart + 1, LEN( b,0 ) );  NEW( y, LEN( b,0 ) );  NEW( t, LEN( b,0 ) );  
-				NEW( h, nRestart );  
-				FOR i := 0 TO nRestart - 1 DO NEW( h[i], i + 1 );  END;  
-				NEW( b1, nRestart );  NEW( c, nRestart );  NEW( s, nRestart );  
-			END;  
-			
-			(* solve system *)
-			RETURN GMRES( A, b, x, Tolerance, nMaxIterations, nRestart );  
-		END SolveNoCopy;  
+			END;
+			IF nRestart + 1 > LEN( q ) THEN
+				NEW( q, nRestart + 1, LEN( b,0 ) );  NEW( y, LEN( b,0 ) );  NEW( t, LEN( b,0 ) );
+				NEW( h, nRestart );
+				FOR i := 0 TO nRestart - 1 DO NEW( h[i], i + 1 );  END;
+				NEW( b1, nRestart );  NEW( c, nRestart );  NEW( s, nRestart );
+			END;
 
-		PROCEDURE SolveProcBased*( MatrixToVector: MatrixToVectorProc;  
-								   CONST b: Vector ): Vector;  
-		VAR i: LONGINT;  
-		BEGIN 
-			IF MatrixToVector = NIL THEN 
-				(*res := (*MatrixBase.NILPROC*);*)  handleError( res, 'MINRES: invalid Matrix to Vector procedure pointer!' );  RETURN x;  
-			END;  
-			
+			(* solve system *)
+			RETURN GMRES( A, b, x, Tolerance, nMaxIterations, nRestart );
+		END SolveNoCopy;
+
+		PROCEDURE SolveProcBased*( MatrixToVector: MatrixToVectorProc;
+								   CONST b: Vector ): Vector;
+		VAR i: LONGINT;
+		BEGIN
+			IF MatrixToVector = NIL THEN
+				(*res := (*MatrixBase.NILPROC*);*)  handleError( res, 'MINRES: invalid Matrix to Vector procedure pointer!' );  RETURN x;
+			END;
+
 			(* if necessary - reallocate all arrays *)
-			IF LEN( b ) > LEN( x ) THEN 
+			IF LEN( b ) > LEN( x ) THEN
 				NEW( x, LEN( b,0 ) );  x := 0;   (* did NEW do it before or not?! *)
-			END;  
-			IF nRestart + 1 > LEN( q ) THEN 
-				NEW( q, nRestart + 1, LEN( b,0 ) );  NEW( y, LEN( b,0 ) );  NEW( t, LEN( b,0 ) );  
-				NEW( h, nRestart );  
-				FOR i := 0 TO nRestart - 1 DO NEW( h[i], i + 1 );  END;  
-				NEW( b1, nRestart );  NEW( c, nRestart );  NEW( s, nRestart );  
-			END;  
-			
+			END;
+			IF nRestart + 1 > LEN( q ) THEN
+				NEW( q, nRestart + 1, LEN( b,0 ) );  NEW( y, LEN( b,0 ) );  NEW( t, LEN( b,0 ) );
+				NEW( h, nRestart );
+				FOR i := 0 TO nRestart - 1 DO NEW( h[i], i + 1 );  END;
+				NEW( b1, nRestart );  NEW( c, nRestart );  NEW( s, nRestart );
+			END;
+
 			(* solve system *)
-			RETURN GMRESProcBased( MatrixToVector, b, x, Tolerance, nMaxIterations, 
-								   nRestart );  
-		END SolveProcBased;  
+			RETURN GMRESProcBased( MatrixToVector, b, x, Tolerance, nMaxIterations,
+								   nRestart );
+		END SolveProcBased;
 
-		PROCEDURE GMRES( CONST A: Matrix;  CONST b: Vector;  
-						 VAR x: Vector;  Tolerance: Datatype;  
-						 nMaxIterations: LONGINT;  nRestart: LONGINT ): Vector;  
-		VAR k, m, p: LONGINT;  hk_k1, gamma, d, residnrm: Datatype;  bRestart: BOOLEAN;  
-		BEGIN 
-			nIterations := 0;  residnrm := 1;  
-			WHILE (nIterations < nMaxIterations) & (residnrm > Tolerance) DO 
+		PROCEDURE GMRES( CONST A: Matrix;  CONST b: Vector;
+						 VAR x: Vector;  Tolerance: Datatype;
+						 nMaxIterations: LONGINT;  nRestart: LONGINT ): Vector;
+		VAR k, m, p: LONGINT;  hk_k1, gamma, d, residnrm: Datatype;  bRestart: BOOLEAN;
+		BEGIN
+			nIterations := 0;  residnrm := 1;
+			WHILE (nIterations < nMaxIterations) & (residnrm > Tolerance) DO
 				(* initialize next outer loop *)
-				q[0] := A * x;  q[0] := b - q[0];  
-				b1[0] := Math.sqrt( q[0] +* q[0] );  q[0] := (1 / b1[0]) * q[0];  
+				q[0] := A * x;  q[0] := b - q[0];
+				b1[0] := Math.sqrt( q[0] +* q[0] );  q[0] := (1 / b1[0]) * q[0];
 
-				k := 0;  bRestart := FALSE;  
-				WHILE (k < nRestart) & (~bRestart) DO 
-					(* 
-					determine new Krylov vector on the base of 
-					Arnoldi orthogonalization algorithm 
+				k := 0;  bRestart := FALSE;
+				WHILE (k < nRestart) & (~bRestart) DO
+					(*
+					determine new Krylov vector on the base of
+					Arnoldi orthogonalization algorithm
 					*)
-					q[k + 1] := A * q[k];  
-					FOR m := 0 TO k DO 
-						h[k, m] := q[k + 1] +* q[m];  y := h[k, m] * q[m];  
-						t := q[k + 1] - y;  q[k + 1] := t;  
+					q[k + 1] := A * q[k];
+					FOR m := 0 TO k DO
+						h[k, m] := q[k + 1] +* q[m];  y := h[k, m] * q[m];
+						t := q[k + 1] - y;  q[k + 1] := t;
 						(*
-						q[k + 1] := q[k + 1] - h[k, m] * q[m];  
+						q[k + 1] := q[k + 1] - h[k, m] * q[m];
 						*)
-					END;  
+					END;
 					(* subdiagonal h[k,k+1] element of Hessenberg matrix H = q'*A*q *)
-					hk_k1 := Math.sqrt( q[k + 1] +* q[k + 1] );  
-					
-					(* account previous Given rotations *)
-					FOR m := 1 TO k DO 
-						gamma := c[m - 1] * h[k, m - 1] + s[m - 1] * h[k, m];  
-						h[k, m] := -s[m - 1] * h[k, m - 1] + c[m - 1] * h[k, m];  
-						h[k, m - 1] := gamma;  
-					END;  
-					
-					(* new Given rotator to annihilate h[k,k+1] *)
-					d := Math.sqrt( h[k, k] * h[k, k] + hk_k1 * hk_k1 );  
-					c[k] := h[k, k] / d;  s[k] := hk_k1 / d;  
-					h[k, k] := c[k] * h[k, k] + s[k] * hk_k1;  
-					
-					(* update unit rhs vectors b1 = ||r0||e1 according to current rotation *)
-					IF k + 1 < nRestart THEN 
-						b1[k + 1] := -s[k] * b1[k];  residnrm := ABS( b1[k + 1] );  
-					ELSE residnrm := ABS( -s[k] * b1[k] );  
-					END;  
-					b1[k] := c[k] * b1[k];  
-					
-					(* check for premature resetting *)
-					IF ABS( hk_k1 ) > Tiny THEN q[k + 1] := q[k + 1] / hk_k1;  
-					ELSE 
-						bRestart := TRUE;  
-						IF Tracer # NIL THEN 
-							Tracer.String( 'Premature resetting!' );  Tracer.Ln;  Tracer.Update();  
-						END;  
-					END;  
-					
-					IF Tracer # NIL THEN 
-						Tracer.String( 'iteration ' );  Tracer.Int( nIterations, 0 );  
-						Tracer.String( '(' );  Tracer.Int( k, 0 );  Tracer.String( ')' );  
-						Tracer.String( 'res norm = ' );  Tracer.FloatFix( residnrm, 16, 16, 0 );  
-						Tracer.Ln;  Tracer.String( 'h[k,k+1] = ' );  
-						Tracer.FloatFix( hk_k1, 16, 16, 0 );  Tracer.Ln;  
-						Tracer.Update();  
-					END;  
-					
-					INC( k );  
-				END;  
-				
-				DEC( k );  
-				(* update solution and restart algorithm *)
-				b1[k] := b1[k] / h[k, k];  
-				FOR m := k - 1 TO 0 BY -1 DO 
-					d := 0;  
-					FOR p := m + 1 TO k DO d := d + h[p, m] * b1[p];  END;  
-					b1[m] := (b1[m] - d) / h[m, m];  
-				END;  
-				FOR m := 0 TO k DO x := x + b1[m] * q[m];  END;  
-				
-				INC( nIterations );  
-			END;  
-			
-			RETURN x;  
-		END GMRES;  
+					hk_k1 := Math.sqrt( q[k + 1] +* q[k + 1] );
 
-		PROCEDURE GMRESProcBased( MatrixToVector: MatrixToVectorProc;  
-								  CONST b: Vector;  
-								  VAR x: Vector;  Tolerance: Datatype;  
-								  nMaxIterations: LONGINT;  nRestart: LONGINT ): Vector;  
-		VAR k, m, p: LONGINT;  hk_k1, gamma, d, residnrm: Datatype;  bRestart: BOOLEAN;  
-		BEGIN 
-			nIterations := 0;  residnrm := 1;  
-			WHILE (nIterations < nMaxIterations) & (residnrm > Tolerance) DO 
+					(* account previous Given rotations *)
+					FOR m := 1 TO k DO
+						gamma := c[m - 1] * h[k, m - 1] + s[m - 1] * h[k, m];
+						h[k, m] := -s[m - 1] * h[k, m - 1] + c[m - 1] * h[k, m];
+						h[k, m - 1] := gamma;
+					END;
+
+					(* new Given rotator to annihilate h[k,k+1] *)
+					d := Math.sqrt( h[k, k] * h[k, k] + hk_k1 * hk_k1 );
+					c[k] := h[k, k] / d;  s[k] := hk_k1 / d;
+					h[k, k] := c[k] * h[k, k] + s[k] * hk_k1;
+
+					(* update unit rhs vectors b1 = ||r0||e1 according to current rotation *)
+					IF k + 1 < nRestart THEN
+						b1[k + 1] := -s[k] * b1[k];  residnrm := ABS( b1[k + 1] );
+					ELSE residnrm := ABS( -s[k] * b1[k] );
+					END;
+					b1[k] := c[k] * b1[k];
+
+					(* check for premature resetting *)
+					IF ABS( hk_k1 ) > Tiny THEN q[k + 1] := q[k + 1] / hk_k1;
+					ELSE
+						bRestart := TRUE;
+						IF Tracer # NIL THEN
+							Tracer.String( 'Premature resetting!' );  Tracer.Ln;  Tracer.Update();
+						END;
+					END;
+
+					IF Tracer # NIL THEN
+						Tracer.String( 'iteration ' );  Tracer.Int( nIterations, 0 );
+						Tracer.String( '(' );  Tracer.Int( k, 0 );  Tracer.String( ')' );
+						Tracer.String( 'res norm = ' );  Tracer.FloatFix( residnrm, 16, 16, 0 );
+						Tracer.Ln;  Tracer.String( 'h[k,k+1] = ' );
+						Tracer.FloatFix( hk_k1, 16, 16, 0 );  Tracer.Ln;
+						Tracer.Update();
+					END;
+
+					INC( k );
+				END;
+
+				DEC( k );
+				(* update solution and restart algorithm *)
+				b1[k] := b1[k] / h[k, k];
+				FOR m := k - 1 TO 0 BY -1 DO
+					d := 0;
+					FOR p := m + 1 TO k DO d := d + h[p, m] * b1[p];  END;
+					b1[m] := (b1[m] - d) / h[m, m];
+				END;
+				FOR m := 0 TO k DO x := x + b1[m] * q[m];  END;
+
+				INC( nIterations );
+			END;
+
+			RETURN x;
+		END GMRES;
+
+		PROCEDURE GMRESProcBased( MatrixToVector: MatrixToVectorProc;
+								  CONST b: Vector;
+								  VAR x: Vector;  Tolerance: Datatype;
+								  nMaxIterations: LONGINT;  nRestart: LONGINT ): Vector;
+		VAR k, m, p: LONGINT;  hk_k1, gamma, d, residnrm: Datatype;  bRestart: BOOLEAN;
+		BEGIN
+			nIterations := 0;  residnrm := 1;
+			WHILE (nIterations < nMaxIterations) & (residnrm > Tolerance) DO
 				(* initialize next outer loop *)
-				MatrixToVector( x, q[0] );  q[0] := b - q[0];  
-				b1[0] := Math.sqrt( q[0] +* q[0] );  q[0] := q[0] / b1[0];  k := 0;  
-				bRestart := FALSE;  
-				WHILE (k < nRestart) & (~bRestart) DO 
-					(* 
-				determine new Krylov vector on the base of 
-				Arnoldi orthogonalization algorithm 
+				MatrixToVector( x, q[0] );  q[0] := b - q[0];
+				b1[0] := Math.sqrt( q[0] +* q[0] );  q[0] := q[0] / b1[0];  k := 0;
+				bRestart := FALSE;
+				WHILE (k < nRestart) & (~bRestart) DO
+					(*
+				determine new Krylov vector on the base of
+				Arnoldi orthogonalization algorithm
 				*)
-					MatrixToVector( q[k], q[k + 1] );  
-					FOR m := 0 TO k DO 
-						h[k, m] := q[k + 1] +* q[m];  y := h[k, m] * q[m];  
-						t := q[k + 1] - y;  q[k + 1] := t;  
-						(* 
-						q[k + 1] := q[k + 1] - h[k, m] * q[m];  
+					MatrixToVector( q[k], q[k + 1] );
+					FOR m := 0 TO k DO
+						h[k, m] := q[k + 1] +* q[m];  y := h[k, m] * q[m];
+						t := q[k + 1] - y;  q[k + 1] := t;
+						(*
+						q[k + 1] := q[k + 1] - h[k, m] * q[m];
 						*)
-					END;  
+					END;
 					(* subdiagonal h[k,k+1] element of Hessenberg matrix H = q'*A*q *)
-					hk_k1 := Math.sqrt( q[k + 1] +* q[k + 1] );  
+					hk_k1 := Math.sqrt( q[k + 1] +* q[k + 1] );
 					(* account previous Given rotations *)
-					FOR m := 1 TO k DO 
-						gamma := c[m - 1] * h[k, m - 1] + s[m - 1] * h[k, m];  
-						h[k, m] := -s[m - 1] * h[k, m - 1] + c[m - 1] * h[k, m];  
-						h[k, m - 1] := gamma;  
-					END;  
+					FOR m := 1 TO k DO
+						gamma := c[m - 1] * h[k, m - 1] + s[m - 1] * h[k, m];
+						h[k, m] := -s[m - 1] * h[k, m - 1] + c[m - 1] * h[k, m];
+						h[k, m - 1] := gamma;
+					END;
 					(* new Given rotator to annihilate h[k,k+1] *)
-					d := Math.sqrt( h[k, k] * h[k, k] + hk_k1 * hk_k1 );  
-					c[k] := h[k, k] / d;  s[k] := hk_k1 / d;  
-					h[k, k] := c[k] * h[k, k] + s[k] * hk_k1;  
-					
-					(* update unit rhs vectors b1 = ||r0||e1 according to current rotation *)
-					IF k + 1 < nRestart THEN 
-						b1[k + 1] := -s[k] * b1[k];  residnrm := ABS( b1[k + 1] );  
-					ELSE residnrm := ABS( -s[k] * b1[k] );  
-					END;  
-					b1[k] := c[k] * b1[k];  
-					
-					(* check for premature resetting *)
-					IF ABS( hk_k1 ) > Tiny THEN q[k + 1] := q[k + 1] / hk_k1;  
-					ELSE 
-						bRestart := TRUE;  
-						IF Tracer # NIL THEN 
-							Tracer.String( 'Premature resetting!' );  Tracer.Ln;  Tracer.Update();  
-						END;  
-					END;  
-					
-					IF Tracer # NIL THEN 
-						Tracer.String( 'iteration ' );  Tracer.Int( nIterations, 0 );  
-						Tracer.String( '(' );  Tracer.Int( k, 0 );  Tracer.String( '): ' );  
-						Tracer.String( 'res norm = ' );  Tracer.FloatFix( residnrm, 16, 16, 0 );  
-						Tracer.Ln;  Tracer.String( 'h[k,k+1] = ' );  
-						Tracer.FloatFix( hk_k1, 16, 16, 0 );  Tracer.Ln;  
-						Tracer.Update();  
-					END;  
-					
-					INC( k );  
-				END;  
-				
-				DEC( k );  
-				(* update solution and restart algorithm *)
-				b1[k] := b1[k] / h[k, k];  
-				FOR m := k - 1 TO 0 BY -1 DO 
-					d := 0;  
-					FOR p := m + 1 TO k DO d := d + h[p, m] * b1[p];  END;  
-					b1[m] := (b1[m] - d) / h[m, m];  
-				END;  
-				FOR m := 0 TO k DO x := x + b1[m] * q[m];  END;  
-				
-				INC( nIterations );  
-			END;  
-			RETURN x;  
-		END GMRESProcBased;  
+					d := Math.sqrt( h[k, k] * h[k, k] + hk_k1 * hk_k1 );
+					c[k] := h[k, k] / d;  s[k] := hk_k1 / d;
+					h[k, k] := c[k] * h[k, k] + s[k] * hk_k1;
 
-	END Solver;  
-	
-	
+					(* update unit rhs vectors b1 = ||r0||e1 according to current rotation *)
+					IF k + 1 < nRestart THEN
+						b1[k + 1] := -s[k] * b1[k];  residnrm := ABS( b1[k + 1] );
+					ELSE residnrm := ABS( -s[k] * b1[k] );
+					END;
+					b1[k] := c[k] * b1[k];
+
+					(* check for premature resetting *)
+					IF ABS( hk_k1 ) > Tiny THEN q[k + 1] := q[k + 1] / hk_k1;
+					ELSE
+						bRestart := TRUE;
+						IF Tracer # NIL THEN
+							Tracer.String( 'Premature resetting!' );  Tracer.Ln;  Tracer.Update();
+						END;
+					END;
+
+					IF Tracer # NIL THEN
+						Tracer.String( 'iteration ' );  Tracer.Int( nIterations, 0 );
+						Tracer.String( '(' );  Tracer.Int( k, 0 );  Tracer.String( '): ' );
+						Tracer.String( 'res norm = ' );  Tracer.FloatFix( residnrm, 16, 16, 0 );
+						Tracer.Ln;  Tracer.String( 'h[k,k+1] = ' );
+						Tracer.FloatFix( hk_k1, 16, 16, 0 );  Tracer.Ln;
+						Tracer.Update();
+					END;
+
+					INC( k );
+				END;
+
+				DEC( k );
+				(* update solution and restart algorithm *)
+				b1[k] := b1[k] / h[k, k];
+				FOR m := k - 1 TO 0 BY -1 DO
+					d := 0;
+					FOR p := m + 1 TO k DO d := d + h[p, m] * b1[p];  END;
+					b1[m] := (b1[m] - d) / h[m, m];
+				END;
+				FOR m := 0 TO k DO x := x + b1[m] * q[m];  END;
+
+				INC( nIterations );
+			END;
+			RETURN x;
+		END GMRESProcBased;
+
+	END Solver;
+
+
 	PROCEDURE CreateSolver*( ): MatrixBase.Solver;   (*FactoryProcedure*)
 	VAR gmres: Solver; dummy:Matrix;
 	BEGIN
 		NEW(gmres,dummy); RETURN gmres;
-	END CreateSolver;  
+	END CreateSolver;
 
 	PROCEDURE Solve*( VAR A: Matrix;  CONST b: Vector ): Vector;   (*direct procedural solving; simplest use, but when using repeatedly, running into internal allocation overhead *)
 	VAR gmres:Solver; dummy:Matrix;
 	BEGIN
-		NEW(gmres,dummy); RETURN gmres.SolveNoCopy(A,b); 
-	END Solve;  
+		NEW(gmres,dummy); RETURN gmres.SolveNoCopy(A,b);
+	END Solve;
 
 
 END KrylovGMRES.

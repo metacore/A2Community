@@ -1,13 +1,13 @@
 (***************** Oberon	StatisticsFunctions .Mod **********************
 		Version 1.0 P.Hunziker (c) 2000
-			
+
 		Derived from TurboPascal Library FMATH.PAS version 2.3 (c) J. Debord, July 2000
 		http://ourworld.compuserve.com/homepages/JDebord/
-			
+
  **********
  This library is distributed as freeware. You may use it any way you like, as
  long as you don't charge money for it, remove the copyright notices, or hold
- anyone liable for its results.	
+ anyone liable for its results.
  ************************************************************** *)
 
 
@@ -85,7 +85,7 @@ CONST
 	Machine-dependent CONSTants
 	---------------------------------------------------------------------- *)
 
-(* constants for use with Float=LONGREAL; These constants are still approximate 
+(* constants for use with Float=LONGREAL; These constants are still approximate
 and could profit from improved definition, preferably in machine-dependent base modules*)
 CONST
 	MACHEP = 2.220446049250E-16;		 (* Floating point precision: 2^(-52) *)
@@ -95,7 +95,7 @@ CONST
 	MINLOG = -708.396392; (* Min. argument for Exp *)
 	MAXFAC = 170; (* Max. argument for Factorial *)
 	MAXGAM = 170; (* Max. argument for Gamma: Improve ! *)
-	MAXLGM = MAXNUM/1000; (* Max. argument for LnGamma: Improve !	*) 
+	MAXLGM = MAXNUM/1000; (* Max. argument for LnGamma: Improve !	*)
 
 (* ----------------------------------------------------------------------
 	Error codes for mathematical functions
@@ -124,8 +124,8 @@ VAR
 	InvNormQ3:	TabCoef ;
 	I : LONGINT;
 
-(* interface 
- ------- Error handling function------------- 
+(* interface
+ ------- Error handling function-------------
 PROCEDURE MathError : LONGINT;	(* Error code from the last function call *)
 
  ------- Minimum, maximum, sign and exchange---------------
@@ -141,8 +141,8 @@ PROCEDURE ISwap(VAR X, Y : LONGINT);			(* Exchange 2 integers *)
 
  ------ Assembler functions	---------------
  (None in this version)
- 
- --------- Sign, logarithms, exponentials and power--------------- 
+
+ --------- Sign, logarithms, exponentials and power---------------
 PROCEDURE Expo(X : Float) : Float;									 (* Exponential *)
 PROCEDURE Exp2(X : Float) : Float;									 (* 2^X *)
 PROCEDURE Exp10(X : Float) : Float;									(* 10^X *)
@@ -164,7 +164,7 @@ PROCEDURE ArcTan2(Y, X : Float) : Float;		(* Angle (Ox, OM) with M(X,Y) *)
 
 PROCEDURE SinCos(X : Float; var SinX, CosX : Float);	(* Sin & Cos *)
 
------------------ Hyperbolic and inverse hyperbolic functions---------- 
+----------------- Hyperbolic and inverse hyperbolic functions----------
 PROCEDURE Sinh(X : Float) : Float;		 (* Hyperbolic sine *)
 PROCEDURE Cosh(X : Float) : Float;		 (* Hyperbolic cosine *)
 PROCEDURE Tanh(X : Float) : Float;		 (* Hyperbolic tangent *)
@@ -174,7 +174,7 @@ PROCEDURE ArcTanh(X : Float) : Float;	(* Inverse hyperbolic tangent *)
 
 PROCEDURE SinhCosh(X : Float; var SinhX, CoshX : Float);	(* Sinh & Cosh *)
 
----------- Special functions ------------------------ 
+---------- Special functions ------------------------
 PROCEDURE Fact(N : LONGINT) : Float;				 (* Factorial *)
 PROCEDURE Binomial(N, K : LONGINT) : Float;	(* Binomial coef. C(N,K) *)
 PROCEDURE Gamma(X : Float) : Float;					(* Gamma PROCEDURE *)
@@ -330,19 +330,19 @@ PROCEDURE FGamma(A, B, X : Float) : Float;	(* Prob( <= X) *)
 	---------------------------------------------------------------------- *)
 	PROCEDURE Ln(X : Float) : Float;
 	BEGIN RETURN BasicMath.ln(X) END Ln;
-	
+
 	PROCEDURE Exp(X:Float) : Float;
 	BEGIN RETURN BasicMath.exp(X) END Exp;
 
 	PROCEDURE Sin(X : Float) : Float;
 	BEGIN RETURN BasicMath.sin(X) END Sin;
-	
+
 	PROCEDURE Cos(X:Float) : Float;
 	BEGIN RETURN BasicMath.cos(X) END Cos;
-	 
+
 	PROCEDURE ArcTan(X:Float) : Float;
 	BEGIN RETURN BasicMath.arctan(X) END ArcTan;
-	
+
 	PROCEDURE Sqr(X:Float) : Float;
 	BEGIN RETURN X*X END Sqr;
 
@@ -450,7 +450,7 @@ PROCEDURE FGamma(A, B, X : Float) : Float;	(* Prob( <= X) *)
 			END;
 		UNTIL M = 0;
 
-		IF N > 0 THEN RETURN T 
+		IF N > 0 THEN RETURN T
 		ELSE RETURN 1.0 / T
 		END;
 	END IntPower;
@@ -492,15 +492,15 @@ PROCEDURE FGamma(A, B, X : Float) : Float;	(* Prob( <= X) *)
 		ELSE RETURN ABSY * Sqrt(1.0 + Sqr(ABSX / ABSY));
 		END;
 	END Pythag;
-	
+
 	PROCEDURE Logistic*(X : Float) : Float;  (* logistic function as nonlinear element for unit response *)
-	BEGIN 
+	BEGIN
 		IF X >= 18.3684002848 (*expNegligibleL*) THEN RETURN 1
 		ELSIF (-X) > 18.3684002848 (*expNegligibleL*) THEN RETURN 0
-		ELSE RETURN 1 / (1 + Exp( -X ));  
-		END;  		
+		ELSE RETURN 1 / (1 + Exp( -X ));
+		END;
 	END Logistic;
-	
+
 	PROCEDURE SinCos*(X : Float; VAR SinX, CosX : Float);
 	BEGIN
 		MathErr := FNOK;
@@ -526,7 +526,7 @@ PROCEDURE FGamma(A, B, X : Float) : Float;	(* Prob( <= X) *)
 		IF CosX = 0.0 THEN RETURN Sgn(SinX) * DefaultVal(FNSING)
 		ELSE RETURN SinX / CosX
 		END;
-	END Tan; 
+	END Tan;
 
 	PROCEDURE ArcSin*(X : Float) : Float;
 	BEGIN
@@ -1026,9 +1026,9 @@ PROCEDURE FGamma(A, B, X : Float) : Float;	(* Prob( <= X) *)
 		ELSE
 				T := LnGamma(A + B) - LnGamma(A) - LnGamma(B)
 						 + U + Ln(S);
-				IF T < MINLOG THEN 
+				IF T < MINLOG THEN
 					RETURN 0.0
-				ELSE 
+				ELSE
 					RETURN Exp(T);
 				END;
 		END;
@@ -1097,14 +1097,14 @@ PROCEDURE CFrac1*(A, B, X : Float) : Float;
 				K6 := K6 - 1.0;
 				K7 := K7 + 2.0;
 				K8 := K8 + 2.0;
-	
+
 				IF ABS(Qk) + ABS(Pk) > BIG THEN
 						Pkm2 := Pkm2 * BIGINV;
 						Pkm1 := Pkm1 * BIGINV;
 						Qkm2 := Qkm2 * BIGINV;
 						Qkm1 := Qkm1 * BIGINV;
 				END;
-	
+
 				IF (ABS(Qk) < BIGINV) OR (ABS(Pk) < BIGINV) THEN
 						Pkm2 := Pkm2 * BIG;
 						Pkm1 := Pkm1 * BIG;
@@ -1183,14 +1183,14 @@ PROCEDURE CFrac1*(A, B, X : Float) : Float;
 				K6 := K6 + 1.0;
 				K7 := K7 + 2.0;
 				K8 := K8 + 2.0;
-	
+
 				IF ABS(Qk) + ABS(Pk) > BIG THEN
 						Pkm2 := Pkm2 * BIGINV;
 						Pkm1 := Pkm1 * BIGINV;
 						Qkm2 := Qkm2 * BIGINV;
 						Qkm1 := Qkm1 * BIGINV;
 				END;
-	
+
 				IF (ABS(Qk) < BIGINV) OR (ABS(Pk) < BIGINV) THEN
 						Pkm2 := Pkm2 * BIG;
 						Pkm1 := Pkm1 * BIG;
@@ -1224,7 +1224,7 @@ PROCEDURE CFrac1*(A, B, X : Float) : Float;
 		Flag := FALSE;
 		IF (B * X <= 1.0) & (X <= 0.95) THEN
 				T := PSeries(A, B, X);
-				Done:=TRUE 
+				Done:=TRUE
 				(*goto Done;
 		END;*)
 		ELSE
@@ -1247,7 +1247,7 @@ PROCEDURE CFrac1*(A, B, X : Float) : Float;
 
 		IF Flag & (B1 * X1 <= 1.0) & (X1 <= 0.95) THEN
 				 T := PSeries(A1, B1, X1);
-				Done:=TRUE 
+				Done:=TRUE
 				(*goto Done;
 		END;
 		IF ~Done THEN*)
@@ -1257,11 +1257,11 @@ PROCEDURE CFrac1*(A, B, X : Float) : Float;
 			IF Y < 0.0 THEN W := CFrac1(A1, B1, X1)
 			ELSE W := CFrac2(A1, B1, X1) / Xc
 			END;
-	
+
 			(* Multiply w by the factor
 			 a			b	 _						 _		 _
 			x	(1-x)	 | (a+b) / ( a | (a) | (b) )		*)
-	
+
 			Y := A1 * Ln(X1);
 			T := B1 * Ln(Xc);
 			IF (A1 + B1 < MAXGAM) & (ABS(Y) < MAXLOG) & (ABS(T) < MAXLOG) THEN
@@ -1275,11 +1275,11 @@ PROCEDURE CFrac1*(A, B, X : Float) : Float;
 					Y := Y + T + LnGamma(A1 + B1) - LnGamma(A1) - LnGamma(B1)
 								 + Ln(W / A1);
 					IF Y < MINLOG THEN T := 0.0
-					ELSE T := Exp(Y); 
+					ELSE T := Exp(Y);
 					END;
 			END;
 	END;
-	
+
 	END;
 (*Done:*)
 		IF Flag THEN
@@ -1395,7 +1395,7 @@ PROCEDURE CFrac1*(A, B, X : Float) : Float;
 		X := Sqrt(- 2.0 * Ln(Y));
 		X0 := X - Ln(X) / X;
 		Z := 1.0 / X;
-		IF X < 8.0 THEN X1 := Z * PolEvl(Z, InvNormP1, 9) / P1Evl(Z, InvNormQ1, 9) 
+		IF X < 8.0 THEN X1 := Z * PolEvl(Z, InvNormP1, 9) / P1Evl(Z, InvNormQ1, 9)
 		ELSIF X < 32.0 THEN X1 := Z * PolEvl(Z, InvNormP2, 7) / P1Evl(Z, InvNormQ2, 7)
 		ELSE X1 := Z * PolEvl(Z, InvNormP3, 7) / P1Evl(Z, InvNormQ3, 7)
 		END;
@@ -1600,7 +1600,7 @@ BEGIN
 				3.472222222230075327854E-3,
 				8.333333333333331800504E-2,
 				0);
-	Assign10(GamSmallS,			
+	Assign10(GamSmallS,
 			- 1.193945051381510095614E-3,
 				7.220599478036909672331E-3,
 			- 9.622023360406271645744E-3,
@@ -1688,7 +1688,7 @@ BEGIN
 			- 1.250016921424819972516E0,
 				1.823840725000038842075E-1,
 			- 1.088633151006419263153E-2,
-				0, 0, 0);	
+				0, 0, 0);
 	Assign10(InvNormP1,
 			4.302849750435552180717E0,
 			4.360209451837096682600E1,
@@ -1729,7 +1729,7 @@ Assign10(InvNormQ1,
 			9.867655920899636109122E-3,
 			1.760452434084258930442E-4,
 			8.028288500688538331773E-7,
-			0, 0, 0);	
+			0, 0, 0);
 			Assign10(InvNormP3,
 				2.020331091302772535752E0,
 				2.133020661587413053144E0,

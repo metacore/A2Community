@@ -2,11 +2,11 @@ MODULE MLConvNet3D; (** AUTHOR "Patrick Hunziker"; PURPOSE "convolutional neural
 (*Literature
 generics: LeCun, Bengio, Hinton: Deep Learning. Nature 2015
 
-specifics for convolutional neural networks: 
+specifics for convolutional neural networks:
 Jake Bouvrie, Notes on Convolutional Neural Networks. 2006
 David Stutz, Understanding Convolutional Neural Networks: good tutorial
-Quoc V. Le: A Tutorial on Deep Learning Part 1: Backpropagation etc 
-Quoc V. Le: A Tutorial on Deep Learning Part 2: Autoencoders, Convolutional Neural Networks and Recurrent Neural Networks 
+Quoc V. Le: A Tutorial on Deep Learning Part 1: Backpropagation etc
+Quoc V. Le: A Tutorial on Deep Learning Part 2: Autoencoders, Convolutional Neural Networks and Recurrent Neural Networks
 https://www.tensorflow.org/tutorials/deep_cnn : a great ressource for implementation strategies and optional features
 
 *)
@@ -27,16 +27,16 @@ CONST
 	DefaultShowError* = TRUE;
 	ClampValue*=1.0;
 	ClampValue01*=0.1;
-	
+
 	EpsL*=1.11022302463E-16;
 
-	
+
 	(* convolution types following the Matlab conv2 conventions *)
 	FULL=0;(** return full convolution (Default) *)
 	SAME=1;(** central part of the convolution with the same size as the input data *)
 	VALID=2; (** returns only those parts of the convolution that are computed without the padded edges *)
 	CUSTOM=3;
-	
+
 
 
 TYPE
@@ -52,7 +52,7 @@ TYPE
 OPERATOR "SUM"*(CONST m:Dataset; dimension:LONGINT):Dataset;
 VAR len:IntVector; i:LONGINT;
 BEGIN
-	ASSERT(dimension<DIM(m));  
+	ASSERT(dimension<DIM(m));
 	NEW(len, DIM(m)-1);
 	FOR i:=0 TO dimension-1 DO
 		len[i]:=LEN(m,i);
@@ -87,16 +87,16 @@ BEGIN
 	ELSIF dimensions=[0,1,2] THEN HALT(201);
 	ELSE HALT(202)
 	END;
-	
+
 	RESULT:=0;
 	IF dimensions=[0] THEN HALT(203); FOR i:=0 TO LEN(m,0)-1 DO RESULT:=RESULT+m[i] END;
 	ELSIF dimensions=[1] THEN HALT(204);FOR i:=0 TO LEN(m,1)-1 DO RESULT:=RESULT+m[..,i] END;
 	ELSIF dimensions=[2] THEN HALT(205); FOR i:=0 TO LEN(m,2)-1 DO RESULT:=RESULT+m[..,..,i] END;
-	
+
 	ELSIF dimensions=[0,1] THEN FOR i:=0 TO LEN(m,2)-1 DO RESULT[i]:=SUM(m[..,..,i]) END; (*!to do: this still involves temporary array allocation - avoid*)
 	ELSIF dimensions=[0,2] THEN FOR i:=0 TO LEN(m,1)-1 DO RESULT[i]:=SUM(m[..,i,..]) END;
 	ELSIF dimensions=[1,2] THEN FOR i:=0 TO LEN(m,0)-1 DO RESULT[i]:=SUM(m[i,..,..]) END;
-	
+
 	ELSIF dimensions=[0,1,2] THEN RESULT:=[SUM(m)]; HALT(206); (* what is a zero-dimensional array ?*)
 	ELSE HALT(207)
 	END;
@@ -184,7 +184,7 @@ END LeakyReLu;
 PROCEDURE LeakyReLuDerivative*(x:Datatype):Datatype;
 CONST leak=0.01;
 BEGIN
-	IF x>0 THEN RETURN 1 ELSE RETURN leak END; 
+	IF x>0 THEN RETURN 1 ELSE RETURN leak END;
 END LeakyReLuDerivative;
 
 PROCEDURE Tanh*( x: Datatype): Datatype;
@@ -231,7 +231,7 @@ BEGIN
 	RETURN  scaley * PMathSSE.tanh(SHORT(scalex * x))
 END ScaledSigmoid;
 
-PROCEDURE ScaledSigmoidDerivative*(x:Datatype):Datatype;  
+PROCEDURE ScaledSigmoidDerivative*(x:Datatype):Datatype;
 CONST scaley=1.7159;
 		scalex=2/3;
 VAR a: Datatype;
@@ -240,74 +240,74 @@ BEGIN
 	RETURN scaley * (1- a*a)
 END ScaledSigmoidDerivative;
 
-PROCEDURE ScaledSigmoidInverse*(y:Datatype):Datatype; 
+PROCEDURE ScaledSigmoidInverse*(y:Datatype):Datatype;
 CONST scaley=1.7159;
 		scalex=2/3;
 BEGIN
 	RETURN 1/scalex * TanhInverse(y/scaley);
 END ScaledSigmoidInverse;
-		
+
 (*!to do: ReduceAbsMax() ?*)
 PROCEDURE ReduceMax*( CONST g: Dataset; VAR map: Util.BoolTensor ): Dataset;  (* select MAX of each 2*2 group.*)(*? note that map can contain >1 TRUEs in quad field if values are same - MAY BE problematic on backprop ?*)
 VAR len: IntVector; i:LONGINT;
-	BEGIN 
+	BEGIN
 		IF DIM(g)=2 THEN
 			len:=LEN(g); len:= (len+1) DIV 2;
-			IF LEN( RESULT) # len THEN NEW( RESULT, len) END;  
+			IF LEN( RESULT) # len THEN NEW( RESULT, len) END;
 			IF LEN(map)#LEN(g) THEN NEW(map,LEN(g)) END;
-			RESULT[.. (LEN( g, 0 ) + 1) DIV 2 - 1, .. (LEN( g, 1 ) + 1) DIV 2 - 1] := g[.. BY 2, .. BY 2];  
-			RESULT[.. (LEN( g, 0 ) + 0) DIV 2 - 1, .. (LEN( g, 1 ) + 1) DIV 2 - 1] := MAX(RESULT[ .. (LEN( g, 0 ) + 0) DIV 2 - 1, .. (LEN( g, 1 ) + 1) DIV 2 - 1], g[ 1.. BY 2, .. BY 2]);  
-			RESULT[.. (LEN( g, 0 ) + 1) DIV 2 - 1, .. (LEN( g, 1 ) + 0) DIV 2 - 1] := MAX(RESULT[ .. (LEN( g, 0 ) + 1) DIV 2 - 1, .. (LEN( g, 1 ) + 0) DIV 2 - 1], g[ .. BY 2, 1.. BY 2]);  
-			RESULT[.. (LEN( g, 0 ) + 0) DIV 2 - 1, .. (LEN( g, 1 ) + 0) DIV 2 - 1] := MAX(RESULT[ .. (LEN( g, 0 ) + 0) DIV 2 - 1, .. (LEN( g, 1 ) + 0) DIV 2 - 1], g[ 1.. BY 2, 1.. BY 2]);  
+			RESULT[.. (LEN( g, 0 ) + 1) DIV 2 - 1, .. (LEN( g, 1 ) + 1) DIV 2 - 1] := g[.. BY 2, .. BY 2];
+			RESULT[.. (LEN( g, 0 ) + 0) DIV 2 - 1, .. (LEN( g, 1 ) + 1) DIV 2 - 1] := MAX(RESULT[ .. (LEN( g, 0 ) + 0) DIV 2 - 1, .. (LEN( g, 1 ) + 1) DIV 2 - 1], g[ 1.. BY 2, .. BY 2]);
+			RESULT[.. (LEN( g, 0 ) + 1) DIV 2 - 1, .. (LEN( g, 1 ) + 0) DIV 2 - 1] := MAX(RESULT[ .. (LEN( g, 0 ) + 1) DIV 2 - 1, .. (LEN( g, 1 ) + 0) DIV 2 - 1], g[ .. BY 2, 1.. BY 2]);
+			RESULT[.. (LEN( g, 0 ) + 0) DIV 2 - 1, .. (LEN( g, 1 ) + 0) DIV 2 - 1] := MAX(RESULT[ .. (LEN( g, 0 ) + 0) DIV 2 - 1, .. (LEN( g, 1 ) + 0) DIV 2 - 1], g[ 1.. BY 2, 1.. BY 2]);
 			map[.. BY 2, .. BY 2] := g[.. BY 2, .. BY 2] .= RESULT[.. (LEN( g, 0 ) + 1) DIV 2 - 1, .. (LEN( g, 1 ) + 1) DIV 2 - 1];
 			map[1.. BY 2, .. BY 2] := g[1.. BY 2, .. BY 2] .=RESULT[.. (LEN( g, 0 ) + 0) DIV 2 - 1, .. (LEN( g, 1 ) + 1) DIV 2 - 1];
 			map[.. BY 2, 1.. BY 2] := g[.. BY 2, 1.. BY 2] .= RESULT[.. (LEN( g, 0 ) + 1) DIV 2 - 1, .. (LEN( g, 1 ) + 0) DIV 2 - 1];
 			map[1.. BY 2, 1.. BY 2] := g[1.. BY 2, 1.. BY 2] .= RESULT[.. (LEN( g, 0 ) + 0) DIV 2 - 1, .. (LEN( g, 1 ) + 0) DIV 2 - 1];
 		ELSIF DIM(g)=3 THEN
 			len:=LEN(g); len[1..2]:= (len[1..2]+1) DIV 2;
-			IF LEN( RESULT) # len THEN NEW( RESULT, len) END;  
+			IF LEN( RESULT) # len THEN NEW( RESULT, len) END;
 			IF LEN(map)#LEN(g) THEN NEW(map,LEN(g)) END;
 			FOR i:=0 TO LEN(g,0)-1 DO (* currently: in-plane MAX; might be extended to 3rd dimension eventually *)
-				RESULT[i,.. (LEN( g, 1 ) + 1) DIV 2 - 1, .. (LEN( g, 2 ) + 1) DIV 2 - 1] := g[i,.. BY 2, .. BY 2];  
-				RESULT[i,.. (LEN( g, 1 ) + 0) DIV 2 - 1, .. (LEN( g, 2 ) + 1) DIV 2 - 1] := MAX(RESULT[i, .. (LEN( g, 1 ) + 0) DIV 2 - 1, .. (LEN( g, 2 ) + 1) DIV 2 - 1], g[i, 1.. BY 2, .. BY 2]);  
-				RESULT[i,.. (LEN( g, 1 ) + 1) DIV 2 - 1, .. (LEN( g, 2 ) + 0) DIV 2 - 1] := MAX(RESULT[i, .. (LEN( g, 1 ) + 1) DIV 2 - 1, .. (LEN( g, 2 ) + 0) DIV 2 - 1], g[i, .. BY 2, 1.. BY 2]);  
-				RESULT[i,.. (LEN( g, 1 ) + 0) DIV 2 - 1, .. (LEN( g, 2 ) + 0) DIV 2 - 1] := MAX(RESULT[i, .. (LEN( g, 1 ) + 0) DIV 2 - 1, .. (LEN( g, 2 ) + 0) DIV 2 - 1], g[i, 1.. BY 2, 1.. BY 2]);  
+				RESULT[i,.. (LEN( g, 1 ) + 1) DIV 2 - 1, .. (LEN( g, 2 ) + 1) DIV 2 - 1] := g[i,.. BY 2, .. BY 2];
+				RESULT[i,.. (LEN( g, 1 ) + 0) DIV 2 - 1, .. (LEN( g, 2 ) + 1) DIV 2 - 1] := MAX(RESULT[i, .. (LEN( g, 1 ) + 0) DIV 2 - 1, .. (LEN( g, 2 ) + 1) DIV 2 - 1], g[i, 1.. BY 2, .. BY 2]);
+				RESULT[i,.. (LEN( g, 1 ) + 1) DIV 2 - 1, .. (LEN( g, 2 ) + 0) DIV 2 - 1] := MAX(RESULT[i, .. (LEN( g, 1 ) + 1) DIV 2 - 1, .. (LEN( g, 2 ) + 0) DIV 2 - 1], g[i, .. BY 2, 1.. BY 2]);
+				RESULT[i,.. (LEN( g, 1 ) + 0) DIV 2 - 1, .. (LEN( g, 2 ) + 0) DIV 2 - 1] := MAX(RESULT[i, .. (LEN( g, 1 ) + 0) DIV 2 - 1, .. (LEN( g, 2 ) + 0) DIV 2 - 1], g[i, 1.. BY 2, 1.. BY 2]);
 			END;
 			map[..,.. BY 2, .. BY 2] := g[..,.. BY 2, .. BY 2] .= RESULT[..,.. (LEN( g, 1 ) + 1) DIV 2 - 1, .. (LEN( g, 2 ) + 1) DIV 2 - 1];
 			map[..,1.. BY 2, .. BY 2] := g[..,1.. BY 2, .. BY 2] .=RESULT[..,.. (LEN( g, 1 ) + 0) DIV 2 - 1, .. (LEN( g, 2 ) + 1) DIV 2 - 1];
 			map[..,.. BY 2, 1.. BY 2] := g[..,.. BY 2, 1.. BY 2] .= RESULT[..,.. (LEN( g, 1 ) + 1) DIV 2 - 1, .. (LEN( g, 2 ) + 0) DIV 2 - 1];
 			map[..,1.. BY 2, 1.. BY 2] := g[..,1.. BY 2, 1.. BY 2] .= RESULT[..,.. (LEN( g, 1 ) + 0) DIV 2 - 1, .. (LEN( g, 2 ) + 0) DIV 2 - 1];
 		END;
-		
+
 		RETURN RESULT
-	END ReduceMax;  
+	END ReduceMax;
 
 
 PROCEDURE ExpandMax*( CONST g: Dataset; VAR map: Util.BoolTensor ): Dataset;  (* select MAX of each 2*2 group.*)(*? note that map can contain >1 TRUEs in quad field if values are same*)
-	BEGIN 
+	BEGIN
 		(*precondition: correct dimensions*)
 		IF DIM(g)=2 THEN
 		IF LEN(RESULT)#LEN(map) THEN NEW(RESULT,LEN(map)) END;
 			RESULT[.. BY 2, .. BY 2] := Util.ApplyMask(g, map[.. BY 1, .. BY 2], 0);
-			RESULT[1.. BY 2, .. BY 2] := Util.ApplyMask(g, map[1.. BY 2, .. BY 2], 0);  
-			RESULT[.. BY 2, 1.. BY 2] := Util.ApplyMask(g, map[.. BY 2, 1.. BY 2], 0);  
-			RESULT[1.. BY 2, 1.. BY 2] := Util.ApplyMask(g, map[1.. BY 2, 1.. BY 2], 0);  	
+			RESULT[1.. BY 2, .. BY 2] := Util.ApplyMask(g, map[1.. BY 2, .. BY 2], 0);
+			RESULT[.. BY 2, 1.. BY 2] := Util.ApplyMask(g, map[.. BY 2, 1.. BY 2], 0);
+			RESULT[1.. BY 2, 1.. BY 2] := Util.ApplyMask(g, map[1.. BY 2, 1.. BY 2], 0);
 		ELSIF DIM(g)=3 THEN
 			IF LEN(RESULT)#LEN(map) THEN NEW(RESULT,LEN(map)) END;
 			RESULT[..,.. BY 2, .. BY 2] := Util.ApplyMask(g, map[..,.. BY 1, .. BY 2], 0);
-			RESULT[..,1.. BY 2, .. BY 2] := Util.ApplyMask(g, map[..,1.. BY 2, .. BY 2], 0);  
-			RESULT[..,.. BY 2, 1.. BY 2] := Util.ApplyMask(g, map[..,.. BY 2, 1.. BY 2], 0);  
-			RESULT[..,1.. BY 2, 1.. BY 2] := Util.ApplyMask(g, map[..,1.. BY 2, 1.. BY 2], 0);  	
+			RESULT[..,1.. BY 2, .. BY 2] := Util.ApplyMask(g, map[..,1.. BY 2, .. BY 2], 0);
+			RESULT[..,.. BY 2, 1.. BY 2] := Util.ApplyMask(g, map[..,.. BY 2, 1.. BY 2], 0);
+			RESULT[..,1.. BY 2, 1.. BY 2] := Util.ApplyMask(g, map[..,1.. BY 2, 1.. BY 2], 0);
 		END;
 		RETURN RESULT
-	END ExpandMax;  
+	END ExpandMax;
 
 PROCEDURE Rot180(CONST m:Dataset):Dataset;(* tbd: accelerated in library*)
 VAR j,i:LONGINT; x:Vector; x0: Datatype;
 BEGIN
 	IF LEN(RESULT) # LEN(m) THEN NEW(RESULT, LEN(m)) END;
 	CASE DIM(m) OF (*!implementation limitation*)
-	|2: 
+	|2:
 		FOR j:=0 TO (LEN(m,0)+1) DIV 2-1 DO
 			FOR i:=0 TO LEN(m,1) -1 DO
 				x0:=m[j,i];
@@ -333,7 +333,7 @@ VAR j,i:LONGINT; x:Vector; x0: Datatype;
 BEGIN
 	IF LEN(RESULT) # LEN(m) THEN NEW(RESULT, LEN(m)) END;
 	CASE DIM(m) OF (*!implementation limitation*)
-	|2: 
+	|2:
 		RESULT:=m[.. BY -1, .. BY -1];
 	|3:
 		RESULT:=[.., .. BY -1, .. BY -1]
@@ -343,7 +343,7 @@ BEGIN
 END Rot180;*)
 
 
-PROCEDURE RoundBinary*(x:Datatype):Datatype; 
+PROCEDURE RoundBinary*(x:Datatype):Datatype;
 	BEGIN
 		IF x>=0.5 THEN RETURN 1
 		ELSE RETURN 0
@@ -359,10 +359,10 @@ BEGIN
 		meanI:=StatisticsBase.Mean(input); meanO:=StatisticsBase.Mean(output);
 		rangeI:=maxI-minI; rangeO:=maxO-minO;
 		input:=input-minI;
-		input:=1/rangeI*input; 
+		input:=1/rangeI*input;
 		output:=output-minO;
 		output:=1/rangeO*output;
-		
+
 	ELSIF function=RectifiedLinear THEN
 	ELSIF function=Tanh THEN
 	ELSIF function=Logistic THEN
@@ -454,16 +454,16 @@ END GetFunction;
 PROCEDURE WriteFunction(w:Streams.Writer; f:Function);
 BEGIN
 	IF f = Tanh THEN w.String("Tanh ");
-	ELSIF f = TanhDerivative THEN w.String("TanhDerivative"); 
+	ELSIF f = TanhDerivative THEN w.String("TanhDerivative");
 	ELSIF f =ScaledSigmoid THEN w.String("ScaledSigmoid ")
-	ELSIF f = ScaledSigmoidDerivative THEN w.String("ScaledSigmoidDerivative ") 
+	ELSIF f = ScaledSigmoidDerivative THEN w.String("ScaledSigmoidDerivative ")
 	ELSIF f = Linear THEN w.String("Linear ")
 	ELSIF f = LinearDerivative THEN w.String("LinearDerivative ")
 	ELSIF f = RectifiedLinear THEN w.String("RectifiedLinear ")
 	ELSIF f = RectifiedLinearDerivative THEN w.String("RectifiedLinearDerivative ")
 	ELSIF f = LeakyReLu THEN w.String("LeakyReLu ");
 	ELSIF f = LeakyReLuDerivative THEN w.String("LeakyReLuDerivative ");
-	ELSIF f = NoisyReLu THEN w.String("NoisyReLu ");  
+	ELSIF f = NoisyReLu THEN w.String("NoisyReLu ");
 	ELSIF f = Logistic THEN w.String("Logistic ");
 	ELSIF f = LogisticDerivative THEN w.String("LogisticDerivative ");
 	(*! to do: more functions to implement*)
@@ -475,7 +475,7 @@ PROCEDURE StoreLayer(w:Streams.Writer; l:Layer);
 VAR lc: ConvLayer; lf: FullLayerM1M;
 BEGIN
 	w.String("MLConvNet3D.GenLayer ");
-	IF l IS ConvLayer THEN 
+	IF l IS ConvLayer THEN
 		lc:=l(ConvLayer);
 		IF lc IS ConvLayerMMM THEN w.String("ConvLayerMMM ");
 		ELSIF lc IS ConvLayerMM1 THEN w.String("ConvLayerMM1 ");
@@ -512,7 +512,7 @@ END StoreLayer;
 
 (* generate layer from a stream. in the stream, this procedure can be preceded by "MLConvNet3D.GenLayer "*)
 PROCEDURE GenLayer*(r:Streams.Reader):Layer;
-VAR 
+VAR
 	type, function, derivative,show,s: ARRAY 32 OF CHAR;
 	lp:MaxPoolLayer;
 	lc: ConvLayer;
@@ -528,7 +528,7 @@ VAR
 	l:Layer;
 	filtersize, inputSize,outputSize: ARRAY[?] OF LONGINT;
 	NonLinear, Derivative: PROCEDURE (x:Datatype):Datatype;
-	version:LONGINT; 
+	version:LONGINT;
 BEGIN
 	IF ~r.GetInteger(version,FALSE) THEN HALT(200) END;
 	ASSERT (version<MAX(LONGINT)); (*! to do*)
@@ -536,7 +536,7 @@ BEGIN
 	IF type="MaxPoolLayer" THEN
 	ELSIF type="NormalizeLayer" THEN
 	ELSIF Strings.Pos("ConvLayerM", type)=0 THEN
-		filtersize:=Util.LoadLInt(r); 
+		filtersize:=Util.LoadLInt(r);
 		IF r.GetString(function) & r.GetString(derivative) THEN
 			NonLinear:=GetFunction(function);
 			Derivative:=GetFunction(derivative);
@@ -555,8 +555,8 @@ BEGIN
 		ELSE HALT(203)
 		END;
 	ELSIF type="FullLayerM1M" THEN
-		inputSize:=Util.LoadLInt(r); 
-		outputSize:=Util.LoadLInt(r); 
+		inputSize:=Util.LoadLInt(r);
+		outputSize:=Util.LoadLInt(r);
 		NonLinear:=GetFunction(function);
 		Derivative:=GetFunction(derivative);
 		IF ~r.GetString (show) THEN HALT(206) END;
@@ -578,14 +578,14 @@ TYPE SoftMax= OBJECT
 		BEGIN
 			IF (DIM(tmp)#DIM(d)) OR (LEN(tmp)#LEN(d)) THEN NEW(tmp, LEN(d)) END;
 			IF (DIM(RESULT)#DIM(d)) OR (LEN(RESULT)#LEN(d)) THEN NEW(RESULT, LEN(d)) END;
-			tmp:=ALL(d, Exp); 
+			tmp:=ALL(d, Exp);
 			sum:=SUM(tmp);
 			RETURN tmp/sum
 		END SoftMax;
-		
+
 		PROCEDURE Derivative(CONST d:Dataset):Dataset;
 		BEGIN
-			(*see https://stackoverflow.com/questions/37790990/derivative-of-a-softmax-function-explanation?rq=1 
+			(*see https://stackoverflow.com/questions/37790990/derivative-of-a-softmax-function-explanation?rq=1
 			and
 			https://math.stackexchange.com/questions/945871/derivative-of-softmax-loss-function*)
 		END Derivative;
@@ -594,7 +594,7 @@ TYPE SoftMax= OBJECT
 
 TYPE
 	Layer* = OBJECT
-		VAR 
+		VAR
 			prior,next*: Layer;
 			NonLinear*, NonLinearDerivative*, InverseNonLinear*: Function;
 			w*, x*, y*, delta*, dIn*, rotDelta, dw, dwOld, goodW*, oldGoodW, invW, invZ, reconstruction: Dataset;
@@ -604,29 +604,29 @@ TYPE
 			bias*: Datatype; (*todo: this should be a vector!*)
 			step*, stepBias*, momentum*, decay*, dropout*,
 			slow*, (* slow down for a time by scaling step temporarily*)
-			goodStep, goodBias, goodMomentum, oldGoodStep, oldGoodBias, oldGoodMomentum, 
+			goodStep, goodBias, goodMomentum, oldGoodStep, oldGoodBias, oldGoodMomentum,
 			maxWeight,minWeight: Datatype;
 			window: WMMatrix.Window;
 			growStep*:LONGINT; (* enable dynamic change of dimension of layer & layer.next; currently only implemented for FullLayerM1M *)
 			(*random:Util.RandomGenerator;*) (* consider own random generator per network, to avoid concurrency issues when several nets are run*)
-			tProp*, tBackprop*: LONGINT; 
+			tProp*, tBackprop*: LONGINT;
 			timer*: Kernel.MilliTimer;
-			
-	
+
+
 		(* data propagation *)
 		PROCEDURE Propagate*(CONST in: Dataset) ; (* returns activations of this*)
 		END Propagate;
-		
+
 		(* error backpropagation *)
 		PROCEDURE Backprop*(CONST deltaNext:Dataset);
-		END Backprop;	
-		
+		END Backprop;
+
 		PROCEDURE Store(writer: Streams.Writer);
 		BEGIN
 			Util.StoreLR(writer,w);
 			Util.StoreLR(writer,[bias]); (*todo: bias is supposed to be a vector everywhere*)
 		END Store;
-		
+
 		PROCEDURE Load(reader: Streams.Reader);
 		VAR
 			biasAsVec: Vector;
@@ -635,11 +635,11 @@ TYPE
 				biasAsVec:=Util.LoadLR(reader);
 				bias:=biasAsVec[0];
 		END Load;
-		
+
 				(* Set/GetGoodParameters allows to reconstruct situation before parameter explosion *)
 		PROCEDURE MemorizeGoodParameters;
 		BEGIN
-			oldGoodW:=goodW; goodW:= w; 
+			oldGoodW:=goodW; goodW:= w;
 			oldGoodStep:=goodStep; goodStep:=step;
 			oldGoodBias:=goodBias; goodBias:=bias;
 			oldGoodMomentum:=goodMomentum; goodMomentum:=momentum;
@@ -650,7 +650,7 @@ TYPE
 				oldGoodMomentum:=goodMomentum
 			END;
 		END MemorizeGoodParameters;
-		
+
 		PROCEDURE Rollback(n:LONGINT); (* Roll parameters back by 2 good epochs*)
 		BEGIN
 			IF n=1 THEN
@@ -668,34 +668,34 @@ TYPE
 			ELSE HALT(200)
 			END;
 		END Rollback;
-		
+
 		(*create a binary (currently integer...) map for weights. Only weights*)
 		PROCEDURE NewDropout*(dropoutFactor: Datatype); (*!implementation limitation - currently only done for fully connected layer type*)
 		BEGIN
 			dropout:=dropoutFactor;
 			IF dropoutFactor>0 THEN drop:=random.Binary(LEN(dw),dropout) END;
 		END NewDropout;
-		
+
 		(* generate image from activation*)
 		PROCEDURE Reconstruct*(CONST activation: Dataset);
 			(*involves solution of AX=B for fully connected layers,
 			and deconvolution for convolutional layers*)
 		END Reconstruct;
-		
+
 		PROCEDURE ChangeSize*(d: LONGINT); (* allow dynamic modification of layer structure*)
-		END ChangeSize; 
-		
+		END ChangeSize;
+
 		PROCEDURE ChangeDepth*; (* allow dynamic modification of layer structure*)
-		END ChangeDepth; 
-		
+		END ChangeDepth;
+
 		PROCEDURE InsertLayer*; (* allow dynamic modification of layer structure*)
-		END InsertLayer; 
+		END InsertLayer;
 	END Layer;
 
 TYPE PoolLayer*= OBJECT(Layer)
 		PROCEDURE Downsample(CONST in:Dataset):Dataset;
 		END Downsample;
-		
+
 		PROCEDURE Upsample(CONST delta:Dataset):Dataset;
 		END Upsample;
 	END PoolLayer;
@@ -705,19 +705,19 @@ TYPE  MaxPoolLayer*= OBJECT(PoolLayer)
 			map: Util.BoolTensor;
 			beta:Datatype;
 			wp: WMMatrix.Window;
-		
+
 		PROCEDURE &New*;
 		BEGIN
-			beta:= 1.0; 
+			beta:= 1.0;
 			bias:= 0.0;
 			show:=TRUE;
 		END New;
-		
+
 		PROCEDURE DeltaFromDNext(CONST dNext: Dataset);
 		BEGIN
 			delta:=dNext;
 		END DeltaFromDNext;
-		
+
 		PROCEDURE AdaptWeights;
 		BEGIN
 			(* (*from http://cogprints.org/5869/1/cnn_tutorial.pdf  - is it necessary that this layer has bias and scale ?*)
@@ -725,7 +725,7 @@ TYPE  MaxPoolLayer*= OBJECT(PoolLayer)
 			dBeta:=SUM(z .* delta)
 			*)
 		END AdaptWeights;
-		
+
 		PROCEDURE Downsample(CONST x:Dataset):Dataset;
 		VAR len:IntVector;
 		BEGIN
@@ -741,28 +741,28 @@ TYPE  MaxPoolLayer*= OBJECT(PoolLayer)
 			 z:=xSmall; (*z := beta .* xSmall + bias;*)
 			 RETURN z
 		END Downsample;
-		
+
 		PROCEDURE Upsample(CONST delta:Dataset):Dataset;
 		BEGIN
 			RESULT:=ExpandMax(delta, map); (*? need handling bias and weights ?*)
 			RETURN RESULT
 		END Upsample;
-		
-		PROCEDURE Propagate*(CONST in: Dataset) ; 
+
+		PROCEDURE Propagate*(CONST in: Dataset) ;
 		BEGIN
 			Kernel.SetTimer(timer,0);
-			x:=in; 
+			x:=in;
 			y:=Downsample(x);
-			IF show THEN 
-				IF window=NIL THEN 
+			IF show THEN
+				IF window=NIL THEN
 					IF DIM(in)=2 THEN NEW (window, y[..,..], "maxPool"); window.AddWindow; ELSE NEW(window, y[0,..,..], "maxPool") END;
-				ELSE 
+				ELSE
 					IF DIM(in)=2 THEN window.SetImage( y[..,..]) ELSE window.SetImage( y[0,..,..]) END;
-				END;				
+				END;
 			END;
 			tProp:=tProp+Kernel.Elapsed(timer);
 		END Propagate;
-		
+
 		PROCEDURE Backprop(CONST dNext:Dataset);
 		BEGIN
 			Kernel.SetTimer(timer,0);
@@ -772,9 +772,9 @@ TYPE  MaxPoolLayer*= OBJECT(PoolLayer)
 			tBackprop:=tBackprop+Kernel.Elapsed(timer);
 		END Backprop;
 	END MaxPoolLayer;
-	
+
 TYPE ConvLayer*=OBJECT(Layer)
-		VAR 
+		VAR
 			(*w*, *) z, (*dwOld,*) dw0, rotDw, rotW, tmp,btmp: Dataset;
 			dBias: Datatype;
 			size, filtersize: IntVector;
@@ -796,14 +796,14 @@ TYPE ConvLayer*=OBJECT(Layer)
 			decay:=DefaultDecay;
 			slow:=1.0;
 			InitWeights(filtersize);
-			
+
 			NEW(convolver);  IF convolver.SetOutputShape(EulFftwConvolve.Valid) THEN END;
 			NEW(convolver1); IF convolver1.SetOutputShape(EulFftwConvolve.Valid) THEN  END;
 			NEW(convolver2); IF  convolver2.SetOutputShape(EulFftwConvolve.Full) THEN  END;
-			
-			
-		END New;	
-		
+
+
+		END New;
+
 		PROCEDURE InitWeights(CONST filtersize: IntVector); (* see Stutz, formulae 16,17*) (* to do: more rational initializatino of weights*)
 		VAR w0: Datatype;
 		BEGIN
@@ -811,34 +811,34 @@ TYPE ConvLayer*=OBJECT(Layer)
 			NEW(dw, filtersize);
 			w:=Util.Random(filtersize, Util.Uniform);
 			IF (NonLinear=ScaledSigmoid) OR (NonLinear=LeakyReLu) THEN
-				IF LEN(filtersize,0)=2 THEN	 
+				IF LEN(filtersize,0)=2 THEN
 					(*w0:=Mathe.sqrt(6)/filtersize[0] ; *)
 					w0:=(*2* *) 0.3* Mathe.sqrt(6)/Mathe.sqrt(SUM(filtersize[0..1])) ;
-				ELSIF LEN(filtersize,0)=3 THEN 
+				ELSIF LEN(filtersize,0)=3 THEN
 					(*w0:=Mathe.sqrt(6)/filtersize[1] ;*)
 					w0:=(*2* *) 0.3* Mathe.sqrt(6)/Mathe.sqrt(SUM(filtersize[1..2])) ;
 				END;
 			ELSE
-				IF LEN(filtersize,0)=2 THEN	 
+				IF LEN(filtersize,0)=2 THEN
 					(*w0:=(*1.1**) 2* Mathe.sqrt(6)/filtersize[0]; *)
 					w0:=2* 0.3*Mathe.sqrt(6)/Mathe.sqrt(SUM(filtersize[0..1]));
-				ELSIF LEN(filtersize,0)=3 THEN 
+				ELSIF LEN(filtersize,0)=3 THEN
 					(*w0:=(*1.1**) 2* Mathe.sqrt(6)/filtersize[1] ;*)
 					w0:=2* 0.3*Mathe.sqrt(6)/Mathe.sqrt(SUM(filtersize[1..2]));
 				END;
 			END;
-			
+
 			w:=w-0.5;
 			w:= w0 * w; (* see Stutz, formulae 16,17*)
-			IF show & (LEN(filtersize,0)=2) THEN 
-					NEW(ww, w, "w"); ww.maxInterpolation := WMGraphics.ScaleBox; ww.AddWindow; 
-					NEW(wdw, dw, "dw"); wdw.maxInterpolation := WMGraphics.ScaleBox; wdw.AddWindow; 
+			IF show & (LEN(filtersize,0)=2) THEN
+					NEW(ww, w, "w"); ww.maxInterpolation := WMGraphics.ScaleBox; ww.AddWindow;
+					NEW(wdw, dw, "dw"); wdw.maxInterpolation := WMGraphics.ScaleBox; wdw.AddWindow;
 			ELSIF show & (LEN(filtersize,0)=3) THEN
-					NEW(weightWindow, w, "w",0); weightWindow.maxInterpolation := WMGraphics.ScaleBox; weightWindow.AddWindow; 
-					NEW(dWeightWindow, dw, "dw",0); dWeightWindow.maxInterpolation := WMGraphics.ScaleBox; dWeightWindow.AddWindow; 
-			END;			
+					NEW(weightWindow, w, "w",0); weightWindow.maxInterpolation := WMGraphics.ScaleBox; weightWindow.AddWindow;
+					NEW(dWeightWindow, dw, "dw",0); dWeightWindow.maxInterpolation := WMGraphics.ScaleBox; dWeightWindow.AddWindow;
+			END;
 		END InitWeights;
-		
+
 		PROCEDURE Propagate(CONST x: Dataset); (* returns activations of this*)
 		BEGIN
 			SELF.x := ALIAS OF x;
@@ -846,45 +846,45 @@ TYPE ConvLayer*=OBJECT(Layer)
 			(*default boundary conditions here, according to z := Convolve(x, w, VALID)+bias;*)
 			IF convolver.SetKernels(w) THEN z:= convolver.Convolve(x); y:=z+bias; END;
 			IF NonLinear#NIL THEN y := ALL(y, NonLinear); END;
-			IF show THEN 
-				IF windowM=NIL THEN NEW(windowM, y, "conv"); windowM.AddWindow; 
+			IF show THEN
+				IF windowM=NIL THEN NEW(windowM, y, "conv"); windowM.AddWindow;
 				ELSIF window.isVisible THEN windowM.SetImage(y);
 				END;
 			END;
 		END Propagate;
-		
+
 		PROCEDURE DeltaFromError(CONST error:Dataset);
 		BEGIN
 			tmp:= ALL(z, NonLinearDerivative);
 			delta:= error .* tmp  ; (* delta:= 2* error .* delta  ; ? *)
 		END DeltaFromError;
-		
+
 		PROCEDURE DeltaFromDNext(CONST dNext (*, betaNext*): Dataset);
 		BEGIN
 			IF NonLinearDerivative#NIL THEN tmp:=ALL(z, NonLinearDerivative); delta:= tmp  .* dNext;
 			ELSE delta:=dNext (*debug*)
 			END;
 		END DeltaFromDNext;
-		
+
 		(* Notes on Convolutional Neural Networks. Jake Bouvrie, 2006 *)
 		PROCEDURE AdaptWeights;
 		BEGIN
 			dBias:=stepBias*SUM(delta)/PROD(LEN(delta));  (*!to do: decouple bias update from weight step size *)
 			(*should it go here or after backprop ?*)(*?; see http://cogprints.org/5869/1/cnn_tutorial.pdf page 3;     *)
 			bias := bias - dBias ; (* with or without scaling ??? see Quoc Le, tutorial 1, page 8 *)
-			
+
 			rotDelta:=Rot180(delta);
 			IF convolver1.SetKernels(rotDelta) THEN rotDw:=convolver1.Convolve(x); dw:=Rot180(rotDw) END;
-			
+
 			(*IF convolver1.SetKernels(Rot180(delta)) THEN dw:=Rot180(convolver1.Convolve(x)) END;*)
 			dw:=1/LEN(x,0)*step*slow*dw;
-			
+
 			IF momentum#0 THEN IF LEN(dw)=LEN(dwOld) THEN dw:=dw+dwOld END; dwOld:=momentum*dw END;
 			IF decay#0 THEN w:=(1-step*decay) * w END;
 			w:=w - dw;
 			IF clamp THEN ClampWeights END;
 		END AdaptWeights;
-		
+
 		PROCEDURE AdaptWeightsN;
 		CONST stepBias=0.01;
 		VAR i:LONGINT;
@@ -892,23 +892,23 @@ TYPE ConvLayer*=OBJECT(Layer)
 			(*dBias:=step/10*SUM(delta)/PROD(LEN(delta));  *)
 			dBias:=stepBias * SUM(delta)/PROD(LEN(delta));
 			bias:=bias-dBias;
-			delta:=delta-dBias; (*??*) 
+			delta:=delta-dBias; (*??*)
 			FOR i:=0 TO LEN(x,0)-1 DO
 				rotDelta:=Rot180(delta[i,..,..]);
-				IF convolver1.SetKernels(rotDelta) THEN rotDw:=convolver1.Convolve(x[i,..,..]);  dw[i,..,..]:=Rot180(rotDw) END; 
+				IF convolver1.SetKernels(rotDelta) THEN rotDw:=convolver1.Convolve(x[i,..,..]);  dw[i,..,..]:=Rot180(rotDw) END;
 				(*IF convolver1.SetKernels(Rot180(delta[i,..,..])) THEN dw[i,..,..]:=Rot180(convolver1.Convolve(x[i,..,..])) END; *)
 			END;
 			dw:=1/LEN(x,0)*step*slow*dw;
-			IF momentum#0 THEN  
+			IF momentum#0 THEN
 				IF LEN(dw)=LEN(dwOld) THEN dw:=dw+dwOld END;
-				dwOld:=momentum*dw 
+				dwOld:=momentum*dw
 			END;
 			IF decay#0 THEN w:=(1-step*decay) * w END;
 			w:=w - dw;
 			IF clamp THEN ClampWeights END;
 			IF show THEN ShowWeights END;
 		END AdaptWeightsN;
-		
+
 		PROCEDURE AdaptWeightsNCompact;
 		(*CONST stepBias=0.01;*)
 		VAR i:LONGINT;
@@ -922,7 +922,7 @@ TYPE ConvLayer*=OBJECT(Layer)
 					ELSE
 						dw[i,..,..]:=1/LEN(x,0)*step*slow*Rot180(convolver1.Convolve(x[i,..,..]));
 					END;
-				END; 
+				END;
 			END;
 			IF (decay=0) & clamp THEN  HALT(200); (*w:=ALL(w-dw, Clamp)*)(*! does not compile*)
 			ELSIF decay=0 THEN w:=w-dw
@@ -940,12 +940,12 @@ TYPE ConvLayer*=OBJECT(Layer)
 			DeltaFromDNext(dNext);
 			AdaptWeights;  (*? should backpropagation occur before or after weight update ?*)
 			rotW:=Rot180(w);
-			IF convolver2.SetKernels(rotW) THEN 
+			IF convolver2.SetKernels(rotW) THEN
 				dIn:=convolver2.Convolve(delta);
 			END;
 			tBackprop:=tBackprop+Kernel.Elapsed(timer);
 		END Backprop;
-		
+
 		PROCEDURE 	BackpropN(CONST dNext:Dataset);
 		VAR i:LONGINT; len: ARRAY [3] OF LONGINT;
 		BEGIN
@@ -959,19 +959,19 @@ TYPE ConvLayer*=OBJECT(Layer)
 					len[0]:=LEN(delta,0); len[1]:=LEN(btmp,0); len[2]:=LEN(btmp,1);
 					IF (DIM(dIn)#DIM(delta)) OR (LEN(dIn)#len) THEN NEW(dIn, len) END;
 					dIn[i,..,..]:=btmp[..,..]
-				END;	
+				END;
 				(*
 				IF convolver2.SetKernels(Rot180(w[i,..,..])) THEN
 					btmp:=convolver2.Convolve(delta[i,..,..]);
 					len[0]:=LEN(delta,0); len[1]:=LEN(btmp,0); len[2]:=LEN(btmp,1);
 					IF (DIM(dIn)#DIM(delta)) OR (LEN(dIn)#len) THEN NEW(dIn, len) END;
 					dIn[i,..,..]:=btmp[..,..]
-				END;		
+				END;
 				*)
 			END;
 			tBackprop:=tBackprop+Kernel.Elapsed(timer);
 		END BackpropN;
-		
+
 				(* generate image from activation*)
 		PROCEDURE Reconstruct*(CONST activation: Dataset);
 			(*involves solution of AX=B for fully connected layers,
@@ -986,61 +986,61 @@ TYPE ConvLayer*=OBJECT(Layer)
 			w:=MIN(w,5*sd);
 			w:=MAX(w,-5*sd);
 		END ClampWeights;
-		
+
 		PROCEDURE Clamp(x: Datatype):Datatype;
 		BEGIN
-			RETURN MAX(-maxWeight, MIN(x, minWeight)) 
+			RETURN MAX(-maxWeight, MIN(x, minWeight))
 		END Clamp;
-		
+
 		PROCEDURE ShowWeights;
 		BEGIN
-			IF (weightWindow#NIL) & weightWindow.isVisible THEN weightWindow.SetImage(w) END; 
+			IF (weightWindow#NIL) & weightWindow.isVisible THEN weightWindow.SetImage(w) END;
 			IF (ww#NIL ) & ww.isVisible THEN ww.SetImage(w) END;
-			IF (dWeightWindow#NIL) & dWeightWindow.isVisible THEN dWeightWindow.SetImage(dw) END; 
+			IF (dWeightWindow#NIL) & dWeightWindow.isVisible THEN dWeightWindow.SetImage(dw) END;
 			IF (wdw#NIL) & wdw.isVisible THEN wdw.SetImage(dw) END;
 		END ShowWeights;
-		
+
 	END ConvLayer;
 
 TYPE ConvLayerMMM*=OBJECT(ConvLayer) (*M input images, M filters, M outputs*)
-		VAR 
+		VAR
 			vBias, dBias: Vector;
-		
+
 		PROCEDURE &New*(CONST filtersize:IntVector; nonLinear, nonLinearDerivative: Function; show: BOOLEAN);
 		BEGIN
 			New^(filtersize, nonLinear, nonLinearDerivative, show);
 			NEW(vBias,filtersize[0]); vBias:=0;
 			NEW(dBias, filtersize[0]); dBias:=0;
-		END New;	
-		
+		END New;
+
 		PROCEDURE Propagate(CONST x: Dataset); (* returns activations of this*)
 		VAR i:LONGINT;
 		BEGIN
 			Kernel.SetTimer(timer,0);
-			ASSERT(LEN(x,0)=LEN(w,0), 200); 
+			ASSERT(LEN(x,0)=LEN(w,0), 200);
 			SELF.x := ALIAS OF x;
 			size:=LEN(x);
 			size[1..2]:=LEN(x)[1..2] - LEN(w)[1..2] + 1;
 			IF LEN(z)#size THEN NEW(z, size) END;
 			IF LEN(y)#size THEN NEW(y, size) END;
-			
+
 			FOR i:=0 TO LEN(w,0)-1 DO
-				IF convolver.SetKernels(w[i,..,..]) THEN 
-					z[i,..,..] := convolver.Convolve(x[i,..,..]); 
+				IF convolver.SetKernels(w[i,..,..]) THEN
+					z[i,..,..] := convolver.Convolve(x[i,..,..]);
 				END; (*! to do: implement as one array operation, as soon as convolver is ready*)
 			END;
-			
+
 			FOR i:=0 TO LEN(z,0)-1 DO
 				IF NonLinear#NIL THEN y[i,..,..]:=z[i,..,..]+vBias[i]; y[i,..,..] := ALL(y[i,..,..], NonLinear); ELSE y[i,..,..]:=z[i,..,..]+vBias[i] END;
 			END;
 			tProp:=tProp+Kernel.Elapsed(timer);
-			IF show THEN 
-				IF window=NIL THEN NEW(window, y, "conv",0); window.maxInterpolation := WMGraphics.ScaleBox; window.AddWindow; 
+			IF show THEN
+				IF window=NIL THEN NEW(window, y, "conv",0); window.maxInterpolation := WMGraphics.ScaleBox; window.AddWindow;
 				ELSE window.SetImage(y);
 				END;
 			END;
 		END Propagate;
-		
+
 
 		(* Notes on Convolutional Neural Networks. Jake Bouvrie, 2006 *)
 		PROCEDURE AdaptWeights;
@@ -1062,12 +1062,12 @@ TYPE ConvLayerMMM*=OBJECT(ConvLayer) (*M input images, M filters, M outputs*)
 			IF clamp THEN ClampWeights END;
 			IF show THEN ShowWeights END;;
 		END AdaptWeights;
-		
+
 		PROCEDURE 	Backprop(CONST dNext:Dataset);
 		BEGIN
 			BackpropN(dNext);
 		END Backprop;
-		
+
 				(* generate image from activation*)
 		PROCEDURE Reconstruct*(CONST activation: Dataset);
 			(*involves solution of AX=B for fully connected layers,
@@ -1075,84 +1075,84 @@ TYPE ConvLayerMMM*=OBJECT(ConvLayer) (*M input images, M filters, M outputs*)
 		END Reconstruct;
 
 	END ConvLayerMMM;
-	
+
 TYPE ConvLayerMM1*=OBJECT(ConvLayer) (*M input images, M filters, 1 output; contributions of input images could be subject to learning, *)
 
-		PROCEDURE Propagate(CONST x: Dataset); 
-		VAR i:LONGINT; 
+		PROCEDURE Propagate(CONST x: Dataset);
+		VAR i:LONGINT;
 		BEGIN
 			Kernel.SetTimer(timer,0);
-			ASSERT(LEN(x,0)=LEN(w,0), 200); 
+			ASSERT(LEN(x,0)=LEN(w,0), 200);
 			SELF.x := ALIAS OF x;
 			size:=LEN(x);
 			size[1..2]:=LEN(x)[1..2] - LEN(w)[1..2] + 1;
 			IF LEN(z)#size THEN NEW(z, size) END;
 			FOR i:=0 TO LEN(x,0)-1 DO
-				IF convolver.SetKernels(w[i,..,..]) THEN 
-					z[i,..,..]:= convolver.Convolve(x[i,..,..]); 
-				END; 
+				IF convolver.SetKernels(w[i,..,..]) THEN
+					z[i,..,..]:= convolver.Convolve(x[i,..,..]);
+				END;
 			END;
 			IF LEN(y)#size[1..2] THEN NEW(y,size[1..2]) END;
-			y:= SUM(z, 0); 
-			y:=y+bias; 
+			y:= SUM(z, 0);
+			y:=y+bias;
 			IF NonLinear#NIL THEN y := ALL(y, NonLinear) END;
 			tProp:=tProp+Kernel.Elapsed(timer);
-			IF show THEN 
-				IF windowM=NIL THEN NEW(windowM, y, "conv"); windowM.maxInterpolation := WMGraphics.ScaleBox; windowM.AddWindow; 
+			IF show THEN
+				IF windowM=NIL THEN NEW(windowM, y, "conv"); windowM.maxInterpolation := WMGraphics.ScaleBox; windowM.AddWindow;
 				ELSE windowM.SetImage(y);
 				END;
 			END;
 		END Propagate;
-		
+
 		PROCEDURE DeltaFromDNext(CONST dNext : Dataset);
 		VAR len:ARRAY [3] OF LONGINT; i:LONGINT;
 		BEGIN
-			len:=[LEN(z,0), LEN(dNext,0), LEN(dNext,1)]; 
+			len:=[LEN(z,0), LEN(dNext,0), LEN(dNext,1)];
 			IF (DIM(delta)#LEN(len,0)) OR (LEN(delta,0)#len) THEN NEW(delta, len) END;
 			FOR i:=0 TO len[0]-1 DO
-				IF NonLinearDerivative#NIL THEN 
-					tmp:=ALL(z[i,..,..], NonLinearDerivative); 
+				IF NonLinearDerivative#NIL THEN
+					tmp:=ALL(z[i,..,..], NonLinearDerivative);
 					tmp:=1/len[0] * tmp; (*!?? scaling actually of dNext that is distributed to several paths; because in Propagate, there is summed up. possibly, scaling of forward and backward paths should be handled differently ?*)
 					delta[i,..,..]:= tmp  .* dNext;
 				ELSE delta[i,..,..]:=1/len[0] * dNext (*debug*)
 				END;
 			END;
 		END DeltaFromDNext;
-		
+
 		PROCEDURE DeltaFromDNextCompact(CONST dNext : Dataset);
 		VAR len:ARRAY [3] OF LONGINT; i:LONGINT;
 		BEGIN
-			len:=[LEN(z,0), LEN(dNext,0), LEN(dNext,1)]; 
+			len:=[LEN(z,0), LEN(dNext,0), LEN(dNext,1)];
 			IF (DIM(delta)#LEN(len,0)) OR (LEN(delta,0)#len) THEN NEW(delta, len) END;
 			FOR i:=0 TO len[0]-1 DO
-				IF NonLinearDerivative#NIL THEN 
+				IF NonLinearDerivative#NIL THEN
 					delta[i,..,..]:=1/len[0] * ALL(z[i,..,..], NonLinearDerivative)  .* dNext;
 	 			ELSE delta[i,..,..]:=1/len[0] * dNext (*debug*)
 				END;
 			END;
 		END DeltaFromDNextCompact;
-		
+
 		(* Notes on Convolutional Neural Networks. Jake Bouvrie, 2006 *)
 		PROCEDURE AdaptWeights;
 		BEGIN
 			AdaptWeightsN;
 		END AdaptWeights;
-				
+
 		PROCEDURE Backprop(CONST dNext:Dataset);
 		BEGIN
 			BackpropN(dNext);
 		END Backprop;
-		
+
 				(* generate image from activation*)
 		PROCEDURE Reconstruct*(CONST activation: Dataset);
 			(*involves solution of AX=B for fully connected layers,
 			and deconvolution for convolutional layers*)
 		END Reconstruct;
-		
+
 	END ConvLayerMM1;
-	
+
 TYPE ConvLayerM1M*=OBJECT(ConvLayer) (*M input images, 1 filter, M outputs*)
-		
+
 		PROCEDURE Propagate(CONST x: Dataset); (* returns activations of this*)
 		VAR i:LONGINT;
 		BEGIN
@@ -1162,22 +1162,22 @@ TYPE ConvLayerM1M*=OBJECT(ConvLayer) (*M input images, 1 filter, M outputs*)
 			size[1..2]:=LEN(x)[1..2] - LEN(w) + 1;
 			IF LEN(z)#size THEN NEW(z, size) END;
 			IF LEN(y)#size THEN NEW(y, size) END;
-			
-			IF convolver.SetKernels(w) THEN 
+
+			IF convolver.SetKernels(w) THEN
 				FOR i:=0 TO LEN(x,0)-1 DO
-					z[i,..,..] := convolver.Convolve(x[i,..,..]); 
+					z[i,..,..] := convolver.Convolve(x[i,..,..]);
 				END; (*! to do: implement as one array operation, as soon as convolver is ready*)
 			END;
-			
+
 			IF NonLinear#NIL THEN y:=z+bias; y := ALL(y, NonLinear); ELSE y:=z+bias END;
 			tProp:=tProp+Kernel.Elapsed(timer);
-			IF show THEN 
-				IF window=NIL THEN NEW(window, y, "conv",0); window.maxInterpolation := WMGraphics.ScaleBox; window.AddWindow; 
+			IF show THEN
+				IF window=NIL THEN NEW(window, y, "conv",0); window.maxInterpolation := WMGraphics.ScaleBox; window.AddWindow;
 				ELSE window.SetImage(y);
 				END;
 			END;
 		END Propagate;
-		
+
 		(* Notes on Convolutional Neural Networks. Jake Bouvrie, 2006 *)
 		PROCEDURE AdaptWeights;
 		VAR i:LONGINT;
@@ -1186,27 +1186,27 @@ TYPE ConvLayerM1M*=OBJECT(ConvLayer) (*M input images, 1 filter, M outputs*)
 			bias:=bias-dBias;
 			(*! to do: gain and local contrast normalization compensation, see http://davidstutz.de/wordpress/wp-content/uploads/2014/07/seminar.pdf, p 15*)
 			(*! to do: enforce sparsity, see http://cogprints.org/5869/1/cnn_tutorial.pdf page 5 *)
-			
+
 			dw:=0;
 			FOR i:=0 TO LEN(x,0)-1 DO
 				rotDelta:=Rot180(delta[i,..,..]);
-				IF convolver1.SetKernels(rotDelta) THEN 
+				IF convolver1.SetKernels(rotDelta) THEN
 					rotDw:=convolver1.Convolve(x[i,..,..]);
 					dw0:=Rot180(rotDw);
 					dw:=dw+dw0;
-				END; 
+				END;
 			END;
 			dw:=1/LEN(x,0)*step*slow*dw;
-			IF momentum#0 THEN  
+			IF momentum#0 THEN
 				IF LEN(dw)=LEN(dwOld) THEN dw:=dw+dwOld END;
-			 	dwOld:=momentum*dw 
+			 	dwOld:=momentum*dw
 			 END;
 			IF decay#0 THEN w:=(1-step*decay) * w END;
 			w:=w - dw;
-			IF clamp THEN ClampWeights END;			
+			IF clamp THEN ClampWeights END;
 			IF show THEN ShowWeights END;
 		END AdaptWeights;
-			
+
 		PROCEDURE 	Backprop(CONST dNext:Dataset);
 		VAR i:LONGINT; len: ARRAY [3] OF LONGINT;
 		BEGIN
@@ -1224,7 +1224,7 @@ TYPE ConvLayerM1M*=OBJECT(ConvLayer) (*M input images, 1 filter, M outputs*)
 			END;
 			tBackprop:=tBackprop+Kernel.Elapsed(timer);
 		END Backprop;
-		
+
 				(* generate image from activation*)
 		PROCEDURE Reconstruct*(CONST activation: Dataset);
 			(*involves solution of AX=B for fully connected layers,
@@ -1235,7 +1235,7 @@ END ConvLayerM1M;
 TYPE ConvLayerMNM*=OBJECT(ConvLayer);(*  [M,N] input images, N filters, M output images*)
 	VAR nn1: ConvLayerMM1;
 		lenX, lenY: IntVector;
-	
+
 	PROCEDURE &New*(CONST filtersize:IntVector; nonLinear, nonLinearDerivative: Function; show: BOOLEAN); (*filtersize is [w,h]*)
 	BEGIN
 		ASSERT(LEN(filtersize,0)=3);
@@ -1245,39 +1245,39 @@ TYPE ConvLayerMNM*=OBJECT(ConvLayer);(*  [M,N] input images, N filters, M output
 		SELF.show:=show;
 		bias:=0;
 		step:=DefaultStep;
-		stepBias:=DefaultStepBias; 
+		stepBias:=DefaultStepBias;
 		decay:=DefaultDecay;
 		slow:=1.0;
 		NEW(nn1,filtersize, nonLinear, nonLinearDerivative, show);
 	END New;
-	
+
 	PROCEDURE Propagate*(CONST x: Dataset);
-	VAR m:LONGINT; 
+	VAR m:LONGINT;
 	BEGIN
 		ASSERT(DIM(x)=4);
 		Kernel.SetTimer(timer,0);
 		lenX:=LEN(x);
-		IF LEN(x)#LEN(SELF.x) THEN NEW(SELF.x, LEN(x)) 
+		IF LEN(x)#LEN(SELF.x) THEN NEW(SELF.x, LEN(x))
 		ELSIF x=SELF.x THEN RETURN (* already processed image; somewhat costly test..*)
 		ELSE SELF.x:=x (*! probably redundant, as content of x is also stored in nn1*)
 		END;
 		NEW(lenY,3); lenY[0]:=LEN(x,0); lenY[1..2]:=LEN(x)[2..3]-filtersize[1..2]+1;
 		IF LEN(y)#lenY THEN NEW(y,lenY) END;
-		nn1.step:=step; 
+		nn1.step:=step;
 		nn1.stepBias:=stepBias;
 		nn1.momentum:=momentum;
 		nn1.decay:=decay;
 		nn1.clamp:=clamp;
 		nn1.slow:=slow;
 		FOR m:=0 TO LEN(x,0)-1 DO
-			nn1.Propagate(x[m,?]); 
+			nn1.Propagate(x[m,?]);
 			y[m,*,*]:=nn1.y[*,*];
 		END;
 		tProp:=tProp+Kernel.Elapsed(timer);
 	END Propagate;
-	
+
 	PROCEDURE 	Backprop*(CONST dNext: Dataset); (*to do: scaling ?*)
-	VAR m:LONGINT; 
+	VAR m:LONGINT;
 	BEGIN
 		Kernel.SetTimer(timer,0);
 		IF dIn#lenX THEN NEW(dIn,lenX) END;
@@ -1285,7 +1285,7 @@ TYPE ConvLayerMNM*=OBJECT(ConvLayer);(*  [M,N] input images, N filters, M output
 			nn1.Backprop(dNext[m,?]);
 			dIn[m,*,*,*]:=nn1.dIn[*,*,*]
 		END;
-		step:=nn1.step; 
+		step:=nn1.step;
 		stepBias:=nn1.stepBias;
 		momentum:=nn1.momentum;
 		decay:=nn1.decay;
@@ -1293,29 +1293,29 @@ TYPE ConvLayerMNM*=OBJECT(ConvLayer);(*  [M,N] input images, N filters, M output
 		slow:=nn1.slow;
 		tBackprop:=tBackprop+Kernel.Elapsed(timer);
 	END Backprop;
-	
+
 			(* generate image from activation*)
 		PROCEDURE Reconstruct*(CONST activation: Dataset);
 			(*involves solution of AX=B for fully connected layers,
 			and deconvolution for convolutional layers*)
 		END Reconstruct;
-	
+
 	PROCEDURE Store(writer: Streams.Writer);
 	BEGIN
 		nn1.Store(writer);
 	END Store;
-	
+
 	PROCEDURE Load(reader: Streams.Reader);
 	VAR
 		biasAsVec: Vector;
 	BEGIN
 		nn1.Load(reader);
 	END Load;
-	
-	
+
+
 	PROCEDURE MemorizeGoodParameters*;
 		BEGIN
-			oldGoodW:=goodW; goodW:= nn1.w; 
+			oldGoodW:=goodW; goodW:= nn1.w;
 			oldGoodStep:=goodStep; goodStep:=step;
 			oldGoodBias:=goodBias; goodBias:=bias;
 			oldGoodMomentum:=goodMomentum; goodMomentum:=momentum;
@@ -1326,7 +1326,7 @@ TYPE ConvLayerMNM*=OBJECT(ConvLayer);(*  [M,N] input images, N filters, M output
 				oldGoodMomentum:=goodMomentum
 			END;
 		END MemorizeGoodParameters;
-		
+
 		PROCEDURE Rollback(n:LONGINT); (* Roll parameters back by n good epochs*)
 		BEGIN
 			IF n=1 THEN
@@ -1350,7 +1350,7 @@ TYPE ConvLayerMNMP*=OBJECT(ConvLayer);(**  [mMinibatch, nLayers, height, width] 
 	VAR nnp: POINTER TO ARRAY OF ConvLayerMM1;
 		lenX, lenY: IntVector;
 		pOutputs:LONGINT;
-	
+
 	PROCEDURE &Init*(CONST filtersize:IntVector; pOutputs:LONGINT; nonLinear, nonLinearDerivative: Function; show: BOOLEAN); (*filtersize is [h,,w]*)
 	VAR p:LONGINT;
 	BEGIN
@@ -1362,20 +1362,20 @@ TYPE ConvLayerMNMP*=OBJECT(ConvLayer);(**  [mMinibatch, nLayers, height, width] 
 		SELF.show:=show;
 		bias:=0;
 		step:=DefaultStep;
-		stepBias:=DefaultStepBias; 
+		stepBias:=DefaultStepBias;
 		decay:=DefaultDecay;
 		slow:=1.0;
 		NEW(nnp,pOutputs);
 		FOR p:=0 TO pOutputs-1 DO	 NEW(nnp[p], filtersize, nonLinear, nonLinearDerivative, show) END;
 	END Init;
-	
+
 	PROCEDURE Propagate*(CONST x: Dataset);
-	VAR m,p:LONGINT; 
+	VAR m,p:LONGINT;
 	BEGIN
 		Kernel.SetTimer(timer,0);
 		ASSERT(DIM(x)=4, 200);
 		lenX:=LEN(x);
-		IF LEN(x)#LEN(SELF.x) THEN NEW(SELF.x, LEN(x)) 
+		IF LEN(x)#LEN(SELF.x) THEN NEW(SELF.x, LEN(x))
 		ELSIF x=SELF.x THEN RETURN (* already processed image; somewhat costly test..*)
 		ELSE SELF.x:=x (*! probably redundant, as content of x is also stored in nnp[..].x*)
 		END;
@@ -1385,9 +1385,9 @@ TYPE ConvLayerMNMP*=OBJECT(ConvLayer);(**  [mMinibatch, nLayers, height, width] 
 		lenY[1]:=pOutputs; (*number of feature maps in output*)
 		lenY[2..3]:=LEN(x)[2..3]-filtersize[1..2]+1; (*reduced number of rows and columns per feature map due to valid convolution*)
 		IF LEN(y)#lenY THEN NEW(y,lenY) END;
-		
+
 		FOR p:=0 TO LEN(y,1)-1 DO
-			nnp[p].step:=step; 
+			nnp[p].step:=step;
 			nnp[p].stepBias:=stepBias;
 			nnp[p].momentum:=momentum;
 			nnp[p].decay:=decay;
@@ -1400,9 +1400,9 @@ TYPE ConvLayerMNMP*=OBJECT(ConvLayer);(**  [mMinibatch, nLayers, height, width] 
 		END;
 		tProp:=tProp+Kernel.Elapsed(timer);
 	END Propagate;
-	
-	PROCEDURE 	Backprop*(CONST dNext: Dataset); 
-	VAR m,p:LONGINT; 
+
+	PROCEDURE 	Backprop*(CONST dNext: Dataset);
+	VAR m,p:LONGINT;
 	BEGIN
 		Kernel.SetTimer(timer,0);
 		ASSERT(DIM(dNext)=4, 200);
@@ -1415,13 +1415,13 @@ TYPE ConvLayerMNMP*=OBJECT(ConvLayer);(**  [mMinibatch, nLayers, height, width] 
 		END;
 		tBackprop:=tBackprop+Kernel.Elapsed(timer);
 	END Backprop;
-	
+
 		(* generate image from activation*)
 	PROCEDURE Reconstruct*(CONST activation: Dataset);
 		(*involves solution of AX=B for fully connected layers,
 		and deconvolution for convolutional layers*)
 	END Reconstruct;
-	
+
 	PROCEDURE Store(writer: Streams.Writer);
 	VAR
 		p: LONGINT;
@@ -1430,7 +1430,7 @@ TYPE ConvLayerMNMP*=OBJECT(ConvLayer);(**  [mMinibatch, nLayers, height, width] 
 			nnp[p].Store(writer);
 		END;
 	END Store;
-	
+
 	PROCEDURE Load(reader: Streams.Reader);
 	VAR
 		p: LONGINT;
@@ -1446,7 +1446,7 @@ TYPE ConvLayerMNMP*=OBJECT(ConvLayer);(**  [mMinibatch, nLayers, height, width] 
 			nnp[p].MemorizeGoodParameters;
 		END;
 	END MemorizeGoodParameters;
-	
+
 	PROCEDURE Rollback(n:LONGINT); (* Roll parameters back by n good epochs*)
 	VAR p:LONGINT;
 	BEGIN
@@ -1454,60 +1454,60 @@ TYPE ConvLayerMNMP*=OBJECT(ConvLayer);(**  [mMinibatch, nLayers, height, width] 
 			nnp[p].Rollback(n);
 		END;
 	END Rollback;
-		
+
 END ConvLayerMNMP;
 
 TYPE ConvLayerMNMN*=OBJECT(ConvLayer);(**  [mMinibatch, nLayers, height, width] input data; nLayers filters[filtersize]; [mMinibatch,nLayers, height, width] output data *)
 	VAR nnn: ConvLayerMMM;
 		lenX, lenY: IntVector;
-	
+
 	PROCEDURE &Init*(CONST filtersize:IntVector; nonLinear, nonLinearDerivative: Function; show: BOOLEAN); (*filtersize is [n, h,w]*)
 	BEGIN
-		ASSERT(LEN(filtersize)=3,200); 
+		ASSERT(LEN(filtersize)=3,200);
 		NonLinear:=nonLinear;
 		NonLinearDerivative:=nonLinearDerivative;
 		SELF.filtersize:=filtersize;
 		SELF.show:=show;
 		bias:=0;
 		step:=DefaultStep;
-		stepBias:=DefaultStepBias; 
+		stepBias:=DefaultStepBias;
 		decay:=DefaultDecay;
 		slow:=1.0;
 		NEW(nnn, filtersize, nonLinear, nonLinearDerivative, show);
 	END Init;
-	
+
 	PROCEDURE Propagate*(CONST x: Dataset);
-	VAR m:LONGINT; 
+	VAR m:LONGINT;
 	BEGIN
 		Kernel.SetTimer(timer,0);
 		ASSERT(DIM(x)=4, 200);
 		lenX:=LEN(x);
-		IF LEN(x)#LEN(SELF.x) THEN NEW(SELF.x, LEN(x)) 
+		IF LEN(x)#LEN(SELF.x) THEN NEW(SELF.x, LEN(x))
 		ELSIF x=SELF.x THEN RETURN (* already processed image; somewhat costly test..*)
 		ELSE SELF.x:=x (*! probably redundant, as content of x is also stored in nnp[..].x*)
 		END;
 
 		NEW(lenY,4);
 		lenY[0]:=LEN(x,0); (*minibatch size*)
-		lenY[1]:=LEN(x,1); 
+		lenY[1]:=LEN(x,1);
 		lenY[2..3]:=LEN(x)[2..3]-filtersize[1..2]+1; (*reduced number of rows and columns per feature map due to valid convolution*)
 		IF LEN(y)#lenY THEN NEW(y,lenY) END;
-		
-		nnn.step:=step; 
+
+		nnn.step:=step;
 		nnn.stepBias:=stepBias;
 		nnn.momentum:=momentum;
 		nnn.decay:=decay;
 		nnn.clamp:=clamp;
 		nnn.slow:=slow;
 		FOR m:=0 TO LEN(x,0)-1 DO
-			nnn.Propagate(x[m,*,*,*]); 
+			nnn.Propagate(x[m,*,*,*]);
 			y[m,*,*,*]:=nnn.y[*,*,*];
 		END;
 		tProp:=tProp+Kernel.Elapsed(timer);
 	END Propagate;
-	
-	PROCEDURE 	Backprop*(CONST dNext: Dataset); 
-	VAR m:LONGINT; 
+
+	PROCEDURE 	Backprop*(CONST dNext: Dataset);
+	VAR m:LONGINT;
 	BEGIN
 		Kernel.SetTimer(timer,0);
 		ASSERT(DIM(dNext)=4, 200);
@@ -1518,30 +1518,30 @@ TYPE ConvLayerMNMN*=OBJECT(ConvLayer);(**  [mMinibatch, nLayers, height, width] 
 		END;
 		tBackprop:=tBackprop+Kernel.Elapsed(timer);
 	END Backprop;
-	
+
 		(* generate image from activation*)
 	PROCEDURE Reconstruct*(CONST activation: Dataset);
 		(*involves solution of AX=B for fully connected layers,
 		and deconvolution for convolutional layers*)
 	END Reconstruct;
-	
+
 	PROCEDURE MemorizeGoodParameters*;
 	BEGIN
 		nnn.MemorizeGoodParameters;
 	END MemorizeGoodParameters;
-	
+
 	PROCEDURE Rollback(n:LONGINT); (* Roll parameters back by n good epochs*)
 	BEGIN
 		nnn.Rollback(n);
 	END Rollback;
-		
+
 END ConvLayerMNMN;
 
 TYPE NormalizeLayer*= OBJECT(Layer)(*! untested*)
 		VAR beta: Dataset;
 		vBias:Vector;
 		ss:Datatype;
-		
+
 		PROCEDURE Propagate*(CONST in: Dataset); (* returns activations of this*) (*how to handle ?*)
 		VAR i:LONGINT;
 		BEGIN
@@ -1556,11 +1556,11 @@ TYPE NormalizeLayer*= OBJECT(Layer)(*! untested*)
 				y[i,..,..]:= beta[i] * y[i,..,..] ;
 			END;
 			tProp:=tProp+Kernel.Elapsed(timer);
-		END Propagate;	
-		
+		END Propagate;
+
 		PROCEDURE Backprop*(CONST deltaNext:Dataset);
 		VAR i:LONGINT;
-		BEGIN	
+		BEGIN
 			Kernel.SetTimer(timer,0);
 			IF (DIM(dIn)#DIM(deltaNext)) OR (LEN(dIn)#LEN(deltaNext)) THEN NEW(dIn, LEN(deltaNext)) END;
 			FOR i:= 0 TO LEN(beta,0)-1 DO
@@ -1568,9 +1568,9 @@ TYPE NormalizeLayer*= OBJECT(Layer)(*! untested*)
 				dIn[i,..,..]:= dIn[i,..,..]+vBias[i]
 			END;
 			tBackprop:=tBackprop+Kernel.Elapsed(timer);
-		END Backprop;	
+		END Backprop;
 	END NormalizeLayer;
-	
+
 	(* A fully connected layer, using the matrix multiplication representation of neural network, handling minibatches of images [samples, imageRws,imageColumns]
 		in this case, data areinternally  RESHAPED to be matrices with 1 sample(images) per row; a minibatch is therefore a matrix
 		weight matrix w connects every input pixel with every output pixel.
@@ -1578,7 +1578,7 @@ TYPE NormalizeLayer*= OBJECT(Layer)(*! untested*)
 	 (*! to do: use a non-copy version of RESHAPE where possible, without destroying the standard layer interface*)
 
 TYPE	FullLayer* = OBJECT (Layer)
-		VAR 
+		VAR
 			dnext : Dataset;
 			posGradient, negGradient,bx, bz, x0, z0, y0: Matrix;
 			w0, z, dIn0: Matrix;
@@ -1588,10 +1588,10 @@ TYPE	FullLayer* = OBJECT (Layer)
 			inputSize, outputSize,tmpSize: IntVector;
 			canDoUnsupervised*:BOOLEAN; (*allow to selectively apply contrastive divergence etc. to indivicual layers*)
 			solver:MatrixSVD.Solver;
-		END FullLayer; 
-		
+		END FullLayer;
+
 TYPE	FullLayerM1M* = OBJECT (FullLayer)
-		
+
 		PROCEDURE &New*(CONST inputSize,outputSize: IntVector; nonLinear, nonLinearDerivative: Function; show: BOOLEAN);
 		BEGIN
 			ASSERT(LEN(inputSize,0)=3, 200);
@@ -1613,12 +1613,12 @@ TYPE	FullLayerM1M* = OBJECT (FullLayer)
 			InitWeights([PROD(inputSize[1..2]), PROD(outputSize[1..2])]);
 			NEW(biasX, PROD(inputSize[1..2])); NEW(dBiasX,LEN(biasX));
 			NEW(biasZ, PROD(outputSize[1..2])); NEW(dBiasZ,LEN(biasZ));
-		END New;	
-		
-		PROCEDURE InitWeights(CONST weightSize: IntVector); 
+		END New;
+
+		PROCEDURE InitWeights(CONST weightSize: IntVector);
 		VAR w0: Datatype;
 		BEGIN
-			ASSERT(LEN(weightSize,0)=2, 200); 
+			ASSERT(LEN(weightSize,0)=2, 200);
 			NEW(w, weightSize);
 			NEW(dw, weightSize);
 			NEW(dwOld, weightSize);
@@ -1627,50 +1627,50 @@ TYPE	FullLayerM1M* = OBJECT (FullLayer)
 				(* see Stutz, formulae 16,17*)
 				(* see http://deeplearning.net/tutorial/mlp.html *)
 			IF NonLinear=ScaledSigmoid THEN w0:=2*Mathe.sqrt(6)/Mathe.sqrt(SUM(weightSize[0..1])) ; 	(*was IF NonLinear=ScaledSigmoid THEN w0:=Mathe.sqrt(6)/weightSize[0] ;*)
-			ELSIF NonLinear=LeakyReLu THEN w0:=2*Mathe.sqrt(6)/Mathe.sqrt(SUM(weightSize[0..1])) ; 	
+			ELSIF NonLinear=LeakyReLu THEN w0:=2*Mathe.sqrt(6)/Mathe.sqrt(SUM(weightSize[0..1])) ;
 			ELSE w0:=4* 2* Mathe.sqrt(6)/Mathe.sqrt(SUM(weightSize[0..1]));
 			END;
-			w:= w0 * w; 
-			IF show THEN 
-				NEW(wd, delta[..MIN(200,LEN(delta,0))-1, ..MIN(200,LEN(delta,1))-1], "delta part"); wd.maxInterpolation := WMGraphics.ScaleBox; wd.AddWindow; 
-				NEW(ww, w[..MIN(200,LEN(w,0))-1, ..MIN(200,LEN(w,1))-1], "w part"); ww.maxInterpolation := WMGraphics.ScaleBox; ww.AddWindow; 
-				NEW(wdw, dw[..MIN(200,LEN(dw,0))-1, ..MIN(200,LEN(dw,1))-1], "dw part"); wdw.maxInterpolation := WMGraphics.ScaleBox; wdw.AddWindow; 
+			w:= w0 * w;
+			IF show THEN
+				NEW(wd, delta[..MIN(200,LEN(delta,0))-1, ..MIN(200,LEN(delta,1))-1], "delta part"); wd.maxInterpolation := WMGraphics.ScaleBox; wd.AddWindow;
+				NEW(ww, w[..MIN(200,LEN(w,0))-1, ..MIN(200,LEN(w,1))-1], "w part"); ww.maxInterpolation := WMGraphics.ScaleBox; ww.AddWindow;
+				NEW(wdw, dw[..MIN(200,LEN(dw,0))-1, ..MIN(200,LEN(dw,1))-1], "dw part"); wdw.maxInterpolation := WMGraphics.ScaleBox; wdw.AddWindow;
 			END;
 		END InitWeights;
-		
-		PROCEDURE InitWeightsB(CONST weightSize: IntVector); 
+
+		PROCEDURE InitWeightsB(CONST weightSize: IntVector);
 		BEGIN
 			NEW(w, weightSize); Util.Identity(w[*,*]);
 			NEW(dw, weightSize);
 			NEW(dwOld, weightSize);
-			IF show THEN 
-				NEW(wd, delta[..MIN(200,LEN(delta,0))-1, ..MIN(200,LEN(delta,1))-1], "delta part"); wd.maxInterpolation := WMGraphics.ScaleBox; wd.AddWindow; 
-				NEW(ww, w[..MIN(200,LEN(w,0))-1, ..MIN(200,LEN(w,1))-1], "w part"); ww.maxInterpolation := WMGraphics.ScaleBox; ww.AddWindow; 
-				NEW(wdw, dw[..MIN(200,LEN(dw,0))-1, ..MIN(200,LEN(dw,1))-1], "dw part"); wdw.maxInterpolation := WMGraphics.ScaleBox; wdw.AddWindow; 
+			IF show THEN
+				NEW(wd, delta[..MIN(200,LEN(delta,0))-1, ..MIN(200,LEN(delta,1))-1], "delta part"); wd.maxInterpolation := WMGraphics.ScaleBox; wd.AddWindow;
+				NEW(ww, w[..MIN(200,LEN(w,0))-1, ..MIN(200,LEN(w,1))-1], "w part"); ww.maxInterpolation := WMGraphics.ScaleBox; ww.AddWindow;
+				NEW(wdw, dw[..MIN(200,LEN(dw,0))-1, ..MIN(200,LEN(dw,1))-1], "dw part"); wdw.maxInterpolation := WMGraphics.ScaleBox; wdw.AddWindow;
 			END;
 		END InitWeightsB;
-	
+
 		PROCEDURE Propagate*(CONST in: Dataset) ; (* returns activations of this*)
 		BEGIN
 			Kernel.SetTimer(timer,0);
 			ASSERT(DIM(in)=3); (*a minibatch of images N/H/W)*)
 			x:=ALIAS OF in;
 			x:= RESHAPE(x, [LEN(in,0), LEN(in,1)* LEN(in,2)]); (* produce a matrix, whereby each row=1 image;  *)
-			IF dropout>0 THEN 
+			IF dropout>0 THEN
 				w0:=drop .* w;
-				z := x * w0; 
+				z := x * w0;
 			ELSE
 				z := x * w; (* matrix multiplication with weight matrix *)
 			END;
 			IF dropout>0 THEN z:= (1-dropout) * z END;(* compensate for zeroed data; could also be done in a different way in Evaluate only *)
-			y0:=z+bias; 
+			y0:=z+bias;
 			IF NonLinear#NIL THEN y0:=ALL(y0, NonLinear) END;
-			IF stochastic THEN  y0:=ALL(y0, TruncateStochastic) END; 
+			IF stochastic THEN  y0:=ALL(y0, TruncateStochastic) END;
 			y:=ALIAS OF y0;
 			y:=RESHAPE(y, outputSize); (* starting from matrix where each row is an image, reconstruct original Dataset format *)
 			tProp:=tProp+Kernel.Elapsed(timer);
 		END Propagate;
-		
+
 		PROCEDURE LearnNonSupervised*(CONST in: Dataset; iterations:LONGINT) ; (* not yet improving results - wrong algo ? wrong example data ?*)
 		BEGIN
 			ASSERT(DIM(in)=3); (*a minibatch of images N/H/W)*)
@@ -1679,25 +1679,25 @@ TYPE	FullLayerM1M* = OBJECT (FullLayer)
 			z := x * w ;
 			y0:= z+bias;
 			IF NonLinear #NIL THEN y0:=ALL(y0, NonLinear) END;
-			y:=RESHAPE(y0, outputSize); 
+			y:=RESHAPE(y0, outputSize);
 		END LearnNonSupervised;
-		
+
 		PROCEDURE DeltaFromDNext(CONST dNext: Dataset);
 		BEGIN
 			IF NonLinearDerivative#NIL THEN delta:=ALL(z, NonLinearDerivative); delta:= delta  .* dNext;
 			ELSE delta:=dNext (*debug*)
 			END;
 		END DeltaFromDNext;
-		
+
 		PROCEDURE AdaptWeights;
 		BEGIN
 			dBias := stepBias * SUM(delta)/PROD(LEN(delta)); (*!to do: decouple bias update from weight step size *)
-			bias := bias - dBias ; 
-			dw := x`* delta; 
+			bias := bias - dBias ;
+			dw := x`* delta;
 			dw:=1/LEN(x,0)* step*slow*dw;
-			IF momentum#0 THEN  
+			IF momentum#0 THEN
 				IF LEN(dw)=LEN(dwOld) THEN dw:=dw+dwOld END;
-				dwOld:=momentum*dw 
+				dwOld:=momentum*dw
 			END;
 			IF decay#0 THEN w:=(1-step*decay) * w END;
 			IF dropout>0 THEN dw:= drop.*dw END; (* dropped out nodes are not updated *)
@@ -1706,20 +1706,20 @@ TYPE	FullLayerM1M* = OBJECT (FullLayer)
 			validInverse:=FALSE;
 			IF show THEN	ShowWeights	END;
 		END AdaptWeights;
-		
+
 		(* literature
 			Hinton 2010 tutorial
 			https://en.wikipedia.org/wiki/Restricted_Boltzmann_machine
 			http://deeplearning.net/tutorial/rbm.html
 		*)
-		
+
 		PROCEDURE     ContrastiveDivergence*(GibbsSteps:LONGINT); (* this works as a minibatch - is this the original design ?*)
 		(*CONST GibbsSteps=1; *)
 		VAR i:LONGINT;
 		BEGIN
 			x0:=x;
-			
-			FOR i:=0 TO GibbsSteps-1 DO 
+
+			FOR i:=0 TO GibbsSteps-1 DO
 				TRACE(i);
 				z := x0 * w ;
 				bz:=AddToRows(z, biasZ);(*	bz:=z+ biasZ;*)
@@ -1729,34 +1729,34 @@ TYPE	FullLayerM1M* = OBJECT (FullLayer)
 					IF stochastic THEN  bz:=ALL(bz, TruncateStochastic); (*binary, stochastic *) END;
 				END;
  				posGradient:=x0`* bz; (*posGradient:=data` * hidden;*)
-				
+
 				z0:=bz;
-				
+
 				bx := bz * w`;(*reconstructed := hidden * weights`;*)
 				bx:=AddToRows(bx, biasX); (*bx:=bx+ biasX; for each row*)
 				IF NonLinear#NIL THEN bz:=ALL(bx,NonLinear) END;
 				(*bx:=TruncateStochastic(bx);*)(*binary, stochastic - not needed here according to Hinton 2010*)
-				
+
 				bz := bx * w ;
 				bz:=AddToRows(bz,biasZ);(*	bz:=bz+ biasZ;*)
 				IF NonLinear#NIL THEN bz:=ALL(bz,NonLinear) END;
 				(*bz:=TruncateStochastic(bz); *)(*binary, stochastic: not needed here according to Hinton2010*)
 				negGradient:=bx` * bz ;	(*negGradient:=reconstruction` * hidden; *)
-				
-				dBiasZ:= SUM(z0-bz,0)/LEN(z0,0); 
+
+				dBiasZ:= SUM(z0-bz,0)/LEN(z0,0);
 				dBiasX:= SUM(x0-bx,0)/LEN(x0,0);
 
 				x0:=bx;
 			END;
-			 
+
 			dw := posGradient-negGradient;
 			dw := step * dw;
 			(*? can use momentum ?*)
-			w := w + dw; 
+			w := w + dw;
 			dBiasX:=step*dBiasX; biasX:=biasX+dBiasX;
 			dBiasZ:=step*dBiasZ; biasZ:=biasZ+dBiasZ;
 		END ContrastiveDivergence;
-		
+
 		PROCEDURE Backprop*(CONST dNext:Dataset);
 		BEGIN
 			Kernel.SetTimer(timer,0);
@@ -1765,18 +1765,18 @@ TYPE	FullLayerM1M* = OBJECT (FullLayer)
 			dnext:=RESHAPE(dNext, [outputSize[0], outputSize[1]* outputSize[2]]);(* produce a matrix, whereby each row=1 image;  *)
 			DeltaFromDNext(dnext);
 			AdaptWeights;
-			IF dropout>0 THEN 
-				w0:= drop .* w; 
+			IF dropout>0 THEN
+				w0:= drop .* w;
 				dIn0 := delta * w0`
-			ELSE 
-				dIn0 := delta * w`; 
+			ELSE
+				dIn0 := delta * w`;
 			END;
 			IF dropout>0 THEN dIn0:= (1-dropout) * dIn0 END;(* compensate for zeroed data; could also be done in a different way in Evaluate only *)
 			(*dIn:=ALIAS OF dIn0; dIn:=RESHAPE(dIn0, inputSize); *)
 			dIn:=RESHAPE(dIn0, inputSize); (* starting from matrix where each row is an image, reconstruct original Dataset format *)
 			tBackprop:=tBackprop+Kernel.Elapsed(timer);
-		END Backprop;	
-				
+		END Backprop;
+
 		PROCEDURE ClampWeights;
 		VAR msq, sd: Datatype;
 		BEGIN
@@ -1785,7 +1785,7 @@ TYPE	FullLayerM1M* = OBJECT (FullLayer)
 			w:=MIN(w,5*sd);
 			w:=MAX(w,-5*sd);
 		END ClampWeights;
-		
+
 		(* reconstruct dataset from activations*)
 		PROCEDURE Reconstruct*(CONST activation: Dataset);
 		BEGIN
@@ -1794,19 +1794,19 @@ TYPE	FullLayerM1M* = OBJECT (FullLayer)
 			ELSIF ~validInverse THEN solver.Init(w); invW:=solver.PseudoInverse(); (*! to do: reset validInverse at suited location when adequate*)
 			END;
 			invZ:=ALL(activation, InverseNonLinear);
-			reconstruction := invZ * invW; 
+			reconstruction := invZ * invW;
 		END Reconstruct;
 
 		(*! experimental: dynamic size change of layer output and next layer input. should grow or shrink a layer; only grow is currently tested*)
-		PROCEDURE ChangeSize*(d: LONGINT); 
-		VAR  wSize: IntVector; 
+		PROCEDURE ChangeSize*(d: LONGINT);
+		VAR  wSize: IntVector;
 		BEGIN
 			ASSERT((next#NIL) & (next IS FullLayerM1M),201); (*implementation limitation*)
-			
+
 			outputSize[1..2]:=outputSize[1..2]+d;
 			wSize:=[PROD(inputSize[1..2]), PROD(outputSize[1..2])];
 			ResizeDataset(w, wSize);
-			
+
 			NEW(dw, wSize);
 			NEW(dwOld, wSize);
 			NEW(goodW, wSize);
@@ -1816,7 +1816,7 @@ TYPE	FullLayerM1M* = OBJECT (FullLayer)
 			NEW(y0, outputSize[0], wSize[1]);
 			NEW(dnext, outputSize[0], wSize[1]);
 			NEW(delta, outputSize[0], wSize[1]);
-						
+
 			next(FullLayerM1M).inputSize[1..2] := next(FullLayerM1M).inputSize[1..2]+d;
 			wSize:=[PROD(next(FullLayerM1M).inputSize[1..2]), PROD(next(FullLayerM1M).outputSize[1..2])];
 			ResizeDataset(next.w, wSize);
@@ -1826,13 +1826,13 @@ TYPE	FullLayerM1M* = OBJECT (FullLayer)
 			NEW(next.oldGoodW, wSize);
 			NEW(next(FullLayerM1M).w0, wSize);
 			NEW(next(FullLayerM1M).dIn0, outputSize[0], wSize[0]);
-			NEW(next(FullLayerM1M).dIn, next(FullLayerM1M).inputSize);			
+			NEW(next(FullLayerM1M).dIn, next(FullLayerM1M).inputSize);
 		END ChangeSize;
-		
+
 		PROCEDURE InsertLayer*; (* allow dynamic modification of layer structure*)
 		VAR full: FullLayerM1M;
 		BEGIN
-			NEW(full, outputSize, outputSize, NonLinear, NonLinearDerivative, show); 
+			NEW(full, outputSize, outputSize, NonLinear, NonLinearDerivative, show);
 			full.step:=step;
 			full.stepBias:=stepBias;
 			full.decay:=decay;
@@ -1841,24 +1841,24 @@ TYPE	FullLayerM1M* = OBJECT (FullLayer)
 			Diagonal(full.w);
 			full.next:=next; next.prior:=full;
 			full.prior:=SELF; next:=full;
-		END InsertLayer; 
-		
+		END InsertLayer;
+
 		PROCEDURE ShowWeights;
 		BEGIN
-			IF (wd#NIL) & wd.isVisible THEN wd.SetImage(delta[..MIN(200,LEN(delta,0))-1, ..MIN(200,LEN(delta,1))-1]) END; 
-			IF (ww#NIL) & ww.isVisible THEN ww.SetImage(w[..MIN(200,LEN(w,0))-1, ..MIN(200,LEN(w,1))-1]) END; 
-			IF (wdw#NIL) & wdw.isVisible THEN wdw.SetImage(dw[..MIN(200,LEN(dw,0))-1, ..MIN(200,LEN(dw,1))-1]) END; 
+			IF (wd#NIL) & wd.isVisible THEN wd.SetImage(delta[..MIN(200,LEN(delta,0))-1, ..MIN(200,LEN(delta,1))-1]) END;
+			IF (ww#NIL) & ww.isVisible THEN ww.SetImage(w[..MIN(200,LEN(w,0))-1, ..MIN(200,LEN(w,1))-1]) END;
+			IF (wdw#NIL) & wdw.isVisible THEN wdw.SetImage(dw[..MIN(200,LEN(dw,0))-1, ..MIN(200,LEN(dw,1))-1]) END;
 		END ShowWeights;
-			
+
 	END FullLayerM1M;
-	
+
 	TYPE	FullLayerMNMN* = OBJECT (FullLayer) (** [M, N, H,W] input, N fully connected filters, [M,N,H,W] outputs *)
 		VAR n1n: POINTER TO ARRAY OF FullLayerM1M;
-		
+
 		PROCEDURE &New*(CONST inputSize,outputSize: IntVector; nonLinear, nonLinearDerivative: Function; show: BOOLEAN);
 		VAR n:LONGINT;
 		BEGIN
-			ASSERT(LEN(inputSize,0)=4, 200);			
+			ASSERT(LEN(inputSize,0)=4, 200);
 			NonLinear:=nonLinear;
 			NonLinearDerivative:=nonLinearDerivative;
 			SELF.inputSize:=inputSize;
@@ -1873,14 +1873,14 @@ TYPE	FullLayerM1M* = OBJECT (FullLayer)
 			momentum:=DefaultMomentum;
 			decay:=DefaultDecay;
 			slow:=1.0;
-			NEW(n1n, inputSize[1]); 
+			NEW(n1n, inputSize[1]);
 			NEW(dIn, inputSize);
-			FOR n:=0 TO LEN(n1n)-1 DO 
+			FOR n:=0 TO LEN(n1n)-1 DO
 				NEW(n1n[n], [inputSize[0],inputSize[2],inputSize[3]], [outputSize[0],outputSize[2],outputSize[3]], nonLinear, nonLinearDerivative, show);
 			END;
 			NEW(y, outputSize);
-		END New;	
-		
+		END New;
+
 		PROCEDURE Propagate*(CONST in: Dataset) ; (* returns activations of this*)
 		VAR n:LONGINT;
 		BEGIN
@@ -1899,48 +1899,48 @@ TYPE	FullLayerM1M* = OBJECT (FullLayer)
 			END;
 			tProp:=tProp+Kernel.Elapsed(timer);
 		END Propagate;
-		
+
 		PROCEDURE Backprop*(CONST dNext:Dataset);
 		VAR n:LONGINT;
 		BEGIN
 			Kernel.SetTimer(timer,0);
-			ASSERT(DIM(dNext)=4); 
+			ASSERT(DIM(dNext)=4);
 			FOR n:=0 TO LEN(n1n)-1 DO
 				n1n[n].Backprop(dNext[*,n,*,*]);
 				dIn[*,n,*,*]:=n1n[n].dIn;
 			END;
 			tBackprop:=tBackprop+Kernel.Elapsed(timer);
-		END Backprop;	
-		
-		
+		END Backprop;
+
+
 	END FullLayerMNMN;
-		
-	
+
+
 TYPE Network*= OBJECT
 	VAR layers*, last*: Layer; (*linked list of layers*)
-		error*: Dataset;	
+		error*: Dataset;
 		plasticity*:BOOLEAN;
 		stopped*:BOOLEAN;
 		priorError*:Datatype;
 		slowTimer*:LONGINT; (* reduce steps for a number of times *)
-		
+
 		next*:Network; (* can create linked lists of networks *)
-		
+
 		PROCEDURE &Init*;
 		BEGIN
 			priorError:=MAX(Datatype);
 			stopped:=FALSE;
 		END Init;
-		
-		
+
+
 		PROCEDURE Append*(l:Layer);
 		BEGIN
 			IF layers=NIL THEN layers:=l; last:=l; l.next:=NIL; l.prior:=NIL;
-			ELSE 
+			ELSE
 				last.next:=l; l.prior:=last; last:=l;
 			END;
 		END Append;
-		
+
 		PROCEDURE LearnNonSupervised*(CONST data: Dataset; iterations: LONGINT);
 		VAR thisLayer:Layer;
 		BEGIN
@@ -1953,8 +1953,8 @@ TYPE Network*= OBJECT
 				thisLayer:=thisLayer.next;
 			END;
 		END LearnNonSupervised;
-		
-		
+
+
 		PROCEDURE TrainingRound*(CONST data, target: Dataset);
 		VAR thisLayer:Layer;
 		BEGIN
@@ -1972,28 +1972,28 @@ TYPE Network*= OBJECT
 				thisLayer:=thisLayer.prior;
 			END;
 		END TrainingRound;
-		
+
 		PROCEDURE ScaleStep*(scale:Datatype); (*scale step size definitely*)
 		VAR l:Layer;
 		BEGIN
-			l:=layers; 
-			WHILE (l#NIL) DO 
+			l:=layers;
+			WHILE (l#NIL) DO
 				l.step:= scale * l.step;
-				l:=l.next 
+				l:=l.next
 			END;
 		END ScaleStep;
-		
+
 		PROCEDURE SlowStep*(speed:Datatype); (* change step temporarily, e.g. when impending parameter explosion is suspected*)
 		VAR l:Layer;
 		BEGIN
-			l:=layers; 
-			WHILE (l#NIL) DO 
+			l:=layers;
+			WHILE (l#NIL) DO
 				l.slow:=speed;
-				l:=l.next 
+				l:=l.next
 			END;
 		END SlowStep;
-		
-		
+
+
 		(*todo: use StoreLayer/GenLayer procedures to store the layer's config together with the weights*)
 		PROCEDURE StoreParameters*(w: Streams.Writer);
 		VAR l:Layer;
@@ -2003,9 +2003,9 @@ TYPE Network*= OBJECT
 			WHILE l#NIL DO
 				l.Store(w);
 				l:=l.next;
-			END;		
+			END;
 		END StoreParameters;
-		
+
 		PROCEDURE LoadParameters*(r: Streams.Reader);
 		VAR l: Layer
 		BEGIN
@@ -2027,14 +2027,14 @@ TYPE Network*= OBJECT
 				l:=l.next;
 			END;
 		END MemorizeGoodParameters;
-		
+
 		PROCEDURE Rollback*(n:LONGINT); (* roll back to last good parameters that are found at n layers earlier*)
 		VAR l:Layer;
 		BEGIN
 			l:=layers;
 			WHILE l#NIL DO	l.Rollback(n);  l:=l.next END;
 		END Rollback;
-		
+
 		PROCEDURE Evaluate*(CONST data:Dataset):Dataset;
 		VAR thisLayer:Layer; sTmp:BOOLEAN;
 		BEGIN
@@ -2042,20 +2042,20 @@ TYPE Network*= OBJECT
 			thisLayer:=layers;
 			sTmp:=thisLayer.stochastic; thisLayer.stochastic:=FALSE; thisLayer.Propagate(data); thisLayer.stochastic:=sTmp;
 			WHILE thisLayer.next#NIL DO
-				sTmp:=thisLayer.stochastic; thisLayer.stochastic:=FALSE; 
+				sTmp:=thisLayer.stochastic; thisLayer.stochastic:=FALSE;
 				thisLayer.next.Propagate(thisLayer.y);
 				thisLayer.stochastic:=sTmp;
 				thisLayer:=thisLayer.next;
 			END;
 			RETURN thisLayer.y
 		END Evaluate;
-		
+
 		PROCEDURE Stop*;
 		BEGIN
 			stopped:=TRUE;
 		END Stop;
-		
-		
+
+
 	END Network;
 
 VAR random:Util.RandomGenerator;
@@ -2075,26 +2075,26 @@ BEGIN
 	NEW(data,256,256);
 	data[100..110,150..160]:=1;
 	NEW(result,256,256);
-	
+
 	NEW(map, nFilters, LEN(data,0), LEN(data,1));
-	
+
 	filter:=Filters.CreateFIRFilter([0.7,0.7],1);
 	filter1:=Filters.CreateSplineFilter(Filters.MomentCubic1);
 	filter2:=Filters.CreateSplineFilter(Filters.MomentCubic2);
 
 	ASSERT(filter#NIL);
 	ASSERT(filter1#NIL);
-	
+
 (*apply filter bank*)
 	map[0]:=data;
-	PlanarTransform.Filter2D(data, map[1], filter, {0}, Filters.finite); 
-	PlanarTransform.Filter2D(data, map[2], filter, {1}, Filters.finite); 
-	PlanarTransform.Filter2D(data, map[3], filter, {0,1}, Filters.finite); 
-	PlanarTransform.Filter2D(data, map[4], filter1, {0}, Filters.finite); 
-	PlanarTransform.Filter2D(data, map[5], filter1, {1}, Filters.finite); 
-	PlanarTransform.Filter2D(data, map[6], filter2, {0}, Filters.finite); 
-	PlanarTransform.Filter2D(data, map[7], filter2, {1}, Filters.finite); 
-	
+	PlanarTransform.Filter2D(data, map[1], filter, {0}, Filters.finite);
+	PlanarTransform.Filter2D(data, map[2], filter, {1}, Filters.finite);
+	PlanarTransform.Filter2D(data, map[3], filter, {0,1}, Filters.finite);
+	PlanarTransform.Filter2D(data, map[4], filter1, {0}, Filters.finite);
+	PlanarTransform.Filter2D(data, map[5], filter1, {1}, Filters.finite);
+	PlanarTransform.Filter2D(data, map[6], filter2, {0}, Filters.finite);
+	PlanarTransform.Filter2D(data, map[7], filter2, {1}, Filters.finite);
+
 	NEW(window, map[0], "00"); window.AddWindow;
 	NEW(window, map[1], "01"); window.AddWindow;
 	NEW(window, map[2], "10"); window.AddWindow;
@@ -2103,10 +2103,10 @@ BEGIN
 	NEW(window, map[5], "20"); window.AddWindow;
 	NEW(window, map[6], "03"); window.AddWindow;
 	NEW(window, map[7], "30"); window.AddWindow;
-	
+
 (*nonlinear transform*)
-	map:=ALL(map, RectifiedLinear); 
-	
+	map:=ALL(map, RectifiedLinear);
+
 	NEW(window, map[0], "100"); window.AddWindow;
 	NEW(window, map[1], "101"); window.AddWindow;
 	NEW(window, map[2], "110"); window.AddWindow;
@@ -2115,8 +2115,8 @@ BEGIN
 	NEW(window, map[5], "120"); window.AddWindow;
 	NEW(window, map[6], "103"); window.AddWindow;
 	NEW(window, map[7], "130"); window.AddWindow;
-	
-	
+
+
 (* MAX pooling *)
 	NEW(map1, nFilters, LEN(data,0) DIV 2, LEN(data,1) DIV 2);
 	map1[0]:=PlanarTransform.ReduceMax(map[0]);
@@ -2126,7 +2126,7 @@ BEGIN
 	map1[4]:=PlanarTransform.ReduceMax(map[4]);
 	map1[5]:=PlanarTransform.ReduceMax(map[5]);
 	map1[6]:=PlanarTransform.ReduceMax(map[6]);
-	
+
 	NEW(window, map1[0], "200"); window.AddWindow;
 	NEW(window, map1[1], "201"); window.AddWindow;
 	NEW(window, map1[2], "210"); window.AddWindow;
@@ -2138,7 +2138,7 @@ BEGIN
 (*BackProp Error*)
 
 (*adjust filter*)
-	
+
 END Do1;
 *)
 
@@ -2202,9 +2202,9 @@ BEGIN
 			data[i,?]:=Rot180(data[i,?]);
 		END;
 		FOR i:=0 TO LEN(data,0)-1 DO
-			data[i,?]:=((LEN(data,0)-i)/nFilters) * data[i,?] 
+			data[i,?]:=((LEN(data,0)-i)/nFilters) * data[i,?]
 		END;
-		
+
 		IF type="MM1" THEN
 			NEW(net);
 			(*NEW(nl); net.Append(nl);*)
@@ -2214,84 +2214,84 @@ BEGIN
 			NEW(ml); net.Append(ml);
 			NEW(cl, [10,15], Linear, LinearDerivative,FALSE); net.Append(cl);
 			NEW(ml); net.Append(ml);
-			
+
 		ELSIF type="MMM" THEN
 			NEW(net);
 			(*NEW(nl); net.Append(nl);*)
 			NEW(clm, [nFilters, 20,30], Tanh, TanhDerivative,TRUE); clm.step:=0.0005; net.Append(clm);
-			NEW(ml); net.Append(ml);	
+			NEW(ml); net.Append(ml);
 			NEW(clm, [nFilters,10,15], Tanh, TanhDerivative,TRUE); clm.step:=0.0005; net.Append(clm);
-			NEW(ml); net.Append(ml);	
+			NEW(ml); net.Append(ml);
 			NEW(clm, [nFilters, 10,15], Linear, LinearDerivative,TRUE); clm.step:=0.0005; net.Append(clm);
 			NEW(ml); net.Append(ml);
-		
+
 		ELSIF type="M1M" THEN
 			NEW(net);
 			(*NEW(nl); net.Append(nl);*)
 			NEW(clm1m, [ 20,30], Tanh, TanhDerivative,FALSE); net.Append(clm1m);
-			NEW(ml); net.Append(ml);	
+			NEW(ml); net.Append(ml);
 			NEW(clm1m, [10,15], Tanh, TanhDerivative,FALSE); net.Append(clm1m);
-			NEW(ml); net.Append(ml);	
+			NEW(ml); net.Append(ml);
 			NEW(clm1m, [ 10,15], Linear, LinearDerivative,FALSE); net.Append(clm1m);
 			NEW(ml); net.Append(ml);
-		
+
 		ELSIF type="FULL2" THEN (* 2 fully connected layers*)
 			NEW(data, [nSamples, 100,100]);
 			data[.. BY 2,60..80, 80..90]:=1.0;
 			data[.. BY 2,90..95, 20..30]:=1.0;
 			data[.. BY 2,20..30, 60..80]:=1.0;
-			data[1,?]:=Rot180(data[0,?]); 
+			data[1,?]:=Rot180(data[0,?]);
 			data[3,?]:=Rot180(data[0,?]);
 			data[2..3,?]:=0.3*data[2..3,?];
 			NEW(net);
-			NEW(fl, [nSamples,100,100],[nSamples,20,20 ], Tanh, TanhDerivative, TRUE); fl.step:=0.0001; net.Append(fl); (*big pretrained layer*) 
+			NEW(fl, [nSamples,100,100],[nSamples,20,20 ], Tanh, TanhDerivative, TRUE); fl.step:=0.0001; net.Append(fl); (*big pretrained layer*)
 			NEW(fl, [nSamples,20,20],[nSamples,10,10], Linear, LinearDerivative, TRUE); fl.step:=0.0001; net.Append(fl);
-		
+
 		ELSIF type="FULL" THEN (* N fully connected layers*)
 			NEW(data, [nSamples, 100,100]);
 			data[.. BY 2,60..80, 80..90]:=1.0;
 			data[.. BY 2,90..95, 20..30]:=1.0;
 			data[.. BY 2,20..30, 60..80]:=1.0;
-			data[1,?]:=Rot180(data[0,?]); 
+			data[1,?]:=Rot180(data[0,?]);
 			data[3,?]:=Rot180(data[0,?]);
 			data[2..3,?]:=0.3*data[2..3,?];
 			NEW(net);
-			NEW(fl, [nSamples,100,100],[nSamples,20,20 ], Logistic, LogisticDerivative, FALSE); fl.step:=0.0001; net.Append(fl); (*big pretrained layer*) 
+			NEW(fl, [nSamples,100,100],[nSamples,20,20 ], Logistic, LogisticDerivative, FALSE); fl.step:=0.0001; net.Append(fl); (*big pretrained layer*)
 			NEW(fl, [nSamples,20,20],[nSamples,20,20 ], Logistic, LogisticDerivative, TRUE); fl.step:=0.0001; net.Append(fl);
 			NEW(fl, [nSamples,20,20],[nSamples,20,20 ], Logistic, LogisticDerivative, TRUE); fl.step:=0.0001; net.Append(fl);
 			NEW(fl, [nSamples,20,20],[nSamples,10,10], Linear, LinearDerivative, FALSE); fl.step:=0.0001; net.Append(fl);
-		
+
 		ELSIF type="CD" THEN
 			NEW(data, [nSamples, 100,100]);
 			data[.. BY 2,60..80, 80..90]:=1.0;
 			data[.. BY 2,90..95, 20..30]:=1.0;
 			data[.. BY 2,20..30, 60..80]:=1.0;
-			data[1,?]:=Rot180(data[0,?]); 
+			data[1,?]:=Rot180(data[0,?]);
 			data[3,?]:=Rot180(data[0,?]);
 			data[2..3,?]:=0.3*data[2..3,?];
 			NEW(net);
-			NEW(fl, [nSamples,100,100],[nSamples,20,20 ], Logistic, LogisticDerivative, TRUE); net.Append(fl); (*big pretrained layer*) 
+			NEW(fl, [nSamples,100,100],[nSamples,20,20 ], Logistic, LogisticDerivative, TRUE); net.Append(fl); (*big pretrained layer*)
 			NEW(fl, [nSamples,20,20],[nSamples,20,20 ], Logistic, LogisticDerivative, FALSE); net.Append(fl);
 			NEW(fl, [nSamples,20,20],[nSamples,20,20 ], Logistic, LogisticDerivative, FALSE); net.Append(fl);
 			(*?;
-			probable explanation: 
+			probable explanation:
 				1) The pretraining uses logistic sigmoid, the backprop uses TanHDerivative, that can't work.
 				2) the pretrained layer finds features that characterize the input, they're not necessarily all useful for discrimination -> the layers with pretraining need to be a bit bigger
 				3) the very top layer that produces the network's cannot be pretrained since it will put its features at a random place and they might be mixtures of what we're actually interested in the end.
 			*)
 			NEW(fl, [nSamples,20,20],[nSamples,10,10], Linear, LinearDerivative, FALSE); net.Append(fl);
-		
+
 		ELSIF (type="DEEP") OR (type="DEEPCD") THEN
 			NEW(data, [nSamples, 100,100]);
 			data[.. BY 2,60..80, 80..90]:=1.0;
 			data[.. BY 2,90..95, 20..30]:=1.0;
 			data[.. BY 2,20..30, 60..80]:=1.0;
-			data[1,?]:=Rot180(data[0,?]); 
+			data[1,?]:=Rot180(data[0,?]);
 			data[3,?]:=Rot180(data[0,?]);
 			data[2..3,?]:=0.3*data[2..3,?];
 			NEW(net);
-			NEW(fl, [nSamples,100,100],[nSamples,20,20 ], Logistic, LogisticDerivative, TRUE); net.Append(fl); (*big pretrained layer*) 
-			
+			NEW(fl, [nSamples,100,100],[nSamples,20,20 ], Logistic, LogisticDerivative, TRUE); net.Append(fl); (*big pretrained layer*)
+
 			NEW(fl, [nSamples,20,20],[nSamples,20,20 ], Logistic, LogisticDerivative, FALSE); net.Append(fl);
 			NEW(fl, [nSamples,20,20],[nSamples,20,20 ], Logistic, LogisticDerivative, FALSE); net.Append(fl);
 			NEW(fl, [nSamples,20,20],[nSamples,20,20 ], Logistic, LogisticDerivative, FALSE); net.Append(fl);
@@ -2301,19 +2301,19 @@ BEGIN
 			NEW(fl, [nSamples,20,20],[nSamples,20,20 ], Logistic, LogisticDerivative, FALSE); net.Append(fl);
 			NEW(fl, [nSamples,20,20],[nSamples,20,20 ], Logistic, LogisticDerivative, FALSE); net.Append(fl);
 			NEW(fl, [nSamples,20,20],[nSamples,20,20 ], Logistic, LogisticDerivative, FALSE); net.Append(fl);
-			
+
 			NEW(fl, [nSamples,20,20],[nSamples,10,10], Linear, LinearDerivative, FALSE); net.Append(fl)
 ELSIF (type="DEEP10B") OR (type="DEEPCD10B") THEN
 			NEW(data, [nSamples, 100,100]);
 			data[.. BY 2,60..80, 80..90]:=1.0;
 			data[.. BY 2,90..95, 20..30]:=1.0;
 			data[.. BY 2,20..30, 60..80]:=1.0;
-			data[1,?]:=Rot180(data[0,?]); 
+			data[1,?]:=Rot180(data[0,?]);
 			data[3,?]:=Rot180(data[0,?]);
 			data[2..3,?]:=0.3*data[2..3,?];
 			NEW(net);
-			NEW(fl, [nSamples,100,100],[nSamples,80,80 ], Logistic, LogisticDerivative, TRUE); net.Append(fl); (*big pretrained layer*) 
-			
+			NEW(fl, [nSamples,100,100],[nSamples,80,80 ], Logistic, LogisticDerivative, TRUE); net.Append(fl); (*big pretrained layer*)
+
 			NEW(fl, [nSamples,80,80],[nSamples,60,60 ], Logistic, LogisticDerivative, FALSE); net.Append(fl);
 			NEW(fl, [nSamples,60,60],[nSamples,40,40 ], Logistic, LogisticDerivative, FALSE); net.Append(fl);
 			NEW(fl, [nSamples,40,40],[nSamples,20,20 ], Logistic, LogisticDerivative, FALSE); net.Append(fl);
@@ -2323,14 +2323,14 @@ ELSIF (type="DEEP10B") OR (type="DEEPCD10B") THEN
 			NEW(fl, [nSamples,20,20],[nSamples,20,20 ], Logistic, LogisticDerivative, FALSE); net.Append(fl);
 			NEW(fl, [nSamples,20,20],[nSamples,20,20 ], Logistic, LogisticDerivative, FALSE); net.Append(fl);
 			NEW(fl, [nSamples,20,20],[nSamples,10,10 ], Logistic, LogisticDerivative, FALSE); net.Append(fl);
-			
+
 			NEW(fl, [nSamples,10,10],[nSamples,10,10], Linear, LinearDerivative, FALSE); net.Append(fl)		ELSE HALT(200)
 		END;
 		IF show THEN NEW(window, data, "data",0); window.AddWindow; END;
 	END;
-	
+
 	result:=net.Evaluate(data);
-	
+
 	NEW(target, LEN(result));
 	IF DIM(target)=2 THEN
 		target[ ..BY 2,..]:=1.0; target[ 1,0]:=-0.01; (* force signed display *)
@@ -2350,8 +2350,8 @@ ELSIF (type="DEEP10B") OR (type="DEEPCD10B") THEN
 		target[..,.., ..BY 2,..]:=1.0; target[..,..,1,0]:=-0.01; (* force signed display *)
 		(*to do: show*)
 	END;
-	
-	FOR i:=0 TO 6 DO 
+
+	FOR i:=0 TO 6 DO
 		IF (type="CD") OR (type="DEEPCD") THEN
 			net.LearnNonSupervised(data, 1);
 			context.out.Float(SUM(fl.w)/PROD(LEN(fl.w)),14); context.out.Float(SUM(fl.dw)/PROD(LEN(fl.dw)),14); context.out.Ln; context.out.Update;
@@ -2360,18 +2360,18 @@ ELSIF (type="DEEP10B") OR (type="DEEPCD10B") THEN
 
 	(*NEW(history, 2,100);
 	NEW(historyGraph, history, "History");*)
-	
+
 	FOR i:=0 TO rounds-1 DO
 		net.TrainingRound(data,target);
-		
+
 		IF (type="FULL2") & (i=10) THEN
 			net.layers.InsertLayer;
 		END;
-		
-		e:=SUM(ABS(net.error)); 
+
+		e:=SUM(ABS(net.error));
 		(*history[0, i MOD rounds]:=e;
 		historyGraph.NewData(history);*)
-		
+
 		IF i MOD MAX(1,(rounds DIV 100))=0 THEN
 			context.out.String(type); context.out.Int(i,4); context.out.String("   "); context.out.Float(e,12); context.out.Ln; context.out.Update;
 		END;
@@ -2381,21 +2381,21 @@ ELSIF (type="DEEP10B") OR (type="DEEPCD10B") THEN
 			IF errorWindow#NIL THEN errorWindow.SetImage(net.error) END;
 			IF we#NIL THEN we.SetImage(net.error) END;
 		END;
-		
+
 		IF (dynamic#"") &  (i MOD 10 = 0) (* & (i= rounds DIV 2)*) & (net.layers.next IS FullLayerM1M) THEN
-			net.layers.next(FullLayerM1M).ChangeSize(2); 
+			net.layers.next(FullLayerM1M).ChangeSize(2);
 			context.out.String(" grow to "); context.out.Int(1,0); context.out.Ln;
 		END;
 	END;
-	
+
 	result:=net.Evaluate(data);
-	
-	e:=SUM(ABS(target-result)); 
-	context	.out.String(type); context.out.Int(i,4); context.out.String("   "); context.out.Float(e,12); 
+
+	e:=SUM(ABS(target-result));
+	context	.out.String(type); context.out.Int(i,4); context.out.String("   "); context.out.Float(e,12);
 	context.out.String(" timing ");
 	l:=net.layers;
 	WHILE l#NIL DO context.out.Int(l.tProp,7); context.out.Int(l.tBackprop,7); l:=l.next	END;
-	
+
 	context.out.Ln; context.out.Update;
 	IF show THEN
 		IF resultWindow#NIL THEN resultWindow.SetImage(result) END;
@@ -2403,7 +2403,7 @@ ELSIF (type="DEEP10B") OR (type="DEEPCD10B") THEN
 		IF errorWindow#NIL THEN errorWindow.SetImage(target-result) END;
 		IF we#NIL THEN we.SetImage(target-result) END;
 	END;
-	
+
 END TestTraining;
 
 
@@ -2416,9 +2416,9 @@ BEGIN
 	NEW(data, 256,256); data[60..80, 80..100]:=1.0;
 	(*NEW(filter, 64,64); filter[20..30,20..30]:=1.0;*)
 	filter:=GenTestFilter([64,64]);
-	NEW(convolver); 
+	NEW(convolver);
 	result:=convolver.Convolve(data,filter,VALID);
-		
+
 	NEW(window, data, "data"); window.AddWindow;
 	NEW(window, filter, "filter"); window.AddWindow;
 	NEW(window, result, "result"); window.AddWindow;
@@ -2429,7 +2429,7 @@ VAR convolver: EulFftwConvolve.MultiKernelConvolver2d_LR;
 	data, filter, result: Dataset;
 	window:WMMatrix.Window;
 BEGIN
-	NEW(data, 256,256); 
+	NEW(data, 256,256);
 	data[60..80, 80..100]:=1.0;
 	data[90..100, 20..30]:=1.0;
 	data[20..30, 60..80]:=1.0;
@@ -2439,9 +2439,9 @@ BEGIN
 	filter:=GenTestFilter([64,64]);
 	NEW(convolver); IF convolver.SetInputSize([256,256]) THEN END;
 	IF convolver.SetKernels(filter) & convolver.SetOutputShape(EulFftwConvolve.Valid) THEN result := convolver.Convolve(data);
-	ELSE HALT(200) 
+	ELSE HALT(200)
 	END;
-	
+
 	NEW(window, data, "data"); window.AddWindow;
 	NEW(window, filter, "filter"); window.AddWindow;
 	NEW(window, result, "result"); window.AddWindow;
@@ -2466,7 +2466,7 @@ BEGIN
 	StoreLayer(w, l0);
 	Files.OpenReader(r,f,0);
 	l:=GenLayer(r);
-	
+
 END TestStream;
 
 PROCEDURE TestDiagonal*(context:Commands.Context);
@@ -2478,13 +2478,13 @@ BEGIN
 	Diagonal(b); Util.WriteArray(context.out, b, 9,2,0);
 END TestDiagonal;
 
-	
+
 BEGIN
 	NEW(random);
 	NEW(rand);
 END MLConvNet3D.
 
-(* 
+(*
 Testing:
 note that maps display scalar values, with white=only positive, and red/blue indicating positive and negative values *)
 MLConvNet3D.TestTraining S 1000 ~

@@ -4,7 +4,7 @@ IMPORT Random (*, Commands, MatrixUtilities*);
 
 (*Fisher Yates Algorithm: Random Permutation*)
 PROCEDURE Permutation*(N:LONGINT): ARRAY[*] OF LONGINT;
-VAR i, n:LONGINT; series: ARRAY [*] OF LONGINT; 
+VAR i, n:LONGINT; series: ARRAY [*] OF LONGINT;
 BEGIN
 	IF LEN(RESULT,0)#N THEN NEW(RESULT,N) END;
 	IF LEN(series,0)#N THEN NEW(series,N) END;

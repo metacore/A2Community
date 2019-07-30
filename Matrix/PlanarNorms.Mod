@@ -1,12 +1,12 @@
 MODULE PlanarNorms; (** AUTHOR "Patrick Hunziker"; PURPOSE "Norms in planar data"; *)
 (* see also MatrixNorms.Mod *)
 
-IMPORT PlanarBase, PlanarMath, PlanarNabla, PMath, MathL, Commands, KernelLog; 
+IMPORT PlanarBase, PlanarMath, PlanarNabla, PMath, MathL, Commands, KernelLog;
 
-TYPE 
+TYPE
 	Datatype=PlanarBase.Datatype;
 	Complex=PlanarBase.Complex;
-	
+
 	Plane=PlanarBase.TwoD;
 	ComplexPlane=ARRAY [*,*] OF Complex;
 
@@ -24,7 +24,7 @@ END PowerComplex;
 
 PROCEDURE TotalVariation*(CONST p:Plane; sampling:LONGINT): Datatype; (* to do: optimize *)
 BEGIN
-	RETURN SUM(PlanarMath.Sqrt(PlanarMath.Sqr(PlanarNabla.dx(p,sampling)) 
+	RETURN SUM(PlanarMath.Sqrt(PlanarMath.Sqr(PlanarNabla.dx(p,sampling))
 									+ PlanarMath.Sqr(PlanarNabla.dy(p,sampling))))
 END TotalVariation;
 
@@ -79,17 +79,17 @@ END MAE;
 PROCEDURE Test*(context:Commands.Context);
 VAR a,b: Plane; c:ComplexPlane;
 BEGIN
-	NEW(a,10,10); a[4,4]:=10; 
+	NEW(a,10,10); a[4,4]:=10;
 	NEW(b,10,10);b[4,4]:=10.5;
-	context.out.Float(SNR(a,b),14); 
+	context.out.Float(SNR(a,b),14);
 	context.out.Float(PSNR(a,b),14);
 	context.out.Float(RMSE(a,b),14);
 	context.out.Float(MAE(a,b),14);
-	context.out.Float(TotalVariation(a, PlanarNabla.centered),14); 
+	context.out.Float(TotalVariation(a, PlanarNabla.centered),14);
 	context.out.Ln; context.out.Update;
 END Test;
 
-END PlanarNorms.  
+END PlanarNorms.
 
 PlanarNorms.Test ~
 SystemTools.FreeDownTo PlanarNorms ~

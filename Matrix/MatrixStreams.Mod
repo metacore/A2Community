@@ -14,14 +14,14 @@ TYPE Reader* = OBJECT (Streams.Reader);
 					FOR Col:=0 TO Cols-1 DO
 						RawLReal(m[Row,Col])
 					END;
-				END; 
-				
+				END;
+
 				RETURN m
 			END Tensor;
 			*)
 			PROCEDURE Volume(lenX,lenY,lenZ:LONGINT): ARRAY [*,*,*] OF SHORTINT;
 			VAR res: ARRAY [*,*,*] OF SHORTINT; x,y,z:LONGINT;
-			BEGIN 
+			BEGIN
 				NEW(res,lenZ,lenY,lenX);
 				FOR z:=0 TO lenZ-1 DO
 					FOR y:=0 TO lenY-1 DO
@@ -33,7 +33,7 @@ TYPE Reader* = OBJECT (Streams.Reader);
 				RETURN res
 			END Volume;
 
-			
+
 			PROCEDURE Matrix*(): ARRAY [*,*] OF Datatype;
 			VAR Rows,Cols, Start, Row,Col: LONGINT; m:ARRAY [*,*] OF Datatype;
 			BEGIN
@@ -43,10 +43,10 @@ TYPE Reader* = OBJECT (Streams.Reader);
 					FOR Col:=0 TO Cols-1 DO
 						RawLReal(m[Row,Col])
 					END;
-				END; 
+				END;
 				RETURN m
 			END Matrix;
-				
+
 			PROCEDURE Vector*():ARRAY [*] OF Datatype;
 			VAR Rows,Cols, Start, Row,Col: LONGINT; v:ARRAY [*] OF Datatype;
 			BEGIN
@@ -57,9 +57,9 @@ TYPE Reader* = OBJECT (Streams.Reader);
 				END;
 				RETURN v
 			END Vector;
-			
+
 		END Reader;
-		
+
 		Writer* = OBJECT (Streams.Writer);
 			(*
 			PROCEDURE Tensor*( m: ARRAY [?] OF Datatype);
@@ -71,10 +71,10 @@ TYPE Reader* = OBJECT (Streams.Reader);
 					FOR Col:=0 TO Cols-1 DO
 						RawLReal(m[Row,Col])
 					END;
-				END; 
+				END;
 			END Tensor;
 			*)
-			
+
 			PROCEDURE Matrix*(CONST m: ARRAY [*,*] OF Datatype);
 			VAR Rows,Cols, Start, Row,Col: LONGINT;
 			BEGIN
@@ -84,9 +84,9 @@ TYPE Reader* = OBJECT (Streams.Reader);
 					FOR Col:=0 TO Cols-1 DO
 						RawLReal(m[Row,Col])
 					END;
-				END; 
+				END;
 			END Matrix;
-				
+
 			PROCEDURE Vector*(CONST v : ARRAY [*] OF Datatype);
 			VAR Rows,Cols, Start, Row,Col: LONGINT;
 			BEGIN
@@ -100,17 +100,17 @@ TYPE Reader* = OBJECT (Streams.Reader);
 		END Writer;
 
 	(** Open a writer to the specified stream sender.  Update must be called after writing to ensure the buffer is written to the stream. *)
-	PROCEDURE OpenWriter*( VAR b: Writer;  send: Streams.Sender );  
-	BEGIN 
+	PROCEDURE OpenWriter*( VAR b: Writer;  send: Streams.Sender );
+	BEGIN
 		NEW( b, send, Streams.DefaultWriterSize )
-	END OpenWriter;  
+	END OpenWriter;
 
 
 (** Open a reader from the specified stream receiver. *)
-	PROCEDURE OpenReader*( VAR b: Reader;  receive: Streams.Receiver );  
-	BEGIN 
+	PROCEDURE OpenReader*( VAR b: Reader;  receive: Streams.Receiver );
+	BEGIN
 		NEW( b, receive, Streams.DefaultReaderSize )
-	END OpenReader;  
+	END OpenReader;
 
 END MatrixStreams.
 

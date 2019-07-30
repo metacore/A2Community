@@ -5,14 +5,14 @@ IMPORT MatrixBase, MatrixUtilities, MatrixStandardSolvers;
 
 CONST threshold=0.0001;
 
-TYPE 
+TYPE
 	Datatype=MatrixBase.Datatype;
 	Matrix=MatrixBase.Matrix;
-	
-	
+
+
 (*altgorithms: searching square root of A ; i.e. A power(1/2)
 
-- by diagonalization: 
+- by diagonalization:
 D = Vinv * A * V (*diagonalize using V created from n Eigenvectros as columns*)
 now, A = V * D * Vinv
 sqrt(A) = V* sqrt(D) * Vinv
@@ -39,12 +39,12 @@ BEGIN
 		R:=tmpR;
 		INC(i);
 	UNTIL (sumofsquares(R*R-A) < threshold) OR (i>30) ; (*To do: better/cheaper termination criteria*)
-	RETURN 
+	RETURN
 END SquareRoot;
 
 PROCEDURE sumofsquares(CONST A:Matrix):Datatype;
 BEGIN
-	RETURN A +* A 
+	RETURN A +* A
 END sumofsquares;
 
 PROCEDURE Test*;

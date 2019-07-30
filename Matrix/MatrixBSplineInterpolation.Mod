@@ -1,11 +1,11 @@
 MODULE MatrixBSplineInterpolation;	(**  AUTHOR "ph"; PURPOSE "";  **)
-IMPORT  MatrixBase, MatrixFilters:=LinearFilters; 
+IMPORT  MatrixBase, MatrixFilters:=LinearFilters;
 
-TYPE Datatype=MatrixBase.Datatype; 	
+TYPE Datatype=MatrixBase.Datatype;
 		Vector=MatrixBase.Vector;
-		Vector4=ARRAY[4]OF Datatype; 
+		Vector4=ARRAY[4]OF Datatype;
 		Matrix=MatrixBase.Matrix;
- 
+
  PROCEDURE cubicinterpolationfilter*(CONST B: Vector4):MatrixFilters.FIRFilter;
  VAR f:MatrixFilters.FIRFilter; T: ARRAY [4] OF Datatype;
  BEGIN
@@ -19,9 +19,9 @@ TYPE Datatype=MatrixBase.Datatype;
 	f.coeff := 1/6 * f.coeff;
 	RETURN f
  END cubicinterpolationfilter;
- 
- (* 
- Simplify: 
+
+ (*
+ Simplify:
  Input:
 A := {-1 , 3 , -3 , 1 ;
 3 , -6 , 3 , 0 ;
@@ -37,7 +37,7 @@ I := I / 6
 I := {((1/6)*(1+(-1*ttt)+(3*tt)+(-3*t))) , ((1/6)*(4+(3*ttt)+(-6*tt))) , ((1/6)*(1+(-3*ttt)+(3*(t+tt)))) , ((1/6)*ttt)}
 
 B := 4 cubic B-spline coefficients
-Interpolation value at (t) = B +* I 
+Interpolation value at (t) = B +* I
 *)
 
 (** input: 4 points given by their B-Spline coefficients B[0..3]; interpolation coordinate 0<=t<1 located between B[1] and B[2];
@@ -61,7 +61,7 @@ BEGIN
 		(*this is NOT the correct matrix for given B-spline coefficients*)
 	(*with x0=-3/2*)
 		T:=[t*t, t, 1];
-		T:=T* 
+		T:=T*
 		[[9, 12,4],
 		[6, 0, -8],
 		[9,-12,4]];
@@ -71,7 +71,7 @@ BEGIN
 		(* T:=[t*t*t, t*t, t, 1]; *)
 		NEW(T,4);
 		T[0]:= t*t*t; T[1]:=t*t; T[2]:=t; T[3]:=1;
- 		T:=	T * 
+ 		T:=	T *
  		   [[-1.0D0,3,-3,1],
 			[3,-6,3,0],
 			[-3,0,3,0],
@@ -79,13 +79,13 @@ BEGIN
 		RETURN T +*  B /6;
 	| 4:
 	| 5:
-	ELSE 
+	ELSE
 	END;
 END interpolate;
 
-(** given 3 Points by their B-Spline Coefficients B[0], B[1], B[2] yields new Coefficients B[01],B[11],B[12] which define 
+(** given 3 Points by their B-Spline Coefficients B[0], B[1], B[2] yields new Coefficients B[01],B[11],B[12] which define
 	the new, binary subdivided point sequence B[0], B[01],B[11],B[12], B[2] ;
-	given 4 Points B[0], B[1], B[2], B[3] the new points B[01],B[11],B[12], B[22], B[23] are computed, 
+	given 4 Points B[0], B[1], B[2], B[3] the new points B[01],B[11],B[12], B[22], B[23] are computed,
 	yielding the sequence  B[0], B[01],B[11],B[12], B[22], B[23], B[3] *)
 PROCEDURE subdivide* (t: Datatype; CONST B: ARRAY [*] OF Datatype; VAR NewB: ARRAY [*] OF Datatype; splinedegree: LONGINT);
 BEGIN
@@ -101,7 +101,7 @@ BEGIN
 		| 1: NewB[0]:=0.75*B[0] + 0.25*B[1];  NewB[1]:=0.5*B[0] + 0.5*B[2]; NewB[2]:=0.25*B[1] + 0.75*B[2]; (* is this really order 1 ?*)
 		| 2:
 		| 3:
-			 NewB:= 
+			 NewB:=
 		 		   [[4.0D0, 4, 0],
 					[1, 6, 1],
 					[0, 4, 4]]
@@ -109,14 +109,14 @@ BEGIN
 			NewB:=NewB/8;
 		| 4:
 		| 5:
-		ELSE 
+		ELSE
 		END;
 	ELSIF LEN(B)=4 THEN
 		CASE splinedegree OF
 		0,1:
 		| 2:
 		| 3:
-			 NewB:= 
+			 NewB:=
 		 		   [[4.0D0, 4, 0, 0],
 					[1, 6, 1, 0],
 					[0, 4, 4, 0],
@@ -126,15 +126,15 @@ BEGIN
 			NewB:=NewB/8;
 		| 4:
 		| 5:
-		ELSE 
+		ELSE
 		END;
-	END;	
+	END;
 END subdivide;
 
 (** interpolation from a regularly sampled dataset in 1D to a result vector with a new sampling interval by spline interpolation.
 input: a 1D array of N spline coefficients C at regular intervals; result vector size M.
 output: a M*4 matrix of weights for interpolation; an index table of size M giving the position of the first coeffient for each interpolation location.
-application: do an inner product of strides of 4 coefficients of the signal coefficients (starting at indices[i]) with the weights given in the table row[i]. 
+application: do an inner product of strides of 4 coefficients of the signal coefficients (starting at indices[i]) with the weights given in the table row[i].
 CAVE: boundary not handled here; i.e., indices array will contain indices <0 and/or > LEN(C) *)
 PROCEDURE LineInterpolationWeights*(datasize,resultsize, splinedegree: LONGINT; x,dx:Datatype; VAR indices: ARRAY [*] OF LONGINT): Matrix;
 CONST div6=1/6;
@@ -146,9 +146,9 @@ BEGIN
 	NEW(indices,resultsize);
 	(*dx:= (datasize-1) / (resultsize-1);*)
 	FOR i:=0 TO resultsize-1 DO
-		index:=ENTIER(x); 
+		index:=ENTIER(x);
 		indices[i]:=index-1; (*first coefficient relevant for interplation at x*)
-		t:=x-index; tt:=t*t; ttt:=t*tt; 
+		t:=x-index; tt:=t*t; ttt:=t*tt;
 		w[i,0]:= (1-ttt+3*tt-3*t)/6;
 		w[i,1]:= (4+3*ttt-6*tt)/6;
 		w[i,2]:= (1-3*ttt+3*(t+tt))/6;
@@ -156,7 +156,7 @@ BEGIN
 		x:=x+dx;
 	END;
 	RETURN w
-END LineInterpolationWeights; 
+END LineInterpolationWeights;
 
 PROCEDURE InterpolateLine*(CONST coefficients: Vector; CONST weights:Matrix; CONST indices:ARRAY [*] OF LONGINT):Vector;
 VAR v:Vector; i, size:LONGINT;
@@ -165,7 +165,7 @@ BEGIN
 	size:=LEN(weights,1);
 	FOR i:=size DIV 2 +1 TO LEN(v,0)-2 - size DIV 2 DO
 		v[i]:=weights[i] +* coefficients[indices[i]..indices[i]+size-1]
-	END; 
+	END;
 	RETURN v
 END InterpolateLine;
 (*
@@ -190,7 +190,7 @@ BEGIN
 	NEW(s,15);
 	w:=LineInterpolationWeights(LEN(c), LEN(s), 3, 5, (LEN(c)-1)/(LEN(s)-1+10), indices);
 	s:=InterpolateLine(c, w, indices);
-	MatrixUtilities.OutVector(c); 
+	MatrixUtilities.OutVector(c);
 	MatrixUtilities.OutMatrix(w); Out.Ln;
 	MatrixUtilities.OutVector(indices); Out.Ln;
 	MatrixUtilities.OutVector(s); Out.Ln;
@@ -201,7 +201,7 @@ END MatrixBSplineInterpolation.
 
 MatrixBSplineInterpolation.Do
 
-System.Free 
+System.Free
 MatrixFilters
 MatrixBSplineInterpolation.Do 1
 MatrixBSplineInterpolation.Do2

@@ -7,30 +7,30 @@ CONST Pi=3.14159265358979323846;
 
 TYPE
 	Datatype*=LONGREAL;
-	
+
 	COMPLEXTYPE * = RECORD re*,im*: Datatype END; (*complex number in component representation*)
 	POLAR * = RECORD abs*,arg*: Datatype END; (*complex number in polar representation*)
-	COMPLEXARRAY* = ARRAY [*] OF COMPLEXTYPE; 
+	COMPLEXARRAY* = ARRAY [*] OF COMPLEXTYPE;
 	POLARARRAY* = ARRAY [*] OF POLAR;
 	FLOATARRAY* = ARRAY [*] OF Datatype;
-	
+
 VAR i-, one-, zero-: COMPLEXTYPE;
-	
+
 OPERATOR ":="*(VAR l:COMPLEXTYPE; r:Datatype);
 BEGIN
-	l.re:=r; 
+	l.re:=r;
 	l.im:=0;
 END ":=";
 
 OPERATOR ":="*(VAR l:COMPLEXTYPE; r:POLAR);
 BEGIN
-	l.re:=  r.abs * Mathe.cos(r.arg); 
+	l.re:=  r.abs * Mathe.cos(r.arg);
 	l.im:= r.abs * Mathe.sin(r.arg);
 END ":=";
 
 OPERATOR ":="*(VAR l:POLAR; r:COMPLEXTYPE);
 BEGIN
-	l.abs:=Abs(r); 
+	l.abs:=Abs(r);
 	l.arg:=Arg(r);
 END ":=";
 
@@ -113,14 +113,14 @@ END "=";
 OPERATOR "="*(VAR l:COMPLEXTYPE; r:POLAR):BOOLEAN;
 VAR c:COMPLEXTYPE;
 BEGIN
-	c:=r; 
+	c:=r;
 	RETURN l=c;
 END "=";
 
 OPERATOR "="*(VAR l:POLAR; r:COMPLEXTYPE):BOOLEAN;
 VAR c:COMPLEXTYPE;
 BEGIN
-	c:=l; 
+	c:=l;
 	RETURN r=c;
 END "=";
 
@@ -154,7 +154,7 @@ END "#";
 OPERATOR "+"*(l,r:COMPLEXTYPE): COMPLEXTYPE;
 VAR res:COMPLEXTYPE;
 BEGIN
-	res.re:=l.re+r.re; 
+	res.re:=l.re+r.re;
 	res.im:=l.im+r.im;
 	RETURN res
 END "+";
@@ -246,7 +246,7 @@ END "+";
 OPERATOR "-"*(r:COMPLEXTYPE): COMPLEXTYPE;
 VAR res:COMPLEXTYPE;
 BEGIN
-	res.re:=-r.re; 
+	res.re:=-r.re;
 	res.im:=-r.im;
 	RETURN res
 END "-";
@@ -254,7 +254,7 @@ END "-";
 OPERATOR "-"*(l,r:COMPLEXTYPE): COMPLEXTYPE;
 VAR res:COMPLEXTYPE;
 BEGIN
-	res.re:=l.re-r.re; 
+	res.re:=l.re-r.re;
 	res.im:=l.im-r.im;
 	RETURN res
 END "-";
@@ -262,7 +262,7 @@ END "-";
 OPERATOR "-"*(l:COMPLEXTYPE; r:Datatype): COMPLEXTYPE;
 VAR res:COMPLEXTYPE;
 BEGIN
-	res.re:=l.re-r; 
+	res.re:=l.re-r;
 	res.im:=l.im;
 	RETURN res
 END "-";
@@ -270,7 +270,7 @@ END "-";
 OPERATOR "-"*(l:Datatype; r:COMPLEXTYPE): COMPLEXTYPE;
 VAR res:COMPLEXTYPE;
 BEGIN
-	res.re:=l-r.re; 
+	res.re:=l-r.re;
 	res.im:=-r.im;
 	RETURN res
 END "-";
@@ -356,7 +356,7 @@ END "*";
 OPERATOR "*"*(l: Datatype; r:COMPLEXTYPE): COMPLEXTYPE;
 VAR res:COMPLEXTYPE;
 BEGIN
-	res.re:=l*r.re; 
+	res.re:=l*r.re;
 	res.im:=l*r.im;
 	RETURN res
 END "*";
@@ -364,7 +364,7 @@ END "*";
 OPERATOR "*"*(l:COMPLEXTYPE; r:Datatype): COMPLEXTYPE;
 VAR res:COMPLEXTYPE;
 BEGIN
-	res.re:=l.re*r; 
+	res.re:=l.re*r;
 	res.im:=l.im*r;
 	RETURN res
 END "*";
@@ -444,27 +444,27 @@ VAR rsqr:Datatype; VAR res:COMPLEXTYPE;
 BEGIN
 	rsqr:= r.re*r.re + r.im*r.im;
 	res.re:=(l.re * r.re + l.im*r.im)/rsqr;
-	res.im:=(l.im* r.re - l.re*r.im)/rsqr; 
+	res.im:=(l.im* r.re - l.re*r.im)/rsqr;
 	RETURN res
-END "/";	
+END "/";
 
 OPERATOR "/"*(l:Datatype; r:COMPLEXTYPE): COMPLEXTYPE;
 VAR rsqr:Datatype; VAR res:COMPLEXTYPE;
 BEGIN
 	rsqr:= r.re*r.re + r.im*r.im;
 	res.re:= l * r.re /rsqr;
-	res.im:= - l*r.im/rsqr; 
+	res.im:= - l*r.im/rsqr;
 	RETURN res
-END "/";	
+END "/";
 
 OPERATOR "/"*(l:COMPLEXTYPE; r:Datatype): COMPLEXTYPE;
 VAR rsqr:Datatype; VAR res:COMPLEXTYPE;
 BEGIN
 	rsqr:= r*r;
 	res.re:= l.re / r;
-	res.im:=l.im/r; 
+	res.im:=l.im/r;
 	RETURN res
-END "/";	
+END "/";
 
 OPERATOR "/"*(l,r:POLAR): POLAR;
 VAR a, b, c:COMPLEXTYPE; res:POLAR;
@@ -541,7 +541,7 @@ END "./";
 OPERATOR "~"*( r: COMPLEXTYPE ): COMPLEXTYPE;
 VAR res: COMPLEXTYPE;
 BEGIN
-	res.re := r.re;  res.im := -r.im;  
+	res.re := r.re;  res.im := -r.im;
 	RETURN res
 END "~";
 
@@ -553,9 +553,9 @@ BEGIN
 		ELSIF c.re=0 THEN res.re:=0; res.im:=0
 		ELSE res.re:=Mathe.sqrt(c.re); res.im:=0;
 		END;
-	ELSE 
+	ELSE
 		pol:=c;
-		pol.abs:=Mathe.sqrt(pol.abs); 
+		pol.abs:=Mathe.sqrt(pol.abs);
 		pol.arg:=pol.arg/2;
 		res:=pol;
 	END;
@@ -567,7 +567,7 @@ END sqrt;
 PROCEDURE sqrtp*(p:POLAR): POLAR;
 VAR res:POLAR;
 BEGIN
-	res.abs:=Mathe.sqrt(p.abs); 
+	res.abs:=Mathe.sqrt(p.abs);
 	res.arg:=p.arg/2;
 	RETURN res
 END sqrtp;
@@ -598,7 +598,7 @@ END sin;
 
 PROCEDURE cos(c:COMPLEXTYPE): COMPLEXTYPE; (*! not yet tested*)
 BEGIN
-	RETURN  cosh(i * c) (* 
+	RETURN  cosh(i * c) (*
 	( d:= i*c; RETURN exp(d)+exp(-d))/2*)
 END cos;
 
@@ -623,14 +623,14 @@ END cosh;
 
 PROCEDURE power*(c, expo: COMPLEXTYPE):COMPLEXTYPE; (*! not yet tested*)
 BEGIN
-	RETURN exp(expo * ln(c)) 
+	RETURN exp(expo * ln(c))
 END power;
 
 (** r'th root of complex number. r is real number*)
 PROCEDURE root*(c: COMPLEXTYPE; r: Datatype):COMPLEXTYPE; (*! not yet tested*)
 VAR pol: POLAR;
 BEGIN
-	IF c.im =0 THEN 
+	IF c.im =0 THEN
 		IF c.re=0 THEN RETURN zero
 		ELSE RETURN Complex(Mathe.exp( Mathe.ln(pol.abs) / r), 0);
 		END;
@@ -641,7 +641,7 @@ BEGIN
 END root;
 
 	(* Abs & Arg from NbrCplx.Mod *)
-	
+
 PROCEDURE Abs*(c:COMPLEXTYPE):Datatype;
 VAR res,absRe,absIm,ratio: Datatype;
 BEGIN
@@ -653,29 +653,29 @@ BEGIN
 	RETURN res
 END Abs;
 
-PROCEDURE Arg*( x: COMPLEXTYPE ): Datatype;  
+PROCEDURE Arg*( x: COMPLEXTYPE ): Datatype;
 VAR arg: Datatype;
-	PROCEDURE ArcTan( xn, xd: Datatype): Datatype;  
-	VAR sn, sd: LONGINT;  atan, ratio: Datatype;  
-	BEGIN 
+	PROCEDURE ArcTan( xn, xd: Datatype): Datatype;
+	VAR sn, sd: LONGINT;  atan, ratio: Datatype;
+	BEGIN
 		IF xn < 0 THEN sn := -1
 		ELSIF xn = 0 THEN sn := 0
 		ELSE sn := 1
-		END;  
+		END;
 		IF xd < 0 THEN sd := -1
 		ELSIF xd = 0 THEN sd := 0
 		ELSE sd := 1
-		END;  
+		END;
 		IF xd = 0 THEN atan := sn * Pi / 2
 		ELSIF xn = 0 THEN atan := (1 - sd) * Pi / 2
 		ELSE ratio := xn / xd;  atan := Mathe.arctan( ratio ) + sn * (1 - sd) * Pi / 2
-		END;  
+		END;
 		RETURN atan
-	END ArcTan;  
-	BEGIN 
-	IF x = 0 THEN arg := 0 ELSE arg := ArcTan( x.im, x.re ) END;  
+	END ArcTan;
+	BEGIN
+	IF x = 0 THEN arg := 0 ELSE arg := ArcTan( x.im, x.re ) END;
 	RETURN arg
-END Arg;  
+END Arg;
 
 PROCEDURE Read(s:Streams.Reader):COMPLEXTYPE;
 VAR c:COMPLEXTYPE;
@@ -688,11 +688,11 @@ BEGIN
 	s.RawLReal(c.re); s.RawLReal(c.im);
 END Write;
 
-PROCEDURE OutFloat(x: LONGREAL;  n, f, D: LONGINT );  
-	VAR str: ARRAY 64 OF CHAR;  
-	BEGIN 
-		Strings.FloatToStr( x, n, f, D, str );  KernelLog.String( str );  
-	END OutFloat;  
+PROCEDURE OutFloat(x: LONGREAL;  n, f, D: LONGINT );
+	VAR str: ARRAY 64 OF CHAR;
+	BEGIN
+		Strings.FloatToStr( x, n, f, D, str );  KernelLog.String( str );
+	END OutFloat;
 
 PROCEDURE Out*(c:COMPLEXTYPE; n, f, D: LONGINT );
 BEGIN

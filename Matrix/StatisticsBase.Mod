@@ -2,19 +2,19 @@ MODULE StatisticsBase; (** AUTHOR "Patrick Hunziker"; PURPOSE "tools for statist
 
 IMPORT MatrixBase, MathL, MatrixUtilities;
 
-TYPE 	
+TYPE
 	Matrix*=MatrixBase.Matrix;
 	Vector*=MatrixBase.Vector;
 	Datatype*=MatrixBase.Datatype;
 	Array*=ARRAY[?] OF Datatype;
-	
+
 PROCEDURE SameDimension(VAR a:Array; CONST len:ARRAY [*] OF SIZE);
 	BEGIN
-		IF (DIM(a)#LEN(len,0)) OR (LEN(a)#len) THEN 
-			NEW(a,len) 
-		END;  
+		IF (DIM(a)#LEN(len,0)) OR (LEN(a)#len) THEN
+			NEW(a,len)
+		END;
 	END SameDimension;
-	
+
 PROCEDURE Count*(CONST a: Array):LONGINT;
 VAR i:LONGINT; res:LONGINT;
 BEGIN
@@ -145,7 +145,7 @@ PROCEDURE QSort*(VAR X : Vector);
  	 diff:=v-Mean(v);
  	 RETURN (diff+*diff) / (ProdS(LEN(v))-1)
  END EstimatedVariance;
- 
+
  (** subset of data , divisor is (N-1)*)
  PROCEDURE EstimatedStandardDeviation*(CONST v:Array): Datatype;
  BEGIN
@@ -172,7 +172,7 @@ PROCEDURE Kurtosis*(CONST X : Array) : Datatype;
 		x2:=x1.*x1;
 		RETURN (x2 +* x2) / (variance*variance) / ProdS(LEN(X)) - 3;
 	END Kurtosis;
-	
+
 PROCEDURE Normalize*(CONST a: Array):Array;
 VAR N:LONGINT; sd: Datatype;
 BEGIN
@@ -188,7 +188,7 @@ PROCEDURE NormalizeColumns*(VAR A:Matrix); (*normalizing to mean=0 and SD=1*)
 VAR onesR, meanVector,sdVector: Vector; meanMatrix, sdMatrix:Matrix;
 BEGIN
 	NEW(onesR, LEN(A,0));
-	onesR:=1; 
+	onesR:=1;
 	meanVector := (onesR * A)/LEN(A,0);
 	meanMatrix := onesR ** meanVector;
 	A:=A-meanMatrix;
@@ -199,7 +199,7 @@ END NormalizeColumns;
 
 (* subtract column mean from each column *)
 PROCEDURE ZeroMeanColumns*(VAR A:Matrix);
-	VAR onesR, meanVector: Vector; 
+	VAR onesR, meanVector: Vector;
 BEGIN
 	NEW(onesR, LEN(A,0));
 	onesR:=1;
@@ -218,15 +218,15 @@ PROCEDURE SoftMax*(VAR x: Array):Array;
 END SoftMax;
 
 PROCEDURE Logistic*(X : Datatype) : Datatype;  (* logistic function as nonlinear element for unit response *)
-	BEGIN 
+	BEGIN
 		IF X >= 18.3684002848 (*expNegligibleL*) THEN RETURN 1
 		ELSIF (-X) > 18.3684002848 (*expNegligibleL*) THEN RETURN 0
-		ELSE RETURN 1 / (1 + MathL.exp( -X ));  
-		END;  		
+		ELSE RETURN 1 / (1 + MathL.exp( -X ));
+		END;
 	END Logistic;
 
 (**
-Normalize input such that input mean(x)=0, input SD(x)=1, then bring to [0..1] using SoftMax sigmoid transform 
+Normalize input such that input mean(x)=0, input SD(x)=1, then bring to [0..1] using SoftMax sigmoid transform
  y[i] = softmax(x[i]) = exp(x[i])/sum(exp(x)) *)
 PROCEDURE SoftMaxNormalize*(CONST x: Array):Array;
 	BEGIN
@@ -276,7 +276,7 @@ BEGIN
 END TestMedian;
 
 PROCEDURE TestSoftMax*;
-VAR v,v1:Vector; 
+VAR v,v1:Vector;
 BEGIN
 	v:=[0, 1, 2, 3, 4,3,2,3,4,5];
 	v1:=Normalize(v);

@@ -14,31 +14,31 @@ TYPE Analyzer*= OBJECT
 		wavelet*:Wavelets.WaveletFamily;
 		lineX,resX, lineY,resY: Line;
 		child: Analyzer;
-		
+
 		(*choose wavelet family; need to choose compatible boundary conditions - see Wavelets.Mod*)
 	PROCEDURE &Init*(waveletType, boundary: LONGINT; CONST data: Matrix);
 	BEGIN
-		
+
 		SELF.waveletType:=waveletType;
 		SELF.boundary:=boundary;
 		NEW(wavelet, waveletType);
 		NEW(conv, wavelet, boundary);
 		SetData(data);
 	END Init;
-	
+
 	PROCEDURE SetData*(CONST data: Matrix);
 	BEGIN
 		IF LEN(data)>0 THEN
-			IF LEN(data)#LEN(SELF.data) THEN 
+			IF LEN(data)#LEN(SELF.data) THEN
 				NEW(SELF.data, LEN(data));
-				NEW(lineY, LEN(data,0)); NEW(resY, LEN(data,0)); 
-				NEW(lineX, LEN(data,1)); NEW(resX, LEN(data,1)); 
+				NEW(lineY, LEN(data,0)); NEW(resY, LEN(data,0));
+				NEW(lineX, LEN(data,1)); NEW(resX, LEN(data,1));
 			END;
 			SELF.data:=data; (*!copy. could do in-place ?*)
 		END;
 	END SetData;
-	
-	
+
+
 	PROCEDURE Analyze*;
 	VAR i:LONGINT;
 	BEGIN
@@ -51,7 +51,7 @@ TYPE Analyzer*= OBJECT
 			data[..,i]:=resY; (* could do in-place ? *)
 		END;
 	END Analyze;
-	
+
 	PROCEDURE AnalyzeMultiscale*(levels:LONGINT);
 	VAR i:LONGINT;
 	BEGIN
@@ -62,7 +62,7 @@ TYPE Analyzer*= OBJECT
 			data[..(LEN(data,0)+1)DIV 2-1, ..(LEN(data,1)+1) DIV 2-1]:=child.data;
 		END;
 	END AnalyzeMultiscale;
-	
+
 	PROCEDURE AnalyzePacket*(levels:LONGINT);
 	VAR i:LONGINT;
 	BEGIN
@@ -71,22 +71,22 @@ TYPE Analyzer*= OBJECT
 			NEW(child, waveletType, boundary, data[..(LEN(data,0)+1)DIV 2-1, ..(LEN(data,1)+1) DIV 2-1]); (*! should use child.SetData for efficiency*)
 			child.AnalyzePacket(levels-1);
 			data[..(LEN(data,0)+1)DIV 2-1, ..(LEN(data,1)+1) DIV 2-1]:=child.data;
-			
+
 			child.Init(waveletType, boundary, data[(LEN(data,0)+1)DIV 2.., ..(LEN(data,1)+1) DIV 2-1]);
 			child.AnalyzePacket(levels-1);
 			data[(LEN(data,0)+1)DIV 2.., ..(LEN(data,1)+1) DIV 2-1]:=child.data;
-			
+
 			child.Init(waveletType, boundary, data[..(LEN(data,0)+1)DIV 2-1, (LEN(data,1)+1) DIV 2..]);
 			child.AnalyzePacket(levels-1);
 			data[..(LEN(data,0)+1)DIV 2-1, (LEN(data,1)+1) DIV 2..]:=child.data;
-			
+
 			child.Init(waveletType, boundary, data[(LEN(data,0)+1)DIV 2.., (LEN(data,1)+1) DIV 2..]);
 			child.AnalyzePacket(levels-1);
 			data[(LEN(data,0)+1)DIV 2.., (LEN(data,1)+1) DIV 2..]:=child.data;
 		END;
 
 	END AnalyzePacket;
-	
+
 	END Analyzer;
 
 END PlanarWavelets.

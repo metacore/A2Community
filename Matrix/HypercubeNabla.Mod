@@ -1,11 +1,11 @@
 MODULE HypercubeNabla;	(**  AUTHOR "ph"; PURPOSE "";  **)
-CONST 
+CONST
 	x=0; y=1; z=2; t=3;
 	projected=0;
-TYPE 
-	Datatype* = LONGREAL;	
+TYPE
+	Datatype* = LONGREAL;
 	ScalarField* = ARRAY [*,*,*,*] OF Datatype;
-	VectorField* = ARRAY [*,*,*,*,*] OF Datatype; 
+	VectorField* = ARRAY [*,*,*,*,*] OF Datatype;
 	TensorField* = ARRAY [?] OF Datatype;
 	Field= ARRAY [*,*,*,*,*] OF Datatype; (* scalar & vector quantity at a point *)
 
@@ -66,7 +66,7 @@ BEGIN
 	RETURN dx(vf[x,..,..,..,..],exact) + dy(vf[y,..,..,..,..], exact) + dz(vf[z,..,..,..,..],exact) + dt(vf[t,..,..,..,..], exact);
 END Div;
 
-(*! MIXUP OF indices 
+(*! MIXUP OF indices
 (** Rotation or Curl operator *)
 PROCEDURE Rot* (CONST vf: VectorField; exact:BOOLEAN): VectorField; (*this is incomplete/incorrect 4D rotation ...*)
 BEGIN
@@ -97,23 +97,23 @@ BEGIN
 END VectorLaplacian;
 
 (** http://en.wikipedia.org/wiki/Del   - not yet implemented *)
-(* Del can also be applied to a vector field with the result being a tensor. 
-The tensor derivative of a vector field \vec{v} is a 9-term second-rank tensor, but can be denoted simply as \nabla \otimes \vec{v} , where \otimes represents the dyadic product. 
+(* Del can also be applied to a vector field with the result being a tensor.
+The tensor derivative of a vector field \vec{v} is a 9-term second-rank tensor, but can be denoted simply as \nabla \otimes \vec{v} , where \otimes represents the dyadic product.
 This quantity is equivalent to the Jacobian matrix of the vector field with respect to space.
-For a small displacement \delta \vec{r}, the change in the vector field is given by:   \delta \vec{v} = (\nabla \otimes \vec{v}) \sdot \delta \vec{r} 
- 
+For a small displacement \delta \vec{r}, the change in the vector field is given by:   \delta \vec{v} = (\nabla \otimes \vec{v}) \sdot \delta \vec{r}
+
 PROCEDURE TensorDerivative*();
 END TensorDerivative;
-In a sense, both the gradient and Jacobian are "first derivatives"  £ the former the first derivative of a scalar function of several variables, 
-the latter the first derivative of a vector function of several variables. 
+In a sense, both the gradient and Jacobian are "first derivatives"  £ the former the first derivative of a scalar function of several variables,
+the latter the first derivative of a vector function of several variables.
 In general, the gradient can be regarded as a special version of the Jacobian: it is the Jacobian of a scalar function of several variables.
 *)
 PROCEDURE Jacobian*(CONST vf:VectorField; exact: BOOLEAN):TensorField; (** == TensorDerivative *)
 END Jacobian;
 
-(* 
-The Hessian matrix (or simply the Hessian) is the square matrix of second-order partial derivatives of a scalar function; 
-that is, it describes the local curvature of a function of many variables. 
+(*
+The Hessian matrix (or simply the Hessian) is the square matrix of second-order partial derivatives of a scalar function;
+that is, it describes the local curvature of a function of many variables.
 *)
 PROCEDURE Hessian*(CONST sf:ScalarField; exact: BOOLEAN):TensorField;
 VAR vf: VectorField;

@@ -4,8 +4,8 @@ CONST 	signed=1;
 		lut=2;
 		rgb=3;
 		heat=4;
- 
-TYPE 	
+
+TYPE
 	Matrix= ARRAY [*,*] OF LONGREAL;
 	Stack= ARRAY [*,*,*] OF LONGREAL;
 	(*Stack= ARRAY [?] OF LONGREAL;*)
@@ -14,51 +14,51 @@ TYPE
 TYPE Model*= OBJECT (Models.Model)
 		VAR m*, r*,g*,b*: Stack;
 	END Model;
-		
-TYPE Window*= OBJECT (WM.BufferWindow) (* or could use WM.DoubleBufferWindow or WMComponents.FormWindow) *) 
+
+TYPE Window*= OBJECT (WM.BufferWindow) (* or could use WM.DoubleBufferWindow or WMComponents.FormWindow) *)
 	VAR model*:Model;
-		max,min, gain*:LONGREAL; 
+		max,min, gain*:LONGREAL;
 		exists:BOOLEAN;
 		type, offset*, mx0,my0,mx1,my1,
 		orientation,
-		current*:LONGINT; 
+		current*:LONGINT;
 		dummy: Stack;
 		baseTitle, title: ARRAY 256 OF CHAR;
 		source*:ANY;
 
-		
+
 	PROCEDURE &Initialize*(CONST m: Stack; CONST title: ARRAY OF CHAR; orientation:LONGINT);
 
 	(*PROCEDURE &Initialize*(CONST m: ARRAY [*,*,*] OF LONGREAL; CONST title: ARRAY OF CHAR; orientation:LONGINT);*)
 	BEGIN
 		ASSERT(DIM(m)=3,200);
 		SELF.orientation:=orientation;
-		IF ~exists  & (LEN(m)>0) THEN 
-			IF orientation=0 THEN Init(LEN(m,2), LEN(m,1), TRUE); 
-			ELSIF orientation=1 THEN Init(LEN(m,2), LEN(m,0), TRUE); 
-			ELSE Init(LEN(m,1), LEN(m,0), TRUE); 
-			END; 
-			exists:=TRUE; 
+		IF ~exists  & (LEN(m)>0) THEN
+			IF orientation=0 THEN Init(LEN(m,2), LEN(m,1), TRUE);
+			ELSIF orientation=1 THEN Init(LEN(m,2), LEN(m,0), TRUE);
+			ELSE Init(LEN(m,1), LEN(m,0), TRUE);
+			END;
+			exists:=TRUE;
 			bounds := WMGraphics.MakeRectangle(0, 0, GetWidth(), GetHeight());
 		END;
-		NEW(model); 
-		IF LEN(m,0)>0 THEN SetImage(m);END; 
-		COPY(title,baseTitle); 
+		NEW(model);
+		IF LEN(m,0)>0 THEN SetImage(m);END;
+		COPY(title,baseTitle);
 		COPY(title,SELF.title);
 		SetTitle(Strings.NewString(title));
 		INCL(flags, WM.FlagStorable);
 		current:=0;
 		(*maxInterpolation:=1; => default bilinear interpolation;  maxInterpolation:=0; => nearest neighbour interpolation*)
 	END Initialize;
-	
-	PROCEDURE SetOrientation*(orientation:LONGINT); 
+
+	PROCEDURE SetOrientation*(orientation:LONGINT);
 	VAR w,h: LONGINT; m: WM.WindowManager;
 	BEGIN
 		IF (orientation#SELF.orientation) THEN
 			IF orientation=0 THEN w:=LEN(model.m,2); h:= LEN(model.m,1);
-			ELSIF orientation=1 THEN w:=LEN(model.m,2); h:= LEN(model.m,0);   
-			ELSE w:=LEN(model.m,1); h:= LEN(model.m,0); 
-			END; 
+			ELSIF orientation=1 THEN w:=LEN(model.m,2); h:= LEN(model.m,0);
+			ELSE w:=LEN(model.m,1); h:= LEN(model.m,0);
+			END;
 			Raster.Create(img, w,h, img.fmt);
 			m:=GetManager();
 			IF m#NIL THEN m.SetWindowSize(SELF, w,h);
@@ -67,7 +67,7 @@ TYPE Window*= OBJECT (WM.BufferWindow) (* or could use WM.DoubleBufferWindow or 
 			SELF.orientation:=orientation
 		END;
 	END SetOrientation;
-	
+
 	PROCEDURE PostInvalidate;
 	VAR m: WMMessages.Message;
 	BEGIN
@@ -99,14 +99,14 @@ TYPE Window*= OBJECT (WM.BufferWindow) (* or could use WM.DoubleBufferWindow or 
 
 	PROCEDURE PointerDown*(x, y : LONGINT; keys : SET); (* does not work ... ?? *)
 		BEGIN
-			mx0:=x; my0:=y; 
+			mx0:=x; my0:=y;
 		END PointerDown;
-		
+
 	PROCEDURE PointerUp*(x, y : LONGINT; keys : SET);
 		BEGIN
-			mx1:=x; my1:=y; 
+			mx1:=x; my1:=y;
 		END PointerUp;
-		
+
 	PROCEDURE PointerMove*(x, y : LONGINT; keys : SET);
 		BEGIN
 			IF keys={2} THEN
@@ -119,7 +119,7 @@ TYPE Window*= OBJECT (WM.BufferWindow) (* or could use WM.DoubleBufferWindow or 
 				PointerMove^(x,y,keys)
 			END;
 		END PointerMove;
-	
+
 	PROCEDURE WheelMove*(dz : LONGINT);
 	VAR s: ARRAY 16 OF CHAR;
 		BEGIN
@@ -129,48 +129,48 @@ TYPE Window*= OBJECT (WM.BufferWindow) (* or could use WM.DoubleBufferWindow or 
 			SetTitle(Strings.NewString(title));
 			Render
 		END WheelMove;
-		
+
 	(*The window can determine wether the key was pressed or released by examining the
 			Inputs.Release flag in flags. ucs contains the unicode equivalent of the key. Special input editors
 			send the generated unicode characters via KeyEvent.  *)
 	PROCEDURE KeyEvent(ucs : LONGINT; flags : SET; keysym : LONGINT);
 		VAR dz: LONGINT; s: ARRAY 16 OF CHAR;
 		BEGIN
-			IF ~(Inputs.Release IN flags )THEN 
-				IF keysym = Inputs.KsUp THEN 
+			IF ~(Inputs.Release IN flags )THEN
+				IF keysym = Inputs.KsUp THEN
 					dz:=1; current:=(current + dz) MOD LEN(model.m, orientation);
-				ELSIF keysym = Inputs.KsDown THEN 
-					dz:=-1; current:=(current + dz) MOD LEN(model.m, orientation); 
-				ELSIF keysym = Inputs.KsRight THEN 
-					SetOrientation( (orientation+1) MOD 3); current:=0; 
-				ELSIF keysym = Inputs.KsLeft THEN 
-					SetOrientation( (orientation-1) MOD 3); current:=0; 
-				ELSE 
+				ELSIF keysym = Inputs.KsDown THEN
+					dz:=-1; current:=(current + dz) MOD LEN(model.m, orientation);
+				ELSIF keysym = Inputs.KsRight THEN
+					SetOrientation( (orientation+1) MOD 3); current:=0;
+				ELSIF keysym = Inputs.KsLeft THEN
+					SetOrientation( (orientation-1) MOD 3); current:=0;
+				ELSE
 					KeyEvent^(ucs,flags,keysym); RETURN
 				END;
 				Strings.IntToStr(current,s);
 				COPY(baseTitle,title); Strings.Append(title,"-"); Strings.Append(title,s);
 				SetTitle(Strings.NewString(title));
 				Render
-			ELSE 
+			ELSE
 				KeyEvent^(ucs,flags,keysym);
 			END;
 		END KeyEvent;
-		
+
 	PROCEDURE SetImage*(CONST m: Stack);
 	BEGIN
-		IF ~exists  & (LEN(m)>0) THEN 
-			IF orientation=0 THEN Init(LEN(m,2), LEN(m,1), TRUE); 
-			ELSIF orientation=1 THEN Init(LEN(m,2), LEN(m,0), TRUE); 
-			ELSE Init(LEN(m,1), LEN(m,0), TRUE); 
-			END; 
-			exists:=TRUE; 
+		IF ~exists  & (LEN(m)>0) THEN
+			IF orientation=0 THEN Init(LEN(m,2), LEN(m,1), TRUE);
+			ELSIF orientation=1 THEN Init(LEN(m,2), LEN(m,0), TRUE);
+			ELSE Init(LEN(m,1), LEN(m,0), TRUE);
+			END;
+			exists:=TRUE;
 			bounds := WMGraphics.MakeRectangle(0, 0, GetWidth(), GetHeight());
 		END;
-		IF LEN(m,0)>0 THEN 
+		IF LEN(m,0)>0 THEN
 			model.m:=ALIAS OF m; (*! ALIAS is not yet done in WMMatrix - maybe introduce it there *)
-			max:=MAX(m); min:=MIN(m); IF min<0 THEN type:=signed ELSE type:=0 END;; 
-			offset:=0; 
+			max:=MAX(m); min:=MIN(m); IF min<0 THEN type:=signed ELSE type:=0 END;;
+			offset:=0;
 			IF max#min THEN gain:= 255/MAX( ABS(max),ABS(min));
 			ELSE gain:=1;
 			END;
@@ -178,95 +178,95 @@ TYPE Window*= OBJECT (WM.BufferWindow) (* or could use WM.DoubleBufferWindow or 
 		ELSE type:=0;
 		END;
 	END SetImage;
-	
+
 	PROCEDURE SetImageB*(CONST m: Stack; offset:LONGINT;gain: LONGREAL);
 	BEGIN
-		IF ~exists  & (LEN(m)>0) THEN 
-			IF orientation=0 THEN Init(LEN(m,2), LEN(m,1), TRUE); 
-			ELSIF orientation=1 THEN Init(LEN(m,2), LEN(m,0), TRUE); 
-			ELSE Init(LEN(m,1), LEN(m,0), TRUE); 
-			END; 
-			exists:=TRUE; 
+		IF ~exists  & (LEN(m)>0) THEN
+			IF orientation=0 THEN Init(LEN(m,2), LEN(m,1), TRUE);
+			ELSIF orientation=1 THEN Init(LEN(m,2), LEN(m,0), TRUE);
+			ELSE Init(LEN(m,1), LEN(m,0), TRUE);
+			END;
+			exists:=TRUE;
 			bounds := WMGraphics.MakeRectangle(0, 0, GetWidth(), GetHeight());
 		END;
 		model.m:=ALIAS OF m; (*! ALIAS is not yet done in WMMatrix - maybe introduce it there *)
-		max:=MAX(m); min:=MIN(m); IF min<0 THEN type:=signed ELSE type:=0 END; 
+		max:=MAX(m); min:=MIN(m); IF min<0 THEN type:=signed ELSE type:=0 END;
 		SELF.offset:=offset; SELF.gain:=gain;
 		Render;
 	END SetImageB;
-	
+
 	PROCEDURE SetImageHeat*(CONST m: Stack);
 	BEGIN
-		IF ~exists  & (LEN(m)>0) THEN 
-			IF orientation=0 THEN Init(LEN(m,2), LEN(m,1), TRUE); 
-			ELSIF orientation=1 THEN Init(LEN(m,2), LEN(m,0), TRUE); 
-			ELSE Init(LEN(m,1), LEN(m,0), TRUE); 
-			END; 
-			exists:=TRUE; 
+		IF ~exists  & (LEN(m)>0) THEN
+			IF orientation=0 THEN Init(LEN(m,2), LEN(m,1), TRUE);
+			ELSIF orientation=1 THEN Init(LEN(m,2), LEN(m,0), TRUE);
+			ELSE Init(LEN(m,1), LEN(m,0), TRUE);
+			END;
+			exists:=TRUE;
 			bounds := WMGraphics.MakeRectangle(0, 0, GetWidth(), GetHeight());
 		END;
 		model.m:=ALIAS OF m;(* no-copy version *)
-		max:=MAX(m); min:=MIN(m); 
-		type:=heat; 
+		max:=MAX(m); min:=MIN(m);
+		type:=heat;
 		IF max#min THEN gain:= 511/(max-min);
 		ELSE gain:=1;
 		END;
 		offset:=ENTIER(-255-gain*min);
 		Render;
 	END SetImageHeat;
-	
+
 	PROCEDURE SetImageRGB*(CONST r,g,b: Stack);
 	BEGIN
-		IF ~exists  & (LEN(r)>0) THEN 
-			IF orientation=0 THEN Init(LEN(r,2), LEN(r,1), TRUE); 
-			ELSIF orientation=1 THEN Init(LEN(r,2), LEN(r,0), TRUE); 
-			ELSE Init(LEN(r,1), LEN(r,0), TRUE); 
-			END; 
-			exists:=TRUE; 
+		IF ~exists  & (LEN(r)>0) THEN
+			IF orientation=0 THEN Init(LEN(r,2), LEN(r,1), TRUE);
+			ELSIF orientation=1 THEN Init(LEN(r,2), LEN(r,0), TRUE);
+			ELSE Init(LEN(r,1), LEN(r,0), TRUE);
+			END;
+			exists:=TRUE;
 			bounds := WMGraphics.MakeRectangle(0, 0, GetWidth(), GetHeight());
 		END;
-		offset:=0; gain:=255/MAX(MAX(ABS(r)), MAX(MAX(ABS(g)), MAX(ABS(b)))); 
+		offset:=0; gain:=255/MAX(MAX(ABS(r)), MAX(MAX(ABS(g)), MAX(ABS(b))));
 		model.r:=ALIAS OF r; model.g:=ALIAS OF g; model.b:=ALIAS OF b; (*! ALIAS is not yet done in WMMatrix - maybe introduce it there *)
 		type:=rgb;
 		Render;
 	END SetImageRGB;
-	
+
 	PROCEDURE Render*;
 	BEGIN
-		IF type=signed THEN 
+		IF type=signed THEN
 			IF orientation=0 THEN MatrixRaster.LRealToImageBR(model.m[current,*,*], offset, gain, img);
 			ELSIF orientation=1 THEN MatrixRaster.LRealToImageBR(model.m[.., current, ..], offset, gain, img);
 			ELSE MatrixRaster.LRealToImageBR(model.m[..,..,current], offset, gain, img);
 			END;
-		ELSIF type=heat THEN 
+		ELSIF type=heat THEN
 			IF orientation=0 THEN MatrixRaster.LRealToImageHeat(model.m[current,*,*], offset, gain, img);
 			ELSIF orientation=1 THEN MatrixRaster.LRealToImageHeat(model.m[.., current, ..], offset, gain, img);
 			ELSE MatrixRaster.LRealToImageHeat(model.m[..,..,current], offset, gain, img);
 			END;
-		ELSIF type=rgb THEN 
+		ELSIF type=rgb THEN
 			IF orientation=0 THEN MatrixRaster.LRealRGBToImageB( model.r[current,*,*], model.g[current,*,*], model.b[current,*,*], offset, gain, img);
 			ELSIF orientation=1 THEN MatrixRaster.LRealRGBToImageB( model.r[..,current,..], model.g[..,current,..], model.b[..,current,..], offset, gain, img);
 			ELSE MatrixRaster.LRealRGBToImageB( model.r[..,..,current], model.g[..,..,current], model.b[..,..,current], offset, gain, img);
 			END;
-		ELSIF LEN(model.m,0)>0 THEN 
+		ELSIF LEN(model.m,0)>0 THEN
 			IF orientation=0 THEN MatrixRaster.LRealToImage(model.m[current,*,*], offset, gain, img);
 			ELSIF orientation=1 THEN MatrixRaster.LRealToImage(model.m[..,current,..], offset, gain, img);
 			ELSE MatrixRaster.LRealToImage(model.m[..,..,current], offset, gain, img);
 			END;
-		ELSE 
+		ELSE
 		END;
 		PostInvalidate;
 		(*
 		Invalidate(WMRectangles.MakeRect(0, 0, GetWidth(), GetHeight()));
 		*)
 	END Render;
-	
+
 	PROCEDURE RenderScaled*(offset:LONGINT;gain: LONGREAL);
 	BEGIN
 		SELF.offset:=offset; SELF.gain:=gain;
 		Render;
 	END RenderScaled;
-	
+
 	PROCEDURE AddWindow*;
 	BEGIN
 		ASSERT(exists);
@@ -275,9 +275,9 @@ TYPE Window*= OBJECT (WM.BufferWindow) (* or could use WM.DoubleBufferWindow or 
 		INC(pos);
 		(*WM.DefaultAddWindow(SELF);*)
 	END AddWindow;
-	
+
 END Window;
-	
+
 VAR InsertPosX*,InsertPosY*, pos: LONGINT; (* default insertion point for new window *)
 
 PROCEDURE GenerateName(prefix: Strings.String; VAR str: ARRAY OF CHAR);
@@ -306,12 +306,12 @@ PROCEDURE AddWindow*(CONST m: Stack; CONST title: ARRAY OF CHAR); (*deprecated*)
 VAR pw: WM.BufferWindow; max,min:LONGREAL; type:BOOLEAN;
 BEGIN
 	max:=MAX(m); min:=MIN(m);
-	IF orientation=0 THEN NEW(pw, LEN(m,2), LEN(m,1), TRUE); 
-	ELSIF orientation=1 THEN NEW(pw, LEN(m,2), LEN(m,0), TRUE); 
-	ELSE NEW(pw, LEN(m,1), LEN(m,0), TRUE); 
-	END; 
+	IF orientation=0 THEN NEW(pw, LEN(m,2), LEN(m,1), TRUE);
+	ELSIF orientation=1 THEN NEW(pw, LEN(m,2), LEN(m,0), TRUE);
+	ELSE NEW(pw, LEN(m,1), LEN(m,0), TRUE);
+	END;
 	pw.SetTitle(Strings.NewString(title));
-	IF min<0 THEN type:=TRUE; 
+	IF min<0 THEN type:=TRUE;
 		IF orientation=0 THEN MatrixRaster.LRealToImageBR(m[0],0,255/MAX(ABS(max),ABS(min)),pw.img);
 		ELSIF orientation=1 THEN MatrixRaster.LRealToImageBR(m[..,0,..],0,255/MAX(ABS(max),ABS(min)),pw.img);
 		ELSE MatrixRaster.LRealToImageBR(m[..,..,0],0,255/MAX(ABS(max),ABS(min)),pw.img);
@@ -365,7 +365,7 @@ VAR window:WMStack.Window;
 	stack: ARRAY [*,*,*] OF LONGINT; (* or LONGREAL or other..*)
 BEGIN
 	(*have some data in a 3D array ready*)
-	NEW(stack, 40,100,100); 
+	NEW(stack, 40,100,100);
 	stack[..,10..40,..]:=1;
 	stack[10..15,..,..]:=2;
 	stack[..,..,10..30]:=3;
@@ -380,4 +380,4 @@ WMStack.RemoveWindows ~ (*close and remove all stack windows*)
 WMStack.RemoveWindows 5 ~ (* close and remove a number of stack windows*)
 
 SystemTools.FreeDownTo WMStack~
-Test.Test 
+Test.Test

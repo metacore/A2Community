@@ -9,12 +9,12 @@ to enable direct opening from File List Window, add this to the FileHandler sect
 *)
 
 IMPORT WMWindowManager, WMGraphics, WMMatrix, WMStack, Files, Streams, Strings, Options, MatrixBase, MatrixUtilities,MatrixRaster, Codecs, Commands, WMTensor;
-	
+
 CONST
 	(* display options *)
 	MaxIntensity*=1;
 	SumIntensity*=2;
-	
+
 PROCEDURE Load*(CONST name:Files.FileName; orientation:LONGINT; options:Options.Options): WMWindowManager.Window;
 VAR d: ARRAY [?] OF MatrixBase.Datatype;
 	d2: ARRAY [*,*] OF MatrixBase.Datatype;
@@ -32,18 +32,18 @@ VAR d: ARRAY [?] OF MatrixBase.Datatype;
 	max: MatrixBase.Datatype;
 BEGIN
 	f:=Files.Old(name);
-	IF f#NIL THEN 
+	IF f#NIL THEN
 		Files.OpenReader(r,f,0);
-		MatrixUtilities.ParseHeader(r,version, datatype,len); 
+		MatrixUtilities.ParseHeader(r,version, datatype,len);
 		NEW(d,len);
-		CASE datatype OF 
+		CASE datatype OF
 		MatrixUtilities.DatatypeUInt8: NEW(d16,len); MatrixUtilities.ReadUInt8(r,d16); d:=d16;
 		| MatrixUtilities.DatatypeLInt: NEW(d32,len); MatrixUtilities.ReadLInt(r,d32); d:=d32;
 		| MatrixUtilities.DatatypeR : NEW(d, len); MatrixUtilities.ReadR(r,dr); d:=dr;
 		| MatrixUtilities.DatatypeLR : NEW(d, len); MatrixUtilities.ReadLR(r,d);
 		ELSE HALT(200);
 		END;
-		IF DIM(d)=2 THEN 
+		IF DIM(d)=2 THEN
 			NEW(mWindow, d, name);
 			mWindow.AddWindow;
 			RETURN mWindow;
@@ -58,7 +58,7 @@ BEGIN
 				IF orientation=0 THEN
 					IF options.GetFlag("oblique") THEN
 						NEW(d2,LEN(d,1)+LEN(d,0), LEN(d,2)+LEN(d,0));
-						d2[..LEN(d,1)-1, ..LEN(d,2)-1]:=d[0,..,..]; 
+						d2[..LEN(d,1)-1, ..LEN(d,2)-1]:=d[0,..,..];
 						FOR y:=0 TO LEN(d2,0)-1 DO
 							FOR x:=0 TO LEN(d2,1)-1 DO
 								max:=0;
@@ -73,22 +73,22 @@ BEGIN
 						END;
 
 					ELSE
-						d2:=d[0,..,..]; 
+						d2:=d[0,..,..];
 						FOR y:=0 TO LEN(d,1)-1 DO
 							FOR x:=0 TO LEN(d,2)-1 DO
-								d2[y,x]:=MAX(d[..,y,x]); 
+								d2[y,x]:=MAX(d[..,y,x]);
 							END;
 						END;
 					END;
 				ELSIF orientation=1 THEN
-					d2:=d[..,0,..]; 
+					d2:=d[..,0,..];
 					FOR x:=0 TO LEN(d,0)-1 DO
 						FOR y:=0 TO LEN(d,2)-1 DO
 							d2[x,y]:=MAX(d[x,..,y]);
 						END;
 					END;
 				ELSIF orientation=2 THEN
-					d2:=d[..,..,0]; 
+					d2:=d[..,..,0];
 					FOR x:=0 TO LEN(d,0)-1 DO
 						FOR y:=0 TO LEN(d,1)-1 DO
 							d2[x,y]:=MAX(d[x,y,..]);
@@ -103,21 +103,21 @@ BEGIN
 				IF orientation=0 THEN
 					IF options.GetFlag("oblique") THEN
 						NEW(d2,LEN(d,1)+LEN(d,0), LEN(d,2)+LEN(d,0));
-						d2[..LEN(d,1)-1, ..LEN(d,2)-1]:=d[0,..,..]; 
-						FOR i:=1 TO LEN(d,0)-1 DO 
+						d2[..LEN(d,1)-1, ..LEN(d,2)-1]:=d[0,..,..];
+						FOR i:=1 TO LEN(d,0)-1 DO
 							d2[	i..i+LEN(d,1)-1, i..i+LEN(d,2)-1]:=d2[	i..i+LEN(d,1)-1, i..i+LEN(d,2)-1]+d[i,..,..];
 						END;
 					ELSE
-						d2:=d[0,..,..]; 
-						FOR i:=1 TO LEN(d,0)-1 DO 
+						d2:=d[0,..,..];
+						FOR i:=1 TO LEN(d,0)-1 DO
 							d2:=d2+d[i,..,..];
 						END;
 					END;
 				ELSIF orientation=1 THEN
-					d2:=d[..,0,..]; 
+					d2:=d[..,0,..];
 					FOR i:=1 TO LEN(d,1)-1 DO d2:=d2+d[..,i,..] END;
 				ELSIF orientation=2 THEN
-					d2:=d[..,..,0]; 
+					d2:=d[..,..,0];
 					FOR i:=1 TO LEN(d,2)-1 DO d2:=d2+d[..,..,i] END;
 				END;
 				title:="Sum "; Strings.Append(title,name);
@@ -141,7 +141,7 @@ END Load;
 
 PROCEDURE Open*(context:Commands.Context);
 VAR name: Files.FileName; w:WMWindowManager.Window; orientation:LONGINT;
-VAR options : Options.Options; 
+VAR options : Options.Options;
 BEGIN
 	NEW(options);
 	options.Add("m", "max", Options.Flag);
@@ -201,10 +201,10 @@ BEGIN
 	IF context.arg.GetString(fn) THEN
 		data:=Import(fn);
 		FOR i:=0 TO DIM(data)-1 DO
-			context.out.Int(LEN(data,i),6); 
+			context.out.Int(LEN(data,i),6);
 		END;
 		context.out.Ln; context.out.Update;
-		IF DIM(data)=3 THEN 
+		IF DIM(data)=3 THEN
 			FOR i:=0 TO DIM(data)-1 DO
 				NEW(window, data[i,..,..], "");
 				window.AddWindow;

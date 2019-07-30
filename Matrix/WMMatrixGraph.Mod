@@ -2,13 +2,13 @@ MODULE WMMatrixGraph ;	(**  AUTHOR "Patrick Hunziker"; PURPOSE "Graph Rendering 
 (*a matrix is considered as a group of curves*)
 IMPORT Modules, Commands, WM:=WMWindowManager, WMGraphics, WMRectangles, Strings, Models, MathL;
 
-CONST 
+CONST
 	Version*=1;
-	
+
 	(** line styles *)
-	line* = 0;  
-	dot* = 1;  
-	
+	line* = 0;
+	dot* = 1;
+
 	(** dataorder: organisation/meaning of data in matrix *)
 	YYYY* = 0;   (** 1D graphs *)
 	XYYY* = 1;   (** first row is X, other rows are Y *)
@@ -16,13 +16,13 @@ CONST
 	XYZ* = 3;   (** mesh display with col=X, row=Y, value=Z *)
 	FUNC*= 4; (** function model*)
 
-TYPE 
+TYPE
 		Datatype*=LONGREAL;
 		Matrix*=ARRAY [*,*] OF Datatype;
-		RealPoint=ARRAY [*] OF Datatype; 
+		RealPoint=ARRAY [*] OF Datatype;
 		IntPoint=ARRAY [*] OF LONGINT;
-		
-TYPE Point* = POINTER TO RECORD 
+
+TYPE Point* = POINTER TO RECORD
 				x,y: Datatype;
 				next: Point
 			END;
@@ -37,12 +37,12 @@ TYPE Model*=OBJECT(Models.Model);
 			minx:=SELF.minx; maxx:=SELF.maxx; miny:=SELF.miny; maxy:=SELF.maxy;
 		END Bounds;
 	END Model;
-		
+
 TYPE MatrixModel*= OBJECT (Model)
 		VAR matrix:Matrix;
 			dataorder:LONGINT;
 	END MatrixModel;
-		
+
 TYPE OldMatrixModel*= OBJECT (Model)
 		VAR matrix:POINTER TO ARRAY OF ARRAY OF Datatype;
 			dataorder:LONGINT;
@@ -55,27 +55,27 @@ TYPE FunctionModel*= OBJECT (Model)
 			RETURN MathL.sin(2*x)
 		END Value;
 	END FunctionModel;
-	
+
 TYPE PointListModel*= OBJECT(Model)
 		VAR p: Point;
 	END PointListModel;
-	
+
 (* graphical components *)
 TYPE Curve= OBJECT
-	VAR 
-		linecol*: LONGINT;  
-		linestyle*: LONGINT;  
-		beg*, end*: LONGINT;  
+	VAR
+		linecol*: LONGINT;
+		linestyle*: LONGINT;
+		beg*, end*: LONGINT;
 		next: Curve;
 	END Curve;
 
 TYPE Graph= OBJECT
 	VAR
-		model* : Models.Model; 
-		curves*: Curve; 
-		autoscaleX*, autoscaleY*,autoscaleZ*: BOOLEAN;  
+		model* : Models.Model;
+		curves*: Curve;
+		autoscaleX*, autoscaleY*,autoscaleZ*: BOOLEAN;
 		X0, Y0, Z0, W, H, Z:LONGINT;
-		minx, miny, maxx, maxy, scalex,scaley :LONGREAL; 
+		minx, miny, maxx, maxy, scalex,scaley :LONGREAL;
 	END Graph;
 
 TYPE Window*= OBJECT (WM.BufferWindow)
@@ -87,36 +87,36 @@ TYPE Window*= OBJECT (WM.BufferWindow)
 		hightclue, depthclue:BOOLEAN;
 		windowposX,windowposY:LONGINT;
 		background:LONGINT;
-	
+
 	PROCEDURE &Create*(width,height:LONGINT; backgroundRGBA: LONGINT; CONST title:ARRAY OF CHAR);
 	BEGIN
 		SELF.width:=width; SELF.height:=height;
 		SELF.background:=backgroundRGBA;
-		Init(width, height, TRUE); 
+		Init(width, height, TRUE);
 		(*projection:=[[0.9, 0.1, 0],[-0.1,0.9,0.1],[0,-0.1,0.9]];  default projection *)
 		hightclue:=TRUE; depthclue:=TRUE;
 		SetTitle(Strings.NewString(title));
 		windowposX:=100; windowposY:=100;
-		
-		NEW(graph); 
+
+		NEW(graph);
 		graph.X0 := width DIV 10; graph.W:= width-2*graph.X0;
 		graph.Y0:= height DIV 10; graph.H:=height-2*graph.Y0;
 		graph.autoscaleX:=TRUE; graph.autoscaleY:=TRUE; graph.autoscaleZ := TRUE;
-		
+
 		Clear;
 	END Create;
-	
+
 	PROCEDURE Show*;
 	BEGIN
 		WM.ExtAddWindow(SELF, windowposX, windowposY, {WM.FlagFrame,WM.FlagClose,WM.FlagMinimize});
 		(*WM.DefaultAddWindow(SELF);*)
 	END Show;
-	
+
 	PROCEDURE Clear*;
 	BEGIN
 		canvas.Fill(WMGraphics.MakeRectangle(0, 0, width, height), background, WMGraphics.ModeSrcOverDst)
 	END Clear;
-	
+
 	PROCEDURE AllocateCurves(n:LONGINT);
 	VAR curve:Curve; i:LONGINT;
 	BEGIN
@@ -126,7 +126,7 @@ TYPE Window*= OBJECT (WM.BufferWindow)
 			curve.linecol:= i * 011000000H +077FF00H-i*01100H+ 077H;
 		END;
 	END AllocateCurves;
-	
+
 	PROCEDURE SetModel(model: ANY);
 	BEGIN
 		IF model IS MatrixModel THEN
@@ -138,29 +138,29 @@ TYPE Window*= OBJECT (WM.BufferWindow)
 		ELSIF model IS PointListModel THEN	graph.model := model(Model);
 		END;
 	END SetModel;
-	
+
 	PROCEDURE Set*(CONST data:Matrix);
 	BEGIN
-		NEW(model); model.matrix:=data; 
+		NEW(model); model.matrix:=data;
 		graph.model:=model; (*! keeping model at a single place would be more consistent ...*)
 		graph.curves:=NIL;
 		AllocateCurves(LEN(SELF.model.matrix,0))
 	END Set;
-	
+
 	PROCEDURE SetProjection*(CONST projection:  Matrix);
 	BEGIN
 		IF LEN(projection,0)=3 THEN SELF.projection:= projection ELSE SELF.projection:=[[1,0,0],[0,1,0],[0,0,1]] END;
 	END SetProjection;
-	
+
 	PROCEDURE SetDataorder*(dataorder:LONGINT);
 	VAR func: FunctionModel;
 	BEGIN
-		
-		IF dataorder=FUNC THEN NEW(func); graph.model:=func; AllocateCurves(1); 
+
+		IF dataorder=FUNC THEN NEW(func); graph.model:=func; AllocateCurves(1);
 		ELSIF graph.model IS MatrixModel THEN graph.model(MatrixModel).dataorder:=dataorder;
 		END;
 	END SetDataorder;
-	
+
 	PROCEDURE Render*;
 	VAR
 		(* 2D*)
@@ -168,7 +168,7 @@ TYPE Window*= OBJECT (WM.BufferWindow)
 		c: Curve;
 		(* 3D*)
 		depth,x,y,col:LONGINT;
-		x0,y0,z0:LONGREAL; 
+		x0,y0,z0:LONGREAL;
 		p,len:RealPoint; p0,p1: IntPoint;
 		scale:LONGREAL; zscale,zrange,minz: LONGREAL;
 		(*function*)
@@ -181,14 +181,14 @@ TYPE Window*= OBJECT (WM.BufferWindow)
 		graph.model(Model).Bounds(graph.autoscaleX, graph.autoscaleY, graph.autoscaleZ, graph.minx, graph.maxx, graph.miny, graph.maxy);
 		graph.scalex:= graph.W/(graph.maxx-graph.minx);
 		graph.scaley:=graph.H/(graph.maxy-graph.miny);
-		
+
 		IF graph.model IS PointListModel THEN
 				oldp:=graph.model(PointListModel).p;
 				WHILE oldp.next#NIL DO
 					newp:=oldp.next;
 					canvas.Line(graph.X0+ENTIER ((oldp.x-graph.minx)*graph.scalex), height - graph.Y0 -ENTIER ((oldp.y-graph.miny)*graph.scaley),
 								graph.X0+ENTIER ((newp.x-graph.minx)*graph.scalex), height-graph.Y0-ENTIER ((newp.y-graph.miny)*graph.scaley),
-								c.linecol, WMGraphics.ModeSrcOverDst); 
+								c.linecol, WMGraphics.ModeSrcOverDst);
 					oldp:=newp;
 				END;
 		ELSIF graph.model IS FunctionModel THEN
@@ -198,105 +198,105 @@ TYPE Window*= OBJECT (WM.BufferWindow)
 				FOR i:=0 TO steps-2 DO (* to do: scaling issues in x .. *)
 					canvas.Line(graph.X0+ENTIER ((i*step)*graph.scalex), 	 height - graph.Y0 - ENTIER ((graph.model(FunctionModel).Value(i*step+graph.minx)-graph.miny)*graph.scaley),
 								graph.X0+ENTIER (((i+1)*step)*graph.scalex), height - graph.Y0 - ENTIER ((graph.model(FunctionModel).Value((i+1)*step+graph.minx)-graph.miny)*graph.scaley),
-								c.linecol, WMGraphics.ModeSrcOverDst); 
+								c.linecol, WMGraphics.ModeSrcOverDst);
 				END;
 		ELSIF graph.model IS MatrixModel THEN
 			CASE graph.model(MatrixModel).dataorder OF
 				YYYY: (*all rows contain curve Y data*)
-					IF graph.autoscaleX THEN 
-						graph.minx:=0; 
+					IF graph.autoscaleX THEN
+						graph.minx:=0;
 						graph.maxx:=LEN(model.matrix,1)-1;
 						graph.scalex:= graph.W/(graph.maxx-graph.minx);
-					END;	
-					IF graph.autoscaleY THEN			
-						graph.miny:=MIN(model.matrix); 
+					END;
+					IF graph.autoscaleY THEN
+						graph.miny:=MIN(model.matrix);
 						graph.maxy:=MAX(model.matrix);
 						graph.scaley:=graph.H/(graph.maxy-graph.miny);
 					END;
 					c:=graph.curves;
 					FOR j:=0 TO LEN(model.matrix,0)-1 DO
-						FOR i:=0 TO LEN(model.matrix,1)-2 DO 
+						FOR i:=0 TO LEN(model.matrix,1)-2 DO
 							canvas.Line(ENTIER((i-graph.minx)*graph.scalex)+graph.X0, height - graph.Y0 -ENTIER ((model.matrix[j,i]-graph.miny)*graph.scaley),
 										ENTIER((i-graph.minx+1)*graph.scalex)+graph.X0, height-graph.Y0-ENTIER ((model.matrix[j,i+1]-graph.miny)*graph.scaley),
-										c.linecol, WMGraphics.ModeSrcOverDst); 
-						END; 
+										c.linecol, WMGraphics.ModeSrcOverDst);
+						END;
 						c:=c.next;
 					END;
 				| XYXY: (* a number of row pairs containing X,Y data for each point*)
-					IF graph.autoscaleX THEN 
-						graph.minx:=MIN(model.matrix[.. BY 2]); 
+					IF graph.autoscaleX THEN
+						graph.minx:=MIN(model.matrix[.. BY 2]);
 						graph.maxx:=MAX(model.matrix[.. BY 2]);
 						graph.scalex:= graph.W/(graph.maxx-graph.minx);
-					END;	
-					IF graph.autoscaleY THEN			
-						graph.miny:=MIN(model.matrix[1.. BY 2]); 
+					END;
+					IF graph.autoscaleY THEN
+						graph.miny:=MIN(model.matrix[1.. BY 2]);
 						graph.maxy:=MAX(model.matrix[1.. BY 2]);
 						graph.scaley:=graph.H/(graph.maxy-graph.miny);
 					END;
 					c:=graph.curves;
 					FOR j:=0 TO LEN(model.matrix,0)-1 BY 2 DO
-						FOR i:=0 TO LEN(model.matrix,1)-2 DO 
+						FOR i:=0 TO LEN(model.matrix,1)-2 DO
 							canvas.Line(graph.X0+ENTIER ((model.matrix[j,i]-graph.minx)*graph.scalex), height - graph.Y0 -ENTIER ((model.matrix[j+1,i]-graph.miny)*graph.scaley),
 										graph.X0+ENTIER ((model.matrix[j,i+1]-graph.minx)*graph.scalex), height-graph.Y0-ENTIER ((model.matrix[j+1,i+1]-graph.miny)*graph.scaley),
-										c.linecol, WMGraphics.ModeSrcOverDst); 
-						END; 
+										c.linecol, WMGraphics.ModeSrcOverDst);
+						END;
 						c:=c.next;
 					END;
 				| XYYY: (* first row are common X locations, other rows are individual curve Y values *)
-					IF graph.autoscaleX THEN 
-						graph.minx:=MIN(model.matrix[0]); 
+					IF graph.autoscaleX THEN
+						graph.minx:=MIN(model.matrix[0]);
 						graph.maxx:=MAX(model.matrix[0]);
 						graph.scalex:= graph.W/(graph.maxx-graph.minx);
-					END;	
-					IF graph.autoscaleY THEN			
-						graph.miny:=MIN(model.matrix[1..]); 
+					END;
+					IF graph.autoscaleY THEN
+						graph.miny:=MIN(model.matrix[1..]);
 						graph.maxy:=MAX(model.matrix[1..]);
 						graph.scaley:=graph.H/(graph.maxy-graph.miny);
 					END;
 					c:=graph.curves;
 					FOR j:=1 TO LEN(model.matrix,0)-1 DO
-						FOR i:=0 TO LEN(model.matrix,1)-2 DO 
+						FOR i:=0 TO LEN(model.matrix,1)-2 DO
 							canvas.Line(graph.X0+ENTIER ((model.matrix[0,i]-graph.minx)*graph.scalex), height - graph.Y0 -ENTIER ((model.matrix[j,i]-graph.miny)*graph.scaley),
 										graph.X0+ENTIER ((model.matrix[0,i+1]-graph.minx)*graph.scalex), height-graph.Y0-ENTIER ((model.matrix[j,i+1]-graph.miny)*graph.scaley),
-										c.linecol, WMGraphics.ModeSrcOverDst); 
-						END; 
+										c.linecol, WMGraphics.ModeSrcOverDst);
+						END;
 						c:=c.next;
 					END;
-				| XYZ: 
+				| XYZ:
 					NEW(p,3); NEW(p0,3);NEW(p1,3);
-					x0:=MAX(LEN(model.matrix,0),LEN(model.matrix,1)) / 2; 
+					x0:=MAX(LEN(model.matrix,0),LEN(model.matrix,1)) / 2;
 					y0:=x0;
 					scale:= width/MAX(LEN(model.matrix,0),LEN(model.matrix,1));
-					z0:=  (MAX(model.matrix)+MIN(model.matrix))/2; 
+					z0:=  (MAX(model.matrix)+MIN(model.matrix))/2;
 					minz:=MIN(model.matrix);
 					(*len:=projection * [LEN(model.matrix,0), LEN(model.matrix,1),MAX(model.matrix)]-[0,0, MIN(model.matrix)];
 					zrange:= MathL.sqrt(len +* len);*)
 					zrange:=MAX(model.matrix)-MIN(model.matrix);
-					zscale:= height / zrange; 
+					zscale:= height / zrange;
 					FOR y:=0 TO LEN(model.matrix,0)-1 DO
 						FOR x:=0 TO LEN(model.matrix,1)-1 DO
 							p:= 0.85*[scale*(x-x0), scale*(y-y0), zscale*(model.matrix[y,x]-z0)]; (* to do: used p[2] for color height encoding*)
 							p1 := ENTIER(projection * p + [scale*x0,scale*y0, zscale*z0]); (*project, scale, convert to pixel coordinate*)
-							IF (x#0) THEN 
+							IF (x#0) THEN
 								clamp(0,width-1,p0[0]); clamp(0,width-1,p1[0]); (* strange: points should ~fit into window, but are far off ... Out.Int(p1[2]) *)
 								clamp(0,height-1,p0[2]); clamp(0,height-1,p1[2]);
 								IF hightclue THEN col:=ENTIER((model.matrix[y,x]-minz)/zrange*255) ELSE col:=255 END;
-								IF depthclue THEN depth:= ENTIER((width-p0[1]) * 192 / width)  +64 ELSE depth:=255 END; 
-								canvas.Line(p0[0],p0[2], p1[0], p1[2], (255-col)*256*256 +col*256 +depth, WMGraphics.ModeSrcOverDst); 
+								IF depthclue THEN depth:= ENTIER((width-p0[1]) * 192 / width)  +64 ELSE depth:=255 END;
+								canvas.Line(p0[0],p0[2], p1[0], p1[2], (255-col)*256*256 +col*256 +depth, WMGraphics.ModeSrcOverDst);
 							END;
 							p0:=p1;
 						END;
 					END;
 					FOR x:=0 TO LEN(model.matrix,1)-1 DO
 						FOR y:=0 TO LEN(model.matrix,0)-1 DO
-							p:= 0.85*[scale*(x-x0), scale*(y-y0), zscale*(model.matrix[y,x]-z0)]; 
+							p:= 0.85*[scale*(x-x0), scale*(y-y0), zscale*(model.matrix[y,x]-z0)];
 							p1 := ENTIER(projection * p + [scale*x0,scale*y0, zscale*z0] ); (*project, convert to pixel coordinate*) (* to do: color encoding*)
-							IF (y#0) THEN 
+							IF (y#0) THEN
 								clamp(0,width-1,p0[0]); clamp(0,width-1,p1[0]);
 								clamp(0,height-1,p0[2]); clamp(0,height-1,p1[2]);
 								IF hightclue THEN col:=ENTIER((model.matrix[y,x]-minz)/zrange*255) ELSE col:=255 END;
-								IF depthclue THEN depth:= ENTIER((width-p0[1]) * 192 / width)+64 ELSE depth:=255 END; 
-								canvas.Line(p0[0],p0[2], p1[0], p1[2], (255-col)*256*256 +col*256 +depth, WMGraphics.ModeSrcOverDst); 
+								IF depthclue THEN depth:= ENTIER((width-p0[1]) * 192 / width)+64 ELSE depth:=255 END;
+								canvas.Line(p0[0],p0[2], p1[0], p1[2], (255-col)*256*256 +col*256 +depth, WMGraphics.ModeSrcOverDst);
 							END;
 							p0:=p1;
 						END;
@@ -306,10 +306,10 @@ TYPE Window*= OBJECT (WM.BufferWindow)
 		END;
 		Invalidate(WMRectangles.MakeRect(0, 0, width, height));
 	END Render;
-	
+
 END Window;
 
-PROCEDURE RemoveWindows*(context:Commands.Context); 
+PROCEDURE RemoveWindows*(context:Commands.Context);
 VAR manager:WM.WindowManager; w,remove:WM.Window; i:LONGINT;
 BEGIN {EXCLUSIVE}
 	IF (context=NIL) OR (~context.arg.GetInteger(i,FALSE)) THEN i:=MAX(LONGINT) END;
@@ -322,7 +322,7 @@ BEGIN {EXCLUSIVE}
 		IF (remove#NIL)&(remove IS Window) THEN manager.Remove(remove); DEC(i) END;
 	END;
 	manager.lock.ReleaseWrite;
-END RemoveWindows; 
+END RemoveWindows;
 
 PROCEDURE RemoveAllWindows;
 BEGIN
@@ -355,8 +355,8 @@ PROCEDURE line(VAR m:Display; p0,p1:IntPoint);
 VAR bx,bz,x,z,x0,z0, dx,dz, sigx,sigz,depth :LONGINT;
 BEGIN
 	x0:=p0[0];	z0:=p0[2];  depth:=p0[1]; (*to do: use this for depth rendering*)
-	bx := p1[0]-p0[0]; 	
-	bz := p1 [2]-p0[2]; 
+	bx := p1[0]-p0[0];
+	bz := p1 [2]-p0[2];
 	IF bx>=0 THEN sigx:=1 ELSE sigx:=-1 END;
 	IF bz>=0 THEN sigz:=1 ELSE sigz:=-1 END;
 	IF ABS(bx)>ABS(bz) THEN
@@ -410,7 +410,7 @@ BEGIN
 END Sample;
 
 PROCEDURE Test*;
-VAR projection:Matrix; 
+VAR projection:Matrix;
 BEGIN
 	Render(Sample(2),512,projection); (*uses default projection*)
 END Test;

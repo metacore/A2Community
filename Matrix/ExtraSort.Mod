@@ -1,8 +1,8 @@
 MODULE ExtraSort;
 (*
 	DESCRIPTION:
-		Library of sorting algorithms 
-		
+		Library of sorting algorithms
+
 	AUTHOR:
 		Alexey Morozov
 *)
@@ -16,31 +16,31 @@ TYPE
 		INPUTS:
 			x[var] - array to sort
 	*)
-	PROCEDURE QuickSortLI*( VAR x: ARRAY [ * ] OF LONGINT);  	
+	PROCEDURE QuickSortLI*( VAR x: ARRAY [ * ] OF LONGINT);
 
-		PROCEDURE QSort( VAR x: ARRAY [ * ] OF LONGINT; l, r: INDEX );  
-		VAR m: INDEX;  
-		BEGIN 
-			WHILE l < r DO 
+		PROCEDURE QSort( VAR x: ARRAY [ * ] OF LONGINT; l, r: INDEX );
+		VAR m: INDEX;
+		BEGIN
+			WHILE l < r DO
 				(* quickly sort short lists *)
-				IF r - l <= 50 THEN InsertionSortLI( x, l, r );  RETURN;  END;  
-				
-				m := PartitionLI( x, l, r );  
-				
+				IF r - l <= 50 THEN InsertionSortLI( x, l, r );  RETURN;  END;
+
+				m := PartitionLI( x, l, r );
+
 				(* eliminate tail recursion and *)
 				(* sort the smallest partition first *)
 				(* to minimize stack requirements    *)
-				IF m - l <= r - m THEN QSort( x, l, m );  l := m + 1;  ELSE 
+				IF m - l <= r - m THEN QSort( x, l, m );  l := m + 1;  ELSE
 
-					QSort( x, m + 1, r );  r := m;  
-				END;  
-			END;  
-		END QSort;				
+					QSort( x, m + 1, r );  r := m;
+				END;
+			END;
+		END QSort;
 
-	BEGIN 	
-		QSort(x , 0, LEN( x,0 ) - 1 );  
+	BEGIN
+		QSort(x , 0, LEN( x,0 ) - 1 );
 	END QuickSortLI;
-	
+
 	(*
 		DESCRIPTION:
 			Quick sort for LONGINT data
@@ -48,66 +48,66 @@ TYPE
 			x[var] - array to sort
 			ind[var] - sorting indices
 	*)
-	PROCEDURE QuickSortExLI*( VAR x: ARRAY [ * ] OF LONGINT;  VAR ind: ARRAY [ * ] OF INDEX );  
-	VAR i: INDEX;  
+	PROCEDURE QuickSortExLI*( VAR x: ARRAY [ * ] OF LONGINT;  VAR ind: ARRAY [ * ] OF INDEX );
+	VAR i: INDEX;
 
-		PROCEDURE QSort( VAR x: ARRAY [ * ] OF LONGINT;  VAR ind: ARRAY [ * ] OF INDEX;  l, r: INDEX );  
-		VAR m: INDEX;  
-		BEGIN 
-			WHILE l < r DO 
+		PROCEDURE QSort( VAR x: ARRAY [ * ] OF LONGINT;  VAR ind: ARRAY [ * ] OF INDEX;  l, r: INDEX );
+		VAR m: INDEX;
+		BEGIN
+			WHILE l < r DO
 				(* quickly sort short lists *)
-				IF r - l <= 50 THEN InsertionSortExLI( x, ind, l, r );  RETURN;  END;  
-				
-				m := PartitionExLI( x, ind, l, r );  
-				
+				IF r - l <= 50 THEN InsertionSortExLI( x, ind, l, r );  RETURN;  END;
+
+				m := PartitionExLI( x, ind, l, r );
+
 				(* eliminate tail recursion and *)
 				(* sort the smallest partition first *)
 				(* to minimize stack requirements    *)
-				IF m - l <= r - m THEN QSort( x, ind, l, m );  l := m + 1;  ELSE 
+				IF m - l <= r - m THEN QSort( x, ind, l, m );  l := m + 1;  ELSE
 
-					QSort( x, ind, m + 1, r );  r := m;  
-				END;  
-			END;  
-		END QSort;  
+					QSort( x, ind, m + 1, r );  r := m;
+				END;
+			END;
+		END QSort;
 
-	BEGIN 
-		IF LEN( ind ,0) < LEN( x,0 ) THEN NEW( ind, LEN( x,0 ) );  END;  		
-		FOR i := 0 TO LEN( x,0 ) - 1 DO ind[i] := i;  END;  
-		QSort(x , ind, 0, LEN( x,0 ) - 1 );  
-	END QuickSortExLI; 
-	
+	BEGIN
+		IF LEN( ind ,0) < LEN( x,0 ) THEN NEW( ind, LEN( x,0 ) );  END;
+		FOR i := 0 TO LEN( x,0 ) - 1 DO ind[i] := i;  END;
+		QSort(x , ind, 0, LEN( x,0 ) - 1 );
+	END QuickSortExLI;
+
 	(*
 		DESCRIPTION:
 			Quick sort for REAL data
 		INPUTS:
 			x[var] - array to sort
 	*)
-	PROCEDURE QuickSortR*( VAR x: ARRAY [ * ] OF REAL);  	
+	PROCEDURE QuickSortR*( VAR x: ARRAY [ * ] OF REAL);
 
-		PROCEDURE QSort( VAR x: ARRAY [ * ] OF REAL; l, r: INDEX );  
-		VAR m: INDEX;  
-		BEGIN 
-			WHILE l < r DO 
+		PROCEDURE QSort( VAR x: ARRAY [ * ] OF REAL; l, r: INDEX );
+		VAR m: INDEX;
+		BEGIN
+			WHILE l < r DO
 				(* quickly sort short lists *)
-				IF r - l <= 50 THEN InsertionSortR( x, l, r );  RETURN;  END;  
-				
-				m := PartitionR( x, l, r );  
-				
+				IF r - l <= 50 THEN InsertionSortR( x, l, r );  RETURN;  END;
+
+				m := PartitionR( x, l, r );
+
 				(* eliminate tail recursion and *)
 				(* sort the smallest partition first *)
 				(* to minimize stack requirements    *)
-				IF m - l <= r - m THEN QSort( x, l, m );  l := m + 1;  ELSE 
+				IF m - l <= r - m THEN QSort( x, l, m );  l := m + 1;  ELSE
 
-					QSort( x, m + 1, r );  r := m;  
-				END;  
-			END;  
-		END QSort;  
+					QSort( x, m + 1, r );  r := m;
+				END;
+			END;
+		END QSort;
 
-	BEGIN 
-		QSort( x, 0, LEN( x,0 ) - 1 );  
+	BEGIN
+		QSort( x, 0, LEN( x,0 ) - 1 );
 	END QuickSortR;
-	
-	 
+
+
 	(*
 		DESCRIPTION:
 			Quick sort for REAL data
@@ -115,65 +115,65 @@ TYPE
 			x[var] - array to sort
 			ind[var] - sorting indices
 	*)
-	PROCEDURE QuickSortExR*( VAR x: ARRAY [ * ] OF REAL;  VAR ind: ARRAY [ * ] OF INDEX );  
-	VAR i: INDEX;  
+	PROCEDURE QuickSortExR*( VAR x: ARRAY [ * ] OF REAL;  VAR ind: ARRAY [ * ] OF INDEX );
+	VAR i: INDEX;
 
-		PROCEDURE QSort( VAR x: ARRAY [ * ] OF REAL;  VAR ind: ARRAY [ * ] OF INDEX;  l, r: INDEX );  
-		VAR m: INDEX;  
-		BEGIN 
-			WHILE l < r DO 
+		PROCEDURE QSort( VAR x: ARRAY [ * ] OF REAL;  VAR ind: ARRAY [ * ] OF INDEX;  l, r: INDEX );
+		VAR m: INDEX;
+		BEGIN
+			WHILE l < r DO
 				(* quickly sort short lists *)
-				IF r - l <= 50 THEN InsertionSortExR( x, ind, l, r );  RETURN;  END;  
-				
-				m := PartitionExR( x, ind, l, r );  
-				
+				IF r - l <= 50 THEN InsertionSortExR( x, ind, l, r );  RETURN;  END;
+
+				m := PartitionExR( x, ind, l, r );
+
 				(* eliminate tail recursion and *)
 				(* sort the smallest partition first *)
 				(* to minimize stack requirements    *)
-				IF m - l <= r - m THEN QSort( x, ind, l, m );  l := m + 1;  ELSE 
+				IF m - l <= r - m THEN QSort( x, ind, l, m );  l := m + 1;  ELSE
 
-					QSort( x, ind, m + 1, r );  r := m;  
-				END;  
-			END;  
-		END QSort;  
+					QSort( x, ind, m + 1, r );  r := m;
+				END;
+			END;
+		END QSort;
 
-	BEGIN 
-		IF LEN( ind,0 ) < LEN( x,0 ) THEN NEW( ind, LEN( x,0 ) );  END;  
-		FOR i := 0 TO LEN( x,0 ) - 1 DO ind[i] := i;  END;  
-		QSort( x, ind, 0, LEN( x,0 ) - 1 );  
-	END QuickSortExR;  
-	
+	BEGIN
+		IF LEN( ind,0 ) < LEN( x,0 ) THEN NEW( ind, LEN( x,0 ) );  END;
+		FOR i := 0 TO LEN( x,0 ) - 1 DO ind[i] := i;  END;
+		QSort( x, ind, 0, LEN( x,0 ) - 1 );
+	END QuickSortExR;
+
 	(*
 		DESCRIPTION:
 			Quick sort for LONGREAL data
 		INPUTS:
 			x[var] - array to sort
 	*)
-	PROCEDURE QuickSortLR*( VAR x: ARRAY [ * ] OF LONGREAL);  
+	PROCEDURE QuickSortLR*( VAR x: ARRAY [ * ] OF LONGREAL);
 
-		PROCEDURE QSort( VAR x: ARRAY [ * ] OF LONGREAL; l, r: INDEX );  
-		VAR m: INDEX;  
-		BEGIN 
-			WHILE l < r DO 
+		PROCEDURE QSort( VAR x: ARRAY [ * ] OF LONGREAL; l, r: INDEX );
+		VAR m: INDEX;
+		BEGIN
+			WHILE l < r DO
 				(* quickly sort short lists *)
-				IF r - l <= 50 THEN InsertionSortLR( x, l, r );  RETURN;  END;  
-				
-				m := PartitionLR( x, l, r );  
-				
+				IF r - l <= 50 THEN InsertionSortLR( x, l, r );  RETURN;  END;
+
+				m := PartitionLR( x, l, r );
+
 				(* eliminate tail recursion and *)
 				(* sort the smallest partition first *)
 				(* to minimize stack requirements    *)
-				IF m - l <= r - m THEN QSort( x, l, m );  l := m + 1;  ELSE 
+				IF m - l <= r - m THEN QSort( x, l, m );  l := m + 1;  ELSE
 
-					QSort( x, m + 1, r );  r := m;  
-				END;  
-			END;  
-		END QSort;  
+					QSort( x, m + 1, r );  r := m;
+				END;
+			END;
+		END QSort;
 
-	BEGIN 		
-		QSort( x, 0, LEN( x,0 ) - 1 );  
-	END QuickSortLR; 
-	
+	BEGIN
+		QSort( x, 0, LEN( x,0 ) - 1 );
+	END QuickSortLR;
+
 	(*
 		DESCRIPTION:
 			Quick sort for LONGREAL data
@@ -181,287 +181,287 @@ TYPE
 			x[var] - array to sort
 			ind[var] - sorting indices
 	*)
-	PROCEDURE QuickSortExLR*( VAR x: ARRAY [ * ] OF LONGREAL;  VAR ind: ARRAY [ * ] OF INDEX );  
-	VAR i: INDEX;  
+	PROCEDURE QuickSortExLR*( VAR x: ARRAY [ * ] OF LONGREAL;  VAR ind: ARRAY [ * ] OF INDEX );
+	VAR i: INDEX;
 
-		PROCEDURE QSort( VAR x: ARRAY [ * ] OF LONGREAL;  VAR ind: ARRAY [ * ] OF INDEX;  l, r: INDEX );  
-		VAR m: INDEX;  
-		BEGIN 
-			WHILE l < r DO 
+		PROCEDURE QSort( VAR x: ARRAY [ * ] OF LONGREAL;  VAR ind: ARRAY [ * ] OF INDEX;  l, r: INDEX );
+		VAR m: INDEX;
+		BEGIN
+			WHILE l < r DO
 				(* quickly sort short lists *)
-				IF r - l <= 50 THEN InsertionSortExLR( x, ind, l, r );  RETURN;  END;  
-				
-				m := PartitionExLR( x, ind, l, r );  
-				
+				IF r - l <= 50 THEN InsertionSortExLR( x, ind, l, r );  RETURN;  END;
+
+				m := PartitionExLR( x, ind, l, r );
+
 				(* eliminate tail recursion and *)
 				(* sort the smallest partition first *)
 				(* to minimize stack requirements    *)
-				IF m - l <= r - m THEN QSort( x, ind, l, m );  l := m + 1;  ELSE 
+				IF m - l <= r - m THEN QSort( x, ind, l, m );  l := m + 1;  ELSE
 
-					QSort( x, ind, m + 1, r );  r := m;  
-				END;  
-			END;  
-		END QSort;  
+					QSort( x, ind, m + 1, r );  r := m;
+				END;
+			END;
+		END QSort;
 
-	BEGIN 
-		IF LEN( ind,0 ) < LEN( x,0 ) THEN NEW( ind, LEN( x,0 ) );  END;  
-		FOR i := 0 TO LEN( x,0 ) - 1 DO ind[i] := i;  END;  
-		QSort( x, ind, 0, LEN( x,0 ) - 1 );  
-	END QuickSortExLR;  
-	
+	BEGIN
+		IF LEN( ind,0 ) < LEN( x,0 ) THEN NEW( ind, LEN( x,0 ) );  END;
+		FOR i := 0 TO LEN( x,0 ) - 1 DO ind[i] := i;  END;
+		QSort( x, ind, 0, LEN( x,0 ) - 1 );
+	END QuickSortExLR;
+
 	(*
 		procedures for internal use
 	*)
-	
-	PROCEDURE InsertionSortLI( VAR x: ARRAY [ * ] OF LONGINT; l, r: INDEX );  
-	VAR t: INDEX;  i, j: INDEX;  
-	BEGIN 
-		FOR i := l + 1 TO r DO 
-			t := x[i];
-			
-			(* shift down until insertion point found *)
-			j := i - 1;  
-			WHILE (j >= 0) & (x[j] > t) DO 
 
-				x[j + 1] := x[j];  DEC( j );  
-			END;  
-			
+	PROCEDURE InsertionSortLI( VAR x: ARRAY [ * ] OF LONGINT; l, r: INDEX );
+	VAR t: INDEX;  i, j: INDEX;
+	BEGIN
+		FOR i := l + 1 TO r DO
+			t := x[i];
+
+			(* shift down until insertion point found *)
+			j := i - 1;
+			WHILE (j >= 0) & (x[j] > t) DO
+
+				x[j + 1] := x[j];  DEC( j );
+			END;
+
 			(* insert *)
 			x[j + 1] := t;
-		END;  
+		END;
 	END InsertionSortLI;
 
-	PROCEDURE InsertionSortExLI( VAR x: ARRAY [ * ] OF LONGINT;  VAR ind: ARRAY [ * ] OF INDEX;  l, r: INDEX );  
-	VAR t: INDEX;  i, j, k: INDEX;  
-	BEGIN 
-		FOR i := l + 1 TO r DO 
-			t := x[i];  k := ind[i];  
-			
-			(* shift down until insertion point found *)
-			j := i - 1;  
-			WHILE (j >= 0) & (x[j] > t) DO 
+	PROCEDURE InsertionSortExLI( VAR x: ARRAY [ * ] OF LONGINT;  VAR ind: ARRAY [ * ] OF INDEX;  l, r: INDEX );
+	VAR t: INDEX;  i, j, k: INDEX;
+	BEGIN
+		FOR i := l + 1 TO r DO
+			t := x[i];  k := ind[i];
 
-				x[j + 1] := x[j];  ind[j + 1] := ind[j];  DEC( j );  
-			END;  
-			
+			(* shift down until insertion point found *)
+			j := i - 1;
+			WHILE (j >= 0) & (x[j] > t) DO
+
+				x[j + 1] := x[j];  ind[j + 1] := ind[j];  DEC( j );
+			END;
+
 			(* insert *)
-			x[j + 1] := t;  ind[j + 1] := k;  
-		END;  
-	END InsertionSortExLI;  
-	
-	PROCEDURE InsertionSortR( VAR x: ARRAY [ * ] OF REAL;  l, r: INDEX );  
-	VAR t: REAL;  i, j: INDEX;  
-	BEGIN 
-		FOR i := l + 1 TO r DO 
-			t := x[i];
-			
-			(* shift down until insertion point found *)
-			j := i - 1;  
-			WHILE (j >= 0) & (x[j] > t) DO 
+			x[j + 1] := t;  ind[j + 1] := k;
+		END;
+	END InsertionSortExLI;
 
-				x[j + 1] := x[j];  DEC( j );  
-			END;  
-			
+	PROCEDURE InsertionSortR( VAR x: ARRAY [ * ] OF REAL;  l, r: INDEX );
+	VAR t: REAL;  i, j: INDEX;
+	BEGIN
+		FOR i := l + 1 TO r DO
+			t := x[i];
+
+			(* shift down until insertion point found *)
+			j := i - 1;
+			WHILE (j >= 0) & (x[j] > t) DO
+
+				x[j + 1] := x[j];  DEC( j );
+			END;
+
 			(* insert *)
 			x[j + 1] := t;
-		END;  
+		END;
 	END InsertionSortR;
 
-	PROCEDURE InsertionSortExR( VAR x: ARRAY [ * ] OF REAL;  VAR ind: ARRAY [ * ] OF INDEX;  l, r: INDEX );  
-	VAR t: REAL;  i, j, k: INDEX;  
-	BEGIN 
-		FOR i := l + 1 TO r DO 
-			t := x[i];  k := ind[i];  
-			
-			(* shift down until insertion point found *)
-			j := i - 1;  
-			WHILE (j >= 0) & (x[j] > t) DO 
+	PROCEDURE InsertionSortExR( VAR x: ARRAY [ * ] OF REAL;  VAR ind: ARRAY [ * ] OF INDEX;  l, r: INDEX );
+	VAR t: REAL;  i, j, k: INDEX;
+	BEGIN
+		FOR i := l + 1 TO r DO
+			t := x[i];  k := ind[i];
 
-				x[j + 1] := x[j];  ind[j + 1] := ind[j];  DEC( j );  
-			END;  
-			
+			(* shift down until insertion point found *)
+			j := i - 1;
+			WHILE (j >= 0) & (x[j] > t) DO
+
+				x[j + 1] := x[j];  ind[j + 1] := ind[j];  DEC( j );
+			END;
+
 			(* insert *)
-			x[j + 1] := t;  ind[j + 1] := k;  
-		END;  
-	END InsertionSortExR; 
-	
-	PROCEDURE InsertionSortLR( VAR x: ARRAY [ * ] OF LONGREAL;  l, r: INDEX );  
-	VAR t: LONGREAL;  i, j: INDEX;  
-	BEGIN 
-		FOR i := l + 1 TO r DO 
-			t := x[i];
-			
-			(* shift down until insertion point found *)
-			j := i - 1;  
-			WHILE (j >= 0) & (x[j] > t) DO 
+			x[j + 1] := t;  ind[j + 1] := k;
+		END;
+	END InsertionSortExR;
 
-				x[j + 1] := x[j]; DEC( j );  
-			END;  
-			
+	PROCEDURE InsertionSortLR( VAR x: ARRAY [ * ] OF LONGREAL;  l, r: INDEX );
+	VAR t: LONGREAL;  i, j: INDEX;
+	BEGIN
+		FOR i := l + 1 TO r DO
+			t := x[i];
+
+			(* shift down until insertion point found *)
+			j := i - 1;
+			WHILE (j >= 0) & (x[j] > t) DO
+
+				x[j + 1] := x[j]; DEC( j );
+			END;
+
 			(* insert *)
 			x[j + 1] := t;
-		END;  
-	END InsertionSortLR; 
+		END;
+	END InsertionSortLR;
 
-	PROCEDURE InsertionSortExLR( VAR x: ARRAY [ * ] OF LONGREAL;  VAR ind: ARRAY [ * ] OF INDEX;  l, r: INDEX );  
-	VAR t: LONGREAL;  i, j, k: INDEX;  
-	BEGIN 
-		FOR i := l + 1 TO r DO 
-			t := x[i];  k := ind[i];  
-			
+	PROCEDURE InsertionSortExLR( VAR x: ARRAY [ * ] OF LONGREAL;  VAR ind: ARRAY [ * ] OF INDEX;  l, r: INDEX );
+	VAR t: LONGREAL;  i, j, k: INDEX;
+	BEGIN
+		FOR i := l + 1 TO r DO
+			t := x[i];  k := ind[i];
+
 			(* shift down until insertion point found *)
-			j := i - 1;  
-			WHILE (j >= 0) & (x[j] > t) DO 
+			j := i - 1;
+			WHILE (j >= 0) & (x[j] > t) DO
 
-				x[j + 1] := x[j];  ind[j + 1] := ind[j];  DEC( j );  
-			END;  
-			
+				x[j + 1] := x[j];  ind[j + 1] := ind[j];  DEC( j );
+			END;
+
 			(* insert *)
-			x[j + 1] := t;  ind[j + 1] := k;  
-		END;  
-	END InsertionSortExLR;  
-	
-	PROCEDURE PartitionLI( VAR x: ARRAY [ * ] OF LONGINT;  l, r: INDEX ): INDEX;  
-	VAR pivot, t: INDEX;  i, j: INDEX;  
-	BEGIN 
-		pivot := x[(l + r) DIV 2];  
-		(* work from both ends, swapping to keep   *)
-		(* values less than pivot to the left, and *)
-		(* values greater than pivot to the right  *)
-		i := l - 1;  j := r + 1;  
-		LOOP 
-			REPEAT DEC( j );  UNTIL (x[j] <= pivot);  
-			REPEAT INC( i );  UNTIL x[i] >= pivot;  
-			
-			IF i >= j THEN EXIT;  
-			END;  
-			
-			(* swap *)
-			t := x[i];  x[i] := x[j];  x[j] := t;  
-		END;  
-		
-		RETURN j;  
-	END PartitionLI;
+			x[j + 1] := t;  ind[j + 1] := k;
+		END;
+	END InsertionSortExLR;
 
-	PROCEDURE PartitionExLI( VAR x: ARRAY [ * ] OF LONGINT;  VAR ind: ARRAY [ * ] OF INDEX;  l, r: INDEX ): INDEX;  
-	VAR pivot, t: INDEX;  i, j, k: INDEX;  
-	BEGIN 
-		pivot := x[(l + r) DIV 2];  
+	PROCEDURE PartitionLI( VAR x: ARRAY [ * ] OF LONGINT;  l, r: INDEX ): INDEX;
+	VAR pivot, t: INDEX;  i, j: INDEX;
+	BEGIN
+		pivot := x[(l + r) DIV 2];
 		(* work from both ends, swapping to keep   *)
 		(* values less than pivot to the left, and *)
 		(* values greater than pivot to the right  *)
-		i := l - 1;  j := r + 1;  
-		LOOP 
-			REPEAT DEC( j );  UNTIL (x[j] <= pivot);  
-			REPEAT INC( i );  UNTIL x[i] >= pivot;  
-			
-			IF i >= j THEN EXIT;  
-			END;  
-			
-			(* swap *)
-			t := x[i];  x[i] := x[j];  x[j] := t;  
+		i := l - 1;  j := r + 1;
+		LOOP
+			REPEAT DEC( j );  UNTIL (x[j] <= pivot);
+			REPEAT INC( i );  UNTIL x[i] >= pivot;
 
-			k := ind[i];  ind[i] := ind[j];  ind[j] := k;  
-		END;  
-		
-		RETURN j;  
-	END PartitionExLI;  
-	
-	PROCEDURE PartitionR( VAR x: ARRAY [ * ] OF REAL;  l, r: INDEX ): INDEX;  
-	VAR pivot, t: REAL;  i, j: INDEX;  
-	BEGIN 
-		pivot := x[(l + r) DIV 2];  
-		(* work from both ends, swapping to keep   *)
-		(* values less than pivot to the left, and *)
-		(* values greater than pivot to the right  *)
-		i := l - 1;  j := r + 1;  
-		LOOP 
-			REPEAT DEC( j );  UNTIL (x[j] <= pivot);  
-			REPEAT INC( i );  UNTIL x[i] >= pivot;  
-			
-			IF i >= j THEN EXIT;  
-			END;  
-			
-			(* swap *)
-			t := x[i];  x[i] := x[j];  x[j] := t;  
-		END;  
-		
-		RETURN j;  
-	END PartitionR; 
+			IF i >= j THEN EXIT;
+			END;
 
-	PROCEDURE PartitionExR( VAR x: ARRAY [ * ] OF REAL;  VAR ind: ARRAY [ * ] OF INDEX;  l, r: INDEX ): INDEX;  
-	VAR pivot, t: REAL;  i, j, k: INDEX;  
-	BEGIN 
-		pivot := x[(l + r) DIV 2];  
-		(* work from both ends, swapping to keep   *)
-		(* values less than pivot to the left, and *)
-		(* values greater than pivot to the right  *)
-		i := l - 1;  j := r + 1;  
-		LOOP 
-			REPEAT DEC( j );  UNTIL (x[j] <= pivot);  
-			REPEAT INC( i );  UNTIL x[i] >= pivot;  
-			
-			IF i >= j THEN EXIT;  
-			END;  
-			
-			(* swap *)
-			t := x[i];  x[i] := x[j];  x[j] := t;  
-
-			k := ind[i];  ind[i] := ind[j];  ind[j] := k;  
-		END;  
-		
-		RETURN j;  
-	END PartitionExR;  
-	
-	PROCEDURE PartitionLR( VAR x: ARRAY [ * ] OF LONGREAL;  l, r: INDEX ): INDEX;  
-	VAR pivot, t: LONGREAL;  i, j: INDEX;  
-	BEGIN 
-		pivot := x[(l + r) DIV 2];  
-		(* work from both ends, swapping to keep   *)
-		(* values less than pivot to the left, and *)
-		(* values greater than pivot to the right  *)
-		i := l - 1;  j := r + 1;  
-		LOOP 
-			REPEAT DEC( j );  UNTIL (x[j] <= pivot);  
-			REPEAT INC( i );  UNTIL x[i] >= pivot;  
-			
-			IF i >= j THEN EXIT;  
-			END;  
-			
 			(* swap *)
 			t := x[i];  x[i] := x[j];  x[j] := t;
-		END;  
-		
-		RETURN j;  
-	END PartitionLR;
+		END;
 
-	PROCEDURE PartitionExLR( VAR x: ARRAY [ * ] OF LONGREAL;  VAR ind: ARRAY [ * ] OF INDEX;  l, r: INDEX ): INDEX;  
-	VAR pivot, t: LONGREAL;  i, j, k: INDEX;  
-	BEGIN 
-		pivot := x[(l + r) DIV 2];  
+		RETURN j;
+	END PartitionLI;
+
+	PROCEDURE PartitionExLI( VAR x: ARRAY [ * ] OF LONGINT;  VAR ind: ARRAY [ * ] OF INDEX;  l, r: INDEX ): INDEX;
+	VAR pivot, t: INDEX;  i, j, k: INDEX;
+	BEGIN
+		pivot := x[(l + r) DIV 2];
 		(* work from both ends, swapping to keep   *)
 		(* values less than pivot to the left, and *)
 		(* values greater than pivot to the right  *)
-		i := l - 1;  j := r + 1;  
-		LOOP 
-			REPEAT DEC( j );  UNTIL (x[j] <= pivot);  
-			REPEAT INC( i );  UNTIL x[i] >= pivot;  
-			
-			IF i >= j THEN EXIT;  
-			END;  
-			
-			(* swap *)
-			t := x[i];  x[i] := x[j];  x[j] := t;  
+		i := l - 1;  j := r + 1;
+		LOOP
+			REPEAT DEC( j );  UNTIL (x[j] <= pivot);
+			REPEAT INC( i );  UNTIL x[i] >= pivot;
 
-			k := ind[i];  ind[i] := ind[j];  ind[j] := k;  
-		END;  
-		
-		RETURN j;  
-	END PartitionExLR;  
-	
-	PROCEDURE QuickSortI*( CONST x: ARRAY [ * ] OF INTEGER;  VAR ind: ARRAY [ * ] OF INDEX );	
+			IF i >= j THEN EXIT;
+			END;
+
+			(* swap *)
+			t := x[i];  x[i] := x[j];  x[j] := t;
+
+			k := ind[i];  ind[i] := ind[j];  ind[j] := k;
+		END;
+
+		RETURN j;
+	END PartitionExLI;
+
+	PROCEDURE PartitionR( VAR x: ARRAY [ * ] OF REAL;  l, r: INDEX ): INDEX;
+	VAR pivot, t: REAL;  i, j: INDEX;
+	BEGIN
+		pivot := x[(l + r) DIV 2];
+		(* work from both ends, swapping to keep   *)
+		(* values less than pivot to the left, and *)
+		(* values greater than pivot to the right  *)
+		i := l - 1;  j := r + 1;
+		LOOP
+			REPEAT DEC( j );  UNTIL (x[j] <= pivot);
+			REPEAT INC( i );  UNTIL x[i] >= pivot;
+
+			IF i >= j THEN EXIT;
+			END;
+
+			(* swap *)
+			t := x[i];  x[i] := x[j];  x[j] := t;
+		END;
+
+		RETURN j;
+	END PartitionR;
+
+	PROCEDURE PartitionExR( VAR x: ARRAY [ * ] OF REAL;  VAR ind: ARRAY [ * ] OF INDEX;  l, r: INDEX ): INDEX;
+	VAR pivot, t: REAL;  i, j, k: INDEX;
+	BEGIN
+		pivot := x[(l + r) DIV 2];
+		(* work from both ends, swapping to keep   *)
+		(* values less than pivot to the left, and *)
+		(* values greater than pivot to the right  *)
+		i := l - 1;  j := r + 1;
+		LOOP
+			REPEAT DEC( j );  UNTIL (x[j] <= pivot);
+			REPEAT INC( i );  UNTIL x[i] >= pivot;
+
+			IF i >= j THEN EXIT;
+			END;
+
+			(* swap *)
+			t := x[i];  x[i] := x[j];  x[j] := t;
+
+			k := ind[i];  ind[i] := ind[j];  ind[j] := k;
+		END;
+
+		RETURN j;
+	END PartitionExR;
+
+	PROCEDURE PartitionLR( VAR x: ARRAY [ * ] OF LONGREAL;  l, r: INDEX ): INDEX;
+	VAR pivot, t: LONGREAL;  i, j: INDEX;
+	BEGIN
+		pivot := x[(l + r) DIV 2];
+		(* work from both ends, swapping to keep   *)
+		(* values less than pivot to the left, and *)
+		(* values greater than pivot to the right  *)
+		i := l - 1;  j := r + 1;
+		LOOP
+			REPEAT DEC( j );  UNTIL (x[j] <= pivot);
+			REPEAT INC( i );  UNTIL x[i] >= pivot;
+
+			IF i >= j THEN EXIT;
+			END;
+
+			(* swap *)
+			t := x[i];  x[i] := x[j];  x[j] := t;
+		END;
+
+		RETURN j;
+	END PartitionLR;
+
+	PROCEDURE PartitionExLR( VAR x: ARRAY [ * ] OF LONGREAL;  VAR ind: ARRAY [ * ] OF INDEX;  l, r: INDEX ): INDEX;
+	VAR pivot, t: LONGREAL;  i, j, k: INDEX;
+	BEGIN
+		pivot := x[(l + r) DIV 2];
+		(* work from both ends, swapping to keep   *)
+		(* values less than pivot to the left, and *)
+		(* values greater than pivot to the right  *)
+		i := l - 1;  j := r + 1;
+		LOOP
+			REPEAT DEC( j );  UNTIL (x[j] <= pivot);
+			REPEAT INC( i );  UNTIL x[i] >= pivot;
+
+			IF i >= j THEN EXIT;
+			END;
+
+			(* swap *)
+			t := x[i];  x[i] := x[j];  x[j] := t;
+
+			k := ind[i];  ind[i] := ind[j];  ind[j] := k;
+		END;
+
+		RETURN j;
+	END PartitionExLR;
+
+	PROCEDURE QuickSortI*( CONST x: ARRAY [ * ] OF INTEGER;  VAR ind: ARRAY [ * ] OF INDEX );
 	BEGIN
 		HALT(100);
 	END QuickSortI;
-		
+
 END ExtraSort.

@@ -1,8 +1,8 @@
 MODULE WMMatrix; (** AUTHOR "Patrick Hunziker"; PURPOSE "quick display of 2D array data as raster image"; *)
-IMPORT Modules, Files, Raster, MatrixRaster, MatrixUtilities, WM:=WMWindowManager,  Strings, Models, WMRectangles, 
+IMPORT Modules, Files, Raster, MatrixRaster, MatrixUtilities, WM:=WMWindowManager,  Strings, Models, WMRectangles,
 WMMessages, WMGraphics, Commands;
 
-CONST 	
+CONST
 		gray=0;
 		signed=1;
 		lut=2;
@@ -15,22 +15,22 @@ TYPE Model*= OBJECT (Models.Model)
 		VAR m*, r*,g*,b*: Matrix;
 	END Model;
 
-TYPE Window*= OBJECT (WM.BufferWindow)  
+TYPE Window*= OBJECT (WM.BufferWindow)
 	VAR model*:Model;
-		max,min, gain*:LONGREAL; 
+		max,min, gain*:LONGREAL;
 		exists:BOOLEAN;
-		type, offset*, mx0,my0,mx1,my1:LONGINT; 
+		type, offset*, mx0,my0,mx1,my1:LONGINT;
 		palette*:Raster.Palette;
 		source*:ANY;
-	
+
 	PROCEDURE &Initialize*(CONST m: ARRAY [*,*] OF LONGREAL; CONST title: ARRAY OF CHAR);
 	BEGIN
-		IF (~exists  & (LEN(m)>0))  OR (LEN(m,1)#GetWidth()) OR (LEN(m,0)#GetHeight()) THEN 
-			Init(LEN(m,1), LEN(m,0), TRUE); exists:=TRUE; 
+		IF (~exists  & (LEN(m)>0))  OR (LEN(m,1)#GetWidth()) OR (LEN(m,0)#GetHeight()) THEN
+			Init(LEN(m,1), LEN(m,0), TRUE); exists:=TRUE;
 			bounds := WMGraphics.MakeRectangle(0, 0, LEN(m,1), LEN(m,0));
 		END;
-		NEW(model); 
-		IF LEN(m,0)>0 THEN SetImage(m);END; 
+		NEW(model);
+		IF LEN(m,0)>0 THEN SetImage(m);END;
 		SetTitle(Strings.NewString(title));
 		INCL(flags, WM.FlagStorable);
 		(*maxInterpolation:=1; => default bilinear interpolation;  maxInterpolation:=0; => nearest neighbour interpolation*)
@@ -42,7 +42,7 @@ TYPE Window*= OBJECT (WM.BufferWindow)
 			m.sender:=SELF; m.msgType := WMMessages.MsgInvalidate; m.msgSubType := WMMessages.MsgSubAll;
 			IF (sequencer#NIL) & sequencer.Add(m) THEN END; (* Invalidate window contents when first put on display. *)
 	END PostInvalidate;
-	
+
 	PROCEDURE Handle*(VAR x : WMMessages.Message);
 		VAR filename: Files.FileName; f:Files.File; w:Files.Writer;
 		BEGIN
@@ -53,27 +53,27 @@ TYPE Window*= OBJECT (WM.BufferWindow)
 				Files.OpenWriter(w,f,0);
 				MatrixUtilities.StoreLR(w, model.m);
 				w.Update;
-				Files.Register(f);	
+				Files.Register(f);
 			ELSIF x.msgType = WMMessages.MsgInvalidate THEN
 				IF x.msgSubType = WMMessages.MsgSubAll THEN
 					Invalidate(WMRectangles.MakeRect(0, 0, GetWidth(), GetHeight()));
 				ELSE
 					HALT(200)
-				END;			
+				END;
 			ELSE Handle^(x)
 			END
 		END Handle;
 
-	PROCEDURE PointerDown*(x, y : LONGINT; keys : SET); 
+	PROCEDURE PointerDown*(x, y : LONGINT; keys : SET);
 		BEGIN
-			mx0:=x; my0:=y; 
+			mx0:=x; my0:=y;
 		END PointerDown;
-		
+
 	PROCEDURE PointerUp*(x, y : LONGINT; keys : SET);
 		BEGIN
-			mx1:=x; my1:=y; 
+			mx1:=x; my1:=y;
 		END PointerUp;
-	
+
 	PROCEDURE PointerMove*(x, y : LONGINT; keys : SET);
 		BEGIN
 			IF keys={2} THEN
@@ -86,18 +86,18 @@ TYPE Window*= OBJECT (WM.BufferWindow)
 				PointerMove^(x,y,keys)
 			END;
 		END PointerMove;
-	
+
 	PROCEDURE SetImage*(CONST m: Matrix);
 	BEGIN
-		IF ~exists  & (LEN(m)>0) THEN 
-			Init(LEN(m,1), LEN(m,0), TRUE); exists:=TRUE; 
+		IF ~exists  & (LEN(m)>0) THEN
+			Init(LEN(m,1), LEN(m,0), TRUE); exists:=TRUE;
 			bounds := WMGraphics.MakeRectangle(0, 0, GetWidth(), GetHeight());
 		END;
-		IF LEN(m,0)>0 THEN 
+		IF LEN(m,0)>0 THEN
 			model.m:=m;
 			(* model.m:=ALIAS OF m; *)(* no-copy version *)
-			max:=MAX(m); min:=MIN(m); IF min<0 THEN type:=signed ELSE type:=0 END;; 
-			offset:=0; 
+			max:=MAX(m); min:=MIN(m); IF min<0 THEN type:=signed ELSE type:=0 END;;
+			offset:=0;
 			IF max#min THEN gain:= 255/MAX( ABS(max),ABS(min));
 			ELSE gain :=1;
 			END;
@@ -105,20 +105,20 @@ TYPE Window*= OBJECT (WM.BufferWindow)
 		ELSE type:=0;
 		END;
 	END SetImage;
-	
+
 	PROCEDURE SetImageB*(CONST m: Matrix; offset:LONGINT;gain: LONGREAL);
 	BEGIN
-		IF ~exists  & (LEN(m)>0) THEN 
-			Init(LEN(m,1), LEN(m,0), TRUE); exists:=TRUE; 
+		IF ~exists  & (LEN(m)>0) THEN
+			Init(LEN(m,1), LEN(m,0), TRUE); exists:=TRUE;
 			bounds := WMGraphics.MakeRectangle(0, 0, GetWidth(), GetHeight());
 		END;
 		model.m:=m;
 		(*model.m:=ALIAS OF m;*)(* no-copy version *)
-		max:=MAX(m); min:=MIN(m); IF min<0 THEN type:=signed ELSE type:=0 END; 
+		max:=MAX(m); min:=MIN(m); IF min<0 THEN type:=signed ELSE type:=0 END;
 		SELF.offset:=offset; SELF.gain:=gain;
 		Render;
 	END SetImageB;
-	
+
 	(*Expects a lookup table in a binary LUT file "name", formatted according to the ImageJ convention:
 	for color:=0 to 2 do (*RGB*)
 	   for index:=0 to 255 do
@@ -130,69 +130,69 @@ TYPE Window*= OBJECT (WM.BufferWindow)
 	VAR format: Raster.Format;
 	BEGIN
 		palette:=GetPalette(name, background);
-		IF palette=NIL THEN 
-		ELSE 
+		IF palette=NIL THEN
+		ELSE
 			type:=lut;
-			Raster.InitPaletteFormat(format, palette); 
-			Raster.Create(img, GetWidth(), GetHeight(), format) 
+			Raster.InitPaletteFormat(format, palette);
+			Raster.Create(img, GetWidth(), GetHeight(), format)
 		END;
 	END SetPalette;
-	
+
 	PROCEDURE SetImageLUT*(CONST m: Matrix);
 	BEGIN
-		IF ~exists  & (LEN(m)>0) THEN 
-			Init(LEN(m,1), LEN(m,0), TRUE); exists:=TRUE; 
+		IF ~exists  & (LEN(m)>0) THEN
+			Init(LEN(m,1), LEN(m,0), TRUE); exists:=TRUE;
 			bounds := WMGraphics.MakeRectangle(0, 0, GetWidth(), GetHeight());
 		END;
 		model.m:=m;
 		(*model.m:=ALIAS OF m;*)(* no-copy version *)
-		max:=MAX(m); min:=MIN(m); 
-		type:=lut; 
+		max:=MAX(m); min:=MIN(m);
+		type:=lut;
 		IF max#min THEN gain:= 255/(max-min);
 		ELSE gain:=1;
 		END;
 		offset:=0;
 		Render;
 	END SetImageLUT;
-	
+
 	PROCEDURE SetImageRGB*(CONST r,g,b: Matrix);
 	BEGIN
-		IF ~exists  & (LEN(r)>0) THEN 
-			Init(LEN(r,1), LEN(r,0), TRUE); exists:=TRUE; 
+		IF ~exists  & (LEN(r)>0) THEN
+			Init(LEN(r,1), LEN(r,0), TRUE); exists:=TRUE;
 			bounds := WMGraphics.MakeRectangle(0, 0, GetWidth(), GetHeight());
 		END;
-		model.r:=r; model.g:=g; model.b:=b; 
+		model.r:=r; model.g:=g; model.b:=b;
 		(*model.r:=ALIAS OF r; model.g:=ALIAS OF g; model.b:=ALIAS OF b; *)(* no-copy version*)
 		type:=rgb;
 		Render;
 	END SetImageRGB;
-	
+
 	PROCEDURE Render*;
 	VAR min,max: LONGREAL;
 	BEGIN
 		IF type=signed THEN MatrixRaster.LRealToImageBR(model.m, offset, gain, img)
 		ELSIF type=heat THEN MatrixRaster.LRealToImageHeat(model.m, offset, gain, img)
-		ELSIF type=lut THEN MatrixRaster.LRealToImageLUT(model.m, offset, gain, img); 
+		ELSIF type=lut THEN MatrixRaster.LRealToImageLUT(model.m, offset, gain, img);
 		ELSIF type=rgb THEN MatrixRaster.LRealRGBToImage( model.r, model.g, model.b, img)
 		ELSIF LEN(model.m)>0 THEN MatrixRaster.LRealToImage(model.m, offset, gain, img)
-		ELSE 
+		ELSE
 		END;
 		PostInvalidate;
 		(*
 		Invalidate(WMRectangles.MakeRect(0, 0, GetWidth(), GetHeight()));
 		*)
 	END Render;
-	
+
 	PROCEDURE RenderScaled*(offset:LONGINT;gain: LONGREAL);
 	BEGIN
 		SELF.offset:=offset; SELF.gain:=gain;
 		Render;
 	END RenderScaled;
-	
+
 	PROCEDURE SetParameters(context: Commands.Context);
 	VAR offset, gain:LONGINT; res:BOOLEAN;
 	BEGIN
-		res:=context.arg.GetInteger(offset, FALSE); 
+		res:=context.arg.GetInteger(offset, FALSE);
 		res:=context.arg.GetInteger(gain, FALSE);
 	END SetParameters;
 
@@ -202,12 +202,12 @@ TYPE Window*= OBJECT (WM.BufferWindow)
 		WM.ExtAddWindow(SELF,  32+(pos MOD 10)*48 + (pos DIV 10) *200, 96+(pos MOD 10) *48,
 									{WM.FlagFrame,WM.FlagClose,WM.FlagMinimize});
 		INC(pos);
-		
+
 		(*WM.DefaultAddWindow(SELF);*)
 	END AddWindow;
-	
+
 END Window;
-	
+
 VAR InsertPosX*,InsertPosY*, pos: LONGINT; (* default insertion point for new window *)
 	(*registry-,last:Registry;*)
 
@@ -240,7 +240,7 @@ VAR pal: Raster.Palette;
 	VAR raw: ARRAY 3,256 OF CHAR;
 BEGIN
 	f:=Files.Old(name);
-	IF f#NIL THEN 
+	IF f#NIL THEN
 		Files.OpenReader(reader,f,0);
 		NEW(pal);
 		FOR j:=0 TO 2 DO
@@ -263,9 +263,9 @@ END GetPalette;
 PROCEDURE AddWindow*(CONST m: Matrix; CONST title: ARRAY OF CHAR); (*deprecated*)
 VAR pw: WM.BufferWindow; max,min:LONGREAL; type:BOOLEAN;
 BEGIN
-	max:=MAX(m); 
+	max:=MAX(m);
 	min:=MIN(m);
-	NEW(pw, LEN(m,0), LEN(m,1), TRUE); 
+	NEW(pw, LEN(m,0), LEN(m,1), TRUE);
 	pw.SetTitle(Strings.NewString(title));
 	IF min<0 THEN type:=TRUE; MatrixRaster.LRealToImageBR(m,0,255/MAX(ABS(max),ABS(min)),pw.img);
 	ELSE
@@ -274,7 +274,7 @@ BEGIN
 	WM.DefaultAddWindow(pw);
 END AddWindow;
 
-PROCEDURE RemoveWindows*(context:Commands.Context); 
+PROCEDURE RemoveWindows*(context:Commands.Context);
 VAR manager:WM.WindowManager; w,remove:WM.Window; i:LONGINT;
 BEGIN {EXCLUSIVE}
 	IF (context=NIL) OR (~context.arg.GetInteger(i,FALSE)) THEN i:=MAX(LONGINT) END;
@@ -287,7 +287,7 @@ BEGIN {EXCLUSIVE}
 		IF (remove#NIL)&(remove IS Window) THEN manager.Remove(remove); DEC(i) END;
 	END;
 	manager.lock.ReleaseWrite;
-END RemoveWindows; 
+END RemoveWindows;
 
 PROCEDURE RemoveAllWindows;
 BEGIN

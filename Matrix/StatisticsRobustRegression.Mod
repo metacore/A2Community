@@ -262,12 +262,12 @@ BEGIN
 	NEW(onesR, LEN(X,0)); onesR:=1;
 	columnMean := (onesR * X)/LEN(X,0);
 	X0 := X - onesR ** columnMean; (* PCA requires zero column mean input data *)
-	
+
 	NEW(pca, X0);
-	X0:=pca.PrincipalComponents(); (* remove colinearity *)  
+	X0:=pca.PrincipalComponents(); (* remove colinearity *)
 	Util.OutMatrix(X0);
-	
-	(*choose sample pairs; here the extremal point pairs are used. Random pairs could also be used *)	
+
+	(*choose sample pairs; here the extremal point pairs are used. Random pairs could also be used *)
 	len:=MIN (200, LEN(X,0)*LEN(X,0));
 	NEW(slopes, len, LEN(X0,1));
 	NEW(random);
@@ -280,8 +280,8 @@ BEGIN
 		dx:=X0[k]-X0[j];
 		sumx:=SUM(ABS(dx));
 		dy:=y[k]-y[j];
-		FOR j:=0 TO LEN(dx,0)-1 DO 
-			IF ABS(dx[j]) > 1.0E-20 THEN 
+		FOR j:=0 TO LEN(dx,0)-1 DO
+			IF ABS(dx[j]) > 1.0E-20 THEN
 				slopes[i,j]:=dy  * (dx[j]/sumx) /dx[j]; (* each dx contributes a part to dy *)
 				max:=MAX(max, slopes[i,j]);
 				min:=MIN(min, slopes[i,j]);

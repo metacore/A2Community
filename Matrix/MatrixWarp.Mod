@@ -1,13 +1,13 @@
 MODULE MatrixWarp;
 IMPORT MatrixBase, MatrixInterpolation,Out:=KernelLog, MatrixUtilities;
 
-TYPE 
+TYPE
 		Datatype=MatrixBase.Datatype;
 		Matrix=MatrixBase.Matrix;
 		Vector=MatrixBase.Vector;
 		Cube=ARRAY [*,*,*] OF MatrixBase.Datatype;
 
-(** warps a rectangle "in" according to warp maps dX,dY containing relative dislocation in pixels. 
+(** warps a rectangle "in" according to warp maps dX,dY containing relative dislocation in pixels.
 currently expects spline coefficient volume and delivers voxel values (not in spline domain) *)
 PROCEDURE Warp2D*(CONST in: Matrix; VAR out:Matrix; CONST dX,dY:Matrix; splinedegree:LONGINT); (**spline degrees currently implemented: 0-5 (0=piecewise constant, 1=piecewise linear, 2=quadratic...)*)
 VAR val:Datatype; x,y,z:LONGINT; lout:Vector;(* temp lines *)
@@ -22,7 +22,7 @@ BEGIN
 	END;
 END Warp2D;
 
-(** warps a cube "in" according to warping maps dX,dY,dZ that contain the relative dislocation in pixel units. 
+(** warps a cube "in" according to warping maps dX,dY,dZ that contain the relative dislocation in pixel units.
 	currently expects spline coefficient volume and delivers voxel values (not in spline domain).
 	This is a 'backward' warp in that each 'out' voxel gets data from the interpolated position from the 'in' volume.
 	(map corresponds to out volume).
@@ -42,13 +42,13 @@ BEGIN
 	END;
 END Warp3D;
 
-(** warps a cube "in" according to warping maps dX,dY,dZ that contain the relative dislocation in pixel units. 
+(** warps a cube "in" according to warping maps dX,dY,dZ that contain the relative dislocation in pixel units.
 currently expects spline coefficient volume and delivers voxel values (not in spline domain).
-In contrast to the procedure Warp3D above, the map /in/out volumes can have different sizes; however, map volumes must have consistent size.. 
+In contrast to the procedure Warp3D above, the map /in/out volumes can have different sizes; however, map volumes must have consistent size..
 More generic, but SLOW. *)
 PROCEDURE Warp3Dgeneral*(CONST in: Cube; VAR out:Cube; CONST dX,dY,dZ:Cube; splinedegree:LONGINT); (**spline degrees currently implemented: 0-5 (0=piecewise constant, 1=piecewise linear, 2=cubic...)*)
 VAR val:Datatype; x,y,z:LONGINT; dx,dy,dz:Datatype; lout:Vector;
-		xFactor, yFactor, zFactor, xScale,yScale,zScale: REAL;	
+		xFactor, yFactor, zFactor, xScale,yScale,zScale: REAL;
 BEGIN
 	xFactor := LEN(in,2) / LEN(dX,2); xScale:= LEN(in,2)/LEN(out,2);
 	yFactor := LEN(in,1) / LEN(dX,1); yScale:= LEN(in,1)/LEN(out,1);
@@ -68,31 +68,31 @@ BEGIN
 END Warp3Dgeneral;
 
 PROCEDURE Test*;
-VAR in,out,dTX,dTY,dTZ:Cube; x,y,z:LONGINT; 
-CONST splinedegree=1; 
+VAR in,out,dTX,dTY,dTZ:Cube; x,y,z:LONGINT;
+CONST splinedegree=1;
 BEGIN
 	NEW(in,5,5,5);
 	NEW(out,5,5,5);
 	NEW(dTX,5,5,5);
 	NEW(dTY,5,5,5);
 	NEW(dTZ,5,5,5);
-	
+
 	in[..,2,..]:=1; (* paints "cross pattern" in 3D space *)
 	in[2,..,..]:=1;
 	in[..,..,2]:=1;
-	
-	dTX:=1; 
-	dTY:=1; 
-	dTZ:=1; (* prescribes distortion at center of cross, in pixel units example displaces part of central column in y direction*)	
+
+	dTX:=1;
+	dTY:=1;
+	dTZ:=1; (* prescribes distortion at center of cross, in pixel units example displaces part of central column in y direction*)
 	Out.String("-----original data, in spline domain-----"); Out.Ln;
-	
+
 	FOR z:=0 TO LEN(in,0)-1 DO	(* shows original data, in spline domain *)
 		MatrixUtilities.OutMatrix(in[z]);
 	END;
 	Out.String("---- warped data, in pixel data ------"); Out.Ln;
-	
-	Warp3Dgeneral(in,out,dTX,dTY,dTZ,splinedegree);	
-	
+
+	Warp3Dgeneral(in,out,dTX,dTY,dTZ,splinedegree);
+
 	FOR z:=0 TO LEN(out,0)-1 DO	(* shows resulting, warped data, in pixel domain (not spline domain) *)
 		MatrixUtilities.OutMatrix(out[z]);
 	END;
