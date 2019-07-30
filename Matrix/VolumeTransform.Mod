@@ -44,7 +44,7 @@ TYPE Transformer  = OBJECT (* allow reuse of temporary structures - important fo
 	END Filter3D;
 
 	PROCEDURE Reduce*( CONST g: Cube ): Cube;  (*simple scaling without interpolation*)
-	VAR L00,L01,L10,L11,L20,L21:LONGINT;
+	VAR L00,L01,L10,L11,L20,L21:SIZE;
 	BEGIN
 		L00:=(LEN( g, 0 ) + 0) DIV 2-1; L01:= (LEN( g, 0 ) + 1)  DIV 2-1;
 		L10:=(LEN( g, 1 ) + 0) DIV 2-1; L11:= (LEN( g, 1 ) + 1)  DIV 2-1;
@@ -144,7 +144,7 @@ TYPE Transformer  = OBJECT (* allow reuse of temporary structures - important fo
 	END Expand3D;
 
 	PROCEDURE Expand*( CONST g: Cube ): Cube; (*simple scaling without interpolation*)
-	VAR L00,L01,L10,L11,L20,L21:LONGINT;
+	VAR L00,L01,L10,L11,L20,L21:SIZE;
 	BEGIN
 		L00:=(LEN( RESULT, 0 ) + 0) DIV 2-1; L01:= (LEN( RESULT, 0 ) + 1) DIV 2-1;
 		L10:=(LEN( RESULT, 1 ) + 0) DIV 2-1; L11:= (LEN( RESULT, 1 ) + 1) DIV 2-1;
@@ -174,7 +174,7 @@ TYPE Transformer  = OBJECT (* allow reuse of temporary structures - important fo
 	END Resample3D;
 
 	PROCEDURE RotateDimensions*( CONST g: Cube ): Cube;
-	VAR dim,dim1: ARRAY [3] OF SIZE; i:LONGINT;
+	VAR dim,dim1: ARRAY [3] OF SIZE; i:SIZE;
 	BEGIN
 		dim:=LEN(g); dim1[0]:=dim[1]; dim1[1]:=dim[2]; dim1[2]:=dim[0];
 		IF LEN(RESULT)#dim1 THEN NEW(RESULT,dim1) END;
@@ -184,7 +184,7 @@ TYPE Transformer  = OBJECT (* allow reuse of temporary structures - important fo
 	END RotateDimensions;
 
 	PROCEDURE MirrorX*( CONST g: Cube ): Cube; (*! to do: ASSURE THAT datasets do not overlap*)
-	VAR i:LONGINT;
+	VAR i:SIZE;
 	BEGIN
 		IF LEN(RESULT)#LEN(g) THEN NEW(RESULT,LEN(g)) END;
 		FOR i:=0 TO LEN(g,0)-1 DO
@@ -193,7 +193,7 @@ TYPE Transformer  = OBJECT (* allow reuse of temporary structures - important fo
 	END MirrorX;
 
 	PROCEDURE MirrorY*( CONST g: Cube ): Cube; (*! to do: ASSURE THAT datasets do not overlap*)
-	VAR i:LONGINT;
+	VAR i:SIZE;
 	BEGIN
 		IF LEN(RESULT)#LEN(g) THEN NEW(RESULT,LEN(g)) END;
 		FOR i:=0 TO LEN(g,1)-1 DO
@@ -202,7 +202,7 @@ TYPE Transformer  = OBJECT (* allow reuse of temporary structures - important fo
 	END MirrorY;
 
 	PROCEDURE MirrorZ*( CONST g: Cube ): Cube; (*! to do: ASSURE THAT datasets do not overlap*)
-	VAR i:LONGINT;
+	VAR i:SIZE;
 	BEGIN
 		IF LEN(RESULT)#LEN(g) THEN NEW(RESULT,LEN(g)) END;
 		FOR i:=0 TO LEN(g,2)-1 DO
@@ -211,7 +211,7 @@ TYPE Transformer  = OBJECT (* allow reuse of temporary structures - important fo
 	END MirrorZ;
 
 	PROCEDURE ProjectSum*(CONST g: Cube; orientation:LONGINT ): Rect;
-	VAR i:LONGINT;
+	VAR i:SIZE;
 	BEGIN
 		IF orientation=0 THEN
 			RESULT:=g[0,..,..];
@@ -227,7 +227,7 @@ TYPE Transformer  = OBJECT (* allow reuse of temporary structures - important fo
 	END ProjectSum;
 
 	PROCEDURE ProjectMax*(CONST g: Cube; orientation:LONGINT ): Rect;
-	VAR x,y:LONGINT;
+	VAR x,y:SIZE;
 	BEGIN
 		IF orientation=0 THEN
 			RESULT:=g[0,..,..];
@@ -304,4 +304,4 @@ System.Free VolumeTransform Convolution MatrixFIRConvolveLongReal TestDSPTransfo
 
 fofPC.Compile \s *
 fofPC.Compile \f *
-OFormatter.Format * 
+OFormatter.Format *

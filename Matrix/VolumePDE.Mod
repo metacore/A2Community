@@ -43,8 +43,8 @@ TYPE
 		map*,smallmap*, m,m0: BooleanMap;
 		resized:BOOLEAN;
 		len,newLen: ARRAY [*] OF SIZE;
-	PROCEDURE Resize(w,h:LONGINT); (*implementation limitation: binary size steps*) (*!TO DO: adapt Resize similar to MatrixPDE.Mod*)
-	VAR x,y,z:LONGINT;
+	PROCEDURE Resize(w,h:SIZE); (*implementation limitation: binary size steps*) (*!TO DO: adapt Resize similar to MatrixPDE.Mod*)
+	VAR x,y,z:SIZE;
 	BEGIN
 		IF  (h#LEN(constraint,1)) OR (w#LEN(constraint,2)) THEN (*no reduction along dimension 0 *)
 			resized:=TRUE;
@@ -89,7 +89,7 @@ TYPE
 		END;
 	END Resize;
 	PROCEDURE Constrain0(VAR data: Grid); (*use "constraint" and "map" as constraints; *)
-	VAR w,h,i:LONGINT;
+	VAR w,h,i:SIZE;
 	BEGIN
 		IF LEN(constraint)=0 THEN RETURN END;
 		w:=LEN(data,1); h:=LEN(data,0);
@@ -413,7 +413,7 @@ TYPE
  	END AllocateSame;
 
 	PROCEDURE Reduce( CONST g: Grid ): Grid;  (* there was a problem until at least 30.9.15 in the compiler with the LEN(RESULT,i), possibly leading to much allocation overhead here *)
-	VAR L00,L01,L10,L11,L20,L21:LONGINT;
+	VAR L00,L01,L10,L11,L20,L21:SIZE;
 	BEGIN
 		L00:=(LEN( g, 0 ) + 0) DIV 2-1; L01:= (LEN( g, 0 ) + 1)  DIV 2-1;
 		L10:=(LEN( g, 1 ) + 0) DIV 2-1; L11:= (LEN( g, 1 ) + 1)  DIV 2-1;
@@ -439,7 +439,7 @@ TYPE
 	END Reduce;
 
 	PROCEDURE Expand( CONST g: Grid ): Grid;
-	VAR L00,L01,L10,L11,L20,L21:LONGINT;
+	VAR L00,L01,L10,L11,L20,L21:SIZE;
 	BEGIN
 		L00:=(LEN( RESULT, 0 ) + 0) DIV 2-1; L01:= (LEN( RESULT, 0 ) + 1) DIV 2-1;
 		L10:=(LEN( RESULT, 1 ) + 0) DIV 2-1; L11:= (LEN( RESULT, 1 ) + 1) DIV 2-1;
@@ -459,7 +459,7 @@ TYPE
 	END Expand;
 
 	PROCEDURE Stencil( CONST x: Grid;  VAR x1: Grid); (*3D stencil for finite difference*) (* not in-place *)
-	VAR lenx, leny, lenz: LONGINT;
+	VAR lenx, leny, lenz: SIZE;
 	BEGIN
 		AllocateSame(x1,x);
 		lenx := LEN( x, 2 );  leny := LEN( x, 1 ); lenz:= LEN(x,0);
@@ -507,7 +507,7 @@ TYPE
 	PROCEDURE Advect*( CONST source,  u, v, w: Grid;  VAR target: Grid;  dt, ds: Datatype; bilinear: BOOLEAN );   (* to do: other interpolation methods *)
 	(*for each gridpoint in target grid, find value in source grid based on retrograd application of map u,v,w ;  u and ds are in SI units*)
 	(* to do: speed up by doing it linewise or slicewise *)
-	VAR x, y, z,  ox, oy, oz: LONGINT;  a, b, c: Datatype;  tmp222: ARRAY [2,2,2] OF Datatype;
+	VAR x, y, z,  ox, oy, oz: SIZE;  a, b, c: Datatype;  tmp222: ARRAY [2,2,2] OF Datatype;
 	BEGIN
 		IF  LEN( target ) = 0 THEN NEW(target,LEN(source,0),LEN(source,1),LEN(source,2)) END;
 		FOR z := 0 TO LEN( source, 0 ) - 1 DO

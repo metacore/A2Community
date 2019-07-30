@@ -40,7 +40,7 @@ TYPE Analyzer*= OBJECT
 
 
 	PROCEDURE Analyze*;
-	VAR i:LONGINT;
+	VAR i:SIZE;
 	BEGIN
 		FOR i:=0 TO LEN(data,0)-1 DO
 			conv.Analyze(data[i], resX);

@@ -136,11 +136,11 @@ input: a 1D array of N spline coefficients C at regular intervals; result vector
 output: a M*4 matrix of weights for interpolation; an index table of size M giving the position of the first coeffient for each interpolation location.
 application: do an inner product of strides of 4 coefficients of the signal coefficients (starting at indices[i]) with the weights given in the table row[i].
 CAVE: boundary not handled here; i.e., indices array will contain indices <0 and/or > LEN(C) *)
-PROCEDURE LineInterpolationWeights*(datasize,resultsize, splinedegree: LONGINT; x,dx:Datatype; VAR indices: ARRAY [*] OF LONGINT): Matrix;
+PROCEDURE LineInterpolationWeights*(datasize,resultsize, splinedegree: SIZE; x,dx:Datatype; VAR indices: ARRAY [*] OF LONGINT): Matrix;
 CONST div6=1/6;
 VAR w:Matrix;
 		t,tt,ttt: Datatype;
-		i,index:LONGINT;
+		i:SIZE; index:LONGINT;
 BEGIN
 	NEW(w,resultsize,4);
 	NEW(indices,resultsize);
