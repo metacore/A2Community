@@ -16,7 +16,7 @@ TYPE
 
 TYPE RandomGenerator*= OBJECT(Rand.Generator);
 		PROCEDURE Random*(CONST size: ARRAY [*] OF SIZE;  content: LONGINT ): Tensor;
-		VAR i: LONGINT;
+		VAR i: SIZE;
 		BEGIN (*{EXCLUSIVE}*)
 			IF DIM(RESULT)=0 THEN NEW(RESULT, size) END;
 			IF DIM(RESULT)=1 THEN
@@ -33,7 +33,7 @@ TYPE RandomGenerator*= OBJECT(Rand.Generator);
 			RETURN RESULT
 		END Random;
 		PROCEDURE Dices*(CONST size: ARRAY [*] OF SIZE;  sides: LONGINT ): IntTensor;
-		VAR i: LONGINT;
+		VAR i: SIZE;
 		BEGIN (*{EXCLUSIVE}*)
 			IF DIM(RESULT)=0 THEN NEW(RESULT, size) END;
 			IF DIM(RESULT)=1 THEN
@@ -44,7 +44,7 @@ TYPE RandomGenerator*= OBJECT(Rand.Generator);
 			RETURN RESULT
 		END Dices;
 		PROCEDURE Binary*(CONST size: ARRAY [*] OF SIZE;  p: Datatype ): IntTensor;
-		VAR i: LONGINT;
+		VAR i: SIZE;
 		BEGIN (* {EXCLUSIVE}*)
 			(*IF DIM(RESULT)=0 THEN NEW(RESULT, size) END;*)
 			IF LEN(RESULT)#size THEN NEW(RESULT, size) END;
@@ -94,7 +94,7 @@ VAR  RG: RandomGenerator (*Rand.Generator*);
 	END Identity;
 
 	PROCEDURE Diagonal*( CONST v: Vector ): Matrix;
-	VAR  i: LONGINT;
+	VAR  i: SIZE;
 	BEGIN
 		IF (LEN(RESULT,0)<LEN(v,0)) OR (LEN(RESULT,1)<LEN(v,0)) THEN NEW( RESULT, LEN( v,0 ), LEN( v,0 ) )
 		ELSE RESULT:=0;
@@ -105,7 +105,7 @@ VAR  RG: RandomGenerator (*Rand.Generator*);
 
 (*inverted diagonal, whereby for very small elements, the inverse is set to zero. *)
 	PROCEDURE InvDiag*( CONST M: Matrix ): Vector;
-	VAR x: Vector;  i: LONGINT;  a: LONGREAL;
+	VAR x: Vector;  i: SIZE;  a: LONGREAL;
 	BEGIN
 		NEW( x, MAX( LEN( M, 0 ), LEN( M, 1 ) ) );
 		FOR i := 0 TO LEN( x,0 ) - 1 DO
@@ -148,7 +148,7 @@ VAR  RG: RandomGenerator (*Rand.Generator*);
 	END RandomMatrix;
 
 	PROCEDURE Random*(CONST size: ARRAY [*] OF SIZE;  content: LONGINT ): Tensor;
-	VAR i: LONGINT;
+	VAR i: SIZE;
 	BEGIN
 		IF DIM(RESULT)=0 THEN NEW(RESULT, size) END;
 		(*RESULT:= RG.Random(size,content);
@@ -188,20 +188,20 @@ VAR  RG: RandomGenerator (*Rand.Generator*);
 	END Rotate90;
 
 
-	PROCEDURE RotateRow*( VAR A: Matrix;  row, offset: LONGINT );   (*cave in loops: performance killer because of repeated allocation of Vector 'r' *)
-	VAR r: Vector;  len: LONGINT;
+	PROCEDURE RotateRow*( VAR A: Matrix;  row, offset: SIZE );   (*cave in loops: performance killer because of repeated allocation of Vector 'r' *)
+	VAR r: Vector;  len: SIZE;
 	BEGIN
 		len := LEN( A, 1 );  r := A[row];  A[row, offset..] := r[.. len - offset - 1];  A[row, .. offset - 1] := r[len - offset - 1..];
 	END RotateRow;
 
-	PROCEDURE RotateCol*( VAR A: Matrix;  col, offset: LONGINT );
-	VAR r: Vector;  len: LONGINT;
+	PROCEDURE RotateCol*( VAR A: Matrix;  col, offset: SIZE );
+	VAR r: Vector;  len: SIZE;
 	BEGIN
 		len := LEN( A, 0 );  offset := offset MOD len;  r := A[.. , col];  A[offset.., col] := r[.. len - offset - 1];  A[.. offset - 1, col] := r[len - offset - 1..];
 	END RotateCol;
 
-	PROCEDURE RotateVec*( CONST v: Vector;  offset: LONGINT ): Vector;
-	VAR r: Vector;  len: LONGINT;
+	PROCEDURE RotateVec*( CONST v: Vector;  offset: SIZE ): Vector;
+	VAR r: Vector;  len: SIZE;
 	BEGIN
 		len := LEN( v,0 );  offset := offset MOD len;  NEW( r, len );  r[offset..] := v[.. len - offset - 1];
 		IF offset # 0 THEN
@@ -213,7 +213,7 @@ VAR  RG: RandomGenerator (*Rand.Generator*);
 	(*mirror a tensor along the specified dimension.*)
 	PROCEDURE Mirror*(VAR a: Tensor; CONST dim: LONGINT);
 	VAR
-		i: LONGINT;
+		i: SIZE;
 		tmp: Tensor;
 		tmpScal: Datatype;
 	BEGIN
@@ -256,7 +256,7 @@ VAR  RG: RandomGenerator (*Rand.Generator*);
 	END ProlongationOp;
 
 	PROCEDURE InterpolateMUp2*( CONST A: Matrix ): Matrix;
-	VAR res: Matrix;  i, j: LONGINT;
+	VAR res: Matrix;  i, j: SIZE;
 	BEGIN
 		NEW( res, 2 * LEN( A, 0 ), 2 * LEN( A, 1 ) );
 		FOR i := 0 TO LEN( A, 0 ) - 1 DO
@@ -274,7 +274,7 @@ VAR  RG: RandomGenerator (*Rand.Generator*);
 	END InterpolateMUp2;
 
 	PROCEDURE InterpolateMDown2*( CONST A: Matrix ): Matrix;   (*simplicistic*)
-	VAR   i, j: LONGINT;
+	VAR   i, j: SIZE;
 	BEGIN
 		IF LEN(RESULT,0)=0 THEN NEW( RESULT, LEN( A, 0 ) DIV 2, LEN( A, 1 ) DIV 2 ); END;
 		IF (LEN(A,0) MOD 2=0) & (LEN(A,1) MOD 2=0) THEN
@@ -288,7 +288,7 @@ VAR  RG: RandomGenerator (*Rand.Generator*);
 	END InterpolateMDown2;
 
 	PROCEDURE InterpolateVUp2*( CONST A: Vector ): Vector;
-	VAR res: Vector;  i: LONGINT;
+	VAR res: Vector;  i: SIZE;
 	BEGIN
 		NEW( res, 2 * LEN( A,0 ) );
 		FOR i := 0 TO LEN( A, 0 ) - 1 DO res[2 * i] := A[i];  END;
@@ -300,7 +300,7 @@ VAR  RG: RandomGenerator (*Rand.Generator*);
 	END InterpolateVUp2;
 
 	PROCEDURE InterpolateVDown2*( CONST A: Vector ): Vector;   (*simplicistic*)
-	VAR res: Vector;  i: LONGINT;
+	VAR res: Vector;  i: SIZE;
 	BEGIN
 		NEW( res, LEN( A,0 ) DIV 2 );
 		FOR i := 0 TO LEN( res, 0 ) - 1 DO res[i] := (A[2 * i]+A[2 * i+1])/2;  END;
@@ -308,7 +308,7 @@ VAR  RG: RandomGenerator (*Rand.Generator*);
 	END InterpolateVDown2;
 
 	PROCEDURE BoolToIntVector*(CONST b: ARRAY [*] OF BOOLEAN) : IntVector;
-	VAR x:LONGINT;
+	VAR x:SIZE;
 	BEGIN
 		IF LEN(RESULT)=0 THEN NEW(RESULT, LEN(b,0)) END;
 		FOR x:=0 TO LEN(b,0)-1 DO
@@ -318,7 +318,7 @@ VAR  RG: RandomGenerator (*Rand.Generator*);
 	END BoolToIntVector;
 
 	PROCEDURE BoolToFloat*(CONST b: ARRAY [?] OF BOOLEAN): Tensor;
-	VAR y,x:LONGINT;
+	VAR y,x:SIZE;
 	BEGIN
 		(*IF DIM(RESULT)#DIM(b) OR ( LEN(RESULT)#LEN(b)) THEN NEW(RESULT, LEN(b)) END;*)(*this does not currently work with the recursion*)
 		IF DIM(b)>1 THEN
@@ -335,7 +335,7 @@ VAR  RG: RandomGenerator (*Rand.Generator*);
 
 
 	PROCEDURE BoolToIntMatrix*(CONST b: ARRAY [*,*] OF BOOLEAN): IntMatrix;
-	VAR y,x:LONGINT;
+	VAR y,x:SIZE;
 	BEGIN
 		IF LEN(RESULT,0)=0 THEN NEW(RESULT, LEN(b,0),LEN(b,1)) END;
 		FOR y:=0 TO LEN(b,0)-1 DO
@@ -347,7 +347,7 @@ VAR  RG: RandomGenerator (*Rand.Generator*);
 	END BoolToIntMatrix;
 
 	PROCEDURE ReduceBool2*(CONST b: ARRAY [*,*] OF BOOLEAN; sampling:LONGINT): BoolMatrix; (*implementation limitation: even size*)
-	VAR y,x:LONGINT;
+	VAR y,x:SIZE;
 	BEGIN
 		IF LEN(RESULT,0)=0 THEN NEW(RESULT, (LEN(b,0)+1) DIV 2, (LEN(b,1)+1) DIV 2) END;
 		FOR y:=0 TO LEN(RESULT,0)-1 DO
@@ -392,7 +392,7 @@ VAR  RG: RandomGenerator (*Rand.Generator*);
 
 
 	PROCEDURE ApplyUnaryVec*(CONST m:Vector; op: UnaryOp): Vector;
-	VAR x:LONGINT;
+	VAR x:SIZE;
 	BEGIN
 		IF LEN(RESULT,0)=0 THEN NEW(RESULT, LEN(m,0)) END;
 		FOR x:=0 TO LEN(m,0)-1 DO
@@ -403,7 +403,7 @@ VAR  RG: RandomGenerator (*Rand.Generator*);
 
 
 	PROCEDURE ApplyUnary*(CONST m:Matrix; op: UnaryOp): Matrix;
-	VAR y,x:LONGINT;
+	VAR y,x:SIZE;
 	BEGIN
 		IF LEN(RESULT,0)=0 THEN NEW(RESULT, LEN(m,0),LEN(m,1)) END;
 		FOR y:=0 TO LEN(m,0)-1 DO
@@ -415,7 +415,7 @@ VAR  RG: RandomGenerator (*Rand.Generator*);
 	END ApplyUnary;
 
 	PROCEDURE ApplyBinaryVec*(CONST m, m1:Vector; op: BinaryOp): Vector;
-	VAR x:LONGINT;
+	VAR x:SIZE;
 	BEGIN
 		IF LEN(RESULT,0)=0 THEN NEW(RESULT, LEN(m,0)) END;
 		FOR x:=0 TO LEN(m,0)-1 DO
@@ -425,7 +425,7 @@ VAR  RG: RandomGenerator (*Rand.Generator*);
 	END ApplyBinaryVec;
 
 	PROCEDURE ApplyBinary*(CONST m, m1:Matrix; op: BinaryOp): Matrix;
-	VAR y,x:LONGINT;
+	VAR y,x:SIZE;
 	BEGIN
 		IF LEN(RESULT,0)=0 THEN NEW(RESULT, LEN(m,0),LEN(m,1)) END;
 		FOR y:=0 TO LEN(m,0)-1 DO
@@ -437,7 +437,7 @@ VAR  RG: RandomGenerator (*Rand.Generator*);
 	END ApplyBinary;
 
 	PROCEDURE IsNaNL*(CONST m: Matrix): BoolMatrix;
-	VAR y,x:LONGINT;
+	VAR y,x:SIZE;
 	BEGIN
 		IF LEN(RESULT,0)=0 THEN NEW(RESULT, LEN(m,0),LEN(m,1)) END;
 		FOR y:=0 TO LEN(m,0)-1 DO
@@ -451,7 +451,7 @@ VAR  RG: RandomGenerator (*Rand.Generator*);
 	END IsNaNL;
 
 	PROCEDURE AssignIF*(CONST m: Matrix; CONST map:BoolMatrix): Matrix;
-	VAR y,x:LONGINT;
+	VAR y,x:SIZE;
 	BEGIN
 		IF LEN(RESULT,0)=0 THEN NEW(RESULT, LEN(m,0),LEN(m,1)) END;
 		FOR y:=0 TO LEN(m,0)-1 DO
@@ -463,7 +463,7 @@ VAR  RG: RandomGenerator (*Rand.Generator*);
 	END AssignIF;
 
 	PROCEDURE ApplyMask*(CONST data: Tensor; CONST mask: BoolTensor; background:Datatype): Tensor;
-	VAR i:LONGINT;
+	VAR i:SIZE;
 	BEGIN
 		(*ASSERT(DIM(data)=DIM(mask));
 		ASSERT(LEN(data)=LEN(mask));*)
@@ -482,7 +482,7 @@ VAR  RG: RandomGenerator (*Rand.Generator*);
 	END ApplyMask;
 
 PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
-	VAR i:LONGINT;
+	VAR i:SIZE;
 	BEGIN
 		ASSERT(DIM(data)=DIM(mask));
 		ASSERT(LEN(data)=LEN(mask));
@@ -500,7 +500,7 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 	END JoinMasked;
 
 	PROCEDURE SetMasked*(CONST data: Tensor; CONST mask: BoolTensor; value:Datatype): Tensor;
-	VAR i:LONGINT;
+	VAR i:SIZE;
 	BEGIN
 		ASSERT(DIM(data)=DIM(mask));
 		ASSERT(LEN(data)=LEN(mask));
@@ -518,21 +518,21 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 	END SetMasked;
 
 	PROCEDURE OutVector*(CONST  v: Vector );
-	VAR i: LONGINT;
+	VAR i: SIZE;
 	BEGIN
 		FOR i := 0 TO LEN( v,0 ) - 1 DO OutFloat( v[i], 7, 4, 0 );  END;
 		KernelLog.Ln;
 	END OutVector;
 
 	PROCEDURE OutVectorBool*( CONST v: ARRAY [*] OF BOOLEAN);
-	VAR i: LONGINT;
+	VAR i: SIZE;
 	BEGIN
 		FOR i := 0 TO LEN( v,0 ) - 1 DO IF v[i] THEN KernelLog.Char("+") ELSE KernelLog.Char("-"); END; END;
 		KernelLog.Ln;
 	END OutVectorBool;
 
 	PROCEDURE Out*(CONST t: ARRAY[?] OF Datatype);
-	VAR i:LONGINT;
+	VAR i:SIZE;
 	BEGIN
 		IF DIM(t)>1 THEN
 			FOR i:=0 TO LEN(t,0)-1 DO
@@ -545,7 +545,7 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 	END Out;
 
 	PROCEDURE OutInt*(CONST t: ARRAY[?] OF LONGINT);
-	VAR i:LONGINT;
+	VAR i:SIZE;
 	BEGIN
 		IF DIM(t)>1 THEN
 			FOR i:=0 TO LEN(t,0)-1 DO
@@ -560,14 +560,14 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 	END OutInt;
 
 	PROCEDURE OutMatrix*( CONST m: Matrix );
-	VAR i: LONGINT;
+	VAR i: SIZE;
 	BEGIN
 		FOR i := 0 TO LEN( m,0 ) - 1 DO OutVector( m[i] );  END;
 		KernelLog.Ln;
 	END OutMatrix;
 
 	PROCEDURE OutMatrixBool*( CONST m: ARRAY [*,*] OF BOOLEAN);
-	VAR i: LONGINT;
+	VAR i: SIZE;
 	BEGIN
 		FOR i := 0 TO LEN( m,0 ) - 1 DO OutVectorBool( m[i] );  END;
 		KernelLog.Ln;
@@ -590,7 +590,7 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 	END OutComplex;
 
 	PROCEDURE OutComplexVector*(CONST C: ARRAY [*] OF ComplexMathL. COMPLEXTYPE);
-	VAR i:LONGINT;
+	VAR i:SIZE;
 	BEGIN
 		FOR i:=0 TO LEN(C,0)-1 DO
 			OutComplex(C[i], 10,6,0);
@@ -598,7 +598,7 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 	END OutComplexVector;
 
 	PROCEDURE Print*(w:Streams.Writer; CONST t: ARRAY[?] OF Datatype; n, f, D: LONGINT );
-	VAR i:LONGINT;
+	VAR i:SIZE;
 	BEGIN
 		IF DIM(t)>1 THEN
 			FOR i:=0 TO LEN(t,0)-1 DO
@@ -614,7 +614,7 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 	END Print;
 
 	PROCEDURE PrintInt*(w:Streams.Writer; CONST t: ARRAY[?] OF LONGINT);
-	VAR i:LONGINT;
+	VAR i:SIZE;
 	BEGIN
 		IF DIM(t)>1 THEN
 			FOR i:=0 TO LEN(t,0)-1 DO
@@ -652,7 +652,7 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 	END WriteFloat;
 
 	PROCEDURE WriteArray*(W:Streams.Writer; CONST t: ARRAY [?] OF Datatype; n,f,D:LONGINT);(* call Update() after writing *)
-	VAR len: ARRAY [*] OF SIZE; i:LONGINT;
+	VAR len: ARRAY [*] OF SIZE; i:SIZE;
 	BEGIN
 		ASSERT(DIM(t)>0);
 		len:=LEN(t);
@@ -668,7 +668,7 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 	(*convert a tensor of DATATYPE (longreal) to datatype REAL*)
 	PROCEDURE MatrixToFloat*(CONST m: ARRAY[?] OF Datatype; VAR ret: ARRAY[?] OF REAL);
 	VAR
-		i: LONGINT;
+		i: SIZE;
 	BEGIN
 		ASSERT(DIM(m)=DIM(ret));
 		IF DIM(m)=1 THEN
@@ -684,7 +684,7 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 	(*convert a tensor or REAL to DATATYPE*)
 	PROCEDURE FloatToMatrix*(CONST m: ARRAY[?] OF REAL ; VAR ret: ARRAY[?] OF Datatype);
 	VAR
-		i: LONGINT;
+		i: SIZE;
 	BEGIN
 		ASSERT(DIM(m)=DIM(ret));
 		IF DIM(m)=1 THEN
@@ -781,7 +781,7 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 		(* raw *)
 	(* todo: packed storage of bits
 	PROCEDURE WriteBool*(W:Streams.Writer; CONST t: ARRAY [?] OF BOOLEAN);
-	VAR i:LONGINT;
+	VAR i:SIZE;
 	BEGIN
 		ASSERT(DIM(t)>0);
 		IF  DIM(t)=1 THEN
@@ -794,7 +794,7 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 
 	PROCEDURE WriteHeader*(W: Streams.Writer; datatype: LONGINT; CONST len: ARRAY [*] OF SIZE);
 	VAR
-		i: LONGINT;
+		i: SIZE;
 		comment:ARRAY 16 OF CHAR;
 	BEGIN
 		W.String("TENSOR 2.0 ");
@@ -1170,7 +1170,7 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 	END MaxAbs;
 
 	PROCEDURE SumAbs*( CONST v: Vector ): Datatype;   (* useful because SUM(ABS(m)) leads to undesired allocation of temporary memory *)
-	VAR sum: Datatype;  i: LONGINT;
+	VAR sum: Datatype;  i: SIZE;
 	BEGIN
 		sum := 0;
 		FOR i := 0 TO LEN( v,0 ) - 1 DO sum := sum + ABS( v[i] ) END;
@@ -1186,7 +1186,7 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 		END;
 	END SizeMatch;
 
-	PROCEDURE NewMatrix*(rows,cols:LONGINT):Matrix;
+	PROCEDURE NewMatrix*(rows,cols:SIZE):Matrix;
 	VAR m:Matrix;
 	BEGIN
 		NEW(m,rows,cols); RETURN m
@@ -1212,7 +1212,7 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 
 	(*naive neighbour sort, from high to low *)
 	PROCEDURE GetDiagonalOrder*(CONST m:Matrix; VAR sorted: Vector; VAR index: IntVector; ascending: BOOLEAN);
-	VAR i:LONGINT;  v:Vector;
+	VAR i:SIZE;  v:Vector;
 	BEGIN
 		ASSERT(LEN(m,0)=LEN(m,1));
 		NEW(v,LEN(m,0));
@@ -1221,7 +1221,7 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 	END GetDiagonalOrder;
 
 	PROCEDURE ReorderMatrix*(CONST m:Matrix; CONST order: IntVector; byRows: BOOLEAN): Matrix;
-	VAR v: Vector; m1:Matrix; i:LONGINT;
+	VAR v: Vector; m1:Matrix; i:SIZE;
 	BEGIN
 		NEW(m1, LEN(m,0),LEN(m,1));
 		IF byRows THEN
