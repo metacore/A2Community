@@ -47,7 +47,7 @@ END LU;
 TYPE LU* = OBJECT
 VAR A11inv, L21, U12, S: Matrix;
 	x:Vector;
-	rows1:SIZE;
+	rows1:LONGINT;
 	quadsolver: LU; (*for recursion in solving S*)
 	lu,luS: MatrixStandardSolvers.LU; (*for inverting A11 and solving S in last recursion*)
 	direct:BOOLEAN;
@@ -262,14 +262,14 @@ TYPE  LUAgent*= OBJECT
 		Mul21,Mul31:ComputeObjects.Mul;
 		blu: LUAgent; (* child *)
 		lu: MatrixStandardSolvers.LU;
-		datasize, blocksize:SIZE;
+		datasize, blocksize:LONGINT;
 		x,y: Vector;
 		id, recursionlevel:LONGINT;
 		notify:Notifier;
 		direct:BOOLEAN;
 		priority:LONGINT; (*experimental -not fully implemented*)
 
-	PROCEDURE & Init*(datasize,blocksize:SIZE; notify:Notifier; prio: LONGINT);
+	PROCEDURE & Init*(datasize,blocksize:LONGINT; notify:Notifier; prio: LONGINT);
 	BEGIN {EXCLUSIVE}
 		id:=ident; INC(ident);
 		priority:=MIN(Objects.High,MAX(prio,Objects.Low));
@@ -494,7 +494,7 @@ TYPE LUActive*= OBJECT
 		UL, UR, LL, LR, dummy, s22: Matrix; (*cave: double bookkeeping ... *)
 		blu: LUActive; (* child *)
 		lu: MatrixStandardSolvers.LU;
-		datasize, blocksize:SIZE;
+		datasize, blocksize:LONGINT;
 		x,y: Vector;
 		id:LONGINT;
 		filling:SET;
@@ -502,7 +502,7 @@ TYPE LUActive*= OBJECT
 		done, childdone, direct, initialized:BOOLEAN;
 		priority:LONGINT; (*experimental -not fully implemented*)
 
-	PROCEDURE & Init(datasize, blocksize:SIZE; notify:Notifier; prio: LONGINT);  (* only first quadrant is expected to be ready*)
+	PROCEDURE & Init(datasize, blocksize:LONGINT; notify:Notifier; prio: LONGINT);  (* only first quadrant is expected to be ready*)
 	VAR a11: Matrix;
 	BEGIN
 		id:=ident; INC(ident);

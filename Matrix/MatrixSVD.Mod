@@ -28,7 +28,7 @@ TYPE
 		END Init;
 
 		PROCEDURE decompose;
-		VAR m, n: SIZE;  rv1: Vector;  anorm, scale, c, f, g, h, s, x, y, z: Real;  i, its, j, jj, k, l, nm: SIZE;  flag: BOOLEAN;
+		VAR m, n: LONGINT;  rv1: Vector;  anorm, scale, c, f, g, h, s, x, y, z: Real;  i, its, j, jj, k, l, nm: LONGINT;  flag: BOOLEAN;
 		BEGIN
 			isSorted:=FALSE;
 			IF LEN( u ) = 0 THEN res := Base.SIZEMISMATCH;  handleError( Base.SIZEMISMATCH, "An zero size matrix was supplied." );  RETURN END;
@@ -168,7 +168,7 @@ TYPE
 		END decompose;
 
 		PROCEDURE Solve*( CONST b: Vector ): Vector;
-		VAR val: LONGREAL;  i: SIZE;
+		VAR val: LONGREAL;  i: LONGINT;
 		BEGIN
 			IF (LEN( tmp, 0 ) # LEN( w, 0 )) OR (LEN( tmp, 1 ) # LEN( w, 1 )) THEN NEW( tmp, LEN( w, 0 ), LEN( w, 1 ) );  ELSE tmp := 0 END;
 			IF LEN( tv ) # LEN( u, 0 ) THEN NEW( tv, LEN( u, 0 ) ) ELSE tv := 0 END;
@@ -194,7 +194,7 @@ TYPE
 
 
 		PROCEDURE PseudoInverse*( ): Matrix;
-		VAR val: LONGREAL;  i: SIZE;
+		VAR val: LONGREAL;  i: LONGINT;
 		BEGIN
 			IF (LEN( tmp, 0 ) # LEN( w, 0 )) OR (LEN( tmp, 1 ) # LEN( w, 1 )) THEN NEW( tmp, LEN( w, 0 ), LEN( w, 1 ) );  ELSE tmp := 0 END;
 			tmp2 := 0;
@@ -208,7 +208,7 @@ TYPE
 	END Solver;
 
 	PROCEDURE All( VAR M: Matrix;  f: PROCEDURE ( x: LONGREAL ): LONGREAL ): Matrix;
-	VAR i, j: SIZE;
+	VAR i, j: LONGINT;
 	BEGIN
 		FOR i := 0 TO LEN( M, 0 ) - 1 DO
 			FOR j := 0 TO LEN( M, 1 ) - 1 DO M[i, j] := f( M[i, j] );  END;
@@ -245,7 +245,7 @@ TYPE
 		RETURN MAX( MAX( m ), -MIN( m ) );   (*non-copying ABS(MAX(m))*)
 	END MaxAbs;
 
-	PROCEDURE MinI( i, j: SIZE ): SIZE;
+	PROCEDURE MinI( i, j: LONGINT ): LONGINT;
 	BEGIN
 		IF i < j THEN RETURN i ELSE RETURN j;  END;
 	END MinI;

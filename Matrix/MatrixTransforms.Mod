@@ -23,9 +23,10 @@ TYPE
 
 		(** Gaussian elimination algorithm  with row pivoting; expects square matrix, transforms it into upper triangular matrix *)
 	PROCEDURE Gauss*( VAR A: Matrix );   (*in-place transformation*)
-	VAR i, j, k, m, n, u, maxi: SIZE;  val, max: LONGREAL; Ai, tRow: Vector;
+	VAR i, j, k, m, n, u, maxi: LONGINT;  val, max: LONGREAL; Ai, tRow: Vector;
 
-		PROCEDURE SwapRows( I, K: SIZE );
+		PROCEDURE SwapRows( I, K: LONGINT );
+		VAR J: LONGINT;
 		BEGIN
 			tRow := A[I];  A[I] := A[K];  A[K] := tRow;
 		END SwapRows;
@@ -120,8 +121,8 @@ Gram-Schmidt is less stable then Householder, but yields  orthogonalized rows ea
 Householder is more stable but yields results only at the end *)
 (** n < 0 implies 'all' *)
 
-	PROCEDURE GramSchmidt*( VAR A: Matrix;  n: SIZE );   (*tested - OK*)
-	VAR j, i, k: SIZE;  ss: LONGREAL;
+	PROCEDURE GramSchmidt*( VAR A: Matrix;  n: LONGINT );   (*tested - OK*)
+	VAR j, i, k: LONGINT;  ss: LONGREAL;
 	BEGIN
 		IF n < 0 THEN n := LEN( A,0 ) END;
 		FOR j := 0 TO n - 1 DO
@@ -134,8 +135,8 @@ Householder is more stable but yields results only at the end *)
 
 (*QR by modified Gram Schmidt algorithm, avoids the numerical loss of orthogonality with the classical approach.
 input: A; output: Q packed in A; upper diagonal R*)
-	PROCEDURE QRGramSchmidt*( VAR A, R: Matrix;  n: SIZE );   (*tested - OK*)
-	VAR j, i, k: SIZE;  r: LONGREAL;
+	PROCEDURE QRGramSchmidt*( VAR A, R: Matrix;  n: LONGINT );   (*tested - OK*)
+	VAR j, i, k: LONGINT;  r: LONGREAL;
 	BEGIN
 	(*ASSERT(sizes are correct)*)  (*to do*)
 		R := 0;
@@ -150,7 +151,7 @@ input: A; output: Q packed in A; upper diagonal R*)
 		END;
 	END QRGramSchmidt;
 
-	PROCEDURE House( CONST x: Vector;  n: SIZE ): Vector;
+	PROCEDURE House( CONST x: Vector;  n: LONGINT ): Vector;
 	VAR v: Vector;
 	BEGIN
 		NEW( v, LEN( x,0 ) );
@@ -165,7 +166,7 @@ The Householder transformation is usable for QR decomposition; only the upper di
 For solving rectangular systems, Householder QR is considerably more stable than LU, but only a little more expensive. it is used for the Matlab \ operator *)
 (*Precondition: rectangular matrix; Postcondition: A contains R, the upper diagonal matrix; Q is equal to ... *)
 	PROCEDURE Householder*( VAR A: Matrix );
-	VAR k, m, n: SIZE;  v, v1: Vector;
+	VAR k, m, n: LONGINT;  v, v1: Vector;
 	BEGIN
 		m := LEN( A, 0 );  n := LEN( A, 1 );
 		FOR k := 0 TO MIN( m - 1, n ) - 1 DO
@@ -283,4 +284,4 @@ TYPE Householder = OBJECT
 				compute Q from R and A if the A is different from R (otherwise A will at this point contain R)
 			END Q;
 
-		END Householder;
+		END Householder; 

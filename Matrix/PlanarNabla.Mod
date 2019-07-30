@@ -200,7 +200,7 @@ BEGIN
 END invr2;
 
 PROCEDURE scalefieldbylinex(VAR p:ScalarField; CONST line: Line);
-VAR i:SIZE;
+VAR i:LONGINT;
 BEGIN
 	FOR i:=0 TO LEN(p,0)-1 DO p[i]:=p[i] .* line END;
 END scalefieldbylinex;
@@ -212,19 +212,19 @@ BEGIN
 	IF LEN(grad.y)=0 THEN NEW(grad.y, LEN(sf,0), LEN(sf,1)) END;
 	grad.x:=dx(sf, sampling);
 	grad.y:=dy(sf, sampling);
-	scalefieldbylinex(grad.x, invr(LEN(grad.x,1)(LONGINT), LEN(grad.x,0)(LONGINT) DIV 2));
+	scalefieldbylinex(grad.x, invr(LEN(grad.x,1), LEN(grad.x,0) DIV 2));
 	RETURN grad;
 END CylGrad;
 
 PROCEDURE CylDiv*(CONST vx,vy:ScalarField; r0: LONGINT; phi: Scalar; sampling:LONGINT):ScalarField; (* to do: place result directly in return variable *)
 VAR f: ScalarField;
 BEGIN
-	f := vx; scalefieldbylinex(f, r(LEN(f,1)(LONGINT), r0));
+	f := vx; scalefieldbylinex(f, r(LEN(f,1), r0));
 	RESULT:= dx(f,sampling) ;
 	f:= dy(vy, sampling);
 	f:= f / phi;
 	RESULT:= RESULT + f;
-	scalefieldbylinex(RESULT, invr(LEN(f,1)(LONGINT), r0));
+	scalefieldbylinex(RESULT, invr(LEN(f,1), r0));
 	RETURN RESULT
 END CylDiv;
 
@@ -232,12 +232,12 @@ END CylDiv;
 PROCEDURE CylRot* (CONST vx,vy: ScalarField; r0: LONGINT; phi: Scalar; sampling:LONGINT): ScalarField; (*is the sign correct ?*) (* to do: place result directly in return variable *)
 VAR f: ScalarField;
 BEGIN
-	f := vy; scalefieldbylinex(f, r(LEN(f,1)(LONGINT), r0));
+	f := vy; scalefieldbylinex(f, r(LEN(f,1), r0));
 	RESULT:= dx(f,sampling) ;
 	f:= dy(vx, sampling);
 	f:= f/phi;
 	RESULT:= RESULT - dy(vx, sampling);
-	scalefieldbylinex(RESULT, invr(LEN(f,1)(LONGINT), r0));
+	scalefieldbylinex(RESULT, invr(LEN(f,1), r0));
 	RETURN RESULT
 END CylRot;
 
@@ -246,15 +246,15 @@ PROCEDURE CylLaplacian*(CONST sf:ScalarField; r0:LONGINT; phi:Scalar; sampling:L
 VAR f,g: ScalarField;
 BEGIN
 	 f := dx(sf, sampling);
-	 scalefieldbylinex(f, r(LEN(f,1)(LONGINT), r0));
+	 scalefieldbylinex(f, r(LEN(f,1), r0));
 	 g:= dx(f, sampling);
-	 scalefieldbylinex(g, invr(LEN(f,1)(LONGINT), r0));
+	 scalefieldbylinex(g, invr(LEN(f,1), r0));
 	 RESULT:= g;
 	 f:=dy(sf, sampling);
 	 f:= f/phi;
 	 g:= dy(f,sampling);
 	 g:= g/phi;
-	 scalefieldbylinex(g, invr2(LEN(f,1)(LONGINT), r0));
+	 scalefieldbylinex(g, invr2(LEN(f,1), r0));
 	 RESULT:=RESULT + g;
 	 RETURN RESULT
 END CylLaplacian;

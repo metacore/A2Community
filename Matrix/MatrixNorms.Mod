@@ -21,7 +21,7 @@ TYPE
 
 	(** Maximum column-sum matrix norm*)
 	PROCEDURE L1*( CONST A: Matrix ): Datatype;
-	VAR col: SIZE;  norm: Datatype;
+	VAR col: LONGINT;  norm: Datatype;
 	BEGIN
 		norm := 0;
 		FOR col := 0 TO LEN( A, 1 ) - 1 DO norm := MAX( norm, SUM( ABS( A[.. , col] ) ) );  END;
@@ -49,7 +49,7 @@ Its computation can be expensive. *)
 
 (** The maximum row-sum matrix norm. *)
 	PROCEDURE LInf*( CONST A: Matrix ): Datatype;
-	VAR row: SIZE;  norm: Datatype;
+	VAR row: LONGINT;  norm: Datatype;
 	BEGIN
 		norm := 0;
 		FOR row := 0 TO LEN( A, 0 ) - 1 DO norm := MAX( norm, SUM( ABS( A[row] ) ) );  END;
@@ -60,7 +60,7 @@ Its computation can be expensive. *)
 
 (** The matrix trace, tr x. *)
 	PROCEDURE Trace*( CONST A: Matrix ): Datatype;
-	VAR sum: Datatype;  i: SIZE;
+	VAR sum: Datatype;  i: LONGINT;
 	BEGIN
 		ASSERT ( LEN( A, 0 ) = LEN( A, 1 ) );
 		sum := 0;
@@ -78,7 +78,7 @@ Its computation can be expensive. *)
 
 (** The matrix determinant, |A|. *)
 	PROCEDURE Det*(VAR A: Matrix ): Datatype;   (*todo: this procedure changes A, probable not desirable most of the time -> rewrite *)
-	VAR i, j, k: SIZE;  c, det, max: Datatype;
+	VAR i, j, k: LONGINT;  c, det, max: Datatype;
 	BEGIN
 		ASSERT ( LEN( A, 0 ) = LEN( A, 1 ) );
 		(* Compute the determinant. *)
@@ -111,7 +111,7 @@ Its computation can be expensive. *)
 
 	(** compute condition number from eigenvalues *)
 	PROCEDURE ConditionNumber*( CONST eigenvalues: ARRAY [?] OF Datatype ): Datatype;   (* see to be improved*)
-	VAR max, min: LONGREAL;  i: SIZE;
+	VAR max, min: LONGREAL;  i: LONGINT;
 	BEGIN
 		IF DIM(eigenvalues)=1 THEN (*eigenvalues stored in vector*)
 			max:=ABS(eigenvalues[0]); min:=max;

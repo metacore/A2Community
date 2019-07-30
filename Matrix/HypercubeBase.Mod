@@ -25,7 +25,7 @@ VAR
 	PROCEDURE HandleLines4D*( CONST cube: FourD;  VAR rescube: FourD;
 													    directions: SET;  linehandler: LineHandler );
 	VAR templine, templine1: OneD;  rect, resrect: TwoD;  same:BOOLEAN;
-		x, y, z, t, w0, w, h, i, j, k, lenX, lenY, lenZ, lenT, time: SIZE;
+		x, y, z, t, w0, w, h, i, j, k, lenX, lenY, lenZ, lenT, time: LONGINT;
 	BEGIN
 		lenX := LEN( cube, 3 );  lenY := LEN( cube, 2 );  lenZ := LEN( cube, 1 ); lenT:= LEN(cube, 0);
 		(*same:=ADDRESSOF(cube)=ADDRESSOF(rescube);*) (*solve in language*)
@@ -134,7 +134,7 @@ VAR
 (** applies a procedure 'linehandler' to all lines of a 3D dataset in the indicated directions.  passes result of f4(x,y,z,t) to the linehandler for parametrization according to the *)
 	PROCEDURE HandleLines4D1*( CONST cube: FourD;  VAR rescube: FourD;   directions: SET;  linehandler: LineHandler1; f4:F4);
 	VAR templine, templine1: OneD;  rect, resrect: TwoD;  same:BOOLEAN;
-		x, y, z, t, w0, w, h, i, j, k, lenX, lenY, lenZ, lenT, time: SIZE;
+		x, y, z, t, w0, w, h, i, j, k, lenX, lenY, lenZ, lenT, time: LONGINT;
 	BEGIN
 		lenX := LEN( cube, 3 );  lenY := LEN( cube, 2 );  lenZ := LEN( cube, 1 ); lenT:= LEN(cube, 0);
 		(*same:=ADDRESSOF(cube)=ADDRESSOF(rescube);*) (*solve in language*)
@@ -303,4 +303,5 @@ HypercubeBase.Test 400 1
 
 fofPC.Compile \s *
 fofPC.Compile \f *
+
 

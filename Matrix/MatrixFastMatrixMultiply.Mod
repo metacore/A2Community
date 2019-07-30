@@ -24,7 +24,7 @@ r	s	=	a	b	*	e	f
 t	u		c	d		g	h
 *)
 TYPE Strassen*=OBJECT
-	VAR a,b,c,d,e,f,g,h, r,s,t,u, P1,P2,P3,P4,P5,P6,P7,P55,P66,P77: Matrix; rowsa,rowsb,colsa,colsb: SIZE;
+	VAR a,b,c,d,e,f,g,h, r,s,t,u, P1,P2,P3,P4,P5,P6,P7,P55,P66,P77: Matrix; rowsa,rowsb,colsa,colsb: LONGINT;
 
 	PROCEDURE Multiply*(CONST A,B:Matrix; VAR C:Matrix); (* less memory overhead, less readable*)
 
@@ -162,4 +162,7 @@ MatrixFastMatrixMultiply.Test ~
 MatrixFastMatrixMultiply.Test1 ~
 S.Free MatrixFastMatrixMultiply ~
 Kernel.GC
+
+
+
 

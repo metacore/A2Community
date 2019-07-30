@@ -80,7 +80,7 @@ BEGIN
 	END;
 END cubenewton;
 *)
-PROCEDURE new(VAR v: Vector; minsize:SIZE);
+PROCEDURE new(VAR v: Vector; minsize:LONGINT);
 BEGIN
 	IF LEN(v)<minsize THEN NEW(v,minsize) ELSE v:=0 END;
 END new;

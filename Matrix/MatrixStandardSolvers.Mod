@@ -22,13 +22,13 @@ TYPE
 	Datatype = Base.Datatype;
 	Matrix = Base.Matrix;
 	Vector = Base.Vector;
-	IntVector = ARRAY [*] OF SIZE;
+	IntVector = ARRAY [*] OF LONGINT;
 
 	(** LU is a standard direct solver for square linear systems of equations; it is related to Gauss elimination; this version uses row pivoting*)
 	LU* = OBJECT (Base.Solver);
 	VAR lu: Matrix;   (*if LU decomposition needs to be exported, think of its permutated state by Index *)
 		pivot*:LONGINT; (** switch off pivoting by setting this to NONE. default is FULL *)
-		Index: ARRAY [*] OF SIZE;
+		Index: ARRAY [*] OF LONGINT;
 		V: Vector;
 		tRow: Vector;
 		temp:Matrix;
@@ -52,7 +52,7 @@ TYPE
 
 		(*decompose with row pivoting*)
 		PROCEDURE decompose( VAR A: Matrix );
-		VAR I, Imax, J: SIZE;  Pvt, T: Datatype;  Ubound: SIZE;
+		VAR I, Imax, J: LONGINT;  Pvt, T: Datatype;  Ubound: LONGINT;
 		BEGIN
 			IF LEN( Index,0 ) # LEN( A,0 ) THEN NEW( Index, LEN( A,0 ) ) ELSE Index := 0;  END;   (*reset*)
 			IF pivot#ROW THEN res:=Base.NOTIMPLEMENTED; handleError(res,"MatrixStandardSolvers.LU: this pivot version is not implemented"); RETURN END;
@@ -127,7 +127,7 @@ TYPE
 
 
 		PROCEDURE decomposeNoPivot( VAR A: Matrix ); (* .. slow because of row accesses with excess cache misses and because outerproduct-add is so slow..*)
-		VAR J: SIZE;
+		VAR J: LONGINT;
 		BEGIN
 			IF LEN( Index,0 ) # LEN( A,0 ) THEN NEW( Index, LEN( A,0 ) ) ELSE Index := 0;  END;   (*reset*)
 			IF (LEN(temp,0)#LEN(A,0)) OR(LEN(temp,1)#LEN(A,1))THEN NEW(temp,LEN(A,0),LEN(A,1)); END;
@@ -145,7 +145,7 @@ TYPE
 
 		(*decompose with row pivoting. column-wise access is accelerated through duplicate, transpose matrix. however, slow transposition renders this slow, too *)
 		PROCEDURE decomposeFastLarge( VAR A: Matrix ); (*tries to limit cache misses, at the expense of memory use*)
-			VAR I, Imax, J: SIZE;  Pvt, T: Datatype;  Ubound: SIZE;  tRow, tRow2: Vector;
+			VAR I, Imax, J: LONGINT;  Pvt, T: Datatype;  Ubound: LONGINT;  tRow, tRow2: Vector;
 
 		BEGIN
 			IF LEN( Index,0 ) # LEN( A,0 ) THEN NEW( Index, LEN( A,0 ) ) ELSE Index := 0;  END;   (*reset*)
@@ -201,8 +201,8 @@ TYPE
 
 		(*decompose with row pivoting with partitioning of the data to avoid cache misses*)
 		PROCEDURE decomposeSliced( VAR A: Matrix );
-		VAR I, Imax, J: SIZE;  Pvt, T: Datatype;  Ubound: SIZE;
-			j, jlen, jsize: SIZE; AS: Matrix;
+		VAR I, Imax, J: LONGINT;  Pvt, T: Datatype;  Ubound: LONGINT;
+			j, jlen, jsize: LONGINT; AS: Matrix;
 		BEGIN
 			IF LEN( Index,0 ) # LEN( A,0 ) THEN NEW( Index, LEN( A,0 ) ) ELSE Index := 0;  END;   (*reset*)
 			IF pivot#ROW THEN res:=Base.NOTIMPLEMENTED; handleError(res,"MatrixStandardSolvers.LU: this pivot version is not implemented"); RETURN END;
@@ -255,7 +255,7 @@ TYPE
 
 
 		PROCEDURE backsubstitute( VAR A: Matrix;  CONST b: Vector );
-		VAR I, Ip, K: SIZE;  Sum: Datatype;  Ubound: SIZE;
+		VAR I, Ip, K: LONGINT;  Sum: Datatype;  Ubound: LONGINT;
 		BEGIN
 			IF LEN( x,0 ) # LEN( A, 1 ) THEN NEW( x, LEN( A, 1 ) ) END;
 			Ubound := LEN( A,0 ) - 1;   (*TODO:check matrix dimensions*)
@@ -275,7 +275,7 @@ TYPE
 		END backsubstitute;
 
 		PROCEDURE backsubstituteMultiple( CONST A: Matrix;  CONST B: Matrix ):Matrix;
-		VAR I, Ip, K: SIZE; Ubound: SIZE; VAR X:Matrix; Sum:Vector;
+		VAR I, Ip, K: LONGINT; Ubound: LONGINT; VAR X:Matrix; Sum:Vector;
 		BEGIN
 			IF (LEN( X,0 ) # LEN( B, 1)) OR (LEN( X ,1) # LEN( B, 0 )) THEN NEW( X, LEN( B, 1 ), LEN(B,0) ) END;
 			Ubound := LEN( A,0 ) - 1;   (*TODO:check matrix dimensions*)
@@ -306,7 +306,7 @@ TYPE
 		*)
 
 		PROCEDURE Inverse*():Matrix; (*to do:compute only once, and store inverse for later use, and have flag to show this *)
-		VAR I, Ip, K: SIZE;  Ubound: SIZE; VAR X:Matrix; Sum, tmp:Vector;
+		VAR I, Ip, K: LONGINT;  Ubound: LONGINT; VAR X:Matrix; Sum, tmp:Vector;
 		BEGIN
 			IF (LEN( X,0 ) # LEN( lu, 1)) OR (LEN( X ,1) # LEN( lu, 0 )) THEN NEW( X, LEN( lu, 1 ), LEN(lu,0) ) ELSE X:=0; END;
 			Ubound := LEN( lu,0 ) - 1;   (*TODO:check matrix dimensions*)
@@ -411,14 +411,14 @@ TYPE
 			Z := X;  X := Y;  Y := Z
 		END Swap;
 
-		PROCEDURE SwapRows( I, K: SIZE );
+		PROCEDURE SwapRows( I, K: LONGINT );
 		BEGIN
 			tRow := A[I];  A[I] := A[K];  A[K] := tRow;
 		END SwapRows;
 
 	(** Solve by Gaussian elimination algorithm  with row pivoting *) (*currently 10-20 times slower than LU. to do: avoid  explicit copying of rows by using indexing approach as in LU ?*)
 		PROCEDURE Solve*( CONST b:Vector): Vector;
-			VAR 		i, j, k, m, n, maxi, u: SIZE;  val, max, Auj: Datatype;
+			VAR 		i, j, k, m, n, maxi, u: LONGINT;  val, max, Auj: Datatype;
 			BEGIN
 			IF LEN( x,0 ) # LEN( b,0 ) THEN NEW( x, LEN( b,0 ) ) ELSE x := 0;  END;
 			IF pivot#ROW THEN res:=Base.NOTIMPLEMENTED; handleError(res,"MatrixStandardSolvers.Gauss: this pivot version is not implemented"); RETURN x END;
@@ -473,7 +473,7 @@ TYPE
 	VAR Ainv-: Matrix;
 		tRow, tCol, Pivot: Vector;
 		PRow, PCol: IntVector;
-		Ubound: SIZE;
+		Ubound: LONGINT;
 		pivot*:LONGINT;
 
 		PROCEDURE & Init*( CONST A: Matrix );
@@ -493,18 +493,18 @@ TYPE
 			Z := X;  X := Y;  Y := Z
 		END Swap;
 
-		PROCEDURE SwapRows( I, K: SIZE );   (*local procedure to save temp memory*)
+		PROCEDURE SwapRows( I, K: LONGINT );   (*local procedure to save temp memory*)
 		BEGIN
 			tRow := Ainv[I];  Ainv[I] := Ainv[K];  Ainv[K] := tRow;
 		END SwapRows;
 
-		PROCEDURE SwapCols( J, K: SIZE );
+		PROCEDURE SwapCols( J, K: LONGINT );
 		BEGIN
 			tCol := Ainv[.. , J];  Ainv[.. , J] := Ainv[.. , K];  Ainv[.. , K] := tCol;
 		END SwapCols;
 
 		PROCEDURE decompose( CONST A: Matrix );
-		VAR I, J, K: SIZE;  Pvt, T: Datatype;
+		VAR I, J, K: LONGINT;  Pvt, T: Datatype;
 		BEGIN
 			IF pivot#FULL THEN res:=Base.NOTIMPLEMENTED; handleError(res,"MatrixStandardSolvers.GaussJordan: this pivot version is not implemented"); RETURN END;
 			Ubound := LEN( A, 1 ) - 1;
@@ -566,7 +566,7 @@ TYPE
 	VAR L-: Matrix;
 
 		PROCEDURE & Init*( CONST A: Matrix );
-		VAR I, J, K, Ubound: SIZE;  Sum: Datatype;
+		VAR I, J, K, Ubound: LONGINT;  Sum: Datatype;
 		BEGIN
 			handleError := Base.HandleError;  res := OK;
 			IF LEN( A , 0 ) = 0 THEN RETURN END;
@@ -603,7 +603,7 @@ TYPE
 		END Init;
 
 		PROCEDURE decompose;
-		VAR K: SIZE; Sum: Datatype;
+		VAR K: LONGINT; Sum: Datatype;
 		BEGIN
 			IF (LEN( R, 0 ) # LEN( Q, 1 )) OR (LEN( R, 1 ) # LEN( Q, 1 )) THEN NEW( R, LEN( Q, 1 ), LEN( Q, 1 ) );  ELSE R := 0 END;
 			FOR K := 0 TO LEN( Q, 1 ) - 1 DO
@@ -617,7 +617,7 @@ TYPE
 		END decompose;
 
 		PROCEDURE backsubstitute( CONST b: Vector );
-		VAR I, Ubound: SIZE;  Sum: Datatype;
+		VAR I, Ubound: LONGINT;  Sum: Datatype;
 		BEGIN
 			Ubound := LEN( Q, 1 ) - 1;
 			x := b*Q;

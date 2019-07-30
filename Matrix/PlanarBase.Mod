@@ -23,7 +23,7 @@ VAR
 	PROCEDURE HandleLines2D*( CONST cube: TwoD;  VAR rescube: TwoD;
 													    directions: SET;  linehandler: LineHandler );
 	VAR templine, templine1: OneD;  rect, resrect: TwoD;
-		x, y, z, w0, w, h, i, j, lenX, lenY: SIZE;
+		x, y, z, w0, w, h, i, j, lenX, lenY, lenZ, time: LONGINT;
 	BEGIN
 		lenX := LEN( cube, 1 );  lenY := LEN( cube, 0 );
 		IF 1 IN directions THEN  (*along x*)
@@ -56,13 +56,13 @@ VAR
 	END HandleLines2D;
 
 	PROCEDURE copy( CONST in: OneD;  VAR in2: OneD );
-	VAR i: SIZE;
+	VAR i: LONGINT;
 	BEGIN
 		FOR i := 0 TO LEN( in,0 ) - 1 DO in2[i] := in[i];  END;
 	END copy;
 
 	PROCEDURE out( CONST in: OneD;  VAR in2: OneD );
-	VAR i: SIZE;
+	VAR i: LONGINT;
 	BEGIN
 		FOR i := 0 TO LEN( in,0 ) - 1 DO Out.Int( ENTIER( in2[i] ), 6 );  (*Out.Int(  in2[i] , 6 );*) END;
 		Out.Ln;

@@ -58,7 +58,7 @@ TYPE PCA*= OBJECT (MatrixBase.Solver)
 		END LargestComponents;
 
 		PROCEDURE Axes*():Matrix; (* principal axes with unit length *)
-		VAR axislengths,unit: Vector; nullmatrix: Matrix; i:SIZE; scale: Datatype;
+		VAR axislengths,unit: Vector; nullmatrix: Matrix; i:LONGINT; scale: Datatype;
 		BEGIN
 			IF ~ytdone THEN RETURN nullmatrix END;
 			NEW(U, LEN(YT,0), LEN(YT,1));
