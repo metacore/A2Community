@@ -7,7 +7,7 @@ TYPE
 	Array = ARRAY [*] OF Datatype;
 
 	PROCEDURE Max*(CONST a,b:Array):Array;
-	VAR i:LONGINT;
+	VAR i:SIZE;
 	BEGIN
 		ASSERT(LEN(a,0)=LEN(b,0));
 		IF LEN(RESULT,0)=0 THEN NEW(RESULT,LEN(a,0)) END;
@@ -18,7 +18,7 @@ TYPE
 	END Max;
 
 	PROCEDURE Min*(CONST a,b:Array):Array;
-	VAR i:LONGINT;
+	VAR i:SIZE;
 	BEGIN
 		ASSERT(LEN(a,0)=LEN(b,0));
 		IF LEN(RESULT,0)=0 THEN NEW(RESULT,LEN(a,0)) END;
@@ -114,7 +114,7 @@ TYPE
 	END ComplexMultiplication;
 
 	PROCEDURE ComplexSqrt*( CONST R,I:Array; VAR outR,outI:Array);
-	VAR cplx,root:NbrCplx.Complex; i:LONGINT; re,im:REAL;
+	VAR cplx,root:NbrCplx.Complex; i:SIZE; re,im:REAL;
 	BEGIN
 		FOR i:=0 TO LEN(R,0)-1 DO
 			IF LEN(I)=0 THEN NbrCplx.Set(SHORT(R[i]),0, cplx);

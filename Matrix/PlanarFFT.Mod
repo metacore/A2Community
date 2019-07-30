@@ -15,7 +15,7 @@ TYPE
 	PROCEDURE HandleLines( CONST dataR, dataI: TwoD;  VAR resdataR, resdataI: TwoD;  directions: SET;  linehandler: LineHandler );
 	VAR templineR, templineI, templine1R, templine1I: OneD;
 			rectR, rectI, resrectR, resrectI: TwoD;
-			x, y, w0, w, h, j, lenX, lenY: LONGINT;
+			x, y, w0, w, h, j, lenX, lenY: SIZE;
 	BEGIN
 		lenX := LEN( dataR, 1 );
 		lenY := LEN( dataR, 0 );
@@ -86,7 +86,7 @@ TYPE
 
 	(** deconvolution is multiplication in the Fourier domain *)
 	PROCEDURE Convolution*( CONST in1, in2: TwoD;  VAR outR, outI: TwoD );
-	VAR R1, I1, R2, I2, nil, tmpR, tmpI: TwoD;  lenX, lenY: LONGINT;
+	VAR R1, I1, R2, I2, nil, tmpR, tmpI: TwoD;  lenX, lenY: SIZE;
 	BEGIN
 		lenX := LEN( in1, 1 );  lenY := LEN( in1, 0 );
 		FFT( in1, nil, R1, I1, {0, 1} );
@@ -107,7 +107,7 @@ TYPE
 
 	(** crosscorrelation is multiplication in the Fourier domain of the complex conjugate*)
 	PROCEDURE CrossCorrelation*( CONST in1, in2: TwoD;  VAR outR, outI: TwoD );
-	VAR R1, I1, R2, I2, tmpR,tmpI,nil: TwoD;  lenX, lenY: LONGINT;
+	VAR R1, I1, R2, I2, tmpR,tmpI,nil: TwoD;  lenX, lenY: SIZE;
 	BEGIN
 		lenX := LEN( in1, 1 );  lenY := LEN( in1, 0 );
 		FFT( in1, nil, R1, I1, {0, 1} );
@@ -146,7 +146,4 @@ TYPE
 END PlanarFFT.
 
 SystemTools.FreeDownTo PlanarFFT ~
-
-
-
 

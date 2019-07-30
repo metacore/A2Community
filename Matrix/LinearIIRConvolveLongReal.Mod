@@ -13,7 +13,7 @@ PROCEDURE ConvolveFinite*(CONST in: ARRAY [*] OF Datatype; VAR out: ARRAY [*] OF
 				kernel is given by its real poles
 		Preconditions:
 				input and output may use the same array*)
-VAR i,j:LONGINT; pole:Datatype;
+VAR i,j:SIZE; pole:Datatype;
 BEGIN
 	ASSERT(LEN(poles,0)>0,100);
 	ASSERT(LEN(in,0)<=LEN(out),101);
@@ -59,7 +59,7 @@ PROCEDURE ConvolveMirror*(CONST in: ARRAY [*] OF Datatype; VAR out: ARRAY [*] OF
 		Preconditions:
 				input and output may use the same array *)
 
-VAR i,j,k,n,n2:LONGINT;
+VAR i,j,k,n,n2:SIZE;
 	x0,pole:Datatype;
 BEGIN
 	ASSERT(LEN(in,0)<=LEN(out),101);
@@ -99,7 +99,7 @@ PROCEDURE ConvolvePeriodic*(CONST in: ARRAY [*] OF Datatype; VAR out: ARRAY [*] 
 				kernel is given by its real poles
 		Preconditions:
 				input and output may use the same array*)
-VAR i,j,k,n,k0:LONGINT;
+VAR i,j,k,n,k0:SIZE;
 	x0,x1,pole:Datatype;
 BEGIN
 	ASSERT(LEN(poles,0)>0,100);

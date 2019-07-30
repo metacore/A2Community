@@ -24,11 +24,11 @@ TYPE
 		gain:Datatype; (*for iir convolution*)
 		filter-: Filters.Filter;
 		boundary*,shift*: LONGINT;
-		tmp:LONGINT;
+		tmp:SIZE;
 
 		(** Filters need to have their coefficients already transposed g(-tau)  for good  performance  *)
 		PROCEDURE &Init*(filter:Filters.Filter; boundary: LONGINT);
-		VAR i:LONGINT;
+		VAR i:SIZE;
 		BEGIN
 			SELF.filter:=filter;
 			SELF.boundary:=boundary;
@@ -47,7 +47,7 @@ TYPE
 		END Init;
 
 		PROCEDURE convolve*( CONST  data: Dataarray; VAR out: Dataarray );  (*in-place convolution in principle possible but requires some more work on this module*)
-		VAR i,  filterlen,  offset: LONGINT;  datalen, rawdatalen: LONGINT;
+		VAR i,  filterlen,  offset: SIZE;  datalen, rawdatalen: SIZE;
 
 		BEGIN
 		(*Assertions;*)
@@ -137,7 +137,7 @@ TYPE
 		*)
 
 		PROCEDURE convolveDown2*(CONST data:Dataarray; VAR out: Dataarray );
-		VAR i, outlen, filterlen, offsetLo, datalen, rawdatalen: LONGINT;
+		VAR i, outlen, filterlen, offsetLo, datalen, rawdatalen: SIZE;
 
 		BEGIN
 		(*Assertions;*)
@@ -191,7 +191,7 @@ TYPE
 		END convolveDown2;
 
 		PROCEDURE convolveUp2*( CONST data:Dataarray; VAR out: Dataarray );   (*use even/odd*)
-		VAR i,  outlen, filterlen, offsetLo,halffilterlen, halfLenPlus, datalen: LONGINT;
+		VAR i,  outlen, filterlen, offsetLo,halffilterlen, halfLenPlus, datalen: SIZE;
 
 		BEGIN
 		(*Assertions;*)
@@ -326,5 +326,4 @@ OFormatter.Format *
 			END;
 		END;
 	END iirConvolveMirrorATrous;
-
 

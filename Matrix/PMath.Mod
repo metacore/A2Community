@@ -238,7 +238,7 @@ BEGIN
 END sign;
 
 PROCEDURE max*(CONST Data:ARRAY OF LONGINT):LONGINT;
-VAR res,len,i:LONGINT;
+VAR res:LONGINT; len,i:SIZE;
 BEGIN
 	len:=LEN(Data);
 	IF LEN(Data)=0 THEN res:= 0
@@ -249,7 +249,7 @@ BEGIN
 END max;
 
 PROCEDURE min*(CONST Data:ARRAY OF LONGINT):LONGINT;
-VAR res,len,i:LONGINT;
+VAR res:LONGINT; len,i:SIZE;
 BEGIN
 	len:=LEN(Data);
 	IF LEN(Data)=0 THEN res:= 0
@@ -362,9 +362,9 @@ PROCEDURE ASCIIHex2SInt(c:CHAR):SHORTINT;
 	END ASCIIHex2SInt;
 
 PROCEDURE ASCIIHexInt*(CONST A:ARRAY OF CHAR):INTEGER;
-VAR res,i,len:INTEGER;
+VAR res:INTEGER; i,len:SIZE;
 BEGIN
-	len:=SHORT(LEN(A));
+	len:=LEN(A);
 	IF len>4 THEN len:=4 END;
 	res:=0;
 	FOR i:=0 TO len-1 DO
@@ -376,7 +376,7 @@ BEGIN
 END ASCIIHexInt;
 
 PROCEDURE ASCIIHexLInt*(CONST A:ARRAY OF CHAR):LONGINT;
-VAR res,i,len:LONGINT;
+VAR res: LONGINT; i,len:SIZE;
 BEGIN
 	len:=LEN(A);
 	IF len>8 THEN len:=8 END;

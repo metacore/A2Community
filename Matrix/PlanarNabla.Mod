@@ -200,7 +200,7 @@ BEGIN
 END invr2;
 
 PROCEDURE scalefieldbylinex(VAR p:ScalarField; CONST line: Line);
-VAR i:LONGINT;
+VAR i:SIZE;
 BEGIN
 	FOR i:=0 TO LEN(p,0)-1 DO p[i]:=p[i] .* line END;
 END scalefieldbylinex;

@@ -8,7 +8,7 @@ IMPORT MatrixBase, LinearMath, Mathe:=MathL;
 TYPE Datatype=MatrixBase.Datatype;
 	Array = ARRAY [*] OF Datatype;
 
-	PROCEDURE IsPowerOfTwo(x: LONGINT): BOOLEAN;
+	PROCEDURE IsPowerOfTwo(x: SIZE): BOOLEAN;
 	BEGIN
 		WHILE (x MOD 2) = 0 DO
 			x := x DIV 2
@@ -16,7 +16,7 @@ TYPE Datatype=MatrixBase.Datatype;
 		RETURN x = 1
 	END IsPowerOfTwo;
 
-	PROCEDURE NumberOfBitsNeeded(x: LONGINT): LONGINT;
+	PROCEDURE NumberOfBitsNeeded(x: SIZE): LONGINT;
 		VAR n: LONGINT;
 	BEGIN
 		n := 0;
@@ -37,7 +37,7 @@ TYPE Datatype=MatrixBase.Datatype;
 		RETURN rev
 	END ReverseBits;
 
-	PROCEDURE Transform(fullAngle: Datatype; nSamples: LONGINT; CONST realIn, imagIn: Array;  VAR  realOut, imagOut: Array); (*SSE2 would allow much faster version*)
+	PROCEDURE Transform(fullAngle: Datatype; nSamples: SIZE; CONST realIn, imagIn: Array;  VAR  realOut, imagOut: Array); (*SSE2 would allow much faster version*)
 		VAR
 			angle, alpha, beta, ar, ai, tr, ti, tmp: Datatype;
 			nBits, i, j, k, n, size, end: LONGINT;
@@ -111,7 +111,7 @@ TYPE Datatype=MatrixBase.Datatype;
 	END Frequency;
 
 	PROCEDURE IFFT*(CONST realIn, imagIn: Array; VAR realOut, imagOut: Array);
-		VAR nSamples: LONGINT;
+		VAR nSamples: SIZE;
 	BEGIN
 		nSamples:=LEN(realIn,0);
 		IF LEN(realOut,0) = 0 THEN NEW( realOut, LEN(realIn,0) ) END;

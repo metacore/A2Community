@@ -159,7 +159,7 @@ BEGIN
 END LineInterpolationWeights;
 
 PROCEDURE InterpolateLine*(CONST coefficients: Vector; CONST weights:Matrix; CONST indices:ARRAY [*] OF LONGINT):Vector;
-VAR v:Vector; i, size:LONGINT;
+VAR v:Vector; i, size:SIZE;
 BEGIN
 	NEW(v,LEN(indices,0));
 	size:=LEN(weights,1);

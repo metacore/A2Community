@@ -74,7 +74,7 @@ TYPE
 		Clow,Chigh: LinearConvolve.Convolver;
 
 		PROCEDURE &Init*(wavelet:WaveletFamily; boundary:LONGINT);
-		VAR i:LONGINT;
+		VAR i:SIZE;
 		BEGIN
 			SELF.wavelet:=wavelet;
 			IF wavelet=NIL THEN RETURN END;
@@ -89,7 +89,7 @@ TYPE
 		END Init;
 
 		PROCEDURE Analyze*( CONST data: Dataarray; VAR resdata:Dataarray);
-		VAR i, filterlen, offsetLo, offsetHi,  datalen, rawdatalen: LONGINT;
+		VAR i, filterlen, offsetLo, offsetHi,  datalen, rawdatalen: SIZE;
 		BEGIN
 	(*
 			Clow.convolveDown2(data, resdata[ .. LEN(data+1) DIV 2 -1]);
@@ -160,8 +160,8 @@ TYPE
 		END Analyze;
 
 		PROCEDURE Reconstruct*( CONST data: Dataarray; VAR resdata:Dataarray);
-		VAR i,  filterlen, offsetLo, offsetHi: LONGINT;
-			halffilterlen, halfLen, halfLenPlus, datalen: LONGINT;
+		VAR i,  filterlen, offsetLo, offsetHi: SIZE;
+			halffilterlen, halfLen, halfLenPlus, datalen: SIZE;
 
 		BEGIN
 		(*Assertions;*)
@@ -232,7 +232,7 @@ TYPE
 
 	PROCEDURE reflect( F: FIRFilter ): FIRFilter;
 	(* reflect a filter by symmetric mapping, to get analysis filter from reconstruction filter in wavelet*)
-	VAR res: FIRFilter;  coeff: FilterCoeffs;  i: LONGINT;
+	VAR res: FIRFilter;  coeff: FilterCoeffs;  i: SIZE;
 	BEGIN
 		NEW( coeff, LEN( F.coeff,0) );
 		FOR i := 0 TO LEN( F.coeff,0) - 1 DO coeff[i] := F.coeff[LEN( coeff,0) - i - 1] END;
@@ -241,14 +241,14 @@ TYPE
 
 	PROCEDURE DoubleCoeff( F: FIRFilter );
 	(* double coeff, to balance analysis and reconstruction filters*)
-	VAR i: LONGINT;
+	VAR i: SIZE;
 	BEGIN
 		FOR i := 0 TO LEN( F.coeff,0) - 1 DO F.coeff[i] := 2 * F.coeff[i] END;
 	END DoubleCoeff;
 
 	PROCEDURE reflectHalf( F: FIRFilter ): FIRFilter;
 	(* reflect a filter by symmetric mapping, to get analysis filter from reconstruction filter in wavelet, and divide by 2 to balance*)
-	VAR res: FIRFilter;  coeff: FilterCoeffs;  i: LONGINT;
+	VAR res: FIRFilter;  coeff: FilterCoeffs;  i: SIZE;
 	BEGIN
 		NEW( coeff, LEN( F.coeff,0) );
 		FOR i := 0 TO LEN( F.coeff,0) - 1 DO coeff[i] := 0.5 * F.coeff[LEN( coeff,0) - i - 1] END;
@@ -257,7 +257,7 @@ TYPE
 
 	PROCEDURE ChangeEvenSignReflect( F: FIRFilter ): FIRFilter;
 	(* Change sign of even items of filter, and reflect the filter,  to get hiReconstruct filter from loReconstruct filter in wavelet*)
-	VAR res: FIRFilter;  coeff: FilterCoeffs;  i, factor: LONGINT;
+	VAR res: FIRFilter;  coeff: FilterCoeffs;  i: SIZE;  factor: LONGINT;
 	BEGIN
 		NEW( coeff, LEN( F.coeff,0) );  factor := 1;
 		FOR i := 0 TO LEN( F.coeff,0) - 1 DO coeff[i] := factor * F.coeff[LEN( coeff,0) - i - 1];  factor := -factor;  END;
@@ -266,7 +266,7 @@ TYPE
 
 	PROCEDURE ChangeOddSignReflect( F: FIRFilter ): FIRFilter;
 	(* Change sign of odd items of filter, and reflect the filter, to get hiAnalysis filter from loAnalysis filter in wavelet*)
-	VAR res: FIRFilter;  coeff: FilterCoeffs;  i, factor: LONGINT;
+	VAR res: FIRFilter;  coeff: FilterCoeffs;  i: SIZE;  factor: LONGINT;
 	BEGIN
 		NEW( coeff, LEN( F.coeff,0) );  factor := -1;
 		FOR i := 0 TO LEN( F.coeff,0) - 1 DO coeff[i] := factor * F.coeff[LEN( coeff,0) - i - 1];  factor := -factor;  END;
@@ -275,14 +275,14 @@ TYPE
 
 	PROCEDURE Swap( F: WaveletFamily );
 	(* change filter, only needed for biorthogonal wavelets.*)
-	VAR tempfilter: FIRFilter;  temporigin: LONGINT;
+	VAR tempfilter: FIRFilter;  temporigin: SIZE;
 	BEGIN
 		NEW( tempfilter );  tempfilter := F.loReconstruct;  F.loReconstruct := F.loAnalysis;  F.loAnalysis := tempfilter;  temporigin := F.hiReconstruct.origin;  F.hiReconstruct.origin := F.hiAnalysis.origin;
 		F.hiAnalysis.origin := temporigin;
 	END Swap;
 
 	PROCEDURE HalfToFull( VAR a, b: FilterCoeffs;  odd: BOOLEAN );   (*odd: b:= W symmetric, odd length filter; otherwise b:= H symmetric, ieven length bilter*)
-	VAR mid, i, len: LONGINT;
+	VAR mid, i, len: SIZE;
 	BEGIN
 		IF LEN( a ) = 0 THEN RETURN END;
 		len := LEN( a,0);
@@ -292,7 +292,7 @@ TYPE
 	END HalfToFull;
 
 	PROCEDURE SwapHalfs( VAR a: FilterCoeffs );
-	VAR val: Datatype;  i, len, mid: LONGINT;
+	VAR val: Datatype;  i, len, mid: SIZE;
 	BEGIN
 		mid := LEN( a,0) DIV 2;  len := LEN( a,0);
 		FOR i := 0 TO mid - 1 DO val := a[i];  a[i] := a[mid - i - 1];  a[mid - i - 1] := val;  val := a[mid + i];  a[mid + i] := a[len - 1 - i];  a[len - 1 - i] := val;  END;
