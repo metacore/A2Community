@@ -22,13 +22,13 @@ TYPE
 	Datatype = Base.Datatype;
 	Matrix = Base.Matrix;
 	Vector = Base.Vector;
-	IntVector = ARRAY [*] OF LONGINT;
+	IntVector = ARRAY [*] OF SIZE;
 
 	(** LU is a standard direct solver for square linear systems of equations; it is related to Gauss elimination; this version uses row pivoting*)
 	LU* = OBJECT (Base.Solver);
 	VAR lu: Matrix;   (*if LU decomposition needs to be exported, think of its permutated state by Index *)
 		pivot*:LONGINT; (** switch off pivoting by setting this to NONE. default is FULL *)
-		Index: ARRAY [*] OF LONGINT;
+		Index: ARRAY [*] OF SIZE;
 		V: Vector;
 		tRow: Vector;
 		temp:Matrix;

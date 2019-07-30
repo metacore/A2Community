@@ -7,7 +7,7 @@ TYPE Matrix=MatrixBase.Matrix;
 		Curve1D=PROCEDURE{DELEGATE}(x:Datatype; c:Color; penwidth:Datatype):LONGINT;
 		Curve2D=PROCEDURE{DELEGATE}(t:Datatype; VAR x,y: LONGINT; c:Color; penwidth:Datatype);
 
-PROCEDURE Inside(x:LONGINT; lower,upper:LONGINT):BOOLEAN;
+PROCEDURE Inside(x:SIZE; lower,upper:SIZE):BOOLEAN;
 BEGIN
 	RETURN (x>=lower) & (x<=upper)
 END Inside;
@@ -15,8 +15,8 @@ END Inside;
 
 
 (* implementation note: matrix index order is m[y,x]*)
-PROCEDURE Line*(VAR m:Matrix; x0,y0,x1,y1:LONGINT; value:Datatype);
-VAR i, x,y, dx,dy,min,max:LONGINT; slope:Datatype;
+PROCEDURE Line*(VAR m:Matrix; x0,y0,x1,y1:SIZE; value:Datatype);
+VAR i, x,y, dx,dy,min,max:SIZE; slope:Datatype;
 BEGIN
 	IF ~(Inside(x0,0,LEN(m,1)) & Inside(y0,0,LEN(m,0)) &Inside(x1,0,LEN(m,1)) &Inside(y1,0,LEN(m,0))) THEN RETURN END;
 	IF ABS(x1-x0) >= ABS(y1-y0) THEN

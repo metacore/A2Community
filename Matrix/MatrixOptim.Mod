@@ -168,13 +168,13 @@ VAR
 		Pstar, P2star: Vector;   (* New vertices *)
 		Ystar, Y2star: Real;   (* New function values *)
 		F0: Real;   (* Function value at minimum *)
-		N: LONGINT;   (* Number of parameters *)
-		M: LONGINT;   (* Index of last vertex *)
-		L, H: LONGINT;   (* Vertices with lowest & highest F values *)
-		I, J: LONGINT;   (* Loop variables *)
-		Iter: LONGINT;   (* Iteration count *)
+		N: SIZE;   (* Number of parameters *)
+		M: SIZE;   (* Index of last vertex *)
+		L, H: SIZE;   (* Vertices with lowest & highest F values *)
+		I, J: SIZE;   (* Loop variables *)
+		Iter: SIZE;   (* Iteration count *)
 		Corr, MaxCorr: Real;   (* Corrections *)
-		Sum: Real;  Flag: BOOLEAN;  i: LONGINT;  Ubound: LONGINT;
+		Sum: Real;  Flag: BOOLEAN;  i: LONGINT;  Ubound: SIZE;
 
 		PROCEDURE UpdateSimplex( Y: Real;  CONST Q: Vector );   (* Update "worst" vertex & function value *)
 		VAR i: LONGINT;
@@ -322,7 +322,7 @@ VAR
   	G       = gradient vector
  *)
 	PROCEDURE NumGradient*( Func: TFuncNVar;  VAR X: Vector;  VAR G: Vector );
-	VAR Temp, Delta, Fplus, Fminus: Real;  I: LONGINT;
+	VAR Temp, Delta, Fplus, Fminus: Real;  I: SIZE;
 	BEGIN
 		FOR I := 0 TO LEN( X,0 ) - 1 DO
 			Temp := X[I];
@@ -341,7 +341,7 @@ VAR
                       H = hessian matrix
   *)
 	PROCEDURE NumHessGrad*( Func: TFuncNVar;  VAR X: Vector;  VAR G: Vector;  VAR H: Matrix );
-	VAR Delta, Xminus, Xplus, Fminus, Fplus: Vector;  Temp1, Temp2, F, F2plus: Real;  I, J: LONGINT;  Ubound: LONGINT;
+	VAR Delta, Xminus, Xplus, Fminus, Fplus: Vector;  Temp1, Temp2, F, F2plus: Real;  I, J: SIZE;  Ubound: SIZE;
 	BEGIN
 		Ubound := LEN( X,0 ) - 1;
 		NEW( Delta, Ubound + 1 );   (* Increments   *)
@@ -388,7 +388,7 @@ VAR
 
 	PROCEDURE ParamConv( CONST OldX, X: Vector;  Tol: Real ): BOOLEAN;
 	(*   Check for convergence on parameters *)
-	VAR I: LONGINT;  Conv: BOOLEAN;  Ubound: LONGINT;
+	VAR I: SIZE;  Conv: BOOLEAN;  Ubound: SIZE;
 	BEGIN
 		Ubound := LEN( X,0 ) - 1;  I := 0;  Conv := TRUE;
 		REPEAT Conv := Conv & (ABS( X[I] - OldX[I] ) < Max( Tol, Tol * ABS( OldX[I] ) ));  INC( I );  UNTIL (Conv = FALSE ) OR (I > Ubound);
@@ -421,7 +421,7 @@ VAR
 		FTOL = 1.0E-10;   (* Tolerance on function decrease *)
 	VAR Lambda,
 		Lambda1: Real;   (* Marquardt's lambda *)
-		I: LONGINT;   (* Loop variable *)
+		I: SIZE;   (* Loop variable *)
 		OldX: Vector;   (* Old parameters *)
 		G: Vector;   (* Gradient vector *)
 		H: Matrix;   (* Hessian matrix *)
@@ -546,7 +546,7 @@ VAR
   ---------------------------------------------------------------------- *)
 	PROCEDURE BFGS*( Func: TFuncNVar;  Gradient: TGradient;  VAR X: Vector;  MaxIter: LONGINT;  Tol: Real;  VAR Fmin: Real;
 									  VAR Hinv: Matrix ): LONGINT;
-	VAR I, J, Iter, ErrCode: LONGINT;  DeltaXmax, Gmax, P1, P2, R1, R2: Real;
+	VAR I: SIZE; J, Iter, ErrCode: LONGINT;  DeltaXmax, Gmax, P1, P2, R1, R2: Real;
 		OldX, DeltaX, dX, G, OldG, dG, HdG, R1dX, R2HdG, U, P2U: Vector;  Conv: BOOLEAN;  one: Real;
 		(*ofunc:OFunc;*)
 	BEGIN

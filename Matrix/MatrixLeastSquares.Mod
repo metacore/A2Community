@@ -128,7 +128,7 @@ TYPE TotalLeastSquares* = OBJECT  (MatrixBase.Solver) (* tested for Vector b and
 		(* see Signal Processing 87 (2007) 2283-2302. Overview of total least-squares methods. Ivan Markovsky,Sabine Van Huffel *)
 		PROCEDURE SolveMultiple*(CONST B:Matrix):Matrix;
 		VAR M,V,diag,tmp,V22inv: Matrix;
-			m,n,d: LONGINT;
+			m,n,d: SIZE;
 		BEGIN
 			m:=LEN(A,0); n:=LEN(A,1); d:=LEN(B,1);
 			ASSERT(LEN(A,0)=LEN(B,0));

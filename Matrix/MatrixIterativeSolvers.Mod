@@ -40,7 +40,7 @@ TYPE
 TYPE
 	GaussSeidel* = OBJECT (IterativeSolver)
 		PROCEDURE Solve*( CONST b: Vector ): Vector;
-		VAR i: LONGINT;  r: Datatype;
+		VAR i: SIZE;  r: Datatype;
 		BEGIN
 			IF LEN( A, 0 ) # LEN( b ) THEN res := Base.SIZEMISMATCH;  handleError( res, "GaussSeidel: matrix / vector size mismatch" );  RETURN x END;
 			iteration := 0;
@@ -59,7 +59,7 @@ TYPE
 		END Solve;
 
 		PROCEDURE Step*( CONST b: Vector;  VAR x: Vector );   (*compute single step of GaussSeidel, e.g. as a smoother*)
-		VAR i: LONGINT;  r: Datatype;
+		VAR i: SIZE;  r: Datatype;
 		BEGIN
 			FOR i := 0 TO LEN( x,0 ) - 1 DO r := b[i] - A[i] +* x;  x[i] := x[i] + r / A[i, i];  END;
 		END Step;
@@ -77,7 +77,7 @@ TYPE
 		END Init;
 
 		PROCEDURE Solve*( CONST b: Vector ): Vector;
-		VAR r: Datatype;  i: LONGINT;
+		VAR r: Datatype;  i: SIZE;
 		BEGIN
 			IF LEN( A, 0 ) # LEN( b ) THEN res := Base.SIZEMISMATCH;  handleError( res, "GaussSeidelSOR: matrix / vector size mismatch" );  RETURN x END;
 			iteration := 0;  residual := b - A * x;
@@ -96,7 +96,7 @@ TYPE
 		END Solve;
 
 		PROCEDURE Step*( CONST b: Vector;  VAR x: Vector );   (*compute single step of GaussSeidelSOR, e.g. as a smoother*)
-		VAR i: LONGINT;  r: Datatype;
+		VAR i: SIZE;  r: Datatype;
 		BEGIN
 			FOR i := 0 TO LEN( x,0 ) - 1 DO r := b[i] - A[i] +* x;  x[i] := (1 - omega) * x[i] + omega * (r / A[i, i] + x[i]);  END;
 		END Step;
@@ -222,7 +222,7 @@ TYPE
 	END L2;
 
 	PROCEDURE InvDiag( CONST M: Matrix ): Vector;
-	VAR x: Vector;  i: LONGINT;  a: Datatype;
+	VAR x: Vector;  i: SIZE;  a: Datatype;
 	BEGIN
 		NEW( x, MAX( LEN( M, 0 ), LEN( M, 1 ) ) );
 		FOR i := 0 TO LEN( x,0 ) - 1 DO
@@ -233,7 +233,7 @@ TYPE
 	END InvDiag;
 
 	PROCEDURE Log( CONST m: Matrix );
-	VAR i, j: LONGINT;
+	VAR i, j: SIZE;
 	BEGIN
 		IF LEN( m ) = 0 THEN Out.String( "zero size matrix" );  Out.Ln;  RETURN;  END;
 		FOR j := 0 TO LEN( m, 0 ) - 1 DO
@@ -244,7 +244,7 @@ TYPE
 	END Log;
 
 	PROCEDURE LogV( CONST m: Vector );
-	VAR i: LONGINT;
+	VAR i: SIZE;
 	BEGIN
 		IF LEN( m ) = 0 THEN Out.String( "zero size matrix" );  Out.Ln;  RETURN;  END;
 		FOR i := 0 TO LEN( m,0 ) - 1 DO OutFloat( m[i] );  END;
@@ -342,5 +342,4 @@ Ref:
 en.wikipedia.org/wiki/Gauss-Seidel_method
 en.wikipedia.org/wiki/Gauss-Seidel_SOR_method
 en.wikipedia.org/wiki/Jacobi_method
-
 
