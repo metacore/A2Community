@@ -46,8 +46,8 @@ TYPE
 		Constrain*: Boundary;
 		map*,smallmap*, m,m0: BooleanMap;
 		resized:BOOLEAN;
-		x,y:LONGINT;
-	PROCEDURE Resize(w,h:LONGINT); (*implementation limitation: binary size steps*)
+		x,y:SIZE;
+	PROCEDURE Resize(w,h:SIZE); (*implementation limitation: binary size steps*)
 	BEGIN
 		IF (w#LEN(constraint,1)) OR (h#LEN(constraint,0)) THEN
 			resized:=TRUE;
@@ -85,7 +85,7 @@ TYPE
 		END;
 	END Resize;
 	PROCEDURE Constrain0(VAR data: Grid); (*use "constraint" and "map" as constraints; *)
-	VAR w,h:LONGINT;
+	VAR w,h:SIZE;
 	BEGIN
 		IF LEN(constraint)=0 THEN RETURN END;
 		w:=LEN(data,1); h:=LEN(data,0);
@@ -369,7 +369,7 @@ TYPE
  	END AllocateSame;
 
 	PROCEDURE Stencil( CONST x: Grid;  VAR x1: Grid); (*2D stencil for finite difference*) (* not in-place *) (*! to do: higher performance by digital filtering approach*)
-	VAR lenx, leny: LONGINT;
+	VAR lenx, leny: SIZE;
 	BEGIN
 		AllocateSame(x1,x);
 		lenx := LEN( x, 1 );  leny := LEN( x, 0 );
@@ -407,7 +407,7 @@ TYPE
 	PROCEDURE Advect*( CONST source,  u, v: Grid;  VAR target: Grid;  dt, ds: Datatype; bilinear: BOOLEAN );
 	(*for each gridpoint in target grid, find value in source grid based on retrograd application of map u,v . ds and dt is grid spacing in source and target *)
 	(*! to do: speed up by doing it linewise or slicewise *)
-	VAR x, y, ox, oy, lenx, leny: LONGINT;
+	VAR x, y, ox, oy, lenx, leny: SIZE;
 	a, b: Datatype;
 	BEGIN
 		lenx:=LEN(source,1); leny:=LEN(source,0);

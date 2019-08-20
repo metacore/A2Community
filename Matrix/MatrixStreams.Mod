@@ -78,7 +78,7 @@ TYPE Reader* = OBJECT (Streams.Reader);
 			PROCEDURE Matrix*(CONST m: ARRAY [*,*] OF Datatype);
 			VAR Rows,Cols, Start, Row,Col: LONGINT;
 			BEGIN
-				Rows:=LEN(m,0); Cols:=LEN(m,1);
+				Rows:=LEN(m,0)(LONGINT); Cols:=LEN(m,1)(LONGINT);
 				RawLInt(Rows); RawLInt(Cols);
 				FOR Row:=0 TO Rows-1 DO
 					FOR Col:=0 TO Cols-1 DO
@@ -90,7 +90,7 @@ TYPE Reader* = OBJECT (Streams.Reader);
 			PROCEDURE Vector*(CONST v : ARRAY [*] OF Datatype);
 			VAR Rows,Cols, Start, Row,Col: LONGINT;
 			BEGIN
-				Cols:=LEN(v,0);
+				Cols:=LEN(v,0)(LONGINT);
 				RawLInt(Cols);
 				FOR Col:=0 TO Cols-1 DO
 					RawLReal(v[Col])

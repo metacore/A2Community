@@ -28,7 +28,8 @@ VAR d: ARRAY [?] OF MatrixBase.Datatype;
 	sWindow:WMStack.Window;
 	tWindow: WMTensor.Window;
 	title: Files.FileName;
-	i,x,y,z, xx,yy, datatype, version:LONGINT;
+	i,x,y,z,xx,yy: SIZE;
+	datatype, version:LONGINT;
 	max: MatrixBase.Datatype;
 BEGIN
 	f:=Files.Old(name);
@@ -157,7 +158,8 @@ PROCEDURE Import*(fileName: Files.FileName):ARRAY [?] OF INTEGER; (** filename ~
 VAR
 	name : Files.FileName;
 	pw : WMWindowManager.BufferWindow;
-	res, w, h, x : LONGINT;
+	res, x : WORD;
+	w, h : SIZE;
 	dec : Codecs.ImageDecoder;
 	rdr : Streams.Reader;
 	ext : ARRAY 16 OF CHAR;
@@ -195,7 +197,7 @@ END Import;
 PROCEDURE Do*(context:Commands.Context);
 VAR fn: Files.FileName;
 	data: ARRAY [?] OF INTEGER;
-	i:LONGINT;
+	i:SIZE;
 	window:WMMatrix.Window;
 BEGIN
 	IF context.arg.GetString(fn) THEN

@@ -115,7 +115,7 @@ TYPE
 
 	(*one repeat of Gauss-SeidelSOR, can be used as smoother, e.g. in algebraic multigrid, is an excerpt from MatrixIterativeSolvers.Mod; use library call in future implementation *)
 	PROCEDURE GaussSeidelSORStep( CONST A: Matrix;  CONST b: Vector;  VAR x: Vector;  omega: Datatype );
-	VAR s: Datatype;  i, n: LONGINT;
+	VAR s: Datatype;  i, n: SIZE;
 	BEGIN
 		ASSERT ( LEN( A, 0 ) = LEN( b ) );
 		ASSERT ( LEN( A, 1 ) = LEN( x ) );

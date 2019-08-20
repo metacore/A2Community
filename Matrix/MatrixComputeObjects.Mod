@@ -87,7 +87,7 @@ TYPE
 			M1,M2:MulSub2;
 			M:MulSub;
 			done1,done2:BOOLEAN;
-			half,divisor:LONGINT;
+			half,divisor:SIZE;
 		PROCEDURE Done1; BEGIN {EXCLUSIVE} done1:=TRUE END Done1;
 		PROCEDURE Done2; BEGIN {EXCLUSIVE} done2:=TRUE END Done2;
 		PROCEDURE Done12; BEGIN {EXCLUSIVE} done1:=TRUE; done2:=TRUE END Done12;
@@ -213,16 +213,16 @@ TYPE ComputeQueue=OBJECT
 			W: Streams.Writer; R:Streams.Reader;
 			done*:BOOLEAN;
 
-		PROCEDURE &Request*(CONST Operation: ARRAY OF CHAR; Flops, SendSize, RecvSize: LONGINT; priority: LONGINT);
+		PROCEDURE &Request*(CONST Operation: ARRAY OF CHAR; Flops, SendSize, RecvSize: SIZE; priority: LONGINT);
 		BEGIN
 			(* choose server according to task characteristics *)
 
 		END Request;
 
 		PROCEDURE SetMatrix(CONST M: Matrix);
-		VAR r,c:LONGINT;
+		VAR r,c:SIZE;
 		BEGIN
-			W.RawLInt(LEN(M,0)); W.RawLInt(LEN(M,1));
+			W.RawLInt(LEN(M,0)(LONGINT)); W.RawLInt(LEN(M,1)(LONGINT));
 			FOR r:=0 TO LEN(M,0)-1 DO
 				FOR c:=0 TO LEN(M,1)-1 DO
 					W.RawLReal(M[r,c])

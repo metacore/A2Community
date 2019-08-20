@@ -18,7 +18,7 @@ TYPE
 	Solver* = OBJECT (MatrixBase.Solver)
 	VAR Tolerance*: Datatype;   (* tolerance of solution accuracy *)
 		nMaxIterations*, nIterations-: LONGINT;   (* maximum number of iterations and number of done iterations *)
-		nRestart*: LONGINT;   (* GMRES will restart every nRestart iterations *)
+		nRestart*: SIZE;   (* GMRES will restart every nRestart iterations *)
 		(* Total number of iterations = nMaxIterations*nRestart *)
 		SysMatrix: Matrix;   (* copy of system matrix *)
 		Tracer*: Streams.Writer;
@@ -31,7 +31,7 @@ TYPE
 		y, t: Vector;
 
 		PROCEDURE & Init( CONST A: Matrix );
-		VAR i: LONGINT;
+		VAR i: SIZE;
 		BEGIN
 			handleError := MatrixBase.HandleError;  res := MatrixBase.OK;
 
@@ -60,7 +60,7 @@ TYPE
 		END Init;
 
 		PROCEDURE Solve*( CONST b: Vector ): Vector;
-		VAR i: LONGINT;
+		VAR i: SIZE;
 		BEGIN
 			IF LEN( b ) # LEN( SysMatrix ) THEN
 				res := MatrixBase.SIZEMISMATCH;  handleError( res, 'MINRES: matrix-vector size missmatch!' );  RETURN x;
@@ -79,7 +79,7 @@ TYPE
 		END Solve;
 
 		PROCEDURE SolveNoCopy*( VAR A: Matrix;CONST b: Vector ): Vector;
-		VAR i: LONGINT;
+		VAR i: SIZE;
 		BEGIN
 			IF LEN( A ) = 0 THEN RETURN x;  END;
 			IF LEN( A ) # LEN( A, 1 ) THEN
@@ -107,7 +107,7 @@ TYPE
 
 		PROCEDURE SolveProcBased*( MatrixToVector: MatrixToVectorProc;
 								   CONST b: Vector ): Vector;
-		VAR i: LONGINT;
+		VAR i: SIZE;
 		BEGIN
 			IF MatrixToVector = NIL THEN
 				(*res := (*MatrixBase.NILPROC*);*)  handleError( res, 'MINRES: invalid Matrix to Vector procedure pointer!' );  RETURN x;
@@ -131,7 +131,7 @@ TYPE
 
 		PROCEDURE GMRES( CONST A: Matrix;  CONST b: Vector;
 						 VAR x: Vector;  Tolerance: Datatype;
-						 nMaxIterations: LONGINT;  nRestart: LONGINT ): Vector;
+						 nMaxIterations: LONGINT;  nRestart: SIZE ): Vector;
 		VAR k, m, p: LONGINT;  hk_k1, gamma, d, residnrm: Datatype;  bRestart: BOOLEAN;
 		BEGIN
 			nIterations := 0;  residnrm := 1;
@@ -216,7 +216,7 @@ TYPE
 		PROCEDURE GMRESProcBased( MatrixToVector: MatrixToVectorProc;
 								  CONST b: Vector;
 								  VAR x: Vector;  Tolerance: Datatype;
-								  nMaxIterations: LONGINT;  nRestart: LONGINT ): Vector;
+								  nMaxIterations: LONGINT;  nRestart: SIZE ): Vector;
 		VAR k, m, p: LONGINT;  hk_k1, gamma, d, residnrm: Datatype;  bRestart: BOOLEAN;
 		BEGIN
 			nIterations := 0;  residnrm := 1;

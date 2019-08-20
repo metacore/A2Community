@@ -215,7 +215,7 @@ PROCEDURE PKhi2(Nu : LONGINT; X : Float) : Float;	(* Prob(Khi2 >= X) *)
 ----------- Fisher-Snedecor distribution with Nu1 and Nu2 d.o.f.-------
 PROCEDURE DSnedecor(Nu1, Nu2 : LONGINT; X : Float) : Float;	(* Density of F *)
 PROCEDURE FSnedecor(Nu1, Nu2 : LONGINT; X : Float) : Float;	(* Prob(F <= X) *)
-PROCEDURE PSnedecor(Nu1, Nu2 : LONGINT; X : Float) : Float;	(* Prob(F >= X) *)
+PROCEDURE PSnedecor(Nu1, Nu2 : SIZE; X : Float) : Float;	(* Prob(F >= X) *)
 
 ------------- Exponential distribution------------------
 PROCEDURE DExpo(A, X : Float) : Float;	(* Density of exponential distrib. *)
@@ -1499,7 +1499,7 @@ PROCEDURE CFrac1*(A, B, X : Float) : Float;
 		END;
 	END FSnedecor;
 
-	PROCEDURE PSnedecor*(Nu1, Nu2 : LONGINT; X : Float) : Float;
+	PROCEDURE PSnedecor*(Nu1, Nu2 : SIZE; X : Float) : Float;
 	BEGIN
 		MathErr := FNOK;
 		IF (Nu1 < 1) OR (Nu2 < 1) OR (X <= 0.0) THEN RETURN DefaultVal(FNDOMAIN)

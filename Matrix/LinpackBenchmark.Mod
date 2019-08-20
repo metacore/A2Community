@@ -21,7 +21,7 @@ TYPE
 
 
 	PROCEDURE Transpose*( VAR A: Matrix );   (*BLOCKED APPROACH; 	is currently very slow - how about blockwise data transfers ? *)
-	VAR block: Matrix;  i,  r, c,  r4, c4, b4: LONGINT;
+	VAR block: Matrix;  i,  r, c,  r4, c4, b4: SIZE;
 	BEGIN
 		r := LEN( A,0 );  c := LEN( A, 1 );  r4 := LEN( A,0 ) + 3 DIV 4;
 		c4 := LEN( A, 1 ) + 3 DIV 4;  b4 := MAX( r4, c4 );
@@ -864,7 +864,7 @@ END;
 PROCEDURE TransposeExplicit(VAR a: Matrix);
 VAR
 	b,c: Vector;
-	i,j, len:LONGINT;
+	i,j, len:SIZE;
 	res:LONGREAL;
 BEGIN
 	NEW(b, LEN(a,1));

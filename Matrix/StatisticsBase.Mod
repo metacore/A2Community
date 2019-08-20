@@ -15,8 +15,8 @@ PROCEDURE SameDimension(VAR a:Array; CONST len:ARRAY [*] OF SIZE);
 		END;
 	END SameDimension;
 
-PROCEDURE Count*(CONST a: Array):LONGINT;
-VAR i:LONGINT; res:LONGINT;
+PROCEDURE Count*(CONST a: Array):SIZE;
+VAR i:SIZE; res:SIZE;
 BEGIN
 	res:=1;
 	FOR i:=0 TO DIM(a)-1 DO
@@ -26,7 +26,7 @@ BEGIN
 END Count;
 
 PROCEDURE Prod*(CONST v: Vector):Datatype;
-VAR i:LONGINT; x:Datatype;
+VAR i:SIZE; x:Datatype;
 BEGIN
 	x:=v[0];
 	FOR i:=1 TO LEN(v,0)-1 DO x:=x*v[i] END;
@@ -34,7 +34,7 @@ BEGIN
 END Prod;
 
 PROCEDURE ProdS*(CONST v: ARRAY [*] OF SIZE):Datatype;
-VAR i:LONGINT; x:SIZE;
+VAR i:SIZE; x:SIZE;
 BEGIN
 	x:=v[0];
 	FOR i:=1 TO LEN(v,0)-1 DO x:=x*v[i] END;
@@ -58,9 +58,9 @@ BEGIN
 	END;
 END RMS;
 
-PROCEDURE KSmallest( VAR a: Vector;  n, k: LONGINT ): Datatype;
+PROCEDURE KSmallest( VAR a: Vector;  n, k: SIZE ): Datatype;
 (** caution: modifies a , Algorithm by N.Wirth / Hoare, cf. N. Wirth: Algorithms & Datastructures. *)
-VAR i, j, l, m: LONGINT;  x: Datatype;
+VAR i, j, l, m: SIZE;  x: Datatype;
 
 	PROCEDURE swap( VAR x, y: Datatype );
 	VAR z: LONGREAL;
@@ -84,9 +84,9 @@ BEGIN
 END KSmallest;
 
 PROCEDURE QSort*(VAR X : Vector);
-	PROCEDURE Sort(l, r : LONGINT);
+	PROCEDURE Sort(l, r : SIZE);
 	VAR
-		i, j : LONGINT;
+		i, j : SIZE;
 		u, v : Datatype;
 	BEGIN
 		i := l;
@@ -108,7 +108,7 @@ PROCEDURE QSort*(VAR X : Vector);
  END QSort;
 
  PROCEDURE DestructiveMedian*(VAR v1:Vector):Datatype;
- VAR len:LONGINT;
+ VAR len:SIZE;
  BEGIN
  	len:=LEN(v1,0);
 	IF ODD( len ) THEN RETURN KSmallest( v1, len, len DIV 2 )
@@ -174,7 +174,7 @@ PROCEDURE Kurtosis*(CONST X : Array) : Datatype;
 	END Kurtosis;
 
 PROCEDURE Normalize*(CONST a: Array):Array;
-VAR N:LONGINT; sd: Datatype;
+VAR N:SIZE; sd: Datatype;
 BEGIN
 	N:=Count(a);
 	RESULT:=a-SUM(a)/N;

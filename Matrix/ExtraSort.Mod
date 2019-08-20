@@ -8,8 +8,6 @@ MODULE ExtraSort;
 *)
 
 TYPE
-	INDEX = LONGINT;
-
 	(*
 		DESCRIPTION:
 			Quick sort for LONGINT data
@@ -18,8 +16,8 @@ TYPE
 	*)
 	PROCEDURE QuickSortLI*( VAR x: ARRAY [ * ] OF LONGINT);
 
-		PROCEDURE QSort( VAR x: ARRAY [ * ] OF LONGINT; l, r: INDEX );
-		VAR m: INDEX;
+		PROCEDURE QSort( VAR x: ARRAY [ * ] OF LONGINT; l, r: SIZE );
+		VAR m: SIZE;
 		BEGIN
 			WHILE l < r DO
 				(* quickly sort short lists *)
@@ -48,11 +46,11 @@ TYPE
 			x[var] - array to sort
 			ind[var] - sorting indices
 	*)
-	PROCEDURE QuickSortExLI*( VAR x: ARRAY [ * ] OF LONGINT;  VAR ind: ARRAY [ * ] OF INDEX );
-	VAR i: INDEX;
+	PROCEDURE QuickSortExLI*( VAR x: ARRAY [ * ] OF LONGINT;  VAR ind: ARRAY [ * ] OF SIZE );
+	VAR i: SIZE;
 
-		PROCEDURE QSort( VAR x: ARRAY [ * ] OF LONGINT;  VAR ind: ARRAY [ * ] OF INDEX;  l, r: INDEX );
-		VAR m: INDEX;
+		PROCEDURE QSort( VAR x: ARRAY [ * ] OF LONGINT;  VAR ind: ARRAY [ * ] OF SIZE;  l, r: SIZE );
+		VAR m: SIZE;
 		BEGIN
 			WHILE l < r DO
 				(* quickly sort short lists *)
@@ -84,8 +82,8 @@ TYPE
 	*)
 	PROCEDURE QuickSortR*( VAR x: ARRAY [ * ] OF REAL);
 
-		PROCEDURE QSort( VAR x: ARRAY [ * ] OF REAL; l, r: INDEX );
-		VAR m: INDEX;
+		PROCEDURE QSort( VAR x: ARRAY [ * ] OF REAL; l, r: SIZE );
+		VAR m: SIZE;
 		BEGIN
 			WHILE l < r DO
 				(* quickly sort short lists *)
@@ -115,11 +113,11 @@ TYPE
 			x[var] - array to sort
 			ind[var] - sorting indices
 	*)
-	PROCEDURE QuickSortExR*( VAR x: ARRAY [ * ] OF REAL;  VAR ind: ARRAY [ * ] OF INDEX );
-	VAR i: INDEX;
+	PROCEDURE QuickSortExR*( VAR x: ARRAY [ * ] OF REAL;  VAR ind: ARRAY [ * ] OF SIZE );
+	VAR i: SIZE;
 
-		PROCEDURE QSort( VAR x: ARRAY [ * ] OF REAL;  VAR ind: ARRAY [ * ] OF INDEX;  l, r: INDEX );
-		VAR m: INDEX;
+		PROCEDURE QSort( VAR x: ARRAY [ * ] OF REAL;  VAR ind: ARRAY [ * ] OF SIZE;  l, r: SIZE );
+		VAR m: SIZE;
 		BEGIN
 			WHILE l < r DO
 				(* quickly sort short lists *)
@@ -151,8 +149,8 @@ TYPE
 	*)
 	PROCEDURE QuickSortLR*( VAR x: ARRAY [ * ] OF LONGREAL);
 
-		PROCEDURE QSort( VAR x: ARRAY [ * ] OF LONGREAL; l, r: INDEX );
-		VAR m: INDEX;
+		PROCEDURE QSort( VAR x: ARRAY [ * ] OF LONGREAL; l, r: SIZE );
+		VAR m: SIZE;
 		BEGIN
 			WHILE l < r DO
 				(* quickly sort short lists *)
@@ -181,11 +179,11 @@ TYPE
 			x[var] - array to sort
 			ind[var] - sorting indices
 	*)
-	PROCEDURE QuickSortExLR*( VAR x: ARRAY [ * ] OF LONGREAL;  VAR ind: ARRAY [ * ] OF INDEX );
-	VAR i: INDEX;
+	PROCEDURE QuickSortExLR*( VAR x: ARRAY [ * ] OF LONGREAL;  VAR ind: ARRAY [ * ] OF SIZE );
+	VAR i: SIZE;
 
-		PROCEDURE QSort( VAR x: ARRAY [ * ] OF LONGREAL;  VAR ind: ARRAY [ * ] OF INDEX;  l, r: INDEX );
-		VAR m: INDEX;
+		PROCEDURE QSort( VAR x: ARRAY [ * ] OF LONGREAL;  VAR ind: ARRAY [ * ] OF SIZE;  l, r: SIZE );
+		VAR m: SIZE;
 		BEGIN
 			WHILE l < r DO
 				(* quickly sort short lists *)
@@ -213,8 +211,8 @@ TYPE
 		procedures for internal use
 	*)
 
-	PROCEDURE InsertionSortLI( VAR x: ARRAY [ * ] OF LONGINT; l, r: INDEX );
-	VAR t: INDEX;  i, j: INDEX;
+	PROCEDURE InsertionSortLI( VAR x: ARRAY [ * ] OF LONGINT; l, r: SIZE );
+	VAR t: LONGINT;  i, j: SIZE;
 	BEGIN
 		FOR i := l + 1 TO r DO
 			t := x[i];
@@ -231,8 +229,8 @@ TYPE
 		END;
 	END InsertionSortLI;
 
-	PROCEDURE InsertionSortExLI( VAR x: ARRAY [ * ] OF LONGINT;  VAR ind: ARRAY [ * ] OF INDEX;  l, r: INDEX );
-	VAR t: INDEX;  i, j, k: INDEX;
+	PROCEDURE InsertionSortExLI( VAR x: ARRAY [ * ] OF LONGINT;  VAR ind: ARRAY [ * ] OF SIZE;  l, r: SIZE );
+	VAR t: LONGINT;  i, j, k: SIZE;
 	BEGIN
 		FOR i := l + 1 TO r DO
 			t := x[i];  k := ind[i];
@@ -249,8 +247,8 @@ TYPE
 		END;
 	END InsertionSortExLI;
 
-	PROCEDURE InsertionSortR( VAR x: ARRAY [ * ] OF REAL;  l, r: INDEX );
-	VAR t: REAL;  i, j: INDEX;
+	PROCEDURE InsertionSortR( VAR x: ARRAY [ * ] OF REAL;  l, r: SIZE );
+	VAR t: REAL;  i, j: SIZE;
 	BEGIN
 		FOR i := l + 1 TO r DO
 			t := x[i];
@@ -267,8 +265,8 @@ TYPE
 		END;
 	END InsertionSortR;
 
-	PROCEDURE InsertionSortExR( VAR x: ARRAY [ * ] OF REAL;  VAR ind: ARRAY [ * ] OF INDEX;  l, r: INDEX );
-	VAR t: REAL;  i, j, k: INDEX;
+	PROCEDURE InsertionSortExR( VAR x: ARRAY [ * ] OF REAL;  VAR ind: ARRAY [ * ] OF SIZE;  l, r: SIZE );
+	VAR t: REAL;  i, j, k: SIZE;
 	BEGIN
 		FOR i := l + 1 TO r DO
 			t := x[i];  k := ind[i];
@@ -285,8 +283,8 @@ TYPE
 		END;
 	END InsertionSortExR;
 
-	PROCEDURE InsertionSortLR( VAR x: ARRAY [ * ] OF LONGREAL;  l, r: INDEX );
-	VAR t: LONGREAL;  i, j: INDEX;
+	PROCEDURE InsertionSortLR( VAR x: ARRAY [ * ] OF LONGREAL;  l, r: SIZE );
+	VAR t: LONGREAL;  i, j: SIZE;
 	BEGIN
 		FOR i := l + 1 TO r DO
 			t := x[i];
@@ -303,8 +301,8 @@ TYPE
 		END;
 	END InsertionSortLR;
 
-	PROCEDURE InsertionSortExLR( VAR x: ARRAY [ * ] OF LONGREAL;  VAR ind: ARRAY [ * ] OF INDEX;  l, r: INDEX );
-	VAR t: LONGREAL;  i, j, k: INDEX;
+	PROCEDURE InsertionSortExLR( VAR x: ARRAY [ * ] OF LONGREAL;  VAR ind: ARRAY [ * ] OF SIZE;  l, r: SIZE );
+	VAR t: LONGREAL;  i, j, k: SIZE;
 	BEGIN
 		FOR i := l + 1 TO r DO
 			t := x[i];  k := ind[i];
@@ -321,8 +319,8 @@ TYPE
 		END;
 	END InsertionSortExLR;
 
-	PROCEDURE PartitionLI( VAR x: ARRAY [ * ] OF LONGINT;  l, r: INDEX ): INDEX;
-	VAR pivot, t: INDEX;  i, j: INDEX;
+	PROCEDURE PartitionLI( VAR x: ARRAY [ * ] OF LONGINT;  l, r: SIZE ): SIZE;
+	VAR pivot, t: LONGINT;  i, j: SIZE;
 	BEGIN
 		pivot := x[(l + r) DIV 2];
 		(* work from both ends, swapping to keep   *)
@@ -343,8 +341,8 @@ TYPE
 		RETURN j;
 	END PartitionLI;
 
-	PROCEDURE PartitionExLI( VAR x: ARRAY [ * ] OF LONGINT;  VAR ind: ARRAY [ * ] OF INDEX;  l, r: INDEX ): INDEX;
-	VAR pivot, t: INDEX;  i, j, k: INDEX;
+	PROCEDURE PartitionExLI( VAR x: ARRAY [ * ] OF LONGINT;  VAR ind: ARRAY [ * ] OF SIZE;  l, r: SIZE ): SIZE;
+	VAR pivot, t: LONGINT;  i, j, k: SIZE;
 	BEGIN
 		pivot := x[(l + r) DIV 2];
 		(* work from both ends, swapping to keep   *)
@@ -367,8 +365,8 @@ TYPE
 		RETURN j;
 	END PartitionExLI;
 
-	PROCEDURE PartitionR( VAR x: ARRAY [ * ] OF REAL;  l, r: INDEX ): INDEX;
-	VAR pivot, t: REAL;  i, j: INDEX;
+	PROCEDURE PartitionR( VAR x: ARRAY [ * ] OF REAL;  l, r: SIZE ): SIZE;
+	VAR pivot, t: REAL;  i, j: SIZE;
 	BEGIN
 		pivot := x[(l + r) DIV 2];
 		(* work from both ends, swapping to keep   *)
@@ -389,8 +387,8 @@ TYPE
 		RETURN j;
 	END PartitionR;
 
-	PROCEDURE PartitionExR( VAR x: ARRAY [ * ] OF REAL;  VAR ind: ARRAY [ * ] OF INDEX;  l, r: INDEX ): INDEX;
-	VAR pivot, t: REAL;  i, j, k: INDEX;
+	PROCEDURE PartitionExR( VAR x: ARRAY [ * ] OF REAL;  VAR ind: ARRAY [ * ] OF SIZE;  l, r: SIZE ): SIZE;
+	VAR pivot, t: REAL;  i, j, k: SIZE;
 	BEGIN
 		pivot := x[(l + r) DIV 2];
 		(* work from both ends, swapping to keep   *)
@@ -413,8 +411,8 @@ TYPE
 		RETURN j;
 	END PartitionExR;
 
-	PROCEDURE PartitionLR( VAR x: ARRAY [ * ] OF LONGREAL;  l, r: INDEX ): INDEX;
-	VAR pivot, t: LONGREAL;  i, j: INDEX;
+	PROCEDURE PartitionLR( VAR x: ARRAY [ * ] OF LONGREAL;  l, r: SIZE ): SIZE;
+	VAR pivot, t: LONGREAL;  i, j: SIZE;
 	BEGIN
 		pivot := x[(l + r) DIV 2];
 		(* work from both ends, swapping to keep   *)
@@ -435,8 +433,8 @@ TYPE
 		RETURN j;
 	END PartitionLR;
 
-	PROCEDURE PartitionExLR( VAR x: ARRAY [ * ] OF LONGREAL;  VAR ind: ARRAY [ * ] OF INDEX;  l, r: INDEX ): INDEX;
-	VAR pivot, t: LONGREAL;  i, j, k: INDEX;
+	PROCEDURE PartitionExLR( VAR x: ARRAY [ * ] OF LONGREAL;  VAR ind: ARRAY [ * ] OF SIZE;  l, r: SIZE ): SIZE;
+	VAR pivot, t: LONGREAL;  i, j, k: SIZE;
 	BEGIN
 		pivot := x[(l + r) DIV 2];
 		(* work from both ends, swapping to keep   *)
@@ -459,7 +457,7 @@ TYPE
 		RETURN j;
 	END PartitionExLR;
 
-	PROCEDURE QuickSortI*( CONST x: ARRAY [ * ] OF INTEGER;  VAR ind: ARRAY [ * ] OF INDEX );
+	PROCEDURE QuickSortI*( CONST x: ARRAY [ * ] OF INTEGER;  VAR ind: ARRAY [ * ] OF SIZE );
 	BEGIN
 		HALT(100);
 	END QuickSortI;

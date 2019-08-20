@@ -187,8 +187,8 @@ TYPE
 		FIRFilter*= OBJECT (Filter)
 			VAR
 			coeff*: Vector;
-			origin*:LONGINT;
-			PROCEDURE InitFIR*(CONST coeff:Vector; origin:LONGINT); BEGIN SELF.coeff:=coeff; SELF.origin:=origin END InitFIR;
+			origin*:SIZE;
+			PROCEDURE InitFIR*(CONST coeff:Vector; origin:SIZE); BEGIN SELF.coeff:=coeff; SELF.origin:=origin END InitFIR;
 		END FIRFilter;
 
 		IIRFilter*=OBJECT(Filter)
@@ -231,7 +231,7 @@ TYPE
 			verifiedBoundaries*:SET
 		END WaveletFamily;
 *)
-PROCEDURE CreateFIRFilter*(CONST coeff:Vector; origin:LONGINT):FIRFilter;
+PROCEDURE CreateFIRFilter*(CONST coeff:Vector; origin:SIZE):FIRFilter;
 VAR FIR:FIRFilter;
 BEGIN
 	NEW(FIR);
@@ -255,7 +255,7 @@ PROCEDURE  CreateSplineFilter* (name: LONGINT):Filter;
 			or: 	FIRConvolvePeriodic(data,filter(FIRFilter))
 			*)
 	VAR
-	       i:LONGINT;
+	       i:SIZE;
 	       FIR:FIRFilter;
 	       IIR:IIRFilter;
 	       mid:LONGINT;

@@ -11,8 +11,6 @@ IMPORT
 	MLBase, MLKernels, ErrorBase, MatrixStandardSolvers, Strings;
 
 TYPE
-	INT = LONGINT;
-
 	Scalar = MLBase.Scalar;
 	Vector = MLBase.Vector;
 	Matrix = MLBase.Matrix;
@@ -20,7 +18,7 @@ TYPE
 	Regressor* = OBJECT(MLBase.LearningMachine)
 	VAR
 		lambda-: Scalar;
-		kernType-: INT;
+		kernType-: WORD;
 		kernParams-: Vector;
 		X: Matrix;
 		alphas: Vector;
@@ -41,7 +39,7 @@ TYPE
 			REMARKS:
 				after you set a new type of kernel you must redo learning of the regressor!
 		*)
-		PROCEDURE SetKernel*(kernType: INT; CONST kernParams: Vector);
+		PROCEDURE SetKernel*(kernType: WORD; CONST kernParams: Vector);
 		BEGIN
 			isTrained := FALSE; (* reset classifier *)
 
@@ -81,7 +79,7 @@ TYPE
 		*)
 		PROCEDURE LearnScalarN*(CONST X: Matrix; CONST y: Vector);
 		VAR
-			i: INT;
+			i: SIZE;
 			A: Matrix;
 			solver: MatrixStandardSolvers.LU;
 		BEGIN

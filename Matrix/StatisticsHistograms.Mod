@@ -6,8 +6,8 @@ TYPE
 	Volume= ARRAY [*,*,*] OF MatrixBase.Datatype;
 	Data= ARRAY [?] OF MatrixBase.Datatype;
 
-PROCEDURE LinearHistogram*(CONST data: MatrixBase.Vector; bins: LONGINT; VAR histogram: MatrixBase.Vector);
-VAR max,min:LONGREAL; i,index :LONGINT;
+PROCEDURE LinearHistogram*(CONST data: MatrixBase.Vector; bins: SIZE; VAR histogram: MatrixBase.Vector);
+VAR max,min:LONGREAL; i,index :SIZE;
 BEGIN
 	max:=MAX(data); min:=MIN(data);
 	IF LEN(histogram)=0 THEN NEW(histogram,bins) ELSE histogram:=0 END;
@@ -17,8 +17,8 @@ BEGIN
 	END;
 END LinearHistogram;
 
-PROCEDURE PlanarHistogram*(CONST data: MatrixBase.Matrix; bins: LONGINT; VAR histogram: MatrixBase.Vector);
-VAR max,min:LONGREAL; i,j,index :LONGINT;
+PROCEDURE PlanarHistogram*(CONST data: MatrixBase.Matrix; bins: SIZE; VAR histogram: MatrixBase.Vector);
+VAR max,min:LONGREAL; i,j,index :SIZE;
 BEGIN
 	max:=MAX(data); min:=MIN(data);
 	IF LEN(histogram)=0 THEN NEW(histogram,bins) ELSE histogram:=0 END;
@@ -30,8 +30,8 @@ BEGIN
 	END;
 END PlanarHistogram;
 
-PROCEDURE VolumeHistogram*(CONST data: Volume; bins: LONGINT; VAR histogram: MatrixBase.Vector);
-VAR max,min:LONGREAL; i,j,k,index :LONGINT;
+PROCEDURE VolumeHistogram*(CONST data: Volume; bins: SIZE; VAR histogram: MatrixBase.Vector);
+VAR max,min:LONGREAL; i,j,k,index :SIZE;
 BEGIN
 	max:=MAX(data); min:=MIN(data);
 	IF LEN(histogram)=0 THEN NEW(histogram,bins) ELSE histogram:=0 END;
@@ -49,8 +49,8 @@ PROCEDURE TensorHistogram*;
 END TensorHistogram;
 
 
-PROCEDURE Histogram*(CONST data: Data ; bins: LONGINT; VAR histogram: MatrixBase.Vector);
-(*VAR max,min:LONGREAL; index :LONGINT;
+PROCEDURE Histogram*(CONST data: Data ; bins: SIZE; VAR histogram: MatrixBase.Vector);
+(*VAR max,min:LONGREAL; index :SIZE;
 BEGIN
 	max:=MAX(data); min:=MIN(data);
 	IF LEN(histogram)=0 THEN NEW(histogram,bins) END;

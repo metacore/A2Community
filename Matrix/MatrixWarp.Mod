@@ -10,7 +10,7 @@ TYPE
 (** warps a rectangle "in" according to warp maps dX,dY containing relative dislocation in pixels.
 currently expects spline coefficient volume and delivers voxel values (not in spline domain) *)
 PROCEDURE Warp2D*(CONST in: Matrix; VAR out:Matrix; CONST dX,dY:Matrix; splinedegree:LONGINT); (**spline degrees currently implemented: 0-5 (0=piecewise constant, 1=piecewise linear, 2=quadratic...)*)
-VAR val:Datatype; x,y,z:LONGINT; lout:Vector;(* temp lines *)
+VAR val:Datatype; x,y,z:SIZE; lout:Vector;(* temp lines *)
 BEGIN
 	IF (LEN(dX)=0) OR (LEN(dY)=0) THEN HALT(100) END;
 	NEW(lout,LEN(dX,1));
@@ -28,7 +28,7 @@ END Warp2D;
 	(map corresponds to out volume).
 	Precondition: Size(in)~size(out)=Size(dX)=Size(dY)=Size(dZ) *)
 PROCEDURE Warp3D*(CONST in: Cube; VAR out:Cube; CONST dX,dY,dZ:Cube; splinedegree:LONGINT); (**spline degrees currently implemented: 0-5 (0=piecewise constant, 1=piecewise linear, 2=quadratic...)*)
-VAR val:Datatype; x,y,z:LONGINT; dx,dy,dz:Datatype; lout:Vector;
+VAR val:Datatype; x,y,z:SIZE; dx,dy,dz:Datatype; lout:Vector;
 BEGIN
 	IF (LEN(dX)=0) OR (LEN(dY)=0) OR (LEN(dZ)=0) THEN HALT(100) END;
 	NEW(lout,LEN(dX,2));
@@ -47,7 +47,7 @@ currently expects spline coefficient volume and delivers voxel values (not in sp
 In contrast to the procedure Warp3D above, the map /in/out volumes can have different sizes; however, map volumes must have consistent size..
 More generic, but SLOW. *)
 PROCEDURE Warp3Dgeneral*(CONST in: Cube; VAR out:Cube; CONST dX,dY,dZ:Cube; splinedegree:LONGINT); (**spline degrees currently implemented: 0-5 (0=piecewise constant, 1=piecewise linear, 2=cubic...)*)
-VAR val:Datatype; x,y,z:LONGINT; dx,dy,dz:Datatype; lout:Vector;
+VAR val:Datatype; x,y,z:SIZE; dx,dy,dz:Datatype; lout:Vector;
 		xFactor, yFactor, zFactor, xScale,yScale,zScale: REAL;
 BEGIN
 	xFactor := LEN(in,2) / LEN(dX,2); xScale:= LEN(in,2)/LEN(out,2);
@@ -68,7 +68,7 @@ BEGIN
 END Warp3Dgeneral;
 
 PROCEDURE Test*;
-VAR in,out,dTX,dTY,dTZ:Cube; x,y,z:LONGINT;
+VAR in,out,dTX,dTY,dTZ:Cube; x,y,z:SIZE;
 CONST splinedegree=1;
 BEGIN
 	NEW(in,5,5,5);

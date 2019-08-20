@@ -11,7 +11,6 @@ IMPORT
 	ErrorBase, MLBase, MLKernels, ExtraSort, Strings;
 
 TYPE
-	INT = LONGINT;
 	Scalar = MLBase.Scalar;
 	Vector = MLBase.Vector;
 	Matrix = MLBase.Matrix;
@@ -21,7 +20,7 @@ TYPE
 	*)
 	Classifier* = OBJECT(MLBase.LearningMachine)
 	VAR
-		kernType-: INT;
+		kernType-: WORD;
 		kernParams-: Vector;
 		C: Scalar;
 		X1, X2: Matrix;
@@ -69,7 +68,7 @@ TYPE
 		*)
 		PROCEDURE EvaluateScalarN(CONST input: Matrix): Vector;
 		VAR
-			i: INT;
+			i: SIZE;
 			K: Matrix;
 			labels: Vector;
 		BEGIN
@@ -99,7 +98,7 @@ TYPE
 			REMARKS:
 				after you set a new type of kernel you must redo learning of the classifier!
 		*)
-		PROCEDURE SetKernel*(kernType: INT; CONST kernParams: Vector);
+		PROCEDURE SetKernel*(kernType: WORD; CONST kernParams: Vector);
 		BEGIN
 			isTrained := FALSE; (* reset classifier *)
 
@@ -131,8 +130,8 @@ TYPE
 		*)
 		PROCEDURE LearnScalarN(CONST input: Matrix; CONST labels: Vector);
 		VAR
-			i, n1, n2: INT;
-			ind: ARRAY [*] OF INT;
+			i, n1, n2: SIZE;
+			ind: ARRAY [*] OF SIZE;
 			y: Vector;
 			K: Matrix;
 			C1, C2: Scalar;
@@ -201,7 +200,7 @@ VAR
 	*)
 	PROCEDURE ColSum(CONST X: Matrix): Vector;
 	VAR
-		i: INT;
+		i: SIZE;
 		x: Vector;
 	BEGIN
 		x := X[0];

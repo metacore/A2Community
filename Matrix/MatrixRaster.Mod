@@ -16,7 +16,7 @@ TYPE Enumerator*=OBJECT(Files.Enumerator) (*extract single or multiple images fr
 			w:=100; h:=100;
 		END Init;
 
-		PROCEDURE GetImage*(VAR name:ARRAY OF CHAR; VAR flags:SET; VAR time, date, size: LONGINT ):WMGraphics.Image; (*get next image*)
+		PROCEDURE GetImage*(VAR name:ARRAY OF CHAR; VAR flags:SET; VAR time, date: LONGINT; VAR size: Files.Size ):WMGraphics.Image; (*get next image*)
 		BEGIN
 			currentImg:=NIL;
 			WHILE HasMoreEntries() & (currentImg=NIL) DO
@@ -53,16 +53,16 @@ TYPE Enumerator*=OBJECT(Files.Enumerator) (*extract single or multiple images fr
 
 		PROCEDURE GetRoiBGR*(img: Raster.Image; VAR x,y:LONGINT): ARRAY [?] OF INTEGER; (* yield ROI[BGR,h,w] of current image;  use "Random" for random position within window*)
 		BEGIN
-			IF x=Random THEN x:= rand.Dice(img.width-w) END; (*! implementation limitation: scaling not yet implemented *)
-			IF y=Random THEN y:= rand.Dice(img.height-h) END;
+			IF x=Random THEN x:= rand.Dice((img.width-w)(LONGINT)) END; (*! implementation limitation: scaling not yet implemented *)
+			IF y=Random THEN y:= rand.Dice((img.height-h)(LONGINT)) END;
 			ImageToArray(img, array); (*img is BGRA, array is [4,..,..] OF INTEGER*)
 			RETURN array [0..2,y..y+h-1, x..x+w-1];
 		END GetRoiBGR;
 
 		PROCEDURE GetRoiGray*(img: Raster.Image; VAR x,y:LONGINT): ARRAY [?] OF INTEGER; (* yield ROI[h,w] of current Image.  use "Random" for random position within window*)
 		BEGIN
-			IF x=Random THEN x:= rand.Dice(img.width-w) END; (*! implementation limitation: scaling not yet implemented *)
-			IF y=Random THEN y:= rand.Dice(img.height-h) END;
+			IF x=Random THEN x:= rand.Dice((img.width-w)(LONGINT)) END; (*! implementation limitation: scaling not yet implemented *)
+			IF y=Random THEN y:= rand.Dice((img.height-h)(LONGINT)) END;
 			ImageToArray(img, array); (*img is BGRA, array is [4,..,..] OF INTEGER*)
 			RETURN array[0,y..y+h-1, x..x+w-1] + array[1,y..y+h-1, x..x+w-1] + array[2,y..y+h-1, x..x+w-1]; (*BGR to grayscale*) (*!! ROI IS MISSING*)
 		END GetRoiGray;
@@ -96,7 +96,7 @@ TYPE Enumerator*=OBJECT(Files.Enumerator) (*extract single or multiple images fr
 	END Enumerator;
 
 PROCEDURE SIntToImage*(CONST data:ARRAY [*,*] OF SHORTINT; VAR palette: ARRAY [*,*] OF LONGINT; im:Raster.Image); (*palette values in range 0..10000H*)
-VAR F:Raster.Format; pal:Raster.Palette; i,x,y:LONGINT;
+VAR F:Raster.Format; pal:Raster.Palette; i,x,y:SIZE;
 BEGIN
 	IF (LEN(data,0)=0) OR (LEN(data,1)=0) THEN RETURN END;
 	NEW(pal);
@@ -126,7 +126,7 @@ BEGIN
 END SIntToImage;
 
 PROCEDURE SIntRGBToImage*(CONST data:ARRAY [*,*,*] OF SHORTINT; im:Raster.Image);
-VAR F:Raster.Format; pal:Raster.Palette; i,x,y:LONGINT;
+VAR F:Raster.Format; pal:Raster.Palette; i,x,y:SIZE;
 BEGIN
 	IF (LEN(data,0)=0) OR (LEN(data,1)=0) THEN RETURN END;
 	F:=Raster.BGR888;
@@ -142,7 +142,7 @@ END SIntRGBToImage;
 
 
 PROCEDURE IntToImage*(CONST data:ARRAY [*,*] OF INTEGER; VAR palette: ARRAY [*,*] OF LONGINT; im:Raster.Image);  (*data >=0; palette values in range 0..10000H*)
-VAR F:Raster.Format; pal:Raster.Palette; max,valI,i,col,x,y:LONGINT;
+VAR F:Raster.Format; pal:Raster.Palette; max,valI,i,col:LONGINT;x,y:SIZE;
 BEGIN
 	IF (LEN(data,0)=0) OR (LEN(data,1)=0) THEN RETURN END;
 	F:=Raster.BGR888;
@@ -150,8 +150,8 @@ BEGIN
 	Raster.Create(im,LEN(data,1),LEN(data,0),F);
 	IF LEN(palette)=0 THEN
 		NEW(palette, max+1,3);
-		FOR col:=0 TO LEN(palette,0)-1 DO
-			valI:=col*10000H DIV LEN(palette,0); palette[col,0]:=valI; palette[col,1]:=valI; palette[col,2]:=valI
+		FOR col:=0 TO LEN(palette,0)(LONGINT)-1 DO
+			valI:=col*10000H DIV LEN(palette,0)(LONGINT); palette[col,0]:=valI; palette[col,1]:=valI; palette[col,2]:=valI
 		END;
 	END;
 	FOR y:=0 TO LEN(data,0)-1 DO
@@ -165,7 +165,7 @@ BEGIN
 END IntToImage;
 
 PROCEDURE LIntToImage*(CONST data:ARRAY [*,*] OF LONGINT; VAR palette: ARRAY [*,*] OF LONGINT; im:Raster.Image); (*palette values in range 0..10000H*)
-VAR F:Raster.Format; pal:Raster.Palette; max,valI,i,col,x,y:LONGINT;
+VAR F:Raster.Format; pal:Raster.Palette; max,valI,i,col:LONGINT; x,y:SIZE;
 BEGIN
 	IF (LEN(data,0)=0) OR (LEN(data,1)=0) THEN RETURN END;
 	F:=Raster.BGR888;
@@ -174,8 +174,8 @@ BEGIN
 	Raster.Create(im,LEN(data,1),LEN(data,0),F);
 	IF LEN(palette)=0 THEN
 		NEW(palette, max+1,3);
-		FOR col:=0 TO LEN(palette,0)-1 DO
-			valI:=col*10000H DIV LEN(palette,0); palette[col,0]:=valI; palette[col,1]:=valI; palette[col,2]:=valI
+		FOR col:=0 TO LEN(palette,0)(LONGINT)-1 DO
+			valI:=col*10000H DIV LEN(palette,0)(LONGINT); palette[col,0]:=valI; palette[col,1]:=valI; palette[col,2]:=valI
 		END;
 	END;
 	FOR y:=0 TO LEN(data,0)-1 DO
@@ -189,7 +189,7 @@ BEGIN
 END LIntToImage;
 
 PROCEDURE CombineLIntToImage*(CONST data,data1:ARRAY [*,*] OF LONGINT; VAR palette, palette1: ARRAY [*,*] OF LONGINT; threshold:LONGINT; im:Raster.Image); (*palette values in range 0..10000H; threshold indicates minimum value of data1 to take precedence over data*)
-VAR F:Raster.Format; pal:Raster.Palette; max,valI, valI1,i,col,x,y:LONGINT;
+VAR F:Raster.Format; pal:Raster.Palette; max,valI, valI1,i,col:LONGINT;x,y:SIZE;
 BEGIN
 	IF (LEN(data,0)=0) OR (LEN(data,1)=0) OR (LEN(data,0)#LEN(data1,0)) OR (LEN(data,1)#LEN(data1,1)) THEN RETURN END;
 	F:=Raster.BGR888;
@@ -198,14 +198,14 @@ BEGIN
 	Raster.Create(im,LEN(data,1),LEN(data,0),F);
 	IF LEN(palette)=0 THEN
 		NEW(palette, max+1,3);
-		FOR col:=0 TO LEN(palette,0)-1 DO
-			valI:=col*10000H DIV LEN(palette,0); palette[col,0]:=valI; palette[col,1]:=valI; palette[col,2]:=valI
+		FOR col:=0 TO LEN(palette,0)(LONGINT)-1 DO
+			valI:=col*10000H DIV LEN(palette,0)(LONGINT); palette[col,0]:=valI; palette[col,1]:=valI; palette[col,2]:=valI
 		END;
 	END;
 	IF LEN(palette1)=0 THEN
 		NEW(palette1, max+1,3);
-		FOR col:=0 TO LEN(palette1,0)-1 DO
-			valI:=col*10000H DIV LEN(palette1,0); palette1[col,0]:=valI;  palette1[col,1]:=10000H - valI-1; palette1[col,2]:=10000H - valI-1
+		FOR col:=0 TO LEN(palette1,0)(LONGINT)-1 DO
+			valI:=col*10000H DIV LEN(palette1,0)(LONGINT); palette1[col,0]:=valI;  palette1[col,1]:=10000H - valI-1; palette1[col,2]:=10000H - valI-1
 		END;
 	END;
 	FOR y:=0 TO LEN(data,0)-1 DO
@@ -226,7 +226,7 @@ BEGIN
 END CombineLIntToImage;
 
 PROCEDURE LIntBGRAToImage*(CONST data:ARRAY [*,*,*] OF SHORTINT; im:Raster.Image);
-VAR F:Raster.Format; pal:Raster.Palette; i,col,x,y:LONGINT; putMode:Raster.Mode;
+VAR F:Raster.Format; pal:Raster.Palette; i,col:LONGINT; x,y: SIZE; putMode:Raster.Mode;
 BEGIN
 	IF (LEN(data,0)=0) OR (LEN(data,1)=0) THEN RETURN END;
 	Raster.InitMode(putMode, Raster.srcCopy);
@@ -240,8 +240,8 @@ BEGIN
 END LIntBGRAToImage;
 
 
-PROCEDURE RealToImage*(CONST data:ARRAY [*,*] OF REAL; offset:LONGINT; gain:LONGREAL; im:Raster.Image);
-VAR F:Raster.Format; pal:Raster.Palette; max,valI,i,col,x,y:LONGINT; val:REAL; palette:ARRAY [*,*] OF LONGINT;
+PROCEDURE RealToImage*(CONST data:ARRAY [*,*] OF REAL; offset:SIZE; gain:LONGREAL; im:Raster.Image);
+VAR F:Raster.Format; pal:Raster.Palette; max,valI,i,col:LONGINT; x,y:SIZE; val:REAL; palette:ARRAY [*,*] OF LONGINT;
 BEGIN
 	IF (LEN(data,0)=0) OR (LEN(data,1)=0) THEN RETURN END;
 	F:=Raster.BGR888;
@@ -257,8 +257,8 @@ BEGIN
 	END;
 END RealToImage;
 
-PROCEDURE LRealToImage*(CONST data:ARRAY [*,*] OF LONGREAL; offset:LONGINT; gain:LONGREAL; im:Raster.Image);
-VAR F:Raster.Format; pal:Raster.Palette; max,valI,i,col,x,y:LONGINT; val:LONGREAL; palette:ARRAY [*,*] OF LONGINT;
+PROCEDURE LRealToImage*(CONST data:ARRAY [*,*] OF LONGREAL; offset:SIZE; gain:LONGREAL; im:Raster.Image);
+VAR F:Raster.Format; pal:Raster.Palette; max,valI,i,col:LONGINT; x,y:SIZE; val:LONGREAL; palette:ARRAY [*,*] OF LONGINT;
 BEGIN
 	IF (LEN(data,0)=0) OR (LEN(data,1)=0) THEN RETURN END;
 	F:=Raster.BGR888;
@@ -275,8 +275,8 @@ BEGIN
 END LRealToImage;
 
 
-PROCEDURE LRealToImageBR*(CONST data:ARRAY [*,*] OF LONGREAL; offset:LONGINT; gain:LONGREAL; im:Raster.Image);
-VAR F:Raster.Format; pal:Raster.Palette; max,valI,i,col,x,y:LONGINT; val:LONGREAL; palette:ARRAY [*,*] OF LONGINT;
+PROCEDURE LRealToImageBR*(CONST data:ARRAY [*,*] OF LONGREAL; offset:SIZE; gain:LONGREAL; im:Raster.Image);
+VAR F:Raster.Format; pal:Raster.Palette; max,valI,i,col:LONGINT; x,y:SIZE; val:LONGREAL; palette:ARRAY [*,*] OF LONGINT;
 BEGIN
 	IF (LEN(data,0)=0) OR (LEN(data,1)=0) THEN RETURN END;
 	F:=Raster.BGR888;
@@ -298,8 +298,8 @@ BEGIN
 	END;
 END LRealToImageBR;
 
-PROCEDURE LRealToImageHeat*(CONST data:ARRAY [*,*] OF LONGREAL; offset:LONGINT; gain:LONGREAL; im:Raster.Image);
-VAR F:Raster.Format; pal:Raster.Palette; max,valI,i,col,x,y:LONGINT; val:LONGREAL; palette:ARRAY [*,*] OF LONGINT;
+PROCEDURE LRealToImageHeat*(CONST data:ARRAY [*,*] OF LONGREAL; offset:SIZE; gain:LONGREAL; im:Raster.Image);
+VAR F:Raster.Format; pal:Raster.Palette; max,valI,i,col:LONGINT; x,y:SIZE; val:LONGREAL; palette:ARRAY [*,*] OF LONGINT;
 BEGIN
 	IF (LEN(data,0)=0) OR (LEN(data,1)=0) THEN RETURN END;
 	F:=Raster.BGR888;
@@ -327,8 +327,8 @@ BEGIN
 	END;
 END LRealToImageHeat;
 
-PROCEDURE LRealToImageLUT*(CONST data:ARRAY [*,*] OF LONGREAL; offset:LONGINT; gain:LONGREAL; im:Raster.Image);
-VAR F:Raster.Format; max,valI,i,col,x,y:LONGINT; val:LONGREAL; palette:ARRAY [*,*] OF LONGINT;
+PROCEDURE LRealToImageLUT*(CONST data:ARRAY [*,*] OF LONGREAL; offset:SIZE; gain:LONGREAL; im:Raster.Image);
+VAR F:Raster.Format; max,valI,i,col:LONGINT; x,y: SIZE; val:LONGREAL; palette:ARRAY [*,*] OF LONGINT;
 BEGIN
 	IF (LEN(data,0)=0) OR (LEN(data,1)=0) THEN RETURN END;
 
@@ -349,7 +349,7 @@ END LRealToImageLUT;
 
 
 PROCEDURE LRealRGBToImage*(CONST R,G,B:ARRAY [*,*] OF LONGREAL; im:Raster.Image);
-VAR x,y, w,h:LONGINT;
+VAR x,y, w,h:SIZE;
 	gain, r,g,b :LONGREAL;
 BEGIN
 	w:=LEN(R,1); h:=LEN(R,0);
@@ -368,7 +368,7 @@ BEGIN
 END LRealRGBToImage;
 
 PROCEDURE LRealRGBToImageB*(CONST R,G,B:ARRAY [*,*] OF LONGREAL;  offset, gain:LONGREAL; im:Raster.Image);
-VAR x,y, w,h:LONGINT;
+VAR x,y, w,h:SIZE;
 BEGIN
 	w:=LEN(R,1); h:=LEN(R,0);
 	Raster.Create(im,w,h,Raster.BGR888);
@@ -382,7 +382,7 @@ BEGIN
 END LRealRGBToImageB;
 
 PROCEDURE BoolToImage*(CONST data:ARRAY [*,*] OF BOOLEAN; im:Raster.Image);
-VAR y,x:LONGINT; val:REAL; SIntData: ARRAY [*,*] OF SHORTINT; palette: ARRAY [*,*] OF LONGINT;
+VAR y,x:SIZE; val:REAL; SIntData: ARRAY [*,*] OF SHORTINT; palette: ARRAY [*,*] OF LONGINT;
 BEGIN
 	NEW(SIntData,LEN(data,0),LEN(data,1));
 	FOR y:=0 TO LEN(data,0)-1 DO
@@ -394,7 +394,7 @@ BEGIN
 END BoolToImage;
 
 PROCEDURE ImageToArray*(img:Raster.Image; VAR data: ARRAY [?] OF INTEGER);
-VAR row,col,p: LONGINT;
+VAR row,col,p: SIZE;
 BEGIN
 	p:=0;
 	IF img.fmt.code=Raster.bgr888 THEN

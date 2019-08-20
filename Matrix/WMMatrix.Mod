@@ -19,7 +19,8 @@ TYPE Window*= OBJECT (WM.BufferWindow)
 	VAR model*:Model;
 		max,min, gain*:LONGREAL;
 		exists:BOOLEAN;
-		type, offset*, mx0,my0,mx1,my1:LONGINT;
+		type*:LONGINT;
+		offset,mx0,my0,mx1,my1:SIZE;
 		palette*:Raster.Palette;
 		source*:ANY;
 
@@ -64,17 +65,17 @@ TYPE Window*= OBJECT (WM.BufferWindow)
 			END
 		END Handle;
 
-	PROCEDURE PointerDown*(x, y : LONGINT; keys : SET);
+	PROCEDURE PointerDown*(x, y : SIZE; keys : SET);
 		BEGIN
 			mx0:=x; my0:=y;
 		END PointerDown;
 
-	PROCEDURE PointerUp*(x, y : LONGINT; keys : SET);
+	PROCEDURE PointerUp*(x, y : SIZE; keys : SET);
 		BEGIN
 			mx1:=x; my1:=y;
 		END PointerUp;
 
-	PROCEDURE PointerMove*(x, y : LONGINT; keys : SET);
+	PROCEDURE PointerMove*(x, y : SIZE; keys : SET);
 		BEGIN
 			IF keys={2} THEN
 				mx1:=x; my1:=y;

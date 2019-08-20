@@ -20,10 +20,10 @@ END Permutation;
 
 (*in-place random permutation*)
 PROCEDURE Permute*(VAR A: ARRAY[*] OF LONGINT);
-VAR i,j, n:LONGINT;
+VAR i: SIZE; j, n:LONGINT;
 BEGIN
 	FOR i:=LEN(A,0)-1 TO 1 BY -1 DO
-		n:=sequence.Dice(i+1);
+		n:=sequence.Dice((i+1)(LONGINT));
 		j:=A[i];
 		A[i]:=A[n];
 		A[n]:=j;

@@ -54,7 +54,7 @@ CONST
 	END Eigenvalues;
 
 	PROCEDURE QREigen( CONST A0: Matrix ): Vector;   (*QR method with shift, see below. This implementation is by far not optimal (improve convergence analysis, use householder)*)
-	VAR A, M: Matrix;  s: Datatype;  i, j: LONGINT;  qr: MatrixStandardSolvers.QR;  dummy: ARRAY [ * , * ] OF Datatype;
+	VAR A, M: Matrix;  s: Datatype;  i, j: SIZE;  qr: MatrixStandardSolvers.QR;  dummy: ARRAY [ * , * ] OF Datatype;
 		res: Vector;
 	BEGIN
 		A := A0;  NEW( qr, dummy );

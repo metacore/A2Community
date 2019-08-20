@@ -62,7 +62,7 @@ TYPE Regression*= OBJECT
 			ls: MatrixLeastSquares.LeastSquares;
 
 			isGLM:BOOLEAN;
-			nvar, nsamp: LONGINT;
+			nvar, nsamp: SIZE;
 
 		PROCEDURE &Init*(CONST X: Matrix; intercept: BOOLEAN);
 		BEGIN
@@ -107,7 +107,7 @@ TYPE Regression*= OBJECT
 		END Solve;
 
 		PROCEDURE SolveGLM*(CONST Y:Matrix): Matrix; (* yields B *)
-		VAR i:LONGINT; y, b,e: Vector;
+		VAR i:SIZE; y, b,e: Vector;
 		BEGIN
 			isGLM:=TRUE;
 			NEW(B, LEN(X,1), LEN(Y,1));
@@ -181,7 +181,7 @@ see http://en.wikipedia.org/wiki/General_linear_model
 
 PROCEDURE GeneralLinearModel*(CONST X: Matrix; CONST Y: Matrix; VAR B, U: Matrix); (** not exhaustively tested *)
 	VAR ls: MatrixLeastSquares.LeastSquares;
-		y, b,e: Vector; i:LONGINT;
+		y, b,e: Vector; i:SIZE;
 BEGIN
 	NEW(ls, X);
 	NEW(B, LEN(X,1), LEN(Y,1));
@@ -214,7 +214,7 @@ Note that at current, this implementation limits the search to MIN(200, N/2) pai
 see http://en.wikipedia.org/wiki/Theil%E2%80%93Sen_estimator for  details
 **)
 PROCEDURE TheilSenEstimator*(CONST x: Vector; CONST y: Vector; VAR b, intercept: Scalar; VAR e: Vector);
-VAR slopes: Vector; i,j,len:LONGINT; dx, dy: Scalar;
+VAR slopes: Vector; i,j,len:SIZE; dx, dy: Scalar;
 BEGIN
 	(*choose sample pairs; here the extremal point pairs are used. Random pairs could also be used *)
 	len:=MIN (200, LEN(x,0) DIV 2);

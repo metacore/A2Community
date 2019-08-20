@@ -26,7 +26,7 @@ VAR
 	PROCEDURE HandleLines3D*( CONST cube: ThreeD;  VAR rescube: ThreeD;
 													    directions: SET;  linehandler: LineHandler );
 	VAR templine, templine1: OneD;  rect, resrect: TwoD;  same:BOOLEAN;
-		x, y, z, w0, w, h, i, j, lenX, lenY, lenZ: LONGINT;
+		x, y, z, w0, w, h, i, j, lenX, lenY, lenZ: SIZE;
 	BEGIN
 		lenX := LEN( cube, 2 );  lenY := LEN( cube, 1 );  lenZ := LEN( cube, 0 );
 		(*same:=ADDRESSOF(cube)=ADDRESSOF(rescube);*) (*solve in language*)
@@ -97,7 +97,7 @@ VAR
 	PROCEDURE HandleLines3D1*( CONST cube: ThreeD;  VAR rescube: ThreeD;
 													    directions: SET;  linehandler: LineHandler1; f3:F3);  (*f3(x,y,z) determines variable for line computation*)
 	VAR templine, templine1: OneD;  rect, resrect: TwoD; same:BOOLEAN;
-		x, y, z, w0, w, h, i, j, lenX, lenY, lenZ: LONGINT;
+		x, y, z, w0, w, h, i, j, lenX, lenY, lenZ: SIZE;
 	BEGIN
 		lenX := LEN( cube, 2 );  lenY := LEN( cube, 1 );  lenZ := LEN( cube, 0 );
 		(*same:=ADDRESSOF(cube)=ADDRESSOF(rescube);*) (*solve in language*)
@@ -168,13 +168,13 @@ VAR
 
 
 	PROCEDURE copy( CONST in: OneD;  VAR in2: OneD );
-	VAR i: LONGINT;
+	VAR i: SIZE;
 	BEGIN
 		FOR i := 0 TO LEN( in,0) - 1 DO in2[i] := in[i];  END;
 	END copy;
 
 	PROCEDURE out( CONST in: OneD;  VAR in2: OneD );
-	VAR i: LONGINT;
+	VAR i: SIZE;
 	BEGIN
 		FOR i := 0 TO LEN( in,0) - 1 DO Out.Int( ENTIER( in[i] ), 6 );  (*Out.Int(  in2[i] , 6 );*) END;
 		Out.Ln;
@@ -226,5 +226,4 @@ VolumeBase.Test 400 1
 
 fofPC.Compile \s *
 fofPC.Compile \f *
-
 

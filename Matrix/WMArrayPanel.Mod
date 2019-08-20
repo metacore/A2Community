@@ -31,8 +31,9 @@ TYPE TYPE Panel*= OBJECT (WMStandardComponents.ImagePanel) (*! tbd: convert some
 		VAR data*:Data; (*is also in model property*)
 		orientation-: WMProperties.Int32Property;
 		displayMode-:WMProperties.Int32Property;
-		type, offset*, mx0,my0,mx1,my1,
-		current*, cur3:LONGINT;
+		type, cur3:LONGINT;
+		mx0,my0,mx1,my1:SIZE;
+		current*,offset*:SIZE;
 		max,min, gain*:LONGREAL;
 		baseTitle, title: ARRAY 256 OF CHAR;
 		img0 : WMGraphics.Image;
@@ -70,17 +71,17 @@ TYPE TYPE Panel*= OBJECT (WMStandardComponents.ImagePanel) (*! tbd: convert some
 			END;
 	END HandleInternal;
 
-	PROCEDURE PointerDown*(x, y : LONGINT; keys : SET);
+	PROCEDURE PointerDown*(x, y : SIZE; keys : SET);
 		BEGIN
 			mx0:=x; my0:=y;
 		END PointerDown;
 
-	PROCEDURE PointerUp*(x, y : LONGINT; keys : SET);
+	PROCEDURE PointerUp*(x, y : SIZE; keys : SET);
 		BEGIN
 			mx1:=x; my1:=y;
 		END PointerUp;
 
-	PROCEDURE PointerMove*(x, y : LONGINT; keys : SET);
+	PROCEDURE PointerMove*(x, y : SIZE; keys : SET);
 		BEGIN
 			IF keys={2} THEN
 				mx1:=x; my1:=y;
@@ -94,7 +95,7 @@ TYPE TYPE Panel*= OBJECT (WMStandardComponents.ImagePanel) (*! tbd: convert some
 			END;
 		END PointerMove;
 
-	PROCEDURE WheelMove*(dz : LONGINT);
+	PROCEDURE WheelMove*(dz : SIZE);
 	VAR s: ARRAY 16 OF CHAR;
 		BEGIN
 			IF DIM(data.m)=3 THEN current:=(current - dz) MOD LEN(data.m, orientation.Get()); (*! to do: fix for 3D, 2D, nD*)
@@ -113,8 +114,8 @@ TYPE TYPE Panel*= OBJECT (WMStandardComponents.ImagePanel) (*! tbd: convert some
 	(*The window can determine wether the key was pressed or released by examining the
 			Inputs.Release flag in flags. ucs contains the unicode equivalent of the key. Special input editors
 			send the generated unicode characters via KeyEvent.  *)
-	PROCEDURE KeyEvent*(ucs : LONGINT; flags : SET; VAR keysym : LONGINT);
-		VAR dz: LONGINT; s: ARRAY 32 OF CHAR; dim:LONGINT;
+	PROCEDURE KeyEvent*(ucs : SIZE; flags : SET; VAR keysym : SIZE);
+		VAR dz: LONGINT; s: ARRAY 32 OF CHAR; dim:SIZE;
 		BEGIN
 			IF ~(Inputs.Release IN flags )THEN
 				dim:=MAX(DIM(data.m),DIM(data.r));
@@ -127,9 +128,9 @@ TYPE TYPE Panel*= OBJECT (WMStandardComponents.ImagePanel) (*! tbd: convert some
 					ELSE DEC(cur3);
 					END;
 				ELSIF keysym = Inputs.KsRight THEN
-					orientation.Set((orientation.Get()+1) MOD dim); current:=0;
+					orientation.Set((orientation.Get()+1) MOD dim(LONGINT)); current:=0;
 				ELSIF keysym = Inputs.KsLeft THEN
-					orientation.Set((orientation.Get()-1) MOD dim); current:=0;
+					orientation.Set((orientation.Get()-1) MOD dim(LONGINT)); current:=0;
 				ELSE
 					KeyEvent^(ucs,flags,keysym); RETURN
 				END;
@@ -206,7 +207,7 @@ TYPE TYPE Panel*= OBJECT (WMStandardComponents.ImagePanel) (*! tbd: convert some
 	END SetArrayRGB;
 
 	PROCEDURE Render*;
-	VAR m,r,g,b: Tensor; orient, w, h: LONGINT;
+	VAR m,r,g,b: Tensor; orient, w, h: SIZE;
 		len: ARRAY [*] OF SIZE;
 	BEGIN
 		orient:=orientation.Get();
@@ -309,7 +310,7 @@ TYPE TYPE Panel*= OBJECT (WMStandardComponents.ImagePanel) (*! tbd: convert some
 	END Panel;
 
 PROCEDURE GenerateName(prefix: ARRAY OF CHAR; VAR str: ARRAY OF CHAR);
-VAR  i,j:LONGINT; title: Files.FileName; c:CHAR; s:ARRAY 8 OF CHAR;
+VAR  i,j:SIZE; title: Files.FileName; c:CHAR; s:ARRAY 8 OF CHAR;
 BEGIN
 	i:=0; j:=0;
 	WHILE (i<LEN(prefix)) & (j<LEN(title)-1) DO
@@ -327,7 +328,7 @@ BEGIN
 END GenerateName;
 
 OPERATOR "SUM"*(CONST t:Tensor; dim: LONGINT):Tensor; (*implementation limitation: 3D*)
-VAR res: Tensor;i:LONGINT;
+VAR res: Tensor;i:SIZE;
 BEGIN
 	IF dim=0 THEN
 		NEW(res, LEN(t)[1..]); FOR i:=0 TO LEN(t,0)-1 DO res:=res+t[i,*,*] END;
@@ -341,7 +342,7 @@ END "SUM";
 
 
 OPERATOR "MAX"*(CONST t:Tensor; dim: LONGINT):Tensor; (*implementation limitation: 3D*)
-VAR res: Tensor;i:LONGINT; a,b: LONGINT;
+VAR res: Tensor;i:LONGINT; a,b: SIZE;
 BEGIN
 	IF dim=0 THEN
 		NEW(res, LEN(t)[1..]);

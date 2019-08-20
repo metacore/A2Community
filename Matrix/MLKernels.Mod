@@ -17,7 +17,6 @@ CONST
 	ThinPlate* = 3; (* thin plate spline *)
 
 TYPE
-	INT = LONGINT;
 	Scalar = MatrixBase.Datatype;
 	Vector = MatrixBase.Vector;
 	Matrix = MatrixBase.Matrix;
@@ -32,9 +31,9 @@ TYPE
 		OUTPUT:
 			Kernel matrix of size nSamples1 x nSamples2
 	*)
-	PROCEDURE KernelMtx*(CONST X1, X2: Matrix; kernType: INT; CONST kernParams: Vector): Matrix;
+	PROCEDURE KernelMtx*(CONST X1, X2: Matrix; kernType: WORD; CONST kernParams: Vector): Matrix;
 	VAR
-		i, j: INT;
+		i, j: SIZE;
 		f: Scalar;
 
 		p, q, sigma, splineOrder: Scalar;
@@ -165,7 +164,7 @@ TYPE
 	*)
 	PROCEDURE ComputeNormMatrix(CONST X1, X2: ARRAY [*,*] OF Scalar; VAR R: ARRAY [*,*] OF Scalar);
 	VAR
-		i, j: INT;
+		i, j: SIZE;
 		tmp: Matrix;
 		ones1, ones2: Vector;
 	BEGIN

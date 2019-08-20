@@ -4,7 +4,7 @@ MODULE LinearFIRConvolveLongReal;	(** Patrick Hunziker & dk(assembler)   **)
 IMPORT Util:=MatrixUtilities;
 
 PROCEDURE Convolve*(CONST filter:ARRAY[*]  OF LONGREAL; CONST data:ARRAY [*] OF LONGREAL; VAR result:ARRAY [*] OF LONGREAL);
-VAR d,filterlen,reslen:LONGINT;
+VAR d,filterlen,reslen:SIZE;
 BEGIN
 	filterlen:=LEN(filter,0);
 	IF LEN(data,0)<LEN(result,0) THEN reslen:=LEN(data,0) ELSE reslen:=LEN(result,0) END;
@@ -61,7 +61,7 @@ END Convolve;
 *)
 
 PROCEDURE ConvolveDown2*(CONST filter:ARRAY[*]  OF LONGREAL;  CONST data:ARRAY [*] OF LONGREAL;VAR result:ARRAY [*] OF LONGREAL; shift:LONGINT);
-VAR d,filterlen,datalen,resPos:LONGINT;
+VAR d,filterlen,datalen,resPos:SIZE;
 BEGIN
 	(** precondition: shift IN {0,1} ; this is used for even/odd algorithm variants *)
 	IF LEN(result,0) < LEN(data,0) DIV 2 THEN datalen:=2* LEN(result,0) ELSE datalen:= LEN(data,0) END;
@@ -138,7 +138,7 @@ END ConvolveDown2;
 
 PROCEDURE ConvolveUp2*(CONST filter:ARRAY[*]  OF LONGREAL; CONST data: ARRAY [*] OF LONGREAL;VAR result:ARRAY [*] OF LONGREAL; shift:LONGINT);
 	(** upsampling by 2 and convolution with filter; admissible types should include all basic Oberon number types *)
-VAR f,d,filterlen,reslen,filterstart:LONGINT;
+VAR f,d,filterlen,reslen,filterstart:SIZE;
 BEGIN
 	(** precondition: shift IN {0,1} ; this is used for even/odd algorithm variants *)
 	(* in simpler, slow variant, upsampling (shifted by shift) into a temp array is followed by standard FIRConvolve*)

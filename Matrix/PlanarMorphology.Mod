@@ -19,9 +19,9 @@ VAR rand:Random.Generator;
 (**
 Number of nonzero elements in volume
 *)
-PROCEDURE NNZ(CONST s: BinaryPlane): LONGINT;
+PROCEDURE NNZ(CONST s: BinaryPlane): SIZE;
 VAR
-	k0,k1,n: LONGINT;
+	k0,k1,n: SIZE;
 BEGIN
 	n := 0;
 	FOR k0:=0 TO LEN(s,0)-1 DO
@@ -55,7 +55,7 @@ END BinarySimpleErosion;
 PROCEDURE BinaryErosion*(CONST t,se:BinaryPlane):BinaryPlane;
 VAR
 	e:BinaryPlane;
-	k0,k1,m0,m1: LONGINT;
+	k0,k1,m0,m1: SIZE;
 BEGIN
 	NEW(e, LEN(t));
 	m0 := LEN(se,0) DIV 2;
@@ -111,7 +111,7 @@ END BinarySimpleDilation;
 PROCEDURE BinaryDilation*(CONST t,se:BinaryPlane):BinaryPlane;
 VAR
 	d:BinaryPlane;
-	k0,k1,m0,m1: LONGINT;
+	k0,k1,m0,m1: SIZE;
 BEGIN
 	NEW(d, LEN(t));
 	m0 := LEN(se,0) DIV 2;

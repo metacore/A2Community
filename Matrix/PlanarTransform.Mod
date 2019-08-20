@@ -91,7 +91,7 @@ CONST
 		END;
 	END Expand2D;
 
-	PROCEDURE clamp(x:LONGINT; low,high:LONGINT):LONGINT;
+	PROCEDURE clamp(x:SIZE; low,high:SIZE):SIZE;
 	BEGIN
 		(*RETURN MIN(high,MAX(x,low)); *)
 		IF x<low THEN RETURN low ELSIF x>high THEN RETURN high ELSE RETURN x END;
@@ -102,7 +102,7 @@ CONST
 	Output: resampled data in 'resdata' *)
 	PROCEDURE Resample*( CONST data: Rect;  VAR resdata: Rect;  x0, y0, dx, dy: Datatype;  splinedegree, boundary: LONGINT );
 	VAR w: Rect;  indices: ARRAY [ * ] OF LONGINT;
-		temp: Rect;  x, y: LONGINT;  v: Signal;  x1,x2,y1,y2,Dx,Dy:LONGINT; ddx,ddy:Datatype;
+		temp: Rect;  x, y, x1, x2, y1, y2: SIZE;  v: Signal;  Dx,Dy:LONGINT; ddx,ddy:Datatype;
 	BEGIN
 		NEW( temp, LEN( data, 0 ), LEN( resdata, 1 ) );
 		NEW( v, LEN( resdata, 1 ) );
@@ -224,7 +224,7 @@ CONST
 	END Expand;
 
 	PROCEDURE Mirror*(CONST m:Rect; horizontal:BOOLEAN):Rect;(*! to do: ASSURE THAT m and RESULT do not conflict*)
-	VAR i:LONGINT; h,v:ARRAY[*] OF Datatype;
+	VAR i:SIZE; h,v:ARRAY[*] OF Datatype;
 	BEGIN
 		IF (LEN(RESULT,0) # LEN(m,0)) OR (LEN(RESULT,1) # LEN(m,1)) THEN (*LEN(RESULT) # LEN(m)*)
 			NEW(RESULT, LEN(m,0), LEN(m,1))
@@ -246,7 +246,7 @@ CONST
 	END Mirror;
 
 	PROCEDURE Rotate90*(CONST m:Rect):Rect;(*! to do: ASSURE THAT m and RESULT do not conflict*)
-	VAR i:LONGINT;
+	VAR i:SIZE;
 	BEGIN
 		IF (LEN(RESULT,0) # LEN(m,1)) OR (LEN(RESULT,1) # LEN(m,0)) THEN (*LEN(RESULT) # [LEN(m,1),LEN(m,0)]*)
 			NEW(RESULT, LEN(m,1), LEN(m,0))
@@ -258,7 +258,7 @@ CONST
 	END Rotate90;
 
 	PROCEDURE Rotate180*(CONST m:Rect):Rect;
-	VAR j,i:LONGINT; x0: Datatype;
+	VAR j,i:SIZE; x0: Datatype;
 	BEGIN
 		IF (LEN(RESULT,0) # LEN(m,0)) OR (LEN(RESULT,1) # LEN(m,1)) THEN (*LEN(RESULT) # LEN(m)*)
 			NEW(RESULT, LEN(m,0), LEN(m,1))

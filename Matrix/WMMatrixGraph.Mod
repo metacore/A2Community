@@ -117,13 +117,13 @@ TYPE Window*= OBJECT (WM.BufferWindow)
 		canvas.Fill(WMGraphics.MakeRectangle(0, 0, width, height), background, WMGraphics.ModeSrcOverDst)
 	END Clear;
 
-	PROCEDURE AllocateCurves(n:LONGINT);
-	VAR curve:Curve; i:LONGINT;
+	PROCEDURE AllocateCurves(n:SIZE);
+	VAR curve:Curve; i:SIZE;
 	BEGIN
 		graph.curves:=NIL;
 		FOR i:=0 TO n-1 DO
 			NEW(curve); curve.next:=graph.curves;  graph.curves:=curve;
-			curve.linecol:= i * 011000000H +077FF00H-i*01100H+ 077H;
+			curve.linecol:= (i * 011000000H +077FF00H-i*01100H+ 077H)(LONGINT);
 		END;
 	END AllocateCurves;
 
@@ -164,10 +164,11 @@ TYPE Window*= OBJECT (WM.BufferWindow)
 	PROCEDURE Render*;
 	VAR
 		(* 2D*)
-		i,j:LONGINT;
+		i,j:SIZE;
 		c: Curve;
 		(* 3D*)
-		depth,x,y,col:LONGINT;
+		x,y:SIZE;
+		depth,col:LONGINT;
 		x0,y0,z0:LONGREAL;
 		p,len:RealPoint; p0,p1: IntPoint;
 		scale:LONGREAL; zscale,zrange,minz: LONGREAL;
@@ -394,7 +395,7 @@ BEGIN
 END Render;
 
 PROCEDURE Sample(i:LONGINT):Matrix;
-VAR data: Matrix; x,y:LONGINT;
+VAR data: Matrix; x,y:SIZE;
 BEGIN
 	NEW(data,10,20);
 	FOR y:=0 TO LEN(data,0)-1 DO	(*invent sample data*)

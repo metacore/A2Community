@@ -27,9 +27,9 @@ VAR rand: Random.Generator;
 (**
 Number of nonzero elements in volume
 *)
-PROCEDURE NNZ(CONST s: BinaryVolume): LONGINT;
+PROCEDURE NNZ(CONST s: BinaryVolume): SIZE;
 VAR
-	k0,k1,k2,n: LONGINT;
+	k0,k1,k2,n: SIZE;
 BEGIN
 	n := 0;
 	FOR k0:=0 TO LEN(s,0)-1 DO
@@ -46,7 +46,7 @@ END NNZ;
 
 (* replace by generic ALL(x,y,op) as soon as the compiler supports it*)
 PROCEDURE All2(CONST x: ARRAY [?] OF MatrixBase.Datatype; CONST y: ARRAY [?] OF BOOLEAN; func: PROCEDURE{DELEGATE}(v: MatrixBase.Datatype; w:BOOLEAN): MatrixBase.Datatype): ARRAY [?] OF MatrixBase.Datatype;
-VAR i: LONGINT;
+VAR i: SIZE;
 BEGIN
 	IF DIM(x) = 1 THEN (* last level of recursion *)
 		FOR i := 0 TO LEN(x,0)-1 DO
@@ -62,7 +62,7 @@ END All2;
 
 
 PROCEDURE BinarySimpleErosion*(CONST t:BinaryVolume; directions:SET):BinaryVolume;
-VAR l0,l1,l2: LONGINT;
+VAR l0,l1,l2: SIZE;
 BEGIN
 	IF (DIM(RESULT)=0) OR (LEN(RESULT,0)=0) THEN NEW(RESULT, LEN(t)) END;
 	l0:=LEN(t,0); l1:=LEN(t,1); l2:=LEN(t,2);
@@ -84,7 +84,7 @@ END BinarySimpleErosion;
 PROCEDURE BinaryErosion*(CONST t,se:BinaryVolume):BinaryVolume;
 VAR
 	e:BinaryVolume;
-	k0,k1,k2,m0,m1,m2: LONGINT;
+	k0,k1,k2,m0,m1,m2: SIZE;
 BEGIN
 	NEW(e, LEN(t));
 	m0 := LEN(se,0) DIV 2;
@@ -106,7 +106,7 @@ END BinaryErosion;
 
 
 PROCEDURE SimpleErosion*(CONST t:Volume; directions:SET):Volume;
-VAR  l0,l1,l2: LONGINT;
+VAR  l0,l1,l2: SIZE;
 BEGIN
 	IF (DIM(RESULT)=0) OR (LEN(RESULT,0)=0) THEN NEW(RESULT, LEN(t)) END;
 	l0:=LEN(t,0); l1:=LEN(t,1); l2:=LEN(t,2);
@@ -156,7 +156,7 @@ BEGIN
 END Erosion;
 
 PROCEDURE BinarySimpleDilation*(CONST t:BinaryVolume; directions:SET):BinaryVolume;
-VAR l0,l1,l2: LONGINT;
+VAR l0,l1,l2: SIZE;
 BEGIN
 	IF (DIM(RESULT)=0) OR (LEN(RESULT,0)=0) THEN NEW(RESULT, LEN(t)) END;
 	l0:=LEN(t,0); l1:=LEN(t,1); l2:=LEN(t,2);
@@ -175,7 +175,7 @@ END BinarySimpleDilation;
 PROCEDURE BinaryDilation*(CONST t,se:BinaryVolume):BinaryVolume;
 VAR
 	d:BinaryVolume;
-	k0,k1,k2,m0,m1,m2: LONGINT;
+	k0,k1,k2,m0,m1,m2: SIZE;
 BEGIN
 	NEW(d, LEN(t));
 	m0 := LEN(se,0) DIV 2;
@@ -195,7 +195,7 @@ END BinaryDilation;
 
 
 PROCEDURE SimpleDilation*(CONST t:Volume; directions:SET):Volume;
-VAR l0,l1,l2: LONGINT;
+VAR l0,l1,l2: SIZE;
 BEGIN
 	IF (DIM(RESULT)=0) OR (LEN(RESULT,0)=0) THEN NEW(RESULT, LEN(t)) END;
 	l0:=LEN(t,0); l1:=LEN(t,1); l2:=LEN(t,2);
@@ -216,7 +216,7 @@ END SimpleDilation;
 PROCEDURE Dilation*(CONST volume,se:Volume):Volume;
 VAR
 	d,c:Volume;
-	k0,k1,k2,m0,m1,m2: LONGINT;
+	k0,k1,k2,m0,m1,m2: SIZE;
 BEGIN
 	HALT(200); (*! do do: use generic ALL operator. Remove dependence from module Spaces*)
 	(*

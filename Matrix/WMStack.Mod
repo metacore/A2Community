@@ -19,9 +19,9 @@ TYPE Window*= OBJECT (WM.BufferWindow) (* or could use WM.DoubleBufferWindow or 
 	VAR model*:Model;
 		max,min, gain*:LONGREAL;
 		exists:BOOLEAN;
-		type, offset*, mx0,my0,mx1,my1,
-		orientation,
-		current*:LONGINT;
+		type, orientation:LONGINT;
+		offset*,current*:SIZE;
+		mx0,my0,mx1,my1:SIZE;
 		dummy: Stack;
 		baseTitle, title: ARRAY 256 OF CHAR;
 		source*:ANY;
@@ -52,7 +52,7 @@ TYPE Window*= OBJECT (WM.BufferWindow) (* or could use WM.DoubleBufferWindow or 
 	END Initialize;
 
 	PROCEDURE SetOrientation*(orientation:LONGINT);
-	VAR w,h: LONGINT; m: WM.WindowManager;
+	VAR w,h: SIZE; m: WM.WindowManager;
 	BEGIN
 		IF (orientation#SELF.orientation) THEN
 			IF orientation=0 THEN w:=LEN(model.m,2); h:= LEN(model.m,1);
@@ -97,17 +97,17 @@ TYPE Window*= OBJECT (WM.BufferWindow) (* or could use WM.DoubleBufferWindow or 
 	END Handle;
 
 
-	PROCEDURE PointerDown*(x, y : LONGINT; keys : SET); (* does not work ... ?? *)
+	PROCEDURE PointerDown*(x, y : SIZE; keys : SET); (* does not work ... ?? *)
 		BEGIN
 			mx0:=x; my0:=y;
 		END PointerDown;
 
-	PROCEDURE PointerUp*(x, y : LONGINT; keys : SET);
+	PROCEDURE PointerUp*(x, y : SIZE; keys : SET);
 		BEGIN
 			mx1:=x; my1:=y;
 		END PointerUp;
 
-	PROCEDURE PointerMove*(x, y : LONGINT; keys : SET);
+	PROCEDURE PointerMove*(x, y : SIZE; keys : SET);
 		BEGIN
 			IF keys={2} THEN
 				mx1:=x; my1:=y;
@@ -120,7 +120,7 @@ TYPE Window*= OBJECT (WM.BufferWindow) (* or could use WM.DoubleBufferWindow or 
 			END;
 		END PointerMove;
 
-	PROCEDURE WheelMove*(dz : LONGINT);
+	PROCEDURE WheelMove*(dz : SIZE);
 	VAR s: ARRAY 16 OF CHAR;
 		BEGIN
 			current:=(current - dz) MOD LEN(model.m,orientation);
@@ -133,7 +133,7 @@ TYPE Window*= OBJECT (WM.BufferWindow) (* or could use WM.DoubleBufferWindow or 
 	(*The window can determine wether the key was pressed or released by examining the
 			Inputs.Release flag in flags. ucs contains the unicode equivalent of the key. Special input editors
 			send the generated unicode characters via KeyEvent.  *)
-	PROCEDURE KeyEvent(ucs : LONGINT; flags : SET; keysym : LONGINT);
+	PROCEDURE KeyEvent(ucs : SIZE; flags : SET; keysym : SIZE);
 		VAR dz: LONGINT; s: ARRAY 16 OF CHAR;
 		BEGIN
 			IF ~(Inputs.Release IN flags )THEN
