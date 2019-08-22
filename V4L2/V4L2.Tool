@@ -25,7 +25,7 @@ Compiler.Compile
 	
 # free modules:
 
-	SystemTools.Free VideoExample libv4l2 V4L2 ~ 
+	System.Free VideoExample libv4l2 V4L2 ~ 
 	
 
 

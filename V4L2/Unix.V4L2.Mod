@@ -4,12 +4,12 @@ IMPORT Unix;
 (* NOTE: Some union structures are not translated and tested yet *)
 
 TYPE 
-	__u64* = UNSIGNED64;
-	__s64* = HUGEINT;
-	__u32* = LONGINT;
-	__s32* = LONGINT;
-	__u16* = UNSIGNED16;
-	__u8* = CHAR;
+	u64* = UNSIGNED64;
+	s64* = HUGEINT;
+	u32* = UNSIGNED32;
+	s32* = LONGINT;
+	u16* = UNSIGNED16;
+	u8* = CHAR;
 (* ----------------- *)
 (* ioctl.h *)
 
@@ -184,25 +184,25 @@ TYPE v4l2_priority* = LONGINT;;
 		 PRIORITY_DEFAULT* = PRIORITY_INTERACTIVE;
 
 	TYPE v4l2_rect* = RECORD 
-		left* : __s32;
-		top* : __s32;
-		width* : __s32;
-		height* : __s32;
+		left* : s32;
+		top* : s32;
+		width* : u32;
+		height* : u32;
 	END;
 
 	TYPE v4l2_fract* = RECORD 
-		numerator* : __u32;
-		denominator* : __u32;
+		numerator* : u32;
+		denominator* : u32;
 	END;
 	
 	(*!	D R I V E R   C A P A B I L I T I E S  *)
-TYPE v4l2_capability *  = RECORD 
-		driver* : ARRAY 16 OF __u8;	(* i.e. "bttv" *)
-		card* : ARRAY 32 OF __u8;	(* i.e. "Hauppauge WinTV" *)
-		bus_info* : ARRAY 32 OF __u8;	(* "PCI:" + pci_name(pci_dev) *)
-		version* : __u32;        (* should use KERNEL_VERSION() *)
-		capabilities* : SET; (*! __u32; *)	(* Device capabilities *)
-		reserved* : ARRAY 4 OF __u32;
+TYPE v4l2_capability *  = RECORD
+		driver* : ARRAY 16 OF u8;	(* i.e. "bttv" *)
+		card* : ARRAY 32 OF u8;	(* i.e. "Hauppauge WinTV" *)
+		bus_info* : ARRAY 32 OF u8;	(* "PCI:" + pci_name(pci_dev) *)
+		version* : u32;        (* should use KERNEL_VERSION() *)
+		capabilities* : SET32; (*! u32; *)	(* Device capabilities *)
+		reserved* : ARRAY 4 OF u32;
 	END;
 	
 	 (* Values for 'capabilities' field *)
@@ -230,24 +230,28 @@ TYPE v4l2_capability *  = RECORD
 
 	(*!	V I D E O   I M A G E   F O R M A T  *)
 	TYPE v4l2_pix_format* = RECORD 
-		width* : __u32;
-		height* : __u32;
-		pixelformat* : __u32;
+		width* : u32;
+		height* : u32;
+		pixelformat* : u32;
 		field* : v4l2_field;
-		bytesperline* : __u32;	(* for padding, zero if unused *)
-		sizeimage* : __u32;
+		bytesperline* : u32;	(* for padding, zero if unused *)
+		sizeimage* : u32;
 		colorspace* : v4l2_colorspace;
-		priv* : __u32;		(* private data, depends on pixelformat *)
+		priv* : u32;		(* private data, depends on pixelformat *)
+		flags*: u32;
+		encoding*: u32; (* union *)
+		quantisation* : u32;
+		xfer_func*: u32;
 	END;
 	
 	(*!	F O R M A T   E N U M E R A T I O N  *)
 	TYPE v4l2_fmtdesc* = RECORD 
-		index* : __u32;             (* Format number      *)
+		index* : u32;             (* Format number      *)
 		type* : v4l2_buf_type;              (* buffer type        *)
-		flags* : SET; (*! __u32 *)
-		description* : ARRAY 32 OF __u8;   (* Description string *)
-		pixelformat* : __u32;       (* Format fourcc      *)
-		reserved* : ARRAY 4 OF __u32;
+		flags* : SET32; (*! u32 *)
+		description* : ARRAY 32 OF u8;   (* Description string *)
+		pixelformat* : u32;       (* Format fourcc      *)
+		reserved* : ARRAY 4 OF u32;
 	END;
 	
 CONST 
@@ -266,31 +270,31 @@ CONST
 		FRMSIZE_TYPE_STEPWISE* = 3;
 	
 TYPE v4l2_frmsize_discrete* = RECORD 
-		width* : __u32;		(* Frame width [pixel] *)
-		height* : __u32;		(* Frame height [pixel] *)
+		width* : u32;		(* Frame width [pixel] *)
+		height* : u32;		(* Frame height [pixel] *)
 	END;
 
 TYPE v4l2_frmsize_stepwise* = RECORD 
-		min_width* : __u32;	(* Minimum frame width [pixel] *)
-		max_width* : __u32;	(* Maximum frame width [pixel] *)
-		step_width* : __u32;	(* Frame width step size [pixel] *)
-		min_height* : __u32;	(* Minimum frame height [pixel] *)
-		max_height* : __u32;	(* Maximum frame height [pixel] *)
-		step_height* : __u32;	(* Frame height step size [pixel] *)
+		min_width* : u32;	(* Minimum frame width [pixel] *)
+		max_width* : u32;	(* Maximum frame width [pixel] *)
+		step_width* : u32;	(* Frame width step size [pixel] *)
+		min_height* : u32;	(* Minimum frame height [pixel] *)
+		max_height* : u32;	(* Maximum frame height [pixel] *)
+		step_height* : u32;	(* Frame height step size [pixel] *)
 	END;
 
 TYPE Frame24* =  ARRAY 24 OF CHAR; (* discrete or stepwise: SIZEOF (v4l2_frmsize_stepwise) or  SIZEOF(v4l2_frmsize_discrete) *)	
 TYPE v4l2_frmsizeenum* = RECORD 
-		index* : __u32;		(* Frame size number *)
-		pixel_format* : __u32;	(* Pixel format *)
-		type* : __u32;		(* Frame size type the device supports. *)
+		index* : u32;		(* Frame size number *)
+		pixel_format* : u32;	(* Pixel format *)
+		type* : u32;		(* Frame size type the device supports. *)
 				
 		frame* : Frame24;	(* Frame size *)
 (*		union: type cast frame according to type; ex:  discrete := SYSTEM.VAL( v4l2_frmsize_discrete, frame)
                 discrete: v4l2_frmsize_discrete; (* 8 bytes *)
 			stepwise: v4l2_frmsize_stepwise; (* 24 bytes *)
 *)
-		reserved*: ARRAY 2 OF __u32; 			(* Reserved space for future use *)
+		reserved*: ARRAY 2 OF u32; 			(* Reserved space for future use *)
 	END;
 	
 	(*
@@ -310,11 +314,11 @@ TYPE v4l2_frmsizeenum* = RECORD
 	END;
 	
 	TYPE v4l2_frmivalenum* = RECORD 
-		index*: __u32;		(* Frame format index *)
-		pixel_format*: __u32;	(* Pixel format *)
-		width*: __u32;		(* Frame width *)
-		height*: __u32;		(* Frame height *)
-		type*: __u32;		(* Frame interval type the device supports. *)
+		index*: u32;		(* Frame format index *)
+		pixel_format*: u32;	(* Pixel format *)
+		width*: u32;		(* Frame width *)
+		height*: u32;		(* Frame height *)
+		type*: u32;		(* Frame interval type the device supports. *)
 		
 		frame* : Frame24; (* Frame interval *)
 		(* union: type cast frame according to type; ex:  discrete := SYSTEM.VAL(v4l2_fract, frame)
@@ -322,24 +326,25 @@ TYPE v4l2_frmsizeenum* = RECORD
 			stepwise: v4l2_frmival_stepwise;
 		*)
 		
-		reserved*: ARRAY 2 OF __u32; 	(* Reserved space for future use *)
+		reserved*: ARRAY 2 OF u32; 	(* Reserved space for future use *)
 	END;;
 
 (*! #endif *)
 	
 	(*!	T I M E C O D E *)
 	TYPE v4l2_timecode* = RECORD 
-		type* : __u32;
-		flags* : SET; (*! __u32; *)
-		frames* : __u8;
-		seconds* : __u8;
-		minutes* : __u8;
-		hours* : __u8;
-		userbits* : ARRAY 4 OF __u8;
+		type* : u32;
+		flags* : SET32; (*! u32; *)
+		frames* : u8;
+		seconds* : u8;
+		minutes* : u8;
+		hours* : u8;
+		userbits* : ARRAY 4 OF u8;
 	END;
 	
 	(*  Type  *)
-	CONST TC_TYPE_24FPS* = 1;
+	CONST 
+	 TC_TYPE_24FPS* = 1;
 	 TC_TYPE_25FPS* = 2;
 	 TC_TYPE_30FPS* = 3;
 	 TC_TYPE_50FPS* = 4;
@@ -364,7 +369,7 @@ TYPE v4l2_frmsizeenum* = RECORD
 		COM_len*: INTEGER;           (* Length of data in JPEG COM segment *)
 		COM_data*: ARRAY 60 OF CHAR;      (* Data in JPEG COM segment *)
 		
-		jpeg_markers* : __u32;     (* Which markers should go into the JPEG
+		jpeg_markers* : u32;     (* Which markers should go into the JPEG
 		* output. Unless you exactly know what
 		* you do, leave them untouched.
 		* Inluding less markers will make the
@@ -386,36 +391,36 @@ TYPE v4l2_frmsizeenum* = RECORD
 	(*!	M E M O R Y - M A P P I N G   B U F F E R S  *)
 	
 	TYPE v4l2_requestbuffers* = RECORD 
-		count* : __u32;
+		count* : u32;
 		type* : v4l2_buf_type;
 		memory* : v4l2_memory;
-		reserved* : ARRAY 2 OF __u32;
+		reserved* : ARRAY 2 OF u32;
 	END;
 	
 	union8* =ARRAY 8 OF CHAR; (* u32 + insigned long *)
 	
 	TYPE v4l2_buffer* = RECORD 
-		index* : __u32;
+		index* : u32;
 		type* : v4l2_buf_type;
-		bytesused* : __u32;
-		flags* : SET; (*!__u32 *)
+		bytesused* : u32;
+		flags* : SET32; (*!u32 *)
 		field* : v4l2_field;
 		timestamp* : Unix.Itimerval;
 		timecode* : v4l2_timecode;
-		sequence* : __u32;
+		sequence* : u32;
 		
 		(* memory location *)
 		memory* : v4l2_memory;
 	
 	(*	TYPE union526* = RECORD 
 			CASE union:INTEGER OF 
-			1 : (offset: __u32);
+			1 : (offset: u32);
 			2 : (userptr: LONGINT);
 		END; *) 
 		m* : ADDRESS;  (*union8 *)
-		 length* : __u32; 
-		input* : __u32; 
-		reserved* : __u32; 
+		 length* : u32; 
+		input* : u32; 
+		reserved* : u32; 
 	END ;
 	
 	(*  Flags for 'flags' field *)
@@ -433,13 +438,22 @@ CONST BUF_FLAG_MAPPED* = 0;  (* Buffer is mapped (flag) *)
 	(*!	O V E R L A Y   P R E V I E W *)
 	
 	TYPE v4l2_framebuffer* = RECORD 
-		capability* : SET; (*! __u32 *)
-		flags* : SET; (*! __u32 *)
+		capability* : SET32; (*! u32 *)
+		flags* : SET32; (*! u32 *)
 		(* FIXME* : in theory we should pass something like PCI device + memory
 		* region + offset instead of some physical address *)
 		base* : ADDRESS; (* pointer, address *)
-		fmt* : v4l2_pix_format;
-	END;
+		fmt* : RECORD
+					width* : u32;
+					height* : u32;
+					pixelformat* : u32;
+					field* : v4l2_field;
+					bytesperline* : u32;	(* for padding, zero if unused *)
+					sizeimage* : u32;
+					colorspace* : v4l2_colorspace;
+					priv* : u32;		(* private data, depends on pixelformat *)	
+		           END;
+		END;
 	
 	(*  Flags for the 'capability' field. Read only *)
 CONST 
@@ -461,7 +475,7 @@ CONST
 	 FBUF_FLAG_SRC_CHROMAKEY* = 6;
 	
 	
-	TYPE v4l2_Pclip* = POINTER TO v4l2_clip;
+	TYPE v4l2_Pclip* = POINTER {UNTRACED, UNSAFE} TO v4l2_clip;
 	TYPE v4l2_clip* = RECORD 
 		c* : v4l2_rect;
 		next* : v4l2_Pclip;
@@ -470,21 +484,21 @@ CONST
 	TYPE v4l2_window* = RECORD 
 		w* : v4l2_rect;
 		field* : v4l2_field;
-		chromakey* : __u32;
+		chromakey* : u32;
 		clips* : v4l2_Pclip;
-		clipcount* : __u32;
+		clipcount* : u32;
 		bitmap* : ADDRESS; (* address *)
-		global_alpha* : __u8;
+		global_alpha* : u8;
 	END;
 	
 	(*!	C A P T U R E   P A R A M E T E R S *)
 TYPE v4l2_captureparm* = RECORD 
-		capability* : __u32;	  (*  Supported modes *)
-		capturemode* : __u32;	  (*  Current mode *)
+		capability* : u32;	  (*  Supported modes *)
+		capturemode* : u32;	  (*  Current mode *)
 		timeperframe* : v4l2_fract;  (*  Time per frame in .1us units *)
-		extendedmode* : __u32;  (*  Driver-specific extensions *)
-		readbuffers* : __u32;   (*  # of buffers for read *)
-		reserved* : ARRAY 4 OF __u32;
+		extendedmode* : u32;  (*  Driver-specific extensions *)
+		readbuffers* : u32;   (*  # of buffers for read *)
+		reserved* : ARRAY 4 OF u32;
 	END;
 	
 	(*  Flags for 'capability' and 'capturemode' fields *)
@@ -492,12 +506,12 @@ CONST MODE_HIGHQUALITY* = 00001H;	(*  High quality imaging mode *)
 	 CAP_TIMEPERFRAME* = 01000H;	(*  timeperframe field is supported *)
 	
 	TYPE v4l2_outputparm* = RECORD 
-		capability* : __u32;	 (*  Supported modes *)
-		outputmode* : __u32;	 (*  Current mode *)
+		capability* : u32;	 (*  Supported modes *)
+		outputmode* : u32;	 (*  Current mode *)
 		timeperframe* : v4l2_fract; (*  Time per frame in seconds *)
-		extendedmode* : __u32; (*  Driver-specific extensions *)
-		writebuffers* : __u32; (*  # of buffers for write *)
-		reserved* : ARRAY 4 OF __u32;
+		extendedmode* : u32; (*  Driver-specific extensions *)
+		writebuffers* : u32; (*  # of buffers for write *)
+		reserved* : ARRAY 4 OF u32;
 	END;
 	
 	(*!	I N P U T   I M A G E   C R O P P I N G  *)
@@ -515,7 +529,7 @@ CONST MODE_HIGHQUALITY* = 00001H;	(*  High quality imaging mode *)
 	
 	(*!   A N A L O G   V I D E O   S T A N D A R D *)
 	
-	TYPE v4l2_std_id* = __u64;
+	TYPE v4l2_std_id* = u64;
 	
 	(* one bit for each *)
 	CONST STD_PAL_B* = v4l2_std_id(000000001H);
@@ -552,7 +566,7 @@ CONST MODE_HIGHQUALITY* = 00001H;	(*  High quality imaging mode *)
 	
 	(* FIXME:
 	   Although std_id is 64 bits, there is an issue on PPC32 architecture that
-	   makes switch(__u64) to break. So, there's a hack on v4l2-common.c rounding
+	   makes switch(u64) to break. So, there's a hack on v4l2-common.c rounding
 	   this value to 32 bits.
 	   As, currently, the max value is for STD_ATSC_16_VSB (30 bits wide),
 	   it should work fine. However, if needed to add more than two standards,
@@ -581,28 +595,28 @@ CONST MODE_HIGHQUALITY* = 00001H;	(*  High quality imaging mode *)
 	 STD_ALL* = STD_525_60 + STD_625_50;
 
 	TYPE v4l2_standard* = RECORD 
-		index* : __u32;
+		index* : u32;
 		id* : v4l2_std_id;
-		name* : ARRAY 24 OF __u8;
+		name* : ARRAY 24 OF u8;
 		frameperiod* : v4l2_fract; (* Frames, not fields *)
-		framelines* : __u32;
-		reserved* : ARRAY 4 OF __u32;
+		framelines* : u32;
+		reserved* : ARRAY 4 OF u32;
 	END;
 	
 	(*! V I D E O	T I M I N G S	D V	P R E S E T  *)
 	TYPE v4l2_dv_preset* = RECORD 
-		preset* : __u32;
-		reserved* : ARRAY 4 OF __u32;
+		preset* : u32;
+		reserved* : ARRAY 4 OF u32;
 	END;
 	
 	(*! D V	P R E S E T S	E N U M E R A T I O N	 *)
 	TYPE v4l2_dv_enum_preset* = RECORD 
-		index* : __u32;
-		preset* : __u32;
-		name* : ARRAY 32 OF __u8; (* Name of the preset timing *)
-		width* : __u32;
-		height* : __u32;
-		reserved* : ARRAY 4 OF __u32;
+		index* : u32;
+		preset* : u32;
+		name* : ARRAY 32 OF u8; (* Name of the preset timing *)
+		width* : u32;
+		height* : u32;
+		reserved* : ARRAY 4 OF u32;
 	END;
 	
 	(*  D V	P R E S E T	V A L U E S *)
@@ -630,27 +644,27 @@ CONST MODE_HIGHQUALITY* = 00001H;	(*  High quality imaging mode *)
 	
 	(* BT.656/BT.1120 timing data *)
 	TYPE v4l2_bt_timings* = RECORD 
-		width* : __u32;		(* width in pixels *)
-		height* : __u32;		(* height in lines *)
-		interlaced* : __u32;	(* Interlaced or progressive *)
-		polarities* : __u32;	(* Positive or negative polarity *)
-		pixelclock* : __u64;	(* Pixel clock in HZ. Ex. 74.25MHz->74250000 *)
-		hfrontporch* : __u32;	(* Horizpontal front porch in pixels *)
-		hsync* : __u32;		(* Horizontal Sync length in pixels *)
-		hbackporch* : __u32;	(* Horizontal back porch in pixels *)
-		vfrontporch* : __u32;	(* Vertical front porch in pixels *)
-		vsync* : __u32;		(* Vertical Sync length in lines *)
-		vbackporch* : __u32;	(* Vertical back porch in lines *)
-		il_vfrontporch* : __u32;	(* Vertical front porch for bottom field of
+		width* : u32;		(* width in pixels *)
+		height* : u32;		(* height in lines *)
+		interlaced* : u32;	(* Interlaced or progressive *)
+		polarities* : u32;	(* Positive or negative polarity *)
+		pixelclock* : u64;	(* Pixel clock in HZ. Ex. 74.25MHz->74250000 *)
+		hfrontporch* : u32;	(* Horizpontal front porch in pixels *)
+		hsync* : u32;		(* Horizontal Sync length in pixels *)
+		hbackporch* : u32;	(* Horizontal back porch in pixels *)
+		vfrontporch* : u32;	(* Vertical front porch in pixels *)
+		vsync* : u32;		(* Vertical Sync length in lines *)
+		vbackporch* : u32;	(* Vertical back porch in lines *)
+		il_vfrontporch* : u32;	(* Vertical front porch for bottom field of
 		* interlaced field formats
 		*)
-		il_vsync* : __u32;	(* Vertical sync length for bottom field of
+		il_vsync* : u32;	(* Vertical sync length for bottom field of
 		* interlaced field formats
 		*)
-		il_vbackporch* : __u32;	(* Vertical back porch for bottom field of
+		il_vbackporch* : u32;	(* Vertical back porch for bottom field of
 		* interlaced field formats
 		*)
-		reserved* : ARRAY 16 OF __u32;
+		reserved* : ARRAY 16 OF u32;
 	END;
 
 	(* Interlaced or progressive format *)
@@ -664,13 +678,13 @@ CONST
 	
 
 	(*!!!!!! DV timings *)
-	TYPE Data47* = ARRAY 47 OF __u32;
+	TYPE Data47* = ARRAY 47 OF u32;
 	TYPE v4l2_dv_timings* = RECORD 
-		type*: __u32;
+		type*: u32;
 	(*	
 		union: type cast data according to type, ex: bt := SYSTEM.VAL(v4l2_bt_timings, data)
 		bt: v4l2_bt_timings;
-		reserved: ARRAY 32 OF __u32;
+		reserved: ARRAY 32 OF u32;
 		*)
 		data*: Data47;
 	END;
@@ -680,15 +694,15 @@ CONST
 
 	(*!	V I D E O   I N P U T S *)
 TYPE v4l2_input* = RECORD 
-		index* : __u32;		(*  Which input *)
-		name* : ARRAY 32 OF __u8;		(*  Label *)
-		type* : __u32;		(*  Type of input *)
-		audioset* : __u32;		(*  Associated audios (bitfield) *)
-		tuner* : __u32;             (*  Associated tuner *)
+		index* : u32;		(*  Which input *)
+		name* : ARRAY 32 OF u8;		(*  Label *)
+		type* : u32;		(*  Type of input *)
+		audioset* : u32;		(*  Associated audios (bitfield) *)
+		tuner* : u32;             (*  Associated tuner *)
 		std* : v4l2_std_id;
-		status* : SET; (*! __u32 *)
-		capabilities* : SET; (*!  __u32 *)
-		reserved* : ARRAY 3 OF __u32;
+		status* : SET32; (*! u32 *)
+		capabilities* : SET32; (*!  u32 *)
+		reserved* : ARRAY 3 OF u32;
 	END;
 
 (*  Values for the 'type' field *)
@@ -727,14 +741,14 @@ CONST
 
 	(*!  V I D E O   O U T P U T S  *)
 	TYPE v4l2_output* = RECORD 
-		index* : __u32;		(*  Which output *)
-		name* : ARRAY 32 OF __u8;		(*  Label *)
-		type* : __u32;		(*  Type of output *)
-		audioset* : __u32;		(*  Associated audios (bitfield) *)
-		modulator* : __u32;         (*  Associated modulator *)
+		index* : u32;		(*  Which output *)
+		name* : ARRAY 32 OF u8;		(*  Label *)
+		type* : u32;		(*  Type of output *)
+		audioset* : u32;		(*  Associated audios (bitfield) *)
+		modulator* : u32;         (*  Associated modulator *)
 		std* : v4l2_std_id;
-		capabilities* : SET; (*!  __u32 *)
-		reserved* : ARRAY 3 OF __u32;
+		capabilities* : SET32; (*!  u32 *)
+		reserved* : ARRAY 3 OF u32;
 	END;
 	
 	(*  Values for the 'type' field *)
@@ -748,31 +762,35 @@ CONST OUTPUT_TYPE_MODULATOR* = 1;
 	 OUT_CAP_STD* = 2; (* Supports S_STD *)
 
 	(*!	C O N T R O L S *)
+	
+CONST
+	CTRL_MAX_DIMS* = 4;
+	
 	TYPE v4l2_control* = RECORD 
-		id* : __u32;
-		value* : __s32;
+		id* : u32;
+		value* : s32;
 	END;
 	
 	TYPE v4l2_ext_control* = RECORD 
-		id* : __u32;
-		size* : __u32;
-		reserved2* : ARRAY 1 OF __u32;
-		data*: __s64;  
+		id* : u32;
+		size* : u32;
+		reserved2* : ARRAY 1 OF u32;
+		data*: s64;  
 	(*	TYPE union909* = RECORD 
 			CASE union:INTEGER OF 
-			1 : (value: __s32);
-			2 : (value64: __s64);
+			1 : (value: s32);
+			2 : (value64: s64);
 			3 : (string: ARRAY OF CHAR);
 		END;
 	*)
 	END;
 
 TYPE v4l2_ext_controls* = RECORD 
-		ctrl_class* : __u32;
-		count* : __u32;
-		error_idx* : __u32;
-		reserved* : ARRAY 2 OF __u32;
-		controls* : POINTER TO v4l2_ext_control;
+		ctrl_class* : u32;
+		count* : u32;
+		error_idx* : u32;
+		reserved* : ARRAY 2 OF u32;
+		controls* : POINTER {UNTRACED, UNSAFE} TO v4l2_ext_control;
 	END;
 	
 	(*  Values for ctrl_class field *)
@@ -804,23 +822,40 @@ CONST
 	
 	(*  Used in the VIDIOC_QUERYCTRL ioctl for querying controls *)
 	TYPE v4l2_queryctrl* = RECORD 
-		id* : __u32;
+		id* : u32;
 		type* : v4l2_ctrl_type;
-		name* : ARRAY 32 OF __u8;	(* Whatever *)
-		minimum* : __s32;	(* Note signedness *)
-		maximum* : __s32;
-		step* : __s32;
-		default_value* : __s32;
-		flags* : SET; (*! __u32; *)
-		reserved* : ARRAY 2 OF __u32;
+		name* : ARRAY 32 OF u8;	(* Whatever *)
+		minimum* : s32;	(* Note signedness *)
+		maximum* : s32;
+		step* : s32;
+		default_value* : s32;
+		flags* : SET32; (*! u32; *)
+		reserved* : ARRAY 2 OF u32;
+	END;
+
+	(*  Used in the VIDIOC_QUERY_EXT_CTRL ioctl for querying extended controls *)
+	TYPE v4l2_query_ext_ctrl* = RECORD
+		id*: u32;
+		type*: u32;
+		name*: ARRAY 32 OF CHAR;
+		minimum*: s64;
+		maximum*: s64;
+		step*: u64;
+		default_value*: s64;
+		flags*: SET32;
+		elem_size*: u32;
+		elems*: u32;
+		nr_of_dims*:u32;
+		dims*: ARRAY CTRL_MAX_DIMS OF u32;
+		reserved* : ARRAY 32 OF u32;
 	END;
 	
 	(*  Used in the VIDIOC_QUERYMENU ioctl for querying menu items *)
 	TYPE v4l2_querymenu* = RECORD 
-		id* : __u32;
-		index* : __u32;
-		name* : ARRAY 32 OF __u8;	(* Whatever *)
-		reserved* : __u32;
+		id* : u32;
+		index* : u32;
+		name* : ARRAY 32 OF u8;	(* Whatever or value *)
+		reserved* : u32;
 	END;
 	
 	(*  Control flags  *)
@@ -871,6 +906,7 @@ CONST
 	 CID_VCENTER* = CID_BASE+23;
 	
 	 CID_POWER_LINE_FREQUENCY* = CID_BASE+24;
+	 
 	TYPE v4l2_power_line_frequency* = LONGINT;
 	CONST 
 		CID_POWER_LINE_FREQUENCY_DISABLED* = 0;
@@ -1229,27 +1265,27 @@ CONST
 	
 	(*!	T U N I N G *)
 	TYPE v4l2_tuner* = RECORD 
-		index* : __u32;
-		name* : ARRAY 32 OF __u8;
+		index* : u32;
+		name* : ARRAY 32 OF u8;
 		type* : v4l2_tuner_type;
-		capability* : SET; (*! __u32; *)
-		rangelow* : __u32;
-		rangehigh* : __u32;
-		rxsubchans* : SET; (*! __u32 *)
-		audmode* : __u32;
-		signal* : __s32;
-		afc* : __s32;
-		reserved* : ARRAY 4 OF __u32;
+		capability* : SET32; (*! u32; *)
+		rangelow* : u32;
+		rangehigh* : u32;
+		rxsubchans* : SET32; (*! u32 *)
+		audmode* : u32;
+		signal* : s32;
+		afc* : s32;
+		reserved* : ARRAY 4 OF u32;
 	END;
 	
 	TYPE v4l2_modulator* = RECORD 
-		index* : __u32;
-		name* : ARRAY 32 OF __u8;
-		capability* : SET; (*! __u32; *)
-		rangelow* : __u32;
-		rangehigh* : __u32;
-		txsubchans* : __u32;
-		reserved* : ARRAY 4 OF __u32;
+		index* : u32;
+		name* : ARRAY 32 OF u8;
+		capability* : SET32; (*! u32; *)
+		rangelow* : u32;
+		rangehigh* : u32;
+		txsubchans* : u32;
+		reserved* : ARRAY 4 OF u32;
 	END;
 	
 	(*  Flags for the 'capability' field *)
@@ -1281,27 +1317,27 @@ CONST
 		TUNER_MODE_LANG1_LANG2* = 00004H;
 	
 	TYPE v4l2_frequency* = RECORD 
-		tuner* : __u32;
+		tuner* : u32;
 		type* : v4l2_tuner_type;
-		frequency* : __u32;
-		reserved* : ARRAY 8 OF __u32;
+		frequency* : u32;
+		reserved* : ARRAY 8 OF u32;
 	END;
 	
 	TYPE v4l2_hw_freq_seek* = RECORD 
-		tuner* : __u32;
+		tuner* : u32;
 		type* : v4l2_tuner_type;
-		seek_upward* : __u32;
-		wrap_around* : __u32;
-		spacing* : __u32;
-		reserved* : ARRAY 7 OF __u32;
+		seek_upward* : u32;
+		wrap_around* : u32;
+		spacing* : u32;
+		reserved* : ARRAY 7 OF u32;
 	END;
 	
 	(*!	R D S *)
 	
 	TYPE v4l2_rds_data* = RECORD 
-		lsb* : __u8;
-		msb* : __u8;
-		block* : __u8;
+		lsb* : u8;
+		msb* : u8;
+		block* : u8;
 	END;
 
 	CONST 
@@ -1318,11 +1354,11 @@ CONST
 
 	(*!	A U D I O  *)
 TYPE v4l2_audio* = RECORD 
-		index* : __u32;
-		name* : ARRAY 32 OF __u8;
-		capability* : SET; (*!__u32; *)
-		mode* : __u32;
-		reserved* : ARRAY 2 OF __u32;
+		index* : u32;
+		name* : ARRAY 32 OF u8;
+		capability* : SET32; (*!u32; *)
+		mode* : u32;
+		reserved* : ARRAY 2 OF u32;
 	END;
 	
 	(*  Flags for the 'capability' field *)
@@ -1334,11 +1370,11 @@ TYPE v4l2_audio* = RECORD
 	AUDMODE_AVL* = 000001H;
 	
 	TYPE v4l2_audioout* = RECORD 
-		index* : __u32;
-		name* : ARRAY 32 OF __u8;
-		capability* : SET; (*! __u32 *)
-		mode* : __u32;
-		reserved* : ARRAY 2 OF __u32;
+		index* : u32;
+		name* : ARRAY 32 OF u8;
+		capability* : SET32; (*! u32 *)
+		mode* : u32;
+		reserved* : ARRAY 2 OF u32;
 	END;
 	
 	(*!
@@ -1355,18 +1391,18 @@ TYPE v4l2_audio* = RECORD
 	ENC_IDX_FRAME_MASK* = 0FH;
 	
 	TYPE v4l2_enc_idx_entry* = RECORD 
-		offset* : __u64;
-		pts* : __u64;
-		length* : __u32;
-		flags* : SET; (*! __u32 *)
-		reserved* : ARRAY 2 OF __u32;
+		offset* : u64;
+		pts* : u64;
+		length* : u32;
+		flags* : SET32; (*! u32 *)
+		reserved* : ARRAY 2 OF u32;
 	END;
 	
 	CONST ENC_IDX_ENTRIES* = 64;
 	TYPE v4l2_enc_idx* = RECORD 
-		entries* : __u32;
-		entries_cap* : __u32;
-		reserved* : ARRAY 4 OF __u32;
+		entries* : u32;
+		entries_cap* : u32;
+		reserved* : ARRAY 4 OF u32;
 		entry* : ARRAY ENC_IDX_ENTRIES OF v4l2_enc_idx_entry;
 	END;
 	
@@ -1380,14 +1416,14 @@ CONST
 	(* Flags for ENC_CMD_STOP *)
 	CONST ENC_CMD_STOP_AT_GOP_END* = 0;
 	
-	TYPE DataRaw*=RECORD data*: ARRAY 8 OF __u32; END;
+	TYPE DataRaw*=RECORD data*: ARRAY 8 OF u32; END;
 	TYPE v4l2_encoder_cmd* = RECORD 
-		cmd* : __u32;
-		flags* : SET; (*! __u32 *)
+		cmd* : u32;
+		flags* : SET32; (*! u32 *)
 		raw*: DataRaw;
 				(*
 				union:
-				data* : ARRAY 8 OF __u32;
+				data* : ARRAY 8 OF u32;
 				*)
 	END;
 
@@ -1402,14 +1438,14 @@ CONST
 	
 	(* Raw VBI *)
 	TYPE v4l2_vbi_format* = RECORD 
-		sampling_rate* : __u32;		(* in 1 Hz *)
-		offset* : __u32;
-		samples_per_line* : __u32;
-		sample_format* : __u32;		(* PIX_FMT_* *)
-		start* : ARRAY 2 OF __s32;
-		count* : ARRAY 2 OF __u32;
-		flags* : SET; (* __u32 *)			(* VBI_* *)
-		reserved* : ARRAY 2 OF __u32;		(* must be zero *)
+		sampling_rate* : u32;		(* in 1 Hz *)
+		offset* : u32;
+		samples_per_line* : u32;
+		sample_format* : u32;		(* PIX_FMT_* *)
+		start* : ARRAY 2 OF s32;
+		count* : ARRAY 2 OF u32;
+		flags* : SET32; (* u32 *)			(* VBI_* *)
+		reserved* : ARRAY 2 OF u32;		(* must be zero *)
 	END;
 	
 	(*!  VBI flags  *)
@@ -1425,15 +1461,17 @@ CONST
 	 * notice in the definitive implementation.
 	 *)
 	
-	TYPE v4l2_sliced_vbi_format* = RECORD 
-		service_set*: __u16;
+	TYPE 
+	Array24*=ARRAY 24 OF u16;
+	v4l2_sliced_vbi_format* = RECORD 
+		service_set*: u16;
 		(* service_lines[0][...] specifies lines 0-23 (1-23 used) of the first field
 		service_lines[1][...] specifies lines 0-23 (1-23 used) of the second field
 		(equals frame lines 313-336 for 625 line video
 		standards, 263-286 for 525 line standards) *)
-		service_lines*: ARRAY 2, 24 OF __u16;
-		io_size*: __u32;
-		reserved*: ARRAY 2 OF __u32;            (* must be zero *)
+		service_lines*: ARRAY 2  OF Array24;
+		io_size*: u32;
+		reserved*: ARRAY 2 OF u32;            (* must be zero *)
 	END;
 	
 	(* Teletext World System Teletext
@@ -1451,22 +1489,22 @@ CONST
 		SLICED_VBI_625* = SLICED_TELETEXT_B + SLICED_VPS + SLICED_WSS_625;
 	
 	TYPE v4l2_sliced_vbi_cap* = RECORD 
-		service_set*: __u16;
+		service_set*: u16;
 		(* service_lines[0][...] specifies lines 0-23 (1-23 used) of the first field
 		service_lines[1][...] specifies lines 0-23 (1-23 used) of the second field
 		(equals frame lines 313-336 for 625 line video
 		standards, 263-286 for 525 line standards) *)
-		service_lines*: ARRAY 2, 24 OF __u16;
+		service_lines*: ARRAY 2, 24 OF u16;
 		type*: v4l2_buf_type;
-		reserved*: ARRAY 3 OF __u32;    (* must be 0 *)
+		reserved*: ARRAY 3 OF u32;    (* must be 0 *)
 	END;
 	
 	TYPE v4l2_sliced_vbi_data* = RECORD 
-		id*: __u32;
-		field*: __u32;          (* 0: first field, 1: second field *)
-		line*: __u32;           (* 1-23 *)
-		reserved*: __u32;       (* must be 0 *)
-		data*: ARRAY 48 OF __u8;
+		id*: u32;
+		field*: u32;          (* 0: first field, 1: second field *)
+		line*: u32;           (* 1-23 *)
+		reserved*: u32;       (* must be 0 *)
+		data*: ARRAY 48 OF u8;
 	END;
 	
 	(*
@@ -1493,8 +1531,8 @@ CONST
 		MPEG_VBI_IVTV_VPS* = 7;
 	
 	TYPE v4l2_mpeg_vbi_itv0_line* = RECORD 
-		id*: __u8;	(* One of MPEG_VBI_IVTV_* above *)
-		data*: ARRAY 42 OF __u8;	(* Sliced VBI data for the line *)
+		id*: u8;	(* One of MPEG_VBI_IVTV_* above *)
+		data*: ARRAY 42 OF u8;	(* Sliced VBI data for the line *)
 	END;
 
 (*	TYPE v4l2_mpeg_vbi_itv0* = RECORD 
@@ -1510,7 +1548,7 @@ CONST
 		MPEG_VBI_IVTV_MAGIC1* = 'ITV0';
 (*	
 	TYPE v4l2_mpeg_vbi_fmt_ivtv* = RECORD 
-		magic: ARRAY 4 OF __u8;
+		magic: ARRAY 4 OF u8;
 		TYPE * = RECORD 
 			CASE union:INTEGER OF 
 			itv0: v4l2_mpeg_vbi_itv0;
@@ -1532,39 +1570,52 @@ CONST
  *			adjacent lines
  *)
 TYPE v4l2_plane_pix_format* = RECORD
-			sizeimage*: __u32;
-			bytesperline*: __u16;
-			reserved*: ARRAY 7 OF __u16;
+			sizeimage*: u32;
+			bytesperline*: u16;
+			reserved*: ARRAY 7 OF u16;
 		END;
 
 (**
- * struct v4l2_pix_format_mplane - multiplanar format definition
+  * struct v4l2_pix_format_mplane - multiplanar format definition
  * @width:		image width in pixels
  * @height:		image height in pixels
  * @pixelformat:	little endian four character code (fourcc)
- * @field:		field order (for interlaced video)
- * @colorspace:		supplemental to pixelformat
+ * @field:		enum v4l2_field; field order (for interlaced video)
+ * @colorspace:		enum v4l2_colorspace; supplemental to pixelformat
  * @plane_fmt:		per-plane information
  * @num_planes:		number of planes for this format
+ * @flags:		format flags (V4L2_PIX_FMT_FLAG_*
+ * @ycbcr_enc:		enum v4l2_ycbcr_encoding, Y'CbCr encoding
+ * @quantization:	enum v4l2_quantization, colorspace quantization
+ * @xfer_func:		enum v4l
  *)
+ 
 TYPE v4l2_pix_format_mplane* = RECORD
-			width*: __u32;
-			height*: __u32;
-			pixelformat* : __u32;
+			width*: u32;
+			height*: u32;
+			pixelformat* : u32;
 			field*: v4l2_field;
 			colorspace*: v4l2_colorspace;
-
-			plane_fmt*: ARRAY VIDEO_MAX_PLANES OF v4l2_plane_pix_format;
-			num_planes* : __u8;
-			reserved* : ARRAY 11 OF __u8;
+			plane_fmt*: ARRAY VIDEO_MAX_PLANES OF v4l2_plane_pix_format;			
+			num_planes* : u8;
+			flags*: u8;
+			union*: u8; (* ycbcr_enc,  hsv_enc;*)
+			quantization*: u8;
+			xfer_func*: u8;		
+			reserved* : ARRAY 7 OF u8;
 	END;
 
 
 	(* Stream data format *)
-	TYPE D200* = ARRAY 200 OF CHAR;
-		
+	TYPE 
+			D200* =  ARRAY  200 OF u8;  (*! CHECK SIZE   *) 
+	          
+		(*! NOTE: sizeof v4l2_format is 204 bytes on 32 bit os
+	        208 bytes on 64 bit os
+	        *)
 	TYPE v4l2_format* = RECORD 
-		type* : v4l2_buf_type;
+		type*: LONGWORD;
+		
 	(*	
 			union: type cast fmt according to type; ex:  pix := SYSTEM.VAL(v4l2_pix_format, fmt)
 			pix* : v4l2_pix_format; (* BUF_TYPE_VIDEO_CAPTURE *)
@@ -1572,11 +1623,13 @@ TYPE v4l2_pix_format_mplane* = RECORD
 			win* : v4l2_window;     (* BUF_TYPE_VIDEO_OVERLAY *)
 			vbi* : v4l2_vbi_format;     (* BUF_TYPE_VBI_CAPTURE *)
 			sliced* : v4l2_sliced_vbi_format;  (* BUF_TYPE_SLICED_VBI_CAPTURE *)
-			raw_data* : ARRAY 200 OF __u8;                   (* user-defined *)
+			
+			raw_data* : ARRAY 200 OF u8;                   (* user-defined *)
 
 	*)	
-		 fmt*: D200;
-		
+		(*x {FICTIVE=4}: LONGINT;*)
+		 fmt* : D200;
+
 	END;
 	
 	
@@ -1587,7 +1640,7 @@ TYPE v4l2_pix_format_mplane* = RECORD
 		union: type cast parm according to type; ex:  capture := SYSTEM.VAL( v4l2_captureparm, parm)
 			capture* : v4l2_captureparm;
 			output* : v4l2_outputparm;
-			raw_data* : ARRAY 200 OF __u8;  (* user-defined *)
+			raw_data* : ARRAY 200 OF u8;  (* user-defined *)
 	*)
 		parm*: D200;
 	
@@ -1609,23 +1662,23 @@ TYPE v4l2_pix_format_mplane* = RECORD
 
 	TYPE Data64* = ARRAY 64 OF CHAR;
 	TYPE v4l2_event* = RECORD 
-		type* : __u32;
+		type* : u32;
 (*
 		union: type cast u according to type; ex:  vsync := SYSTEM.VAL( v4l2_event_vsync, u)
 		vsync:  v4l2_event_vsync;
-		data: ARRAY 64 OF __u8;
+		data: ARRAY 64 OF u8;
 *)		
 		u* : Data64; 
 
-		pending* : __u32; 
-		sequence * : __u32; 
+		pending* : u32; 
+		sequence * : u32; 
 		(*! timestamp: timespec; *)   (*! <------ neded timespec structure definition *)
-		reserved* : ARRAY 9 OF __u32; 
+		reserved* : ARRAY 9 OF u32; 
 	END;
 	
 	TYPE v4l2_event_subscription* = RECORD 
-		type* : __u32;
-		reserved* : ARRAY 7 OF __u32;
+		type* : u32;
+		reserved* : ARRAY 7 OF u32;
 	END;
 	
 	(*!
@@ -1644,10 +1697,10 @@ TYPE v4l2_pix_format_mplane* = RECORD
 	
 	TYPE Data32* = ARRAY 32 OF CHAR;
 	TYPE v4l2_dbg_match* = RECORD 
-		type*: __u32; (* Match type *)
+		type*: u32; (* Match type *)
 		 (* Match this chip, meaning determined by type *)
-		(* union:  type cast data according to type; ex:  addr := SYSTEM.VAL( __u32, data) 
-			1 : (addr: __u32);
+		(* union:  type cast data according to type; ex:  addr := SYSTEM.VAL( u32, data) 
+			1 : (addr: u32);
 			| 2 : (name: ARRAY 32 OF CHAR);
 
 		*)
@@ -1656,15 +1709,15 @@ TYPE v4l2_pix_format_mplane* = RECORD
 	
 	TYPE v4l2_dbg_register* = RECORD 
 		match*: v4l2_dbg_match;
-		size*: __u32;	(* register size in bytes *)
-		reg*: __u64;
-		val*: __u64;
+		size*: u32;	(* register size in bytes *)
+		reg*: u64;
+		val*: u64;
 	END;
 	 (* VIDIOC_DBG_G_CHIP_IDENT *)
 	TYPE v4l2_dbg_chip_ident* = RECORD 
 		match*: v4l2_dbg_match;
-		ident*: __u32;       (* chip identifier as specified in <media/v4l2-chip-ident.h> *)
-		revision*: __u32;    (* chip revision, chip specific *)
+		ident*: u32;       (* chip identifier as specified in <media/v4l2-chip-ident.h> *)
+		revision*: u32;    (* chip revision, chip specific *)
 	END;
 
 
@@ -1860,7 +1913,7 @@ VAR
 (* Four-character-code (FOURCC) *)
 PROCEDURE fourcc* (a, b, c, d: CHAR): LONGINT;
 BEGIN
-	RETURN ORD(d) * 1000000H + ORD(c) * 10000H + ORD(b) * 100H + ORD(a);
+	 RETURN ORD(d) * 1000000H + ORD(c) * 10000H + ORD(b) * 100H + ORD(a);
 END fourcc;
 
 PROCEDURE IOC (dir, type, nr, size: LONGINT): LONGINT;
@@ -1882,7 +1935,7 @@ END IOC;
 	VIDIOC_ENUM_FMT := IOC( IOC_READ + IOC_WRITE, ORD('V'),  2, SIZEOF(v4l2_fmtdesc));
 	(*! check size of v4l2_format *)
 	VIDIOC_G_FMT := IOC(IOC_READ + IOC_WRITE, ORD('V'),  4, SIZEOF(v4l2_format));  
-	VIDIOC_S_FMT := IOC(IOC_READ + IOC_WRITE, ORD('V'),  5, SIZEOF(v4l2_format));
+	VIDIOC_S_FMT := IOC(IOC_READ + IOC_WRITE, ORD('V'),  5,  SIZEOF(v4l2_format));
 	VIDIOC_REQBUFS := IOC(IOC_READ + IOC_WRITE, ORD('V'),  8, SIZEOF(v4l2_requestbuffers));
 	VIDIOC_QUERYBUF := IOC(IOC_READ + IOC_WRITE, ORD('V'),  9, SIZEOF(v4l2_buffer));
 	VIDIOC_G_FBUF := IOC(IOC_READ, ORD('V'), 10, SIZEOF(v4l2_framebuffer));
@@ -1909,10 +1962,10 @@ END IOC;
 
 	VIDIOC_QUERYCTRL := IOC(IOC_READ + IOC_WRITE, ORD('V'), 36, SIZEOF( v4l2_queryctrl));
 	VIDIOC_QUERYMENU := IOC(IOC_READ + IOC_WRITE, ORD('V'), 37, SIZEOF( v4l2_querymenu));
-	VIDIOC_G_INPUT := IOC(IOC_READ, ORD('V'), 38, SIZEOF(__u32));
-	VIDIOC_S_INPUT := IOC(IOC_READ + IOC_WRITE, ORD('V'), 39, SIZEOF(__u32));
-	VIDIOC_G_OUTPUT := IOC(IOC_READ, ORD('V'), 46, SIZEOF(__u32));
-	VIDIOC_S_OUTPUT := IOC(IOC_READ + IOC_WRITE, ORD('V'), 47, SIZEOF(__u32));
+	VIDIOC_G_INPUT := IOC(IOC_READ, ORD('V'), 38, SIZEOF(u32));
+	VIDIOC_S_INPUT := IOC(IOC_READ + IOC_WRITE, ORD('V'), 39, SIZEOF(u32));
+	VIDIOC_G_OUTPUT := IOC(IOC_READ, ORD('V'), 46, SIZEOF(u32));
+	VIDIOC_S_OUTPUT := IOC(IOC_READ + IOC_WRITE, ORD('V'), 47, SIZEOF(u32));
 
 	VIDIOC_ENUMOUTPUT := IOC(IOC_READ + IOC_WRITE, ORD('V'), 48, SIZEOF( v4l2_output));
 	VIDIOC_G_AUDOUT := IOC(IOC_READ, ORD('V'), 49, SIZEOF( v4l2_audioout));
@@ -2079,5 +2132,5 @@ BEGIN
 END V4L2.
 
 
-SystemTools.Free V4L2 ~ 
+System.Free V4L2 ~ 
 

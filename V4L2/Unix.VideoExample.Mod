@@ -8,7 +8,7 @@ IMPORT
 	Modules, Kernel, KernelLog, SYSTEM, Unix,  WMDialogs, Math:=MathL,
 	WM := WMWindowManager, Strings, WMRectangles, WMGraphics, Raster,
 	Commands, Streams, WMComponents, WMStandardComponents,
-	lib := libv4l2, V := V4L2, WMMessages, WMEditors, Files, FreeImageUtils;
+	lib := libv4l2, V := V4L2, WMMessages, WMEditors, Files; (* FreeImageUtils; *)
 
 CONST deviceName0 = "/dev/video0";
 	
@@ -60,7 +60,7 @@ TYPE ControlWindow = OBJECT(WMComponents.FormWindow)
 			i, j: LONGINT;
 			qmenu: V.v4l2_querymenu;
 			
-			PROCEDURE MakeEdit( x, y: LONGINT; ctrl: V.v4l2_queryctrl): WMEditors.TextField;
+			PROCEDURE MakeEdit( x, y: SIZE; ctrl: V.v4l2_queryctrl): WMEditors.TextField;
 			VAR e: WMEditors.TextField;
 				str: ARRAY 128 OF CHAR;
 				val: LONGINT;
@@ -79,7 +79,7 @@ TYPE ControlWindow = OBJECT(WMComponents.FormWindow)
 				RETURN e;
 			END MakeEdit;
 
-			PROCEDURE MakeLabel( x, y: LONGINT; ctrl: V.v4l2_queryctrl): WMStandardComponents.Label;
+			PROCEDURE MakeLabel( x, y: SIZE; ctrl: V.v4l2_queryctrl): WMStandardComponents.Label;
 			VAR l: WMStandardComponents.Label;
 			BEGIN
 				NEW(l); 
@@ -89,7 +89,7 @@ TYPE ControlWindow = OBJECT(WMComponents.FormWindow)
 				RETURN l;
 			END MakeLabel;
 
-			PROCEDURE MakeCheckBox( x, y: LONGINT; ctrl: V.v4l2_queryctrl): WMStandardComponents.Button;
+			PROCEDURE MakeCheckBox( x, y: SIZE; ctrl: V.v4l2_queryctrl): WMStandardComponents.Button;
 			VAR b: WMStandardComponents.Button;
 				str: ARRAY 128 OF CHAR;
 				val: LONGINT;
@@ -108,7 +108,7 @@ TYPE ControlWindow = OBJECT(WMComponents.FormWindow)
 				RETURN b;
 			END MakeCheckBox;
 
-			PROCEDURE MakeMenu( x, y: LONGINT; ctrl: V.v4l2_querymenu): WMStandardComponents.Button;
+			PROCEDURE MakeMenu( x, y: SIZE; ctrl: V.v4l2_querymenu): WMStandardComponents.Button;
 			VAR b: WMStandardComponents.Button;
 				str: ARRAY 128 OF CHAR;
 				val: LONGINT;
@@ -190,7 +190,7 @@ TYPE ControlWindow = OBJECT(WMComponents.FormWindow)
 	
 					END;
 				(*END; *)
-				queryctrl.id  := SYSTEM.VAL(LONGINT, SYSTEM.VAL(SET, queryctrl.id) + {V.CTRL_FLAG_NEXT_CTRL});
+				queryctrl.id  := SYSTEM.VAL(LONGINT, SYSTEM.VAL(SET32, queryctrl.id) + {V.CTRL_FLAG_NEXT_CTRL});
 			END;
 			out.Update();
 			RETURN pan;
@@ -253,17 +253,19 @@ TYPE ControlWindow = OBJECT(WMComponents.FormWindow)
 		
 	PreviewWindow = OBJECT (WM.BufferWindow);
 		VAR startX, startY, stopX, stopY: LONGREAL; (* measurement points *)
-				
+				labelw, labelh: SIZE;
 		PROCEDURE &New(width, height : LONGINT; CONST title: ARRAY OF CHAR);
 		BEGIN
 			Init(width, height, FALSE);
 			(* WM.AddWindow(SELF, 200, 200); *)
 			WM.ExtAddWindow(SELF, 200, 200, {WM.FlagFrame, WM.FlagClose, WM.FlagNoResizing});
-			SetTitle(Strings.NewString(title));		
+			SetTitle(Strings.NewString(title));
+			canvas.SetFont(WMGraphics.GetFont("Vera",	10, {}));
+			canvas.GetFont().GetStringSize("O", labelw, labelh);
 		END New;
 		
 		(* Overwrite draw procedure because we do not want any interpolation *)
-		PROCEDURE Draw(canvas : WMGraphics.Canvas; w, h, q : LONGINT);
+		PROCEDURE Draw(canvas : WMGraphics.Canvas; w, h: SIZE; q : WORD);
 		BEGIN
 			Draw^(canvas, w, h, 0);
 		END Draw;
@@ -272,7 +274,7 @@ TYPE ControlWindow = OBJECT(WMComponents.FormWindow)
 		VAR sx, sy, dxy, teta: LONGREAL;
 			sxs, sys: ARRAY 32 OF CHAR;
 			str: ARRAY 128 OF CHAR;	
-			rect: WMRectangles.Rectangle;			
+			rect: WMRectangles.Rectangle;	
 		BEGIN			
 			canvas.DrawImage(0, 0, buffer32, WMGraphics.ModeCopy);
 			IF showms THEN
@@ -280,7 +282,9 @@ TYPE ControlWindow = OBJECT(WMComponents.FormWindow)
 				canvas.DrawString(5, 12, timestr);
 			END;
 			IF showRuler THEN
-				rect := WMRectangles.MakeRect( 10, 10, GetWidth()-10, 20);
+
+				
+				rect := WMRectangles.MakeRect( 10, 10, GetWidth()-10, labelh+10);
 				canvas.Fill( rect, WMGraphics.Yellow, WMGraphics. ModeSrcOverDst);
 				canvas.SetColor(WMGraphics.Black);
 				
@@ -316,7 +320,7 @@ TYPE ControlWindow = OBJECT(WMComponents.FormWindow)
 			Invalidate(WMRectangles.MakeRect(0, 0, GetWidth(), GetHeight()))						
 		END Update;
 		
-		PROCEDURE KeyEvent (ucs: LONGINT; flags: SET; keysym: LONGINT);
+		PROCEDURE KeyEvent (ucs: SIZE; flags: SET; keysym: SIZE);
 		BEGIN
 			CASE CHR(ucs) OF
 				| "s": SaveImage;
@@ -327,7 +331,7 @@ TYPE ControlWindow = OBJECT(WMComponents.FormWindow)
 			END;
 		END KeyEvent;
 
-		PROCEDURE PointerMove (x, y : LONGINT; keys : SET);
+		PROCEDURE PointerMove (x, y : SIZE; keys : SET);
 		BEGIN
 			IF 0 IN keys THEN  (* ML: measure started *)
 				showRuler := TRUE;
@@ -337,16 +341,16 @@ TYPE ControlWindow = OBJECT(WMComponents.FormWindow)
 			END;
 		END PointerMove;
 		
-		PROCEDURE PointerDown (x, y : LONGINT; keys : SET);
+		PROCEDURE PointerDown (x, y : SIZE; keys : SET);
 		BEGIN
 			startX := x;
 			startY := y;
-        	END PointerDown;
+		END PointerDown;
  
- 		PROCEDURE PointerUp (x, y : LONGINT; keys : SET);
+ 		PROCEDURE PointerUp (x, y : SIZE; keys : SET);
 		BEGIN
 			showRuler := FALSE;
-        	END PointerUp;
+		END PointerUp;
         	
 		PROCEDURE Handle(VAR x : WMMessages.Message);
 		BEGIN
@@ -361,8 +365,8 @@ TYPE ControlWindow = OBJECT(WMComponents.FormWindow)
 		VAR res: LONGINT;
 		BEGIN
 			IF WMDialogs.QueryString(" Save File name:", filename) = WMDialogs.ResOk THEN
-			(*	WMGraphics.StoreImage(img, filename,res); *)
-				FreeImageUtils.StoreImage2(buffer32, filename);
+				WMGraphics.StoreImage(img, filename,res); 
+				(* FreeImageUtils.StoreImage2(buffer32, filename); *)
 			END;
 		END SaveImage;
 					
@@ -446,6 +450,7 @@ VAR
 	fds: Unix.FdSet;
 	tv: Unix.Timeval;
 	r: LONGINT;
+	bufsize: SIZE;
 	(* --------for ioctl ------------ *)
 	PROCEDURE FDZERO(VAR fs: Unix.FdSet);
 	VAR i: LONGINT;
@@ -455,7 +460,7 @@ VAR
 
 	PROCEDURE FDSET(fd: LONGINT; VAR fs: Unix.FdSet);
 	BEGIN 
-		INCL( fs[fd DIV 32],  fd MOD 32 );	
+		INCL( fs[fd DIV Unix.FdSetLen],  fd MOD Unix.FdSetLen );	
 	END FDSET;
 	
 BEGIN
@@ -466,8 +471,8 @@ BEGIN
 	tv.usec := 0;
 	r := Unix.select(fd+1,  ADDRESSOF(fds), NIL, NIL, tv);
 	IF r = -1 THEN RETURN FALSE END;
-
-	 IF -1 = lib.read(fd, ADDRESSOF(buffer.mem[0]), buffer.width*buffer.height*3) THEN	 	
+	bufsize := buffer.width*buffer.height*3;
+	 IF -1 = lib.read(fd, ADDRESSOF(buffer.mem[0]), bufsize) THEN
 	 	RETURN FALSE;
 	END;
 	(* convert to BGRA8888 image *)
@@ -504,7 +509,7 @@ END CloseDevice;
 
 PROCEDURE OpenDevice(CONST devicename: ARRAY OF CHAR): BOOLEAN;
 BEGIN
- 	fd := lib.open(devicename, Unix.rdwr, {});
+ 	fd := lib.open(devicename, Unix.rdwr, 0);
  	IF fd = -1 THEN
  		out.String("Error: Could not open video device : "); out.String(deviceName);
  		RETURN FALSE;
@@ -611,13 +616,14 @@ VAR
 	cropcap: V.v4l2_cropcap;
 	crop: V.v4l2_crop;
 	fmt: V.v4l2_format;
-	min: LONGINT;	
+	min: V.u32;	
  	pix: V.v4l2_pix_format;
 	err: LONGINT;
 	
 BEGIN
+    out.String("errno-initdev-0: "); out.Int(Unix.errno(), 0); out.Ln;        
 	err := xioctl(fd, V.VIDIOC_QUERYCAP, ADDRESSOF(cap));
-
+   out.String("errno-initdev-1: "); out.Int(Unix.errno(), 0); out.Ln;      
 	out.String("------------------------------"); out.Ln; 
 	out.String("VIDIOC_QUERYCAP:"); out.Ln; 
 	out.String("cap.driver= "); out.String(cap.driver); out.Ln; 
@@ -658,7 +664,7 @@ BEGIN
 		END;
 	END;
 *)
-                
+      out.String("errno-0: "); out.Int(Unix.errno(), 0); out.Ln;               
 	fmt.type := V.BUF_TYPE_VIDEO_CAPTURE;
  	    
 	pix.width := camWidth;
@@ -668,15 +674,24 @@ BEGIN
 (*	pix.field := V.FIELD_NONE; *)
 	fmt.fmt := SYSTEM.VAL(V.D200, pix);
  
-	IF -1 = xioctl(fd, V.VIDIOC_S_FMT, ADDRESSOF(fmt) ) THEN                   
-		out.String("error: VIDIOC_S_FMT."); out.Ln;
-		RETURN FALSE; 
+	IF -1 = xioctl(fd, V.VIDIOC_S_FMT, ADDRESSOF(fmt) ) THEN
+		out.String("errno: "); out.Int(Unix.errno(), 0); out.Ln;               
+		out.String("error: VIDIOC_S_FMT."); out.Ln; out.Update();
+		
 	END;
     
 	(* Note VIDIOC_S_FMT may change width and height. *)
     
 	(* Buggy driver paranoia. *)
 	pix := SYSTEM.VAL(V.v4l2_pix_format, fmt.fmt); (* convert union struct to pix_format type *)
+	
+	out.Int(V.BUF_TYPE_VIDEO_CAPTURE, 5); out.Int(fmt.type, 10);  out.Ln;
+	out.Int(pix.width, 0); out.Int(pix.height, 10); out.Ln;
+	out.Hex(V.PIX_FMT_BGR24, 4); out.String(" ?? "); out.Hex(pix.pixelformat, 4); out.Ln;
+	
+	 out.Update;
+
+	
 	IF pix.pixelformat # V.PIX_FMT_BGR24 THEN
 		out.String("libv4l didn't accept BGR24 format."); out.Ln; out.Update();
 		RETURN FALSE
@@ -699,8 +714,8 @@ BEGIN
 	out.String("pix.width= "); out.Int(pix.width, 0); out.Ln; 
 	out.String("pix.height= "); out.Int(pix.height, 0); out.Ln; out.Update();
 	
-	camWidth := pix.width;
-	camHeight := pix.height;
+	camWidth := LONGINT(pix.width);
+	camHeight := LONGINT(pix.height);
 
   	fmt.fmt := SYSTEM.VAL(V.D200, pix);
 
@@ -711,7 +726,7 @@ BEGIN
 	RETURN TRUE
 END InitDevice;
 
-PROCEDURE xioctl(fh, request: LONGINT; arg: ADDRESS): LONGINT;
+PROCEDURE xioctl(fh: LONGINT; request: LONGINT; arg: ADDRESS): LONGINT;
 BEGIN
 	RETURN  lib.ioctl(fh, request, arg);
 END xioctl;
@@ -757,7 +772,7 @@ BEGIN
 		CloseDevice();
 	END;	
 	IF OpenDevice(deviceName) THEN
-		IF InitDevice() THEN	NEW(starter); END;
+		IF InitDevice() THEN NEW(starter); END;
 	ELSE
 		CloseDevice();	
 	END;	
@@ -840,7 +855,7 @@ BEGIN
 			out.String(" queryctrl.type:"); out.Int(queryctrl.type, 0);
 			out.String(" queryctrl.flags: "); out.Set(queryctrl.flags);
 			out.Ln; out.Update();
-		queryctrl.id := SYSTEM.VAL(LONGINT, SYSTEM.VAL(SET, queryctrl.id) +{V.CTRL_FLAG_NEXT_CTRL});
+		queryctrl.id := SYSTEM.VAL(LONGINT, SYSTEM.VAL(SET32, queryctrl.id) +{V.CTRL_FLAG_NEXT_CTRL});
 	END;
 (*
 	(* extended controls *)
@@ -1090,7 +1105,7 @@ END FlipHorizontal;
 
 (* ==================== *)
 (*  return >= 0 ok otherwhise -1 *)
-PROCEDURE IsControl (fd: LONGINT; cid: LONGINT;  VAR queryctrl: V.v4l2_queryctrl): LONGINT;
+PROCEDURE IsControl (fd: LONGINT; cid: V.u32;  VAR queryctrl: V.v4l2_queryctrl): LONGINT;
 VAR err: LONGINT;
 BEGIN
 	queryctrl.id := cid;
@@ -1109,7 +1124,7 @@ BEGIN
 	RETURN -1;
 END IsControl;
 
-PROCEDURE GetControl (fd: LONGINT; cid: LONGINT): LONGINT;
+PROCEDURE GetControl (fd: LONGINT; cid: V.u32): LONGINT;
 VAR
 	queryctrl: V.v4l2_queryctrl;
 	scontrol: V.v4l2_control;
@@ -1221,7 +1236,7 @@ BEGIN
 	RETURN scontrol.value;
 END ToggleControl;
 
-PROCEDURE ResetControl (fd: LONGINT; cid: LONGINT): LONGINT;
+PROCEDURE ResetControl (fd: LONGINT; cid: V.u32 ): LONGINT;
 VAR
 	scontrol: V.v4l2_control;
 	queryctrl: V.v4l2_queryctrl;
@@ -1255,10 +1270,10 @@ VAR res: LONGINT;
 	queryctrl: V.v4l2_queryctrl;
 BEGIN
 
-	queryctrl.id := SYSTEM.VAL(LONGINT, {V.CTRL_FLAG_NEXT_CTRL});
+	queryctrl.id := SYSTEM.VAL(UNSIGNED32, {V.CTRL_FLAG_NEXT_CTRL});
 	WHILE xioctl (fd, V.VIDIOC_QUERYCTRL, ADDRESSOF(queryctrl)) > - 1 DO
 		res := ResetControl(fd, queryctrl.id);
-		queryctrl.id  := SYSTEM.VAL(LONGINT, SYSTEM.VAL(SET, queryctrl.id) + {V.CTRL_FLAG_NEXT_CTRL});
+		queryctrl.id  := SYSTEM.VAL(UNSIGNED32, SYSTEM.VAL(SET32, queryctrl.id) + {V.CTRL_FLAG_NEXT_CTRL});
 	END;
 END ResetAllControls;
 
@@ -1323,7 +1338,7 @@ END ColorToGrayR;
 
 PROCEDURE CovertToGray(im: WMGraphics.Image);
 VAR 
-	  i, j: LONGINT;
+	  i, j: SIZE;
 	  pix: Raster.Pixel; 
 	  mode: Raster.Mode;
 BEGIN
@@ -1339,8 +1354,8 @@ END CovertToGray;
 PROCEDURE LoadDummyImage*(CONST fname: ARRAY 128 OF CHAR);
 BEGIN
 	dummyimg := WMGraphics.LoadImage(fname, FALSE);
-	camWidth := dummyimg.width;
-	camHeight := dummyimg.height;
+	camWidth := dummyimg.width(LONGINT);
+	camHeight := dummyimg.height(LONGINT);
 END LoadDummyImage;
 
 PROCEDURE GetDummyImage*(): WMGraphics.Image;
@@ -1357,11 +1372,16 @@ END Cleanup;
 
 (* set scale factor for distance measurement on the image *)
 PROCEDURE SetMeasurementScale*(cmd: Commands.Context);
-VAR strx, stry: ARRAY 32 OF CHAR;
+VAR sx, sy: LONGREAL;
 BEGIN
-	IF cmd.arg.GetString(strx) & cmd.arg.GetString(stry) THEN
-		Strings.StrToFloat(strx, scaleX);
-		Strings.StrToFloat(stry, scaleY);
+	IF cmd.arg.GetReal(sx) & cmd.arg.GetReal(sy) THEN
+		scaleX := sx;
+		scaleY := sy;
+		cmd.out.String("scalex, scaley: "); cmd.out.FloatFix(sx, 0, 4, 0);  cmd.out.String(", ");
+		cmd.out.FloatFix(sy, 0, 4, 0);
+		cmd.out.Ln; cmd.out.Update;
+	ELSE
+		cmd.error.String("input error "); cmd.error.Ln; cmd.error.Update;
 	END;
 END SetMeasurementScale;
 
@@ -1383,6 +1403,8 @@ BEGIN
 	Raster.InitMode(mode, Raster.srcCopy);
 	Modules.InstallTermHandler(Cleanup)
 END VideoExample.
+
+System.Free VideoExample  libv4l2 V4L2 ~
 
 VideoExample.Start "/dev/video0" ~
 
@@ -1408,22 +1430,24 @@ Compiler.Compile
 VideoExample.SetMeasurementScale 1  1 ~ 
 VideoExample.SetMeasurementScale 3.06  3.06 ~ x4 icin
 VideoExample.SetMeasurementScale 0.58 0.58 ~ x20 icin
-VideoExample.SetMeasurementScale 0.29 0.29 ~ x40 icin
+VideoExample.SetMeasurementScale  0.29 0.29 ~ x40 icin
 
 # eskisi
 VideoExample.SetMeasurementScale 2.74  2.74 ~   # x4 scalex, scaley: um/pix
 VideoExample.SetMeasurementScale 0.55  0.55 ~   # x20 scalex, scaley: um/pix
 VideoExample.SetMeasurementScale 0.274  0.274 ~   # x40 scalex, scaley: um/pix
 
-SystemTools.Free VideoExample ~
 
 
 VideoExample.IncContrast~  VideoExample.DecContrast~ 
 VideoExample.FlipVertical ~    VideoExample.FlipHorizontal ~
 
 
+System.Free VideoExample ~
 
-SystemTools.Free VideoExample  libv4l2 V4L2 ~
+System.Free VideoExample  libv4l2 V4L2 ~
+
+System.CollectGarbage ~ 
 
 ---------------------------
 $ v4l2-ctl  -L

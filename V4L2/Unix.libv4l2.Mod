@@ -1,17 +1,20 @@
 MODULE libv4l2; (** AUTHOR "fnecati"; PURPOSE "interface library to linux libv4l2 and libv4lconvert"; *)
 
-IMPORT KernelLog, Unix, Modules, V := V4L2, SYSTEM, Strings;
+IMPORT KernelLog, Unix, Modules, V := V4L2, Strings;
 
 CONST 
 	libname="libv4l2.so.0";
 	libname2 = "libv4lconvert.so.0";
-	
+
+CONST 
+     (* file open mode *)	
+     nonblock* = SET32({11});
 VAR
 	libhandle, libhandle2: ADDRESS;
 	   
 TYPE 
 	int64_t* = HUGEINT;
-		
+	ssize_t* = SIZE;	
 	
 	(*! libv4l2.h *)
 	(* Point this to a FILE opened for writing when you want to log error and
@@ -43,11 +46,13 @@ TYPE
 	*)
 	
 VAR	
-	open-: PROCEDURE {C} (CONST file: ARRAY OF CHAR;  oflag: SET; mode: SET): LONGINT;
+	open-: PROCEDURE {C} (CONST file: ARRAY OF CHAR;  oflag: SET32; mode: Unix.mode_t): LONGINT;
 	close-: PROCEDURE {C} (fd: LONGINT): LONGINT;
 	dup- : PROCEDURE{C} (fd: LONGINT): LONGINT;
-	ioctl-: PROCEDURE {C} (fd: LONGINT;  request: LONGINT(*unsigned*); adr: ADDRESS): LONGINT;
-	read-: PROCEDURE {C} (fd: LONGINT;  buffer: ADDRESS;  n: LONGINT): LONGINT;
+	ioctl-: PROCEDURE {C} (fd: LONGINT;  request: LONGINT; adr: ADDRESS): LONGINT;
+	read-: PROCEDURE {C} (fd: LONGINT;  buffer: ADDRESS;  n: SIZE): ssize_t;
+	write-: PROCEDURE {C} (fd: LONGINT;  buffer: ADDRESS;  n: SIZE): ssize_t;
+	
 	mmap- :  PROCEDURE {C} (start: ADDRESS;  length: SIZE;  prot: LONGINT;  flags: LONGINT; 
 									fd: LONGINT;  offset: int64_t): ADDRESS;
 	munmap-: PROCEDURE {C} (start: ADDRESS;  length: SIZE):LONGINT;
@@ -176,7 +181,8 @@ BEGIN
 	  Unix.Dlsym(libhandle,  'v4l2_close', ADDRESSOF( close ));	
 	  Unix.Dlsym(libhandle,  'v4l2_dup', ADDRESSOF( dup ));	
 	  Unix.Dlsym(libhandle,  'v4l2_ioctl', ADDRESSOF( ioctl ));	
-	  Unix.Dlsym(libhandle,  'v4l2_read', ADDRESSOF( read ));	
+	  Unix.Dlsym(libhandle,  'v4l2_read', ADDRESSOF( read ));
+	  Unix.Dlsym(libhandle,  'v4l2_write', ADDRESSOF( write ));
 	  Unix.Dlsym(libhandle,  'v4l2_mmap', ADDRESSOF( mmap ));	
 	  Unix.Dlsym(libhandle,  'v4l2_munmap', ADDRESSOF( munmap ));	
 	  Unix.Dlsym(libhandle,  'v4l2_set_control', ADDRESSOF( set_control ));	
@@ -184,6 +190,8 @@ BEGIN
 	  Unix.Dlsym(libhandle,  'v4l2_get_control', ADDRESSOF( get_control ));
 	  Unix.Dlsym(libhandle,  'v4l2_fd_open', ADDRESSOF( fd_open ));
 
+	(* add other function protypes if required *)
+	
 END Init;
 
 PROCEDURE OnClose;
@@ -230,31 +238,31 @@ END Init2;
 (* utilities  *)
 (* Get string from address  *)
 PROCEDURE GetStringFromAddr*(adr: ADDRESS): Strings.String;
-VAR  sadr, sadr1: ADDRESS;
-		i, cnt: LONGINT;
-		ch: CHAR;
-		s: Strings.String;
+VAR s {UNTRACED}: POINTER {UNSAFE} TO ARRAY OF CHAR;
+	str: Strings.String;
+	size, pos: SIZE;
 BEGIN
-	sadr := adr; 	cnt  := 0;	sadr1 := sadr;
-	
-	(* find length  *)
-	IF sadr1 # 0 THEN
-		SYSTEM.GET(sadr1,ch);
-		WHILE (ch # 0X) DO  INC(cnt); INC(sadr1); SYSTEM.GET(sadr1,ch); END;
+
+	s := adr;
+	pos := 0;
+	IF adr # NIL THEN
+		WHILE s[pos] # 0X DO
+			INC(pos);
+		END;
+		size := pos + 1;
+		NEW(str, size);
+		pos := 0;
+		WHILE s[pos] # 0X DO
+			str[pos] := s[pos];
+			INC(pos);
+		END;
+
+	ELSE NEW(str, 1);
 	END;
 
-	IF cnt = 0 THEN  (* empty string  *)
-		NEW(s,1); s[0] := 0X; RETURN s
-	END;
-	
-	(* copy string *)
-	NEW(s, cnt+1); i := 0; sadr1 := sadr;
-	SYSTEM.GET(sadr1,ch);
-	WHILE (i< cnt) & (ch # 0X) DO
-		s^[i] := ch; INC(i); INC(sadr1);
-		SYSTEM.GET(sadr1,ch);
-	END;	
-	RETURN s;
+	str[pos] := 0X;
+	RETURN str;
+
 END GetStringFromAddr;
 
 BEGIN
