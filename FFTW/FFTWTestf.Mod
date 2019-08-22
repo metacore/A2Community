@@ -11,7 +11,7 @@ MODULE FFTWTestf;
 *)
 
 IMPORT
-	Commands, Streams,  Kernel, Strings,
+	Commands, Streams,  Kernel,
 	KernelLog, Math, dll:=FFTWf ;
 	
 TYPE
@@ -223,7 +223,8 @@ BEGIN
 PROCEDURE TestfftwExecuteComplexDft1d*(context: Commands.Context);
 VAR
 	x: ARRAY [*] OF COMPLEX;
-	i, j,  nRetry, N: Int;		
+	i,  nRetry, N: Int;	
+	j: SIZE;	
 	mul: Float;
 	
 	mflops, err, v: Float;	

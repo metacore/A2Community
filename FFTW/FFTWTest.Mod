@@ -223,7 +223,8 @@ BEGIN
 PROCEDURE TestfftwExecuteComplexDft1d*(context: Commands.Context);
 VAR
 	x: ARRAY [*] OF LONGCOMPLEX;
-	i, j,  nRetry, N: Int;		
+	i, nRetry, N: Int;
+	j: SIZE;	
 	mul: Float;
 	
 	mflops, err, v: Float;	
@@ -492,7 +493,7 @@ FFTWTest.Testfftw1d
 FFTWTest.Testfftw2d
 19 19 1
 256 256 1
-~ 
+
 1024 1024 4
 1600 1200 5 ~ 
 1600 1199 5
