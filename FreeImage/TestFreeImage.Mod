@@ -243,7 +243,7 @@ BEGIN
 	img := WMGraphics.LoadImage(fname, FALSE );	
 	IF img = NIL THEN RETURN END;	
 	
-	w := img.width; h := img.height;
+	w := img.width(LONGINT); h := img.height(LONGINT);
 	
 	
 	tdib := FI.Allocate(w, h, 24, 0, 0, 0);
@@ -329,7 +329,7 @@ BEGIN
 		DEC(i)
 	END;
 
-	IF FI.SaveImage(im, "freefresel.png",0) THEN
+	IF FI.SaveImage(im, "freefresnel.png",0) THEN
 		KernelLog.String("Make Fresnel Ok."); KernelLog.Ln; 
 	END;
 

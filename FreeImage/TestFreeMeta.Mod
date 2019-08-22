@@ -19,7 +19,7 @@ BEGIN
 END writeString;
 
 PROCEDURE WriteOrd(s: Strings.String);
-VAR i: LONGINT;
+VAR i: SIZE;
 BEGIN
 	out.String("--------------------"); out.Ln;
 	IF s # NIL THEN
@@ -196,6 +196,5 @@ TestFreeMeta.Open E:/WinAosSvn/WinAos/Work/test8_Bg.jpg ~
 TestFreeMeta.Open DSC_7163.JPG ~
 
 
-System.FreeDoenTo FreeImageDll ~ 
-
+System.FreeDownTo FreeImageDll ~ 
 

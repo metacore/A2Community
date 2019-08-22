@@ -46,7 +46,6 @@ END PutPixel24;
 PROCEDURE StoreImage*(img: Raster.Image; CONST filename: ARRAY OF CHAR; VAR res: LONGINT);
 VAR dib: FI.FIBITMAP;
 	bpp: LONGINT;
-	bits: ADDRESS;
 	w, h, i, j: LONGINT;
 	pix: Raster.Pixel;
 	mode: Raster.Mode;	
@@ -54,7 +53,7 @@ BEGIN
 
 	IF (img # NIL) & (img.width # 0) & (img.height # 0) THEN
 	(*	KernelLog.String("img.fmt.bpp= "); KernelLog.Int(img.fmt.bpp, 0); KernelLog.Ln; *)
-		w := img.width; h := img.height;
+		w := img.width(LONGINT); h := img.height(LONGINT);
 		dib := FI.Allocate(w, h, 24, 0, 0, 0);
 	
 		IF dib # NIL THEN
@@ -88,7 +87,7 @@ BEGIN
 
 	IF (img # NIL) & (img.width # 0) & (img.height # 0) THEN
 	(*	KernelLog.String("img.fmt.bpp= "); KernelLog.Int(img.fmt.bpp, 0); KernelLog.Ln; *)
-		w := img.width; h := img.height;
+		w := img.width(LONGINT); h := img.height(LONGINT);
 		dib := FI.Allocate(w, h, 32, 0, 0, 0);
 	
 		IF dib # NIL THEN

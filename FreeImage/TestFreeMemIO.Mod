@@ -88,7 +88,7 @@ BEGIN
 		RETURN;
 	END;
 				
-	bufsize := f.Length();
+	bufsize := f.Length()(LONGINT);
 	Out.String("Length of "); Out.String(title); Out.Int(bufsize, 10);  
 	Out.String(" bytes"); Out.Ln;
 		
