@@ -110,7 +110,7 @@ PROCEDURE NewCommand(CONST str: ARRAY OF CHAR): ANY;
 TYPE Labeler*=OBJECT
 	CONST ScaledSize=512;
 			RoiSize=128;
-			NSamples=32;
+			NSamples=64;
 	VAR
 		dataSetI, labelSetI: ARRAY [?] OF INTEGER;
 		positions: ARRAY [*,*] OF LONGINT;
@@ -158,7 +158,9 @@ TYPE Labeler*=OBJECT
 		positions[*,*]:=Random;
 		scale:=1.0;
 
-		NEW(source); source.InitWrite(dataWriter);(* DataPipe experiment*)
+		NEW(source); 
+		source.datatype:=MLDataFiles.Integer;
+		source.InitWrite(dataWriter);
 	END Init;
 
 	PROCEDURE NextImage*();
@@ -279,7 +281,7 @@ BEGIN
 	options.Add("m","mask",Options.String);
 	options.Add("t","threshold",Options.Integer); (* distance of image center from label that is still considered a hit *)
 	options.Add("s","scaling",Options.Flag); (* scale image to manageable size *)
-	(*options.Add("n","nSamples", Options.Integer); *)
+	options.Add("n","nSamples", Options.Integer); 
 	IF options.Parse(context.arg, context.error) THEN
 		IF options.GetString("resultFile", s) THEN
 			f:=Files.New(s); Files.Register(f); Files.OpenWriter(fw,f,0); w:=fw;
@@ -336,7 +338,8 @@ ImageLabeler.NewMenu
  ~
 
 ImageLabeler.Open -m="*.jpg" -f=Labeler1.txt ~
-ImageLabeler.Open -m="C:/Program Files (x86)/A2/HighDim/Code/EyeTracker/EyeDB_Internet/*.jpg" -f=EyesH.txt -d=EyesH_3D.MtA --scaling ~
+ImageLabeler.Open -m="C:/Program Files (x86)/A2/HighDim/Code/EyeTracker/EyeDB_Internet/*.jpg" -f=Eyes.txt -d=Eyes_3D.MtA --scaling ~
+ImageLabeler.Open -m="C:/Program Files (x86)/A2/HighDim/Code/EyeTracker/EyeDB_Internet/*.jpg" -f=Eyes.txt -d=Eyes_3D.MtA --scaling ~
 System.CollectGarbage ~
 System.Free ImageLabeler ~
 System.FreeDownTo MatrixBase~
