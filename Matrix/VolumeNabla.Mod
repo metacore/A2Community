@@ -135,9 +135,10 @@ END Laplacian;
 The tensor derivative of a vector field \vec{v} is a 9-term second-rank tensor, but can be denoted simply as \nabla \otimes \vec{v} , where \otimes represents the dyadic product.
 This quantity is equivalent to the Jacobian matrix of the vector field with respect to space.
 For a small displacement \delta \vec{r}, the change in the vector field is given by:   \delta \vec{v} = (\nabla \otimes \vec{v}) \sdot \delta \vec{r}
-
-PROCEDURE TensorDerivative*();
+*)
+PROCEDURE TensorDerivative*(); (*! TBD *)
 END TensorDerivative;
+(*
 In a sense, both the gradient and Jacobian are "first derivatives" . the former the first derivative of a scalar function of several variables,
 the latter the first derivative of a vector function of several variables.
 In general, the gradient can be regarded as a special version of the Jacobian: it is the Jacobian of a scalar function of several variables.
