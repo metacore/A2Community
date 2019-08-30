@@ -8,7 +8,7 @@ VAR rand:Rand.Generator;
 TYPE Enumerator*=OBJECT(Files.Enumerator) (*extract single or multiple images from file directory using path, mask; yield tensor data *)
 		VAR currentImg*: WMGraphics.Image;
 			array: ARRAY [?] OF INTEGER;
-			w*,h*, depth*:LONGINT;
+			w*,h*, depth*:SIZE;
 			scale*: LONGINT;
 
 		PROCEDURE &Init*;
@@ -51,7 +51,7 @@ TYPE Enumerator*=OBJECT(Files.Enumerator) (*extract single or multiple images fr
 		END GetGray;
 
 
-		PROCEDURE GetRoiBGR*(img: Raster.Image; VAR x,y:LONGINT): ARRAY [?] OF INTEGER; (* yield ROI[BGR,h,w] of current image;  use "Random" for random position within window*)
+		PROCEDURE GetRoiBGR*(img: Raster.Image; VAR x,y:SIZE): ARRAY [?] OF INTEGER; (* yield ROI[BGR,h,w] of current image;  use "Random" for random position within window*)
 		BEGIN
 			IF x=Random THEN x:= rand.Dice((img.width-w)(LONGINT)) END; (*! implementation limitation: scaling not yet implemented *)
 			IF y=Random THEN y:= rand.Dice((img.height-h)(LONGINT)) END;
@@ -59,7 +59,7 @@ TYPE Enumerator*=OBJECT(Files.Enumerator) (*extract single or multiple images fr
 			RETURN array [0..2,y..y+h-1, x..x+w-1];
 		END GetRoiBGR;
 
-		PROCEDURE GetRoiGray*(img: Raster.Image; VAR x,y:LONGINT): ARRAY [?] OF INTEGER; (* yield ROI[h,w] of current Image.  use "Random" for random position within window*)
+		PROCEDURE GetRoiGray*(img: Raster.Image; VAR x,y:SIZE): ARRAY [?] OF INTEGER; (* yield ROI[h,w] of current Image.  use "Random" for random position within window*)
 		BEGIN
 			IF x=Random THEN x:= rand.Dice((img.width-w)(LONGINT)) END; (*! implementation limitation: scaling not yet implemented *)
 			IF y=Random THEN y:= rand.Dice((img.height-h)(LONGINT)) END;
@@ -68,8 +68,8 @@ TYPE Enumerator*=OBJECT(Files.Enumerator) (*extract single or multiple images fr
 		END GetRoiGray;
 
 		(* from an image, extract a stack of ROIs with random positions, that are also returned  *)
-		PROCEDURE GetRoiStackRandom*(img: Raster.Image; depth, colorPlanes: LONGINT; VAR positions: ARRAY [*,*] OF LONGINT): ARRAY [?] OF INTEGER;
-		VAR i:LONGINT;
+		PROCEDURE GetRoiStackRandom*(img: Raster.Image; depth, colorPlanes: SIZE; VAR positions: ARRAY [*,*] OF SIZE): ARRAY [?] OF INTEGER;
+		VAR i:SIZE;
 		BEGIN
 			SELF.depth:=depth;
 			IF LEN(positions)#[depth,2] THEN NEW(positions, depth, 2) END;

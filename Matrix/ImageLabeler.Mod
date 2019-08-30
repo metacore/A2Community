@@ -16,7 +16,7 @@ VAR 	rand:Rand.Generator;
 TYPE StringObject=OBJECT
 			VAR
 				s:Strings.String;
-				id:LONGINT;
+				id:SIZE;
 		END StringObject;
 
 TYPE Command=OBJECT
@@ -24,14 +24,14 @@ TYPE Command=OBJECT
 		END Command;
 
 TYPE Location=POINTER TO RECORD
-		x,y, w,h: LONGINT;
-		id:LONGINT;
+		x,y, w,h: SIZE;
+		id:SIZE;
 		s:Strings.String;
 		next:Location;
 	END;
 
 TYPE	ContextMenu* = OBJECT
-	VAR x,y, nItems: LONGINT;
+	VAR x,y, nItems: SIZE;
 		w:Streams.Writer;
 		name: Files.FileName;
 		menu: WMTrees.Tree;
@@ -60,8 +60,8 @@ TYPE	ContextMenu* = OBJECT
 		locations:=NIL;
 	END ResetLocations;
 
-	PROCEDURE Handle* (sender : ANY; x, y: LONGINT);
-	VAR gx,gy: LONGINT;
+	PROCEDURE Handle* (sender : ANY; x, y: SIZE);
+	VAR gx,gy: SIZE;
 	BEGIN
 		SELF.x:=x; SELF.y:=y;
 		sender(WMComponents.VisualComponent).ToWMCoordinates(x,y,gx,gy);
@@ -86,7 +86,7 @@ TYPE	ContextMenu* = OBJECT
 
 	END ContextMenu;
 
-PROCEDURE Distance2(dx,dy: LONGINT):LONGINT; (*squared distance*)
+PROCEDURE Distance2(dx,dy: SIZE):SIZE; (*squared distance*)
 BEGIN
 	RETURN dx*dx+dy*dy
 END Distance2;
@@ -113,10 +113,11 @@ TYPE Labeler*=OBJECT
 			NSamples=64;
 	VAR
 		dataSetI, labelSetI: ARRAY [?] OF INTEGER;
-		positions: ARRAY [*,*] OF LONGINT;
-		nSamples: LONGINT(*SIZE*);
-		i: LONGINT;
-		time, date, size: LONGINT;
+		positions: ARRAY [*,*] OF SIZE;
+		nSamples: SIZE;
+		i: SIZE;
+		time, date: LONGINT; 
+		size: Files.Size;
 		enum:MatrixRaster.Enumerator;
 		flags: SET;
 		name, mask:Files.FileName;
@@ -129,9 +130,10 @@ TYPE Labeler*=OBJECT
 		contextMenu:ContextMenu;
 		w:Streams.Writer;
 		dead, hasNewImage, hit, scaling, success:BOOLEAN;
-		minWidth,minHeight:LONGINT;
+		minWidth,minHeight:SIZE;
 		l:Location;
-		dx,dy,threshold2:LONGINT; (*squared threshold*)
+		dx,dy: SIZE;
+		threshold2:LONGINT; (*squared threshold*)
 		scale:LONGREAL;
 
 	PROCEDURE &Init*(CONST mask: ARRAY OF CHAR; w, dataWriter: Streams.Writer; scaling:BOOLEAN);
@@ -328,18 +330,26 @@ BEGIN
 		globalContextMenu.AddItem("stop", NewCommand("Stop"));
 END ImageLabeler.
 
-(*create label-name pairs for popup menu *)
+(*create label-name pairs for popup menu. It is sometimes useful to have the first label=0=nothing. *)
 ImageLabeler.NewMenu
+	nothing Nothing
 	mouth Mouth
 	nose	Nose
 	eye	Eye
 	ear	Ear
 	chin	Chin
  ~
+ImageLabeler.NewMenu
+	head SpermHead
+	tail	SpermTail
+	background Background
+	artifact	Artifact
+ ~
+
 
 ImageLabeler.Open -m="*.jpg" -f=Labeler1.txt ~
 ImageLabeler.Open -m="C:/Program Files (x86)/A2/HighDim/Code/EyeTracker/EyeDB_Internet/*.jpg" -f=Eyes.txt -d=Eyes_3D.MtA --scaling ~
-ImageLabeler.Open -m="C:/Program Files (x86)/A2/HighDim/Code/EyeTracker/EyeDB_Internet/*.jpg" -f=Eyes.txt -d=Eyes_3D.MtA --scaling ~
+ImageLabeler.Open -m="C:/Program Files (x86)/A2/HighDim/Data/Sperm/IMSI1_100Frames_BMP/*.bmp" -f=SpermIMSI1.txt -d=Sperm_3DIMSI1.MtA --scaling ~
 System.CollectGarbage ~
 System.Free ImageLabeler ~
 System.FreeDownTo MatrixBase~
