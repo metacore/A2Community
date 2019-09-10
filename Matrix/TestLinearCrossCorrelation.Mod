@@ -2,12 +2,12 @@ MODULE TestLinearCrossCorrelation; (** AUTHOR "Patrick Hunziker"; PURPOSE ""; *)
 
 IMPORT LinearFFT, LinearWindowFunction, MathL, WMSimpleGraphs, Random;
 
-TYPE Datatype=LONGREAL;
+TYPE Datatype=FLOAT64;
 
 PROCEDURE Do*;
 VAR d:ARRAY [*,*] OF Datatype;
 	w: ARRAY [*] OF Datatype;
-	i:LONGINT;
+	i:SIGNED32;
 	graphs:WMSimpleGraphs.Graphs; r:Datatype;
 BEGIN
 	NEW(d,7, 256);

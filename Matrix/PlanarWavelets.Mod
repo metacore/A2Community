@@ -9,14 +9,14 @@ TYPE Datatype*=Wavelets.Datatype;
 
 TYPE Analyzer*= OBJECT
 	VAR data*: Matrix;
-		 waveletType, boundary: LONGINT;
+		 waveletType, boundary: SIGNED32;
 		conv: Wavelets.WaveletConvolver;
 		wavelet*:Wavelets.WaveletFamily;
 		lineX,resX, lineY,resY: Line;
 		child: Analyzer;
 
 		(*choose wavelet family; need to choose compatible boundary conditions - see Wavelets.Mod*)
-	PROCEDURE &Init*(waveletType, boundary: LONGINT; CONST data: Matrix);
+	PROCEDURE &Init*(waveletType, boundary: SIGNED32; CONST data: Matrix);
 	BEGIN
 
 		SELF.waveletType:=waveletType;
@@ -52,8 +52,8 @@ TYPE Analyzer*= OBJECT
 		END;
 	END Analyze;
 
-	PROCEDURE AnalyzeMultiscale*(levels:LONGINT);
-	VAR i:LONGINT;
+	PROCEDURE AnalyzeMultiscale*(levels:SIGNED32);
+	VAR i:SIGNED32;
 	BEGIN
 		Analyze;
 		IF levels>1 THEN
@@ -63,8 +63,8 @@ TYPE Analyzer*= OBJECT
 		END;
 	END AnalyzeMultiscale;
 
-	PROCEDURE AnalyzePacket*(levels:LONGINT);
-	VAR i:LONGINT;
+	PROCEDURE AnalyzePacket*(levels:SIGNED32);
+	VAR i:SIGNED32;
 	BEGIN
 		Analyze;
 		IF levels>1 THEN

@@ -259,7 +259,7 @@ TYPE TotalLeastSquares* = OBJECT  (MatrixBase.Solver) (* tested for Vector b and
 	END TestSVD;
 
 	PROCEDURE TestTLS*;  (*to be removed later*)
-	VAR A,B,X,M: Matrix;  b,c, x: Vector; s: LONGREAL;  tls: TotalLeastSquares;
+	VAR A,B,X,M: Matrix;  b,c, x: Vector; s: FLOAT64;  tls: TotalLeastSquares;
 	BEGIN
 		A:=[[0],
 			[1.1],

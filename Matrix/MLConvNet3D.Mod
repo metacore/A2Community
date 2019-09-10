@@ -40,17 +40,17 @@ CONST
 
 
 TYPE
-	IntVector* = ARRAY [ * ] OF LONGINT;
+	IntVector* = ARRAY [ * ] OF SIGNED32;
 	Datatype* = MatrixBase.Datatype;
 	Vector* = MatrixBase.Vector;
 	Matrix* = MatrixBase.Matrix;
 	Dataset*= ARRAY [?] OF Datatype;
 	Function*= PROCEDURE(x:Datatype):Datatype;
 	Function2*=PROCEDURE(x,delta:Datatype):Datatype;
-	FilterProc*=PROCEDURE{DELEGATE}(CONST data: Dataset; CONST filter:Dataset; boundary: LONGINT): Dataset;
+	FilterProc*=PROCEDURE{DELEGATE}(CONST data: Dataset; CONST filter:Dataset; boundary: SIGNED32): Dataset;
 
-OPERATOR "SUM"*(CONST m:Dataset; dimension:LONGINT):Dataset;
-VAR len:IntVector; i:LONGINT;
+OPERATOR "SUM"*(CONST m:Dataset; dimension:SIGNED32):Dataset;
+VAR len:IntVector; i:SIGNED32;
 BEGIN
 	ASSERT(dimension<DIM(m));
 	NEW(len, DIM(m)-1);
@@ -73,7 +73,7 @@ BEGIN
 END "SUM";
 
 OPERATOR "SUM"*(CONST m:Dataset; CONST dimensions: IntVector):Dataset;
-VAR len:IntVector; i:LONGINT;
+VAR len:IntVector; i:SIGNED32;
 BEGIN
 	ASSERT(DIM(m)=3, 200); (*implementation limitation*)
 	i:=DIM(m)-LEN(dimensions,0);
@@ -103,8 +103,8 @@ BEGIN
 	RETURN RESULT
 END "SUM";
 
-PROCEDURE PROD*(CONST v: IntVector): LONGINT;
-VAR res: LONGINT; i:LONGINT;
+PROCEDURE PROD*(CONST v: IntVector): SIGNED32;
+VAR res: SIGNED32; i:SIGNED32;
 BEGIN
 	res:=1;
 	FOR i:=0 TO LEN(v,0)-1 DO
@@ -114,7 +114,7 @@ BEGIN
 END PROD;
 
 PROCEDURE AddToRows(CONST l:Matrix; CONST r: Vector):Matrix;
-VAR i:LONGINT;
+VAR i:SIGNED32;
 BEGIN
 	IF (DIM(l)#DIM(RESULT)) OR (LEN(l)#LEN(RESULT)) THEN NEW (RESULT, LEN(l)) END;
 	FOR i:=0 TO LEN(l,0)-1 DO RESULT [i,*]:=r END;
@@ -122,7 +122,7 @@ BEGIN
 END AddToRows;
 
 PROCEDURE AddToCols(CONST l:Matrix; CONST r: Vector):Matrix;
-VAR i:LONGINT;
+VAR i:SIGNED32;
 BEGIN
 	IF (DIM(l)#DIM(RESULT)) OR (LEN(l)#LEN(RESULT)) THEN NEW (RESULT, LEN(l)) END;
 	FOR i:=0 TO LEN(l,1)-1 DO RESULT [*,i]:=r END;
@@ -249,7 +249,7 @@ END ScaledSigmoidInverse;
 
 (*!to do: ReduceAbsMax() ?*)
 PROCEDURE ReduceMax*( CONST g: Dataset; VAR map: Util.BoolTensor ): Dataset;  (* select MAX of each 2*2 group.*)(*? note that map can contain >1 TRUEs in quad field if values are same - MAY BE problematic on backprop ?*)
-VAR len: IntVector; i:LONGINT;
+VAR len: IntVector; i:SIGNED32;
 	BEGIN
 		IF DIM(g)=2 THEN
 			len:=LEN(g); len:= (len+1) DIV 2;
@@ -303,7 +303,7 @@ PROCEDURE ExpandMax*( CONST g: Dataset; VAR map: Util.BoolTensor ): Dataset;  (*
 	END ExpandMax;
 
 PROCEDURE Rot180(CONST m:Dataset):Dataset;(* tbd: accelerated in library*)
-VAR j,i:LONGINT; x:Vector; x0: Datatype;
+VAR j,i:SIGNED32; x:Vector; x0: Datatype;
 BEGIN
 	IF LEN(RESULT) # LEN(m) THEN NEW(RESULT, LEN(m)) END;
 	CASE DIM(m) OF (*!implementation limitation*)
@@ -329,7 +329,7 @@ BEGIN
 END Rot180;
 (*
 PROCEDURE Rot180(CONST m:Dataset):Dataset;(* tbd: accelerated in library*)
-VAR j,i:LONGINT; x:Vector; x0: Datatype;
+VAR j,i:SIGNED32; x:Vector; x0: Datatype;
 BEGIN
 	IF LEN(RESULT) # LEN(m) THEN NEW(RESULT, LEN(m)) END;
 	CASE DIM(m) OF (*!implementation limitation*)
@@ -395,7 +395,7 @@ BEGIN
 END ResizeDataset;
 
 PROCEDURE Diagonal(VAR data:Dataset);
-VAR i,j:LONGINT;
+VAR i,j:SIGNED32;
 BEGIN
 	data:=0;
 	IF DIM(data)=2 THEN
@@ -426,7 +426,7 @@ BEGIN
 END Diagonal;
 
 PROCEDURE GenTestFilter(CONST size:IntVector):Dataset;
-VAR j,i:LONGINT;
+VAR j,i:SIGNED32;
 BEGIN
 	NEW(RESULT,size);
 	FOR j:=30 TO 39 DO
@@ -526,12 +526,12 @@ VAR
 	lf: FullLayerM1M;
 	lfn: FullLayerMNMN;
 	l:Layer;
-	filtersize, inputSize,outputSize: ARRAY[?] OF LONGINT;
+	filtersize, inputSize,outputSize: ARRAY[?] OF SIGNED32;
 	NonLinear, Derivative: PROCEDURE (x:Datatype):Datatype;
-	version:LONGINT;
+	version:SIGNED32;
 BEGIN
 	IF ~r.GetInteger(version,FALSE) THEN HALT(200) END;
-	ASSERT (version<MAX(LONGINT)); (*! to do*)
+	ASSERT (version<MAX(SIGNED32)); (*! to do*)
 	IF ~r.GetString(type) THEN HALT(201) END;
 	IF type="MaxPoolLayer" THEN
 	ELSIF type="NormalizeLayer" THEN
@@ -607,9 +607,9 @@ TYPE
 			goodStep, goodBias, goodMomentum, oldGoodStep, oldGoodBias, oldGoodMomentum,
 			maxWeight,minWeight: Datatype;
 			window: WMMatrix.Window;
-			growStep*:LONGINT; (* enable dynamic change of dimension of layer & layer.next; currently only implemented for FullLayerM1M *)
+			growStep*:SIGNED32; (* enable dynamic change of dimension of layer & layer.next; currently only implemented for FullLayerM1M *)
 			(*random:Util.RandomGenerator;*) (* consider own random generator per network, to avoid concurrency issues when several nets are run*)
-			tProp*, tBackprop*: LONGINT;
+			tProp*, tBackprop*: SIGNED32;
 			timer*: Kernel.MilliTimer;
 
 
@@ -651,7 +651,7 @@ TYPE
 			END;
 		END MemorizeGoodParameters;
 
-		PROCEDURE Rollback(n:LONGINT); (* Roll parameters back by 2 good epochs*)
+		PROCEDURE Rollback(n:SIGNED32); (* Roll parameters back by 2 good epochs*)
 		BEGIN
 			IF n=1 THEN
 				w:=goodW;
@@ -682,7 +682,7 @@ TYPE
 			and deconvolution for convolutional layers*)
 		END Reconstruct;
 
-		PROCEDURE ChangeSize*(d: LONGINT); (* allow dynamic modification of layer structure*)
+		PROCEDURE ChangeSize*(d: SIGNED32); (* allow dynamic modification of layer structure*)
 		END ChangeSize;
 
 		PROCEDURE ChangeDepth*; (* allow dynamic modification of layer structure*)
@@ -887,7 +887,7 @@ TYPE ConvLayer*=OBJECT(Layer)
 
 		PROCEDURE AdaptWeightsN;
 		CONST stepBias=0.01;
-		VAR i:LONGINT;
+		VAR i:SIGNED32;
 		BEGIN
 			(*dBias:=step/10*SUM(delta)/PROD(LEN(delta));  *)
 			dBias:=stepBias * SUM(delta)/PROD(LEN(delta));
@@ -911,7 +911,7 @@ TYPE ConvLayer*=OBJECT(Layer)
 
 		PROCEDURE AdaptWeightsNCompact;
 		(*CONST stepBias=0.01;*)
-		VAR i:LONGINT;
+		VAR i:SIGNED32;
 		BEGIN
 			bias:=bias-stepBias * SUM(delta)/PROD(LEN(delta));
 			FOR i:=0 TO LEN(x,0)-1 DO
@@ -947,7 +947,7 @@ TYPE ConvLayer*=OBJECT(Layer)
 		END Backprop;
 
 		PROCEDURE 	BackpropN(CONST dNext:Dataset);
-		VAR i:LONGINT; len: ARRAY [3] OF LONGINT;
+		VAR i:SIGNED32; len: ARRAY [3] OF SIGNED32;
 		BEGIN
 			Kernel.SetTimer(timer,0);
 			DeltaFromDNext(dNext);
@@ -1014,7 +1014,7 @@ TYPE ConvLayerMMM*=OBJECT(ConvLayer) (*M input images, M filters, M outputs*)
 		END New;
 
 		PROCEDURE Propagate(CONST x: Dataset); (* returns activations of this*)
-		VAR i:LONGINT;
+		VAR i:SIGNED32;
 		BEGIN
 			Kernel.SetTimer(timer,0);
 			ASSERT(LEN(x,0)=LEN(w,0), 200);
@@ -1044,7 +1044,7 @@ TYPE ConvLayerMMM*=OBJECT(ConvLayer) (*M input images, M filters, M outputs*)
 
 		(* Notes on Convolutional Neural Networks. Jake Bouvrie, 2006 *)
 		PROCEDURE AdaptWeights;
-		VAR i:LONGINT;
+		VAR i:SIGNED32;
 		BEGIN
 			dBias:=stepBias*SUM(delta, [1,2])/PROD(LEN(delta)[1..2]);
 			vBias := vBias - dBias ; (* with or without scaling ??? see Quoc Le, tutorial 1, page 8 *)
@@ -1079,7 +1079,7 @@ TYPE ConvLayerMMM*=OBJECT(ConvLayer) (*M input images, M filters, M outputs*)
 TYPE ConvLayerMM1*=OBJECT(ConvLayer) (*M input images, M filters, 1 output; contributions of input images could be subject to learning, *)
 
 		PROCEDURE Propagate(CONST x: Dataset);
-		VAR i:LONGINT;
+		VAR i:SIGNED32;
 		BEGIN
 			Kernel.SetTimer(timer,0);
 			ASSERT(LEN(x,0)=LEN(w,0), 200);
@@ -1105,7 +1105,7 @@ TYPE ConvLayerMM1*=OBJECT(ConvLayer) (*M input images, M filters, 1 output; cont
 		END Propagate;
 
 		PROCEDURE DeltaFromDNext(CONST dNext : Dataset);
-		VAR len:ARRAY [3] OF LONGINT; i:LONGINT;
+		VAR len:ARRAY [3] OF SIGNED32; i:SIGNED32;
 		BEGIN
 			len:=[LEN(z,0), LEN(dNext,0), LEN(dNext,1)];
 			IF (DIM(delta)#LEN(len,0)) OR (LEN(delta,0)#len) THEN NEW(delta, len) END;
@@ -1120,7 +1120,7 @@ TYPE ConvLayerMM1*=OBJECT(ConvLayer) (*M input images, M filters, 1 output; cont
 		END DeltaFromDNext;
 
 		PROCEDURE DeltaFromDNextCompact(CONST dNext : Dataset);
-		VAR len:ARRAY [3] OF LONGINT; i:LONGINT;
+		VAR len:ARRAY [3] OF SIGNED32; i:SIGNED32;
 		BEGIN
 			len:=[LEN(z,0), LEN(dNext,0), LEN(dNext,1)];
 			IF (DIM(delta)#LEN(len,0)) OR (LEN(delta,0)#len) THEN NEW(delta, len) END;
@@ -1154,7 +1154,7 @@ TYPE ConvLayerMM1*=OBJECT(ConvLayer) (*M input images, M filters, 1 output; cont
 TYPE ConvLayerM1M*=OBJECT(ConvLayer) (*M input images, 1 filter, M outputs*)
 
 		PROCEDURE Propagate(CONST x: Dataset); (* returns activations of this*)
-		VAR i:LONGINT;
+		VAR i:SIGNED32;
 		BEGIN
 			Kernel.SetTimer(timer,0);
 			SELF.x := ALIAS OF x;
@@ -1180,7 +1180,7 @@ TYPE ConvLayerM1M*=OBJECT(ConvLayer) (*M input images, 1 filter, M outputs*)
 
 		(* Notes on Convolutional Neural Networks. Jake Bouvrie, 2006 *)
 		PROCEDURE AdaptWeights;
-		VAR i:LONGINT;
+		VAR i:SIGNED32;
 		BEGIN
 			dBias:=stepBias*SUM(delta)/PROD(LEN(delta));
 			bias:=bias-dBias;
@@ -1208,7 +1208,7 @@ TYPE ConvLayerM1M*=OBJECT(ConvLayer) (*M input images, 1 filter, M outputs*)
 		END AdaptWeights;
 
 		PROCEDURE 	Backprop(CONST dNext:Dataset);
-		VAR i:LONGINT; len: ARRAY [3] OF LONGINT;
+		VAR i:SIGNED32; len: ARRAY [3] OF SIGNED32;
 		BEGIN
 			Kernel.SetTimer(timer,0);
 			DeltaFromDNext(dNext);
@@ -1252,7 +1252,7 @@ TYPE ConvLayerMNM*=OBJECT(ConvLayer);(*  [M,N] input images, N filters, M output
 	END New;
 
 	PROCEDURE Propagate*(CONST x: Dataset);
-	VAR m:LONGINT;
+	VAR m:SIGNED32;
 	BEGIN
 		ASSERT(DIM(x)=4);
 		Kernel.SetTimer(timer,0);
@@ -1277,7 +1277,7 @@ TYPE ConvLayerMNM*=OBJECT(ConvLayer);(*  [M,N] input images, N filters, M output
 	END Propagate;
 
 	PROCEDURE 	Backprop*(CONST dNext: Dataset); (*to do: scaling ?*)
-	VAR m:LONGINT;
+	VAR m:SIGNED32;
 	BEGIN
 		Kernel.SetTimer(timer,0);
 		IF dIn#lenX THEN NEW(dIn,lenX) END;
@@ -1327,7 +1327,7 @@ TYPE ConvLayerMNM*=OBJECT(ConvLayer);(*  [M,N] input images, N filters, M output
 			END;
 		END MemorizeGoodParameters;
 
-		PROCEDURE Rollback(n:LONGINT); (* Roll parameters back by n good epochs*)
+		PROCEDURE Rollback(n:SIGNED32); (* Roll parameters back by n good epochs*)
 		BEGIN
 			IF n=1 THEN
 				nn1.w:=goodW;
@@ -1349,10 +1349,10 @@ END ConvLayerMNM;
 TYPE ConvLayerMNMP*=OBJECT(ConvLayer);(**  [mMinibatch, nLayers, height, width] input data; nLayers*pFeaturemaps filters[filtersize]; [mMinibatch,pFeatureMaps, height, width] output data *)
 	VAR nnp: POINTER TO ARRAY OF ConvLayerMM1;
 		lenX, lenY: IntVector;
-		pOutputs:LONGINT;
+		pOutputs:SIGNED32;
 
-	PROCEDURE &Init*(CONST filtersize:IntVector; pOutputs:LONGINT; nonLinear, nonLinearDerivative: Function; show: BOOLEAN); (*filtersize is [h,,w]*)
-	VAR p:LONGINT;
+	PROCEDURE &Init*(CONST filtersize:IntVector; pOutputs:SIGNED32; nonLinear, nonLinearDerivative: Function; show: BOOLEAN); (*filtersize is [h,,w]*)
+	VAR p:SIGNED32;
 	BEGIN
 		ASSERT(LEN(filtersize,0)=3);
 		SELF.pOutputs:=pOutputs;
@@ -1370,7 +1370,7 @@ TYPE ConvLayerMNMP*=OBJECT(ConvLayer);(**  [mMinibatch, nLayers, height, width] 
 	END Init;
 
 	PROCEDURE Propagate*(CONST x: Dataset);
-	VAR m,p:LONGINT;
+	VAR m,p:SIGNED32;
 	BEGIN
 		Kernel.SetTimer(timer,0);
 		ASSERT(DIM(x)=4, 200);
@@ -1402,7 +1402,7 @@ TYPE ConvLayerMNMP*=OBJECT(ConvLayer);(**  [mMinibatch, nLayers, height, width] 
 	END Propagate;
 
 	PROCEDURE 	Backprop*(CONST dNext: Dataset);
-	VAR m,p:LONGINT;
+	VAR m,p:SIGNED32;
 	BEGIN
 		Kernel.SetTimer(timer,0);
 		ASSERT(DIM(dNext)=4, 200);
@@ -1424,7 +1424,7 @@ TYPE ConvLayerMNMP*=OBJECT(ConvLayer);(**  [mMinibatch, nLayers, height, width] 
 
 	PROCEDURE Store(writer: Streams.Writer);
 	VAR
-		p: LONGINT;
+		p: SIGNED32;
 	BEGIN
 		FOR p:=0 TO pOutputs-1 DO
 			nnp[p].Store(writer);
@@ -1433,22 +1433,22 @@ TYPE ConvLayerMNMP*=OBJECT(ConvLayer);(**  [mMinibatch, nLayers, height, width] 
 
 	PROCEDURE Load(reader: Streams.Reader);
 	VAR
-		p: LONGINT;
+		p: SIGNED32;
 	BEGIN
 		FOR p:=0 TO pOutputs-1 DO
 			nnp[p].Load(reader);
 		END;
 	END Load;
 	PROCEDURE MemorizeGoodParameters*;
-	VAR p:LONGINT;
+	VAR p:SIGNED32;
 	BEGIN
 		FOR p:=0 TO pOutputs-1 DO
 			nnp[p].MemorizeGoodParameters;
 		END;
 	END MemorizeGoodParameters;
 
-	PROCEDURE Rollback(n:LONGINT); (* Roll parameters back by n good epochs*)
-	VAR p:LONGINT;
+	PROCEDURE Rollback(n:SIGNED32); (* Roll parameters back by n good epochs*)
+	VAR p:SIGNED32;
 	BEGIN
 		FOR p:=0 TO pOutputs-1 DO
 			nnp[p].Rollback(n);
@@ -1477,7 +1477,7 @@ TYPE ConvLayerMNMN*=OBJECT(ConvLayer);(**  [mMinibatch, nLayers, height, width] 
 	END Init;
 
 	PROCEDURE Propagate*(CONST x: Dataset);
-	VAR m:LONGINT;
+	VAR m:SIGNED32;
 	BEGIN
 		Kernel.SetTimer(timer,0);
 		ASSERT(DIM(x)=4, 200);
@@ -1507,7 +1507,7 @@ TYPE ConvLayerMNMN*=OBJECT(ConvLayer);(**  [mMinibatch, nLayers, height, width] 
 	END Propagate;
 
 	PROCEDURE 	Backprop*(CONST dNext: Dataset);
-	VAR m:LONGINT;
+	VAR m:SIGNED32;
 	BEGIN
 		Kernel.SetTimer(timer,0);
 		ASSERT(DIM(dNext)=4, 200);
@@ -1530,7 +1530,7 @@ TYPE ConvLayerMNMN*=OBJECT(ConvLayer);(**  [mMinibatch, nLayers, height, width] 
 		nnn.MemorizeGoodParameters;
 	END MemorizeGoodParameters;
 
-	PROCEDURE Rollback(n:LONGINT); (* Roll parameters back by n good epochs*)
+	PROCEDURE Rollback(n:SIGNED32); (* Roll parameters back by n good epochs*)
 	BEGIN
 		nnn.Rollback(n);
 	END Rollback;
@@ -1543,7 +1543,7 @@ TYPE NormalizeLayer*= OBJECT(Layer)(*! untested*)
 		ss:Datatype;
 
 		PROCEDURE Propagate*(CONST in: Dataset); (* returns activations of this*) (*how to handle ?*)
-		VAR i:LONGINT;
+		VAR i:SIGNED32;
 		BEGIN
 			Kernel.SetTimer(timer,0);
 			vBias:=SUM(in, [1,2])/PROD(LEN(in)[1..2]); (*? does reinitialization ???*)
@@ -1559,7 +1559,7 @@ TYPE NormalizeLayer*= OBJECT(Layer)(*! untested*)
 		END Propagate;
 
 		PROCEDURE Backprop*(CONST deltaNext:Dataset);
-		VAR i:LONGINT;
+		VAR i:SIGNED32;
 		BEGIN
 			Kernel.SetTimer(timer,0);
 			IF (DIM(dIn)#DIM(deltaNext)) OR (LEN(dIn)#LEN(deltaNext)) THEN NEW(dIn, LEN(deltaNext)) END;
@@ -1671,7 +1671,7 @@ TYPE	FullLayerM1M* = OBJECT (FullLayer)
 			tProp:=tProp+Kernel.Elapsed(timer);
 		END Propagate;
 
-		PROCEDURE LearnNonSupervised*(CONST in: Dataset; iterations:LONGINT) ; (* not yet improving results - wrong algo ? wrong example data ?*)
+		PROCEDURE LearnNonSupervised*(CONST in: Dataset; iterations:SIGNED32) ; (* not yet improving results - wrong algo ? wrong example data ?*)
 		BEGIN
 			ASSERT(DIM(in)=3); (*a minibatch of images N/H/W)*)
 			x:= RESHAPE(in, [LEN(in,0), LEN(in,1)* LEN(in,2)]); (* produce a matrix, whereby each row=1 image;  *)
@@ -1713,9 +1713,9 @@ TYPE	FullLayerM1M* = OBJECT (FullLayer)
 			http://deeplearning.net/tutorial/rbm.html
 		*)
 
-		PROCEDURE     ContrastiveDivergence*(GibbsSteps:LONGINT); (* this works as a minibatch - is this the original design ?*)
+		PROCEDURE     ContrastiveDivergence*(GibbsSteps:SIGNED32); (* this works as a minibatch - is this the original design ?*)
 		(*CONST GibbsSteps=1; *)
-		VAR i:LONGINT;
+		VAR i:SIGNED32;
 		BEGIN
 			x0:=x;
 
@@ -1798,7 +1798,7 @@ TYPE	FullLayerM1M* = OBJECT (FullLayer)
 		END Reconstruct;
 
 		(*! experimental: dynamic size change of layer output and next layer input. should grow or shrink a layer; only grow is currently tested*)
-		PROCEDURE ChangeSize*(d: LONGINT);
+		PROCEDURE ChangeSize*(d: SIGNED32);
 		VAR  wSize: IntVector;
 		BEGIN
 			ASSERT((next#NIL) & (next IS FullLayerM1M),201); (*implementation limitation*)
@@ -1856,7 +1856,7 @@ TYPE	FullLayerM1M* = OBJECT (FullLayer)
 		VAR n1n: POINTER TO ARRAY OF FullLayerM1M;
 
 		PROCEDURE &New*(CONST inputSize,outputSize: IntVector; nonLinear, nonLinearDerivative: Function; show: BOOLEAN);
-		VAR n:LONGINT;
+		VAR n:SIGNED32;
 		BEGIN
 			ASSERT(LEN(inputSize,0)=4, 200);
 			NonLinear:=nonLinear;
@@ -1882,7 +1882,7 @@ TYPE	FullLayerM1M* = OBJECT (FullLayer)
 		END New;
 
 		PROCEDURE Propagate*(CONST in: Dataset) ; (* returns activations of this*)
-		VAR n:LONGINT;
+		VAR n:SIGNED32;
 		BEGIN
 			Kernel.SetTimer(timer,0);
 			ASSERT(DIM(in)=4); (*a minibatch of images N/H/W)*)
@@ -1901,7 +1901,7 @@ TYPE	FullLayerM1M* = OBJECT (FullLayer)
 		END Propagate;
 
 		PROCEDURE Backprop*(CONST dNext:Dataset);
-		VAR n:LONGINT;
+		VAR n:SIGNED32;
 		BEGIN
 			Kernel.SetTimer(timer,0);
 			ASSERT(DIM(dNext)=4);
@@ -1922,7 +1922,7 @@ TYPE Network*= OBJECT
 		plasticity*:BOOLEAN;
 		stopped*:BOOLEAN;
 		priorError*:Datatype;
-		slowTimer*:LONGINT; (* reduce steps for a number of times *)
+		slowTimer*:SIGNED32; (* reduce steps for a number of times *)
 
 		next*:Network; (* can create linked lists of networks *)
 
@@ -1941,7 +1941,7 @@ TYPE Network*= OBJECT
 			END;
 		END Append;
 
-		PROCEDURE LearnNonSupervised*(CONST data: Dataset; iterations: LONGINT);
+		PROCEDURE LearnNonSupervised*(CONST data: Dataset; iterations: SIGNED32);
 		VAR thisLayer:Layer;
 		BEGIN
 			thisLayer:=layers;
@@ -2028,7 +2028,7 @@ TYPE Network*= OBJECT
 			END;
 		END MemorizeGoodParameters;
 
-		PROCEDURE Rollback*(n:LONGINT); (* roll back to last good parameters that are found at n layers earlier*)
+		PROCEDURE Rollback*(n:SIGNED32); (* roll back to last good parameters that are found at n layers earlier*)
 		VAR l:Layer;
 		BEGIN
 			l:=layers;
@@ -2163,7 +2163,7 @@ VAR data, result: Dataset;
 	fl: FullLayerM1M;
 	ml:MaxPoolLayer;
 	nl: NormalizeLayer;
-	i, rounds:LONGINT;
+	i, rounds:SIGNED32;
 	e: Datatype;
 	type, dynamic:ARRAY 10 OF CHAR;
 	history, oldHistory: Matrix;

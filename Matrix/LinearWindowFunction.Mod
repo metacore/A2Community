@@ -5,8 +5,8 @@ IMPORT MatrixBase, Commands, MatrixInterpolation;
 TYPE Datatype*=MatrixBase.Datatype;
 
 (* window with weights in B-spline shape *)
-PROCEDURE SplineWindow*(CONST d: ARRAY [*] OF Datatype; splineDegree: LONGINT): ARRAY [*] OF Datatype;
-VAR B: ARRAY [*] OF Datatype; i:LONGINT;
+PROCEDURE SplineWindow*(CONST d: ARRAY [*] OF Datatype; splineDegree: SIGNED32): ARRAY [*] OF Datatype;
+VAR B: ARRAY [*] OF Datatype; i:SIGNED32;
 BEGIN
 	CASE splineDegree OF
 		1: HALT(200); (*implementation of degree 1 buggy, do not use at currrent*)
@@ -32,7 +32,7 @@ END SplineWindow;
 
 
 PROCEDURE Do*(context:Commands.Context);
-VAR r,b: ARRAY [*] OF Datatype; i:LONGINT;
+VAR r,b: ARRAY [*] OF Datatype; i:SIGNED32;
 BEGIN
 
 	NEW(r,5);

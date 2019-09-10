@@ -94,7 +94,7 @@ END Strassen;
 
 PROCEDURE Test*;
 CONST block=256; repeats = 3;
-VAR i,n:LONGINT; A,B,C, C1, dummy :Matrix; timer: Kernel.MilliTimer; r,t:LONGINT; strassen:Strassen;
+VAR i,n:SIGNED32; A,B,C, C1, dummy :Matrix; timer: Kernel.MilliTimer; r,t:SIGNED32; strassen:Strassen;
 BEGIN
 	(**)
 	Kernel.SetTimer(timer,0);

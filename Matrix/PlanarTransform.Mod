@@ -15,32 +15,32 @@ CONST
 	finite* = Filters.finite;  periodic* = Filters.cyclicH;  mirrorH* = Filters.mirrorH;  mirrorW* = Filters.mirrorW;  antimirrorH* = Filters.antimirrorH;
 	antimirrorW* = Filters.antimirrorW;
 
-	PROCEDURE toSpline2D*( CONST in: Rect;  VAR out: Rect;  splinedegree: INTEGER;  directions: SET );  (*! to do: more adapted boundaries, depending on spline order*)
+	PROCEDURE toSpline2D*( CONST in: Rect;  VAR out: Rect;  splinedegree: SIGNED16;  directions: SET );  (*! to do: more adapted boundaries, depending on spline order*)
 	BEGIN
 		IF (LEN(out,0)=0) & (LEN(in,0)#0) THEN NEW( out, LEN(in,0),LEN(in,1)) END;
 		Filter2D( in, out, Filters.CreateSplineFilter( Filters.DirectBSpline0 + splinedegree ), directions, mirrorH );
 	END toSpline2D;
 
-	PROCEDURE fromSpline2D*( CONST in: Rect;  VAR out: Rect;  splinedegree: INTEGER;  directions: SET );
+	PROCEDURE fromSpline2D*( CONST in: Rect;  VAR out: Rect;  splinedegree: SIGNED16;  directions: SET );
 	BEGIN
 		IF (LEN(out,0)=0) & (LEN(in,0)#0) THEN NEW( out, LEN(in,0),LEN(in,1)) END;
 		Filter2D( in, out, Filters.CreateSplineFilter( Filters.InverseBSpline0 + splinedegree ), directions, mirrorH );
 	END fromSpline2D;
 	(*
-	PROCEDURE toSplineCurve*( CONST in: Rect;  VAR out: Rect;  splinedegree: INTEGER;  boundary: LONGINT );
+	PROCEDURE toSplineCurve*( CONST in: Rect;  VAR out: Rect;  splinedegree: SIGNED16;  boundary: SIGNED32 );
 	BEGIN
 		IF (LEN(out,0)=0) & (LEN(in,0)#0) THEN NEW( out, LEN(in,0),LEN(in,1)) END;
 		Filter2D( in, out, Filters.CreateSplineFilter( Filters.DirectBSpline0 + splinedegree ), directions, mirrorH );
 	END toSplineCurve;
 
-	PROCEDURE fromSplineCurve*( CONST in: Rect;  VAR out: Rect;  splinedegree: INTEGER;  boundary: LONGINT );
+	PROCEDURE fromSplineCurve*( CONST in: Rect;  VAR out: Rect;  splinedegree: SIGNED16;  boundary: SIGNED32 );
 	BEGIN
 		IF (LEN(out,0)=0) & (LEN(in,0)#0) THEN NEW( out, LEN(in,0),LEN(in,1)) END;
 		Filter2D( in, out, Filters.CreateSplineFilter( Filters.InverseBSpline0 + splinedegree ), directions, mirrorH );
 	END fromSplineCurve;
 *)
 
-	PROCEDURE Filter2D*( CONST data: Rect;  VAR resdata: Rect;  filter: Filters.Filter;  directions: SET;  boundary: INTEGER );
+	PROCEDURE Filter2D*( CONST data: Rect;  VAR resdata: Rect;  filter: Filters.Filter;  directions: SET;  boundary: SIGNED16 );
 	VAR convolver: LinearConvolve.Convolver;
 	BEGIN
 		IF filter = NIL THEN resdata := data;  RETURN END;
@@ -50,7 +50,7 @@ CONST
 
 	(* possible filters: Filters.CreateSplineFilter( Filters.LeastSquareSpline0Down2 + splinedegree ) *)  (*ToDo: IN_PLACE !!*)
 
-	PROCEDURE Reduce2D*( CONST data: Rect;  VAR resdata: Rect;  filter: Filters.Filter;  directions: SET;  boundary: INTEGER );
+	PROCEDURE Reduce2D*( CONST data: Rect;  VAR resdata: Rect;  filter: Filters.Filter;  directions: SET;  boundary: SIGNED16 );
 	VAR temp: Rect;  convolver: LinearConvolve.Convolver;
 	BEGIN
 		directions := directions * {0, 1};
@@ -69,7 +69,7 @@ CONST
 
 	(* possible filters: Filters.CreateSplineFilter( Filters.LeastSquareSpline0Up2 + splinedegree ) *)  (*todo:  in-place*)
 
-	PROCEDURE Expand2D*( CONST data: Rect;  VAR resdata: Rect;  filter: Filters.Filter;  directions: SET;  boundary: INTEGER );
+	PROCEDURE Expand2D*( CONST data: Rect;  VAR resdata: Rect;  filter: Filters.Filter;  directions: SET;  boundary: SIGNED16 );
 	VAR temp : Rect;  convolver: LinearConvolve.Convolver;
 	BEGIN
 	(*to do: check sizes, check filter*)  (*check for in-place*)
@@ -100,9 +100,9 @@ CONST
 (** Resampling of input data, starting from x0,y0, in increments of dx,dy; if upscaling (dx,dy>1), then )
 	Input: data: spline coefficients of "splinedegree"; allocated 'resdata' of desired size; boundary: see Filters.Mod for boundary types
 	Output: resampled data in 'resdata' *)
-	PROCEDURE Resample*( CONST data: Rect;  VAR resdata: Rect;  x0, y0, dx, dy: Datatype;  splinedegree, boundary: LONGINT );
-	VAR w: Rect;  indices: ARRAY [ * ] OF LONGINT;
-		temp: Rect;  x, y, x1, x2, y1, y2: SIZE;  v: Signal;  Dx,Dy:LONGINT; ddx,ddy:Datatype;
+	PROCEDURE Resample*( CONST data: Rect;  VAR resdata: Rect;  x0, y0, dx, dy: Datatype;  splinedegree, boundary: SIGNED32 );
+	VAR w: Rect;  indices: ARRAY [ * ] OF SIGNED32;
+		temp: Rect;  x, y, x1, x2, y1, y2: SIZE;  v: Signal;  Dx,Dy:SIGNED32; ddx,ddy:Datatype;
 	BEGIN
 		NEW( temp, LEN( data, 0 ), LEN( resdata, 1 ) );
 		NEW( v, LEN( resdata, 1 ) );
@@ -140,7 +140,7 @@ CONST
 (*	PROCEDURE resample( CONST data: ARRAY OF Datatype;  VAR res: ARRAY OF Datatype );
 	END resample;
 
-	PROCEDURE Resample2D( CONST data: Rect;  VAR resdata: Rect;  filter: Filters.Filter;  directions: SET;  boundary: INTEGER );
+	PROCEDURE Resample2D( CONST data: Rect;  VAR resdata: Rect;  filter: Filters.Filter;  directions: SET;  boundary: SIGNED16 );
 	END Resample2D;
 *)
 (*simple scaling without interpolation*)
@@ -274,7 +274,7 @@ CONST
 	END Rotate180;
 
 (* to do: make order of dimensions for analyse/reconstruct consistent (e.g., 1->2->3, on way back: 3->2->1 *)
-	PROCEDURE Wavelet2D*( CONST data: Rect;  VAR resdata: Rect;  wavelet: Wavelets.WaveletFamily;  directions: SET;  boundary: INTEGER;  analyze: BOOLEAN );
+	PROCEDURE Wavelet2D*( CONST data: Rect;  VAR resdata: Rect;  wavelet: Wavelets.WaveletFamily;  directions: SET;  boundary: SIGNED16;  analyze: BOOLEAN );
 	VAR waveconvolver: Wavelets.WaveletConvolver;
 	BEGIN
 		IF wavelet = NIL THEN HALT( 100 ) END;
@@ -286,7 +286,7 @@ CONST
 
 (*
 	PROCEDURE Test*;
-	VAR m, m1, m2,m3: Rect;  i, j, t0, t1: LONGINT;
+	VAR m, m1, m2,m3: Rect;  i, j, t0, t1: SIGNED32;
 	BEGIN
 		NEW( m, 300, 300 );  NEW( m1, 600, 600 );  NEW( m2, 600, 600 );  NEW( m3, 600, 600 );
 		m := 0;  m[30..50, 30..50] := 1;

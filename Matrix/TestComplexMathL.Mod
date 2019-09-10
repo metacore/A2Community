@@ -4,7 +4,7 @@ IMPORT CMath:=ComplexMathL, Log:=KernelLog;
 
 PROCEDURE Demo*;
 CONST size= 16;
-VAR a,b,c: CMath.COMPLEXTYPE; x:REAL; y,z:CMath.Datatype; i:INTEGER; j:LONGINT;
+VAR a,b,c: CMath.COMPLEXTYPE; x:FLOAT32; y,z:CMath.Datatype; i:SIGNED16; j:SIGNED32;
 	A,B,C: CMath.COMPLEXARRAY; P: CMath.POLARARRAY; R,I,Y: CMath.FLOATARRAY;
 BEGIN
 	c:=CMath.Complex(1.3,0.9);

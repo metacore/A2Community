@@ -21,17 +21,17 @@ CONST
 	CUSTOM=3;
 
 TYPE
-	IntVector* = ARRAY [ * ] OF LONGINT;
+	IntVector* = ARRAY [ * ] OF SIGNED32;
 	Datatype* = MatrixBase.Datatype;
 	Vector* = MatrixBase.Vector;
 	Matrix* = MatrixBase.Matrix;
 	Dataset*= ARRAY [?] OF Datatype;
 	Function*= PROCEDURE(x:Datatype):Datatype;
 	Function2*=PROCEDURE(x,delta:Datatype):Datatype;
-	FilterProc*=PROCEDURE{DELEGATE}(CONST data: Dataset; CONST filter:Dataset; boundary: LONGINT): Dataset;
+	FilterProc*=PROCEDURE{DELEGATE}(CONST data: Dataset; CONST filter:Dataset; boundary: SIGNED32): Dataset;
 
-OPERATOR "SUM"(m:Dataset; dimension:LONGINT):Dataset;
-VAR len:IntVector; i:LONGINT;
+OPERATOR "SUM"(m:Dataset; dimension:SIGNED32):Dataset;
+VAR len:IntVector; i:SIGNED32;
 BEGIN
 	ASSERT(dimension<LEN(LEN(m),0));
 	NEW(len, LEN(m)-1);
@@ -53,7 +53,7 @@ BEGIN
 END "SUM";
 
 PROCEDURE PROD(CONST v: Vector): Datatype;
-VAR res: Datatype; i:LONGINT;
+VAR res: Datatype; i:SIGNED32;
 BEGIN
 	res:=1;
 	FOR i:=0 TO LEN(v,0)-1 DO
@@ -128,7 +128,7 @@ PROCEDURE ExpandMax*( CONST g: Matrix; VAR map: Util.BoolMatrix ): Dataset;  (* 
 	END ExpandMax;
 
 PROCEDURE Rot180(CONST m:Dataset):Dataset;(* tbd: accelerated in library*)
-VAR j,i:LONGINT; x:Datatype;
+VAR j,i:SIGNED32; x:Datatype;
 BEGIN
 	IF LEN(RESULT) # LEN(m) THEN NEW(RESULT, LEN(m)) END;
 	ASSERT(DIM(m)=2); (*!implementation limitation*)
@@ -143,7 +143,7 @@ BEGIN
 END Rot180;
 
 PROCEDURE GenTestFilter(size:IntVector):Dataset;
-VAR j,i:LONGINT;
+VAR j,i:SIGNED32;
 BEGIN
 	NEW(RESULT,size);
 	FOR j:=30 TO 39 DO
@@ -419,12 +419,12 @@ END Do0;
 
 PROCEDURE Do4*(context:Commands.Context);
 VAR
-	raw: ARRAY [?] OF INTEGER;
+	raw: ARRAY [?] OF SIGNED16;
 	data,result,result1,result2,result3: PlanarWavelets.Matrix;
 	analyzer: PlanarWavelets.Analyzer;
 	window: WMMatrix.Window;
 	filename: Files.FileName;
-	w,h: LONGINT;
+	w,h: SIGNED32;
 	f:Files.File; r:Files.Reader;
 BEGIN
 	IF context.arg.GetString(filename) & context.arg.GetInteger(h, FALSE) & context.arg.GetInteger(w,FALSE) THEN
@@ -565,7 +565,7 @@ VAR data, temp, result: Dataset;
 	net:Network;
 	cl: ConvLayer;
 	ml:MaxPoolLayer;
-	i, rounds:LONGINT;
+	i, rounds:SIGNED32;
 	e: Datatype;
 BEGIN
 	IF ~context.arg.GetInteger(rounds,FALSE) THEN rounds:=100 END;

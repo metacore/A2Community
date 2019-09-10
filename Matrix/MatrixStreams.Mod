@@ -1,12 +1,12 @@
 MODULE MatrixStreams ;	(**  AUTHOR "Patrick Hunziker"; PURPOSE "";  **)
 IMPORT Streams;
 
-TYPE Datatype = LONGREAL;
+TYPE Datatype = FLOAT64;
 
 TYPE Reader* = OBJECT (Streams.Reader);
 			(*
 			PROCEDURE Tensor*(): ARRAY [?] OF Datatype;
-			VAR dims, Rows,Cols, Start, Row,Col: LONGINT; m:ARRAY [?] OF Datatype;
+			VAR dims, Rows,Cols, Start, Row,Col: SIGNED32; m:ARRAY [?] OF Datatype;
 			BEGIN
 				RawLInt(dims); RawLInt(Rows); RawLInt(Cols);
 				NEW(m,Rows,Cols);
@@ -19,8 +19,8 @@ TYPE Reader* = OBJECT (Streams.Reader);
 				RETURN m
 			END Tensor;
 			*)
-			PROCEDURE Volume(lenX,lenY,lenZ:LONGINT): ARRAY [*,*,*] OF SHORTINT;
-			VAR res: ARRAY [*,*,*] OF SHORTINT; x,y,z:LONGINT;
+			PROCEDURE Volume(lenX,lenY,lenZ:SIGNED32): ARRAY [*,*,*] OF SIGNED8;
+			VAR res: ARRAY [*,*,*] OF SIGNED8; x,y,z:SIGNED32;
 			BEGIN
 				NEW(res,lenZ,lenY,lenX);
 				FOR z:=0 TO lenZ-1 DO
@@ -35,7 +35,7 @@ TYPE Reader* = OBJECT (Streams.Reader);
 
 
 			PROCEDURE Matrix*(): ARRAY [*,*] OF Datatype;
-			VAR Rows,Cols, Start, Row,Col: LONGINT; m:ARRAY [*,*] OF Datatype;
+			VAR Rows,Cols, Start, Row,Col: SIGNED32; m:ARRAY [*,*] OF Datatype;
 			BEGIN
 				RawLInt(Rows); RawLInt(Cols);
 				NEW(m,Rows,Cols);
@@ -48,7 +48,7 @@ TYPE Reader* = OBJECT (Streams.Reader);
 			END Matrix;
 
 			PROCEDURE Vector*():ARRAY [*] OF Datatype;
-			VAR Rows,Cols, Start, Row,Col: LONGINT; v:ARRAY [*] OF Datatype;
+			VAR Rows,Cols, Start, Row,Col: SIGNED32; v:ARRAY [*] OF Datatype;
 			BEGIN
 				RawLInt(Cols);
 				NEW(v,Cols);
@@ -63,7 +63,7 @@ TYPE Reader* = OBJECT (Streams.Reader);
 		Writer* = OBJECT (Streams.Writer);
 			(*
 			PROCEDURE Tensor*( m: ARRAY [?] OF Datatype);
-			VAR dims, Rows,Cols, Start, Row,Col: LONGINT;
+			VAR dims, Rows,Cols, Start, Row,Col: SIGNED32;
 			BEGIN
 				RawLInt(dims); RawLInt(Rows); RawLInt(Cols);
 				NEW(m,Rows,Cols);
@@ -76,9 +76,9 @@ TYPE Reader* = OBJECT (Streams.Reader);
 			*)
 
 			PROCEDURE Matrix*(CONST m: ARRAY [*,*] OF Datatype);
-			VAR Rows,Cols, Start, Row,Col: LONGINT;
+			VAR Rows,Cols, Start, Row,Col: SIGNED32;
 			BEGIN
-				Rows:=LEN(m,0)(LONGINT); Cols:=LEN(m,1)(LONGINT);
+				Rows:=LEN(m,0)(SIGNED32); Cols:=LEN(m,1)(SIGNED32);
 				RawLInt(Rows); RawLInt(Cols);
 				FOR Row:=0 TO Rows-1 DO
 					FOR Col:=0 TO Cols-1 DO
@@ -88,9 +88,9 @@ TYPE Reader* = OBJECT (Streams.Reader);
 			END Matrix;
 
 			PROCEDURE Vector*(CONST v : ARRAY [*] OF Datatype);
-			VAR Rows,Cols, Start, Row,Col: LONGINT;
+			VAR Rows,Cols, Start, Row,Col: SIGNED32;
 			BEGIN
-				Cols:=LEN(v,0)(LONGINT);
+				Cols:=LEN(v,0)(SIGNED32);
 				RawLInt(Cols);
 				FOR Col:=0 TO Cols-1 DO
 					RawLReal(v[Col])

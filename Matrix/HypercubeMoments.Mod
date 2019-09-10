@@ -14,7 +14,7 @@ TYPE
 Precondition:
 Postcondition:
 *)
-	PROCEDURE Moment*( CONST from: Hypercube;  degreeX, degreeY, degreeZ, degreeT: LONGINT ): Hypercube;
+	PROCEDURE Moment*( CONST from: Hypercube;  degreeX, degreeY, degreeZ, degreeT: SIGNED32 ): Hypercube;
 	VAR MomentFilter0, MomentFilter1, MomentFilter2, filter: Filters.Filter;
 	BEGIN
 		ASSERT( LEN( from, 0 ) > 0 );

@@ -3,7 +3,7 @@ MODULE TestMatrixOptim;
 IMPORT Optim := MatrixOptim, Out:=KernelLog, Strings;
 
 TYPE
-	Float = LONGREAL;
+	Float = FLOAT64;
 	Matrix = Optim.Matrix;
 	Vector = Optim.Vector;
 	TFuncNVar = Optim.TFuncNVar;
@@ -18,7 +18,7 @@ TYPE
 		RETURN (X[0] - 0.3) * (X[0] - 0.3) + (X[1] - 0.4) * (X[1] - 0.4) + 0.5
 	END fn;
 
-	PROCEDURE OutFix( x: LONGREAL;  m, n: INTEGER );
+	PROCEDURE OutFix( x: FLOAT64;  m, n: SIGNED16 );
 	VAR str: ARRAY 32 OF CHAR;
 	BEGIN
 		Strings.FloatToStr(x, m, n, 0, str);
@@ -26,7 +26,7 @@ TYPE
 	END OutFix;
 
 	PROCEDURE Do*;
-	VAR A, B, Tol, Xmin, Ymin: Float;  MaxIter, Res, time, i: LONGINT;  X0, Dir, G: Vector;  Hinv: Matrix;
+	VAR A, B, Tol, Xmin, Ymin: Float;  MaxIter, Res, time, i: SIGNED32;  X0, Dir, G: Vector;  Hinv: Matrix;
 	BEGIN
 		Out.Ln;  Out.String( "----- Test of different optimization algorithms ------ " );  Out.Ln;  A := -10;  B := 10;  MaxIter := 50;  Tol := 0.0001;
 		Res := Optim.GoldSearch( f, A, B, MaxIter, Tol, Xmin, Ymin );  Out.String( "Golden Search:" );  Out.Ln;  Out.String( "Res, expected Xmin,Ymin: " );  Out.Int( Res, 6 );

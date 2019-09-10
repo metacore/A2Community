@@ -9,7 +9,7 @@ CONST
 		rgb=3;
 		heat=4;
 
-TYPE Matrix= ARRAY [*,*] OF LONGREAL;
+TYPE Matrix= ARRAY [*,*] OF FLOAT64;
 
 TYPE Model*= OBJECT (Models.Model)
 		VAR m*, r*,g*,b*: Matrix;
@@ -17,14 +17,14 @@ TYPE Model*= OBJECT (Models.Model)
 
 TYPE Window*= OBJECT (WM.BufferWindow)
 	VAR model*:Model;
-		max,min, gain*:LONGREAL;
+		max,min, gain*:FLOAT64;
 		exists:BOOLEAN;
-		type*:LONGINT;
+		type*:SIGNED32;
 		offset,mx0,my0,mx1,my1:SIZE;
 		palette*:Raster.Palette;
 		source*:ANY;
 
-	PROCEDURE &Initialize*(CONST m: ARRAY [*,*] OF LONGREAL; CONST title: ARRAY OF CHAR);
+	PROCEDURE &Initialize*(CONST m: ARRAY [*,*] OF FLOAT64; CONST title: ARRAY OF CHAR);
 	BEGIN
 		IF (~exists  & (LEN(m)>0))  OR (LEN(m,1)#GetWidth()) OR (LEN(m,0)#GetHeight()) THEN
 			Init(LEN(m,1), LEN(m,0), TRUE); exists:=TRUE;
@@ -107,7 +107,7 @@ TYPE Window*= OBJECT (WM.BufferWindow)
 		END;
 	END SetImage;
 
-	PROCEDURE SetImageB*(CONST m: Matrix; offset:LONGINT;gain: LONGREAL);
+	PROCEDURE SetImageB*(CONST m: Matrix; offset:SIGNED32;gain: FLOAT64);
 	BEGIN
 		IF ~exists  & (LEN(m)>0) THEN
 			Init(LEN(m,1), LEN(m,0), TRUE); exists:=TRUE;
@@ -127,7 +127,7 @@ TYPE Window*= OBJECT (WM.BufferWindow)
 	   end
 	end.
 	Can add a custom background (0=none, 1=black, 2=transparent)*)
-	PROCEDURE SetPalette*(CONST name:ARRAY OF CHAR; background:LONGINT); (*background=0: none; 1=transparent; 2=black*)
+	PROCEDURE SetPalette*(CONST name:ARRAY OF CHAR; background:SIGNED32); (*background=0: none; 1=transparent; 2=black*)
 	VAR format: Raster.Format;
 	BEGIN
 		palette:=GetPalette(name, background);
@@ -169,7 +169,7 @@ TYPE Window*= OBJECT (WM.BufferWindow)
 	END SetImageRGB;
 
 	PROCEDURE Render*;
-	VAR min,max: LONGREAL;
+	VAR min,max: FLOAT64;
 	BEGIN
 		IF type=signed THEN MatrixRaster.LRealToImageBR(model.m, offset, gain, img)
 		ELSIF type=heat THEN MatrixRaster.LRealToImageHeat(model.m, offset, gain, img)
@@ -184,14 +184,14 @@ TYPE Window*= OBJECT (WM.BufferWindow)
 		*)
 	END Render;
 
-	PROCEDURE RenderScaled*(offset:LONGINT;gain: LONGREAL);
+	PROCEDURE RenderScaled*(offset:SIGNED32;gain: FLOAT64);
 	BEGIN
 		SELF.offset:=offset; SELF.gain:=gain;
 		Render;
 	END RenderScaled;
 
 	PROCEDURE SetParameters(context: Commands.Context);
-	VAR offset, gain:LONGINT; res:BOOLEAN;
+	VAR offset, gain:SIGNED32; res:BOOLEAN;
 	BEGIN
 		res:=context.arg.GetInteger(offset, FALSE);
 		res:=context.arg.GetInteger(gain, FALSE);
@@ -209,11 +209,11 @@ TYPE Window*= OBJECT (WM.BufferWindow)
 
 END Window;
 
-VAR InsertPosX*,InsertPosY*, pos: LONGINT; (* default insertion point for new window *)
+VAR InsertPosX*,InsertPosY*, pos: SIGNED32; (* default insertion point for new window *)
 	(*registry-,last:Registry;*)
 
 PROCEDURE GenerateName(prefix: Strings.String; VAR str: ARRAY OF CHAR);
-VAR  i,j:LONGINT; title: Files.FileName; c:CHAR;
+VAR  i,j:SIGNED32; title: Files.FileName; c:CHAR;
 BEGIN
 	i:=0; j:=0;
 	IF prefix#NIL THEN
@@ -233,11 +233,11 @@ BEGIN
 	COPY(title, str);
 END GenerateName;
 
-PROCEDURE GetPalette(CONST name:ARRAY OF CHAR; background:LONGINT):Raster.Palette; (*background=0: none; 1=transparent; 2=black*)
+PROCEDURE GetPalette(CONST name:ARRAY OF CHAR; background:SIGNED32):Raster.Palette; (*background=0: none; 1=transparent; 2=black*)
 VAR pal: Raster.Palette;
 	f: Files.File;
 	reader:Files.Reader;
-	j,i:LONGINT;
+	j,i:SIGNED32;
 	VAR raw: ARRAY 3,256 OF CHAR;
 BEGIN
 	f:=Files.Old(name);
@@ -262,7 +262,7 @@ END GetPalette;
 
 
 PROCEDURE AddWindow*(CONST m: Matrix; CONST title: ARRAY OF CHAR); (*deprecated*)
-VAR pw: WM.BufferWindow; max,min:LONGREAL; type:BOOLEAN;
+VAR pw: WM.BufferWindow; max,min:FLOAT64; type:BOOLEAN;
 BEGIN
 	max:=MAX(m);
 	min:=MIN(m);
@@ -276,9 +276,9 @@ BEGIN
 END AddWindow;
 
 PROCEDURE RemoveWindows*(context:Commands.Context);
-VAR manager:WM.WindowManager; w,remove:WM.Window; i:LONGINT;
+VAR manager:WM.WindowManager; w,remove:WM.Window; i:SIGNED32;
 BEGIN {EXCLUSIVE}
-	IF (context=NIL) OR (~context.arg.GetInteger(i,FALSE)) THEN i:=MAX(LONGINT) END;
+	IF (context=NIL) OR (~context.arg.GetInteger(i,FALSE)) THEN i:=MAX(SIGNED32) END;
 	manager:=WM.GetDefaultManager();
 	manager.lock.AcquireWrite;
 	w:=manager.GetFirst();
@@ -308,8 +308,8 @@ SystemTools.CollectGarbage
 
 --------------example application of LUT --------------
 PROCEDURE Do*;
-VAR m:ARRAY [100,100] OF REAL;
-	i:LONGINT;
+VAR m:ARRAY [100,100] OF FLOAT32;
+	i:SIGNED32;
 	w:WMMatrix.Window;
 BEGIN
 	FOR i:=0 TO 99 DO

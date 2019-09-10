@@ -199,7 +199,7 @@ END BinaryInnerEdge;
 PROCEDURE TestBinary*(context:Commands.Context);
 VAR imgB,imgB1,imgB2,imgB3,imgB4,imgB5,imgB6: ARRAY [*,*] OF BOOLEAN;
 	img,img1,img2,img3,img4,img5,img6: ARRAY [*,*] OF MatrixBase.Datatype;
-	i:LONGINT;
+	i:SIGNED32;
 	window: WMMatrix.Window;
 BEGIN
 	IF TRUE THEN
@@ -249,7 +249,7 @@ END TestBinary;
 PROCEDURE Test*(context:Commands.Context);
 VAR imgB,imgB1,imgB2,imgB3,imgB4: Plane;
 	img,img1,img2,img3,img4,img5,img6: Plane;
-	i:LONGINT;
+	i:SIGNED32;
 	window: WMMatrix.Window;
 BEGIN
 	IF TRUE THEN

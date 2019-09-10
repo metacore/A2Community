@@ -20,7 +20,7 @@ TYPE
 
 	Solver* = OBJECT (MatrixBase.Solver)
 	VAR Tolerance*: TData;   (* tolerance of solution accuracy *)
-		nMaxIterations*, nIterations-: LONGINT;   (* maximum number of iterations and number of done iterations *)
+		nMaxIterations*, nIterations-: SIGNED32;   (* maximum number of iterations and number of done iterations *)
 		SysMatrix: Matrix;   (* copy of system matrix *)
 		Tracer*: Streams.Writer;
 		Tiny: TData;
@@ -108,7 +108,7 @@ TYPE
 
 		PROCEDURE CGS( CONST A: Matrix;  CONST b: Vector;
 					   VAR x: Vector;  Tolerance: TData;
-					   nMaxIterations: LONGINT ): Vector;
+					   nMaxIterations: SIGNED32 ): Vector;
 		VAR alpha, beta, rho, rho_1, residnrm: TData;
 		BEGIN
 			resid0 := A * x;  resid0 := b - resid0;  resid := resid0;  beta := 0;
@@ -145,7 +145,7 @@ TYPE
 		PROCEDURE CGSProcBased( MatrixToVector: MatrixToVectorProc;
 								CONST b: Vector;
 								VAR x: Vector;  Tolerance: TData;
-								nMaxIterations: LONGINT ): Vector;
+								nMaxIterations: SIGNED32 ): Vector;
 		VAR
 		VAR alpha, beta, rho, rho_1, residnrm: TData;
 		BEGIN

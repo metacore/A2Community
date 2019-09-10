@@ -23,7 +23,7 @@ TYPE
 
 		(** Gaussian elimination algorithm  with row pivoting; expects square matrix, transforms it into upper triangular matrix *)
 	PROCEDURE Gauss*( VAR A: Matrix );   (*in-place transformation*)
-	VAR i, j, k, m, n, u, maxi: SIZE;  val, max: LONGREAL; Ai, tRow: Vector;
+	VAR i, j, k, m, n, u, maxi: SIZE;  val, max: FLOAT64; Ai, tRow: Vector;
 
 		PROCEDURE SwapRows( I, K: SIZE );
 		BEGIN
@@ -53,10 +53,10 @@ TYPE
 (*
 	(** Gaussian elimination algorithm  with row pivoting; expects augmented matrix (last column containing right hand side) resulting in A now having a reduced row echelon form *)
 	PROCEDURE GaussAugmented*( VAR A: Matrix );   (*in-place transformation*) (* tested ??*)
-	VAR i, j, k, m, n, u, maxi: LONGINT;  val, max: LONGREAL; Ai, tRow: Vector;
+	VAR i, j, k, m, n, u, maxi: SIGNED32;  val, max: FLOAT64; Ai, tRow: Vector;
 
-		PROCEDURE SwapRows( I, K: LONGINT );
-		VAR J: LONGINT;
+		PROCEDURE SwapRows( I, K: SIGNED32 );
+		VAR J: SIGNED32;
 		BEGIN
 			tRow := A[I];  A[I] := A[K];  A[K] := tRow;
 		END SwapRows;
@@ -88,10 +88,10 @@ TYPE
 (*
 			(** produce upper Hessenberg Matrix (zeros below first subdiagonal) using Gaussian elimination algorithm  with row pivoting; expects square matrix*)
 	PROCEDURE Hessenberg*( VAR A: Matrix );   (*in-place transformation*)  (*NOT FINISHED - currently just Gauss Elimination - NOT TESTED*)
-	VAR i, j, k, m, n, u, maxi: LONGINT;  val, max: LONGREAL; Ai, tRow: Vector;
+	VAR i, j, k, m, n, u, maxi: SIGNED32;  val, max: FLOAT64; Ai, tRow: Vector;
 
-		PROCEDURE SwapRows( I, K: LONGINT );
-		VAR J: LONGINT;
+		PROCEDURE SwapRows( I, K: SIGNED32 );
+		VAR J: SIGNED32;
 		BEGIN
 			tRow := A[I];  A[I] := A[K];  A[K] := tRow;
 		END SwapRows;
@@ -121,7 +121,7 @@ Householder is more stable but yields results only at the end *)
 (** n < 0 implies 'all' *)
 
 	PROCEDURE GramSchmidt*( VAR A: Matrix;  n: SIZE );   (*tested - OK*)
-	VAR j, i, k: SIZE;  ss: LONGREAL;
+	VAR j, i, k: SIZE;  ss: FLOAT64;
 	BEGIN
 		IF n < 0 THEN n := LEN( A,0 ) END;
 		FOR j := 0 TO n - 1 DO
@@ -135,7 +135,7 @@ Householder is more stable but yields results only at the end *)
 (*QR by modified Gram Schmidt algorithm, avoids the numerical loss of orthogonality with the classical approach.
 input: A; output: Q packed in A; upper diagonal R*)
 	PROCEDURE QRGramSchmidt*( VAR A, R: Matrix;  n: SIZE );   (*tested - OK*)
-	VAR j, i, k: SIZE;  r: LONGREAL;
+	VAR j, i, k: SIZE;  r: FLOAT64;
 	BEGIN
 	(*ASSERT(sizes are correct)*)  (*to do*)
 		R := 0;
@@ -190,7 +190,7 @@ add backsubstitution to householder:
 (* ???? not yet correct...
 	(* how to extract Q from the algorithm *)
 	PROCEDURE HouseholderQ* (VAR A: Matrix);
-	VAR x: ARRAY [*] OF LONGREAL; k, m, n: LONGINT;
+	VAR x: ARRAY [*] OF FLOAT64; k, m, n: SIGNED32;
 	BEGIN
 		m:=LEN(A,0); n:=LEN(A,1);
 		NEW(x,n); x:=1;
@@ -200,7 +200,7 @@ add backsubstitution to householder:
 	END HouseholderQ;
 *)
 
-	PROCEDURE sign( x: LONGREAL ): LONGREAL;
+	PROCEDURE sign( x: FLOAT64 ): FLOAT64;
 	BEGIN
 		IF x > 0 THEN RETURN 1
 		ELSIF x < 0 THEN RETURN -1
@@ -220,7 +220,7 @@ A full Givens Rotation Matrix with rotation theta, where c=cos(theta) and s=sin(
 *)
 (** parameters: 'ab' contains the 2 entries: A[row-1..row,col] of the target matrix; the givens rotation will set these elements to [r,0] *)
 	PROCEDURE GivensMatrix*( CONST ab: Vector; VAR G: Matrix );   (**tested - OK*)
-	VAR u, t: LONGREAL;  a, b: LONGREAL;  c, s, r: LONGREAL;
+	VAR u, t: FLOAT64;  a, b: FLOAT64;  c, s, r: FLOAT64;
 	BEGIN
 		a := ab[0];  b := ab[1];
 		IF b = 0 THEN
@@ -243,9 +243,9 @@ A full Givens Rotation Matrix with rotation theta, where c=cos(theta) and s=sin(
 	END GivensMatrix;
 
 (** applies Givens Rotation GA to set element i,j of Matrix A to zero *)
-	PROCEDURE GivensRotation*( VAR A: Matrix;  i, j: LONGINT );
-	VAR c, s, r: LONGREAL;  B: Matrix;
-		G: ARRAY [ 2, 2] OF LONGREAL;
+	PROCEDURE GivensRotation*( VAR A: Matrix;  i, j: SIGNED32 );
+	VAR c, s, r: FLOAT64;  B: Matrix;
+		G: ARRAY [ 2, 2] OF FLOAT64;
 	BEGIN
 		GivensMatrix( A[i - 1..i, j], G );
 		(*A[i-1..i]:= G * A[i-1..i];*)  (*here is a logical/compiler implementation problem: overwriting of second line; upon debugginf of compiler, variable B should be redundant*)
@@ -253,7 +253,7 @@ A full Givens Rotation Matrix with rotation theta, where c=cos(theta) and s=sin(
 	END GivensRotation;
 (*
 PROCEDURE DoGaussElim*;
-VAR A,B: MatrixBase.Matrix; v:MatrixBase.Vector; res,i,j:LONGINT;
+VAR A,B: MatrixBase.Matrix; v:MatrixBase.Vector; res,i,j:SIGNED32;
 BEGIN
 	A:=[[1,2,3,4],[4,3,3,1],[1,2,4,3],[2,2,2,3]];
 	KernelLog.String("before "); KernelLog.Ln;

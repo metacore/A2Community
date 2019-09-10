@@ -33,8 +33,8 @@ TYPE
 
 	VolumeContainer* = POINTER TO RECORD
 		v*, outside*: BinaryVolume;   (* volume itself *)
-		N0*,N1*,N2*: LONGINT; (* volume sizes *)
-		nElements*: LONGINT; (* count of (TRUE) elements of v *)
+		N0*,N1*,N2*: SIGNED32; (* volume sizes *)
+		nElements*: SIGNED32; (* count of (TRUE) elements of v *)
 		outerShell*: BinaryVolume; (* outer surface of the volume*)
 		innerShell*: BinaryVolume; (* inner surface of the volume*)
 		name*: ARRAY 512 OF CHAR;
@@ -43,12 +43,12 @@ TYPE
 	VolumeDomain* = OBJECT
 	VAR
 		volumes*: ARRAY [*] OF VolumeContainer;
-		index*: LONGINT; (* current container index *)
+		index*: SIGNED32; (* current container index *)
 		pInlet*, pOutlet*, rho*, dt*: MatrixBase.Datatype;
-		dyeInlet*: PROCEDURE(sizeY,sizeZ,y,z: LONGINT): BOOLEAN;
+		dyeInlet*: PROCEDURE(sizeY,sizeZ,y,z: SIGNED32): BOOLEAN;
 
 		PROCEDURE &Init*(CONST names: ARRAY OF ARRAY OF CHAR; pInlet,pOutlet,rho,dt: MatrixBase.Datatype);
-		VAR i:LONGINT;
+		VAR i:SIGNED32;
 		BEGIN
 			SELF.pInlet := pInlet;
 			SELF.pOutlet:=pOutlet;
@@ -81,7 +81,7 @@ TYPE
 		This is not perfect for Nabla operators that take 3 elements into account	*)
 		PROCEDURE ZeroBoundaryGradient*(VAR p: Volume);
 		VAR
-			k,N0,N1,N2: LONGINT;
+			k,N0,N1,N2: SIGNED32;
 			vc: VolumeContainer;
 		BEGIN
 			N0 := LEN(p,0);
@@ -100,7 +100,7 @@ TYPE
 
 		PROCEDURE FlowBoundaries*(VAR field: Volume);
 		VAR
-			k,N0,N1,N2: LONGINT;
+			k,N0,N1,N2: SIGNED32;
 			vc: VolumeContainer;
 		BEGIN
 			N0 := LEN(field,0);
@@ -127,7 +127,7 @@ TYPE
 		(** control pressure at inlet and outlet *)
 		PROCEDURE PressureBoundaries0*(VAR p: Volume);
 		VAR
-			k,k0,k1,N0,N1,N2: LONGINT;
+			k,k0,k1,N0,N1,N2: SIGNED32;
 			vc: VolumeContainer;
 		BEGIN
 			 (*fast version. Does not lead to a disadvantage, as imposing a pressure on voxels outside the volume does not induce a flow*)
@@ -162,7 +162,7 @@ TYPE
 		-on locations with external pressure boundary conditions, and in solid, no change*)
 		PROCEDURE PressureBoundariesPDT*(VAR pdt: Volume);
 		VAR
-			k,N0,N1,N2: LONGINT;
+			k,N0,N1,N2: SIGNED32;
 			vc: VolumeContainer;
 		BEGIN
 			N0 := LEN(pdt,0);
@@ -186,7 +186,7 @@ TYPE
 
 		PROCEDURE SoluteBoundaries*(VAR field: Volume); (* avoid presence of solute to outside a channel. TO DO: do not suppress, but bring the material diffused outside inwards again, to avoid loss. *)
 		VAR
-			i,j,k,N0,N1,N2: LONGINT;
+			i,j,k,N0,N1,N2: SIGNED32;
 		BEGIN
 			N0 := LEN(field,0);
 			N1 := LEN(field,1);
@@ -215,7 +215,7 @@ TYPE
 
 		PROCEDURE SoluteBoundaries0*(VAR field: Volume); (* along Z for initialization *)
 		VAR
-			i,j,k,N0,N1,N2: LONGINT;
+			i,j,k,N0,N1,N2: SIGNED32;
 		BEGIN
 			N0 := LEN(field,0);
 			N1 := LEN(field,1);
@@ -241,9 +241,9 @@ TYPE
 		END SoluteBoundaries0;
 
 
-	PROCEDURE CountElements*(CONST field: Volume):LONGINT; (* avoid presence of solute to outside a channel. TO DO: do not suppress, but bring the material diffused outside inwards again, to avoid loss. *)
+	PROCEDURE CountElements*(CONST field: Volume):SIGNED32; (* avoid presence of solute to outside a channel. TO DO: do not suppress, but bring the material diffused outside inwards again, to avoid loss. *)
 		VAR
-			k,N0,N1,N2: LONGINT;
+			k,N0,N1,N2: SIGNED32;
 		BEGIN
 			N0 := LEN(field,0);
 			N1 := LEN(field,1);
@@ -261,13 +261,13 @@ TYPE
 
 VAR log*: Streams.Writer;
 
-PROCEDURE Sqr(a:LONGREAL):LONGREAL;
+PROCEDURE Sqr(a:FLOAT64):FLOAT64;
 BEGIN
 	RETURN a*a
 END Sqr;
 
 
-PROCEDURE DyeInlet(sizeZ,sizeY,z,y: LONGINT): BOOLEAN;
+PROCEDURE DyeInlet(sizeZ,sizeY,z,y: SIGNED32): BOOLEAN;
 CONST radius=0.055 * 2.8;
 BEGIN
 	RETURN Sqr(y-sizeY/2) + Sqr(z - sizeZ/2) < Sqr(radius*sizeY) (*? >= ?*)
@@ -302,7 +302,7 @@ END FindInnerSurface;
 		1: MAX(neighbours); ('innerSurface' is not used here)
 		2: Average(nonzero neighbours)
 *)
-PROCEDURE NeumannBC*(VAR p: ScalarField; CONST volume, innerSurface, outerSurface: BinaryVolume; mode: LONGINT);
+PROCEDURE NeumannBC*(VAR p: ScalarField; CONST volume, innerSurface, outerSurface: BinaryVolume; mode: SIGNED32);
 BEGIN
 	CASE mode OF
 	1: NeumannBC1(p,volume,innerSurface, outerSurface);
@@ -313,7 +313,7 @@ END NeumannBC;
 
 PROCEDURE NeumannBC1(VAR p: ScalarField; CONST volume, innerSurface, outerSurface: BinaryVolume);
 VAR
-	k0,k1,k2: LONGINT;
+	k0,k1,k2: SIGNED32;
 	tmp: ScalarField; (* as a local variable, tmp is always allocated again => move to object*)
 	e:  MatrixBase.Datatype;
 BEGIN
@@ -346,7 +346,7 @@ END NeumannBC1;
 *)
 PROCEDURE NeumannBC2(VAR p: ScalarField; CONST volume, innerSurface, outerSurface: BinaryVolume);
 VAR
-	k0,k1,k2, kk0,kk1,kk2,count: LONGINT;
+	k0,k1,k2, kk0,kk1,kk2,count: SIGNED32;
 	q: MatrixBase.Datatype;
 BEGIN
 	FOR k0:=1 TO LEN(outerSurface,0)-2 DO
@@ -369,7 +369,7 @@ BEGIN
 END NeumannBC2;
 
 PROCEDURE ForAll2(CONST x: ARRAY [?] OF MatrixBase.Datatype; y: ARRAY [?] OF BOOLEAN; func: PROCEDURE{DELEGATE}(v: MatrixBase.Datatype; w:BOOLEAN): MatrixBase.Datatype): ARRAY [?] OF MatrixBase.Datatype;
-VAR i: LONGINT;
+VAR i: SIGNED32;
 BEGIN
 	IF DIM(x) = 1 THEN (* last level of recursion *)
 		FOR i := 0 TO LEN(x,0)-1 DO
@@ -388,7 +388,7 @@ END ForAll2;
 *)
 PROCEDURE DirichletBC*(VAR u: ScalarField; CONST volume: BinaryVolume; u0: MatrixBase.Datatype);
 VAR
-	k0,k1,k2: LONGINT;
+	k0,k1,k2: SIGNED32;
 BEGIN
 	FOR k0:=0 TO LEN(volume,0)-1 DO
 		FOR k1:=0 TO LEN(volume,1)-1 DO
@@ -403,9 +403,9 @@ END DirichletBC;
 Number of nonzero elements in binary volume
 s: binary volume
 *)
-PROCEDURE TrueCount*(s: BinaryVolume): LONGINT;
+PROCEDURE TrueCount*(s: BinaryVolume): SIGNED32;
 VAR
-	k0,k1,k2,n: LONGINT;
+	k0,k1,k2,n: SIGNED32;
 BEGIN
 	n := 0;
 	FOR k0:=0 TO LEN(s,0)-1 DO

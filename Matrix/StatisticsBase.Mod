@@ -63,7 +63,7 @@ PROCEDURE KSmallest( VAR a: Vector;  n, k: SIZE ): Datatype;
 VAR i, j, l, m: SIZE;  x: Datatype;
 
 	PROCEDURE swap( VAR x, y: Datatype );
-	VAR z: LONGREAL;
+	VAR z: FLOAT64;
 	BEGIN
 		z := x;  x := y;  y := z
 	END swap;

@@ -19,7 +19,7 @@ TYPE
 			Writer*: Streams.Writer;
 			CService:ComputeAgent;
 			ready, wait*, done*: BOOLEAN;
-			priority*: LONGINT;
+			priority*: SIGNED32;
 			next: ComputeObject;
 			result: ARRAY 16 OF CHAR;
 		PROCEDURE compute*; END compute; (*prototype*)
@@ -40,7 +40,7 @@ TYPE
 TYPE
 	ComputeMMObject*= OBJECT (ComputeObject)
 		VAR A,B,C: Matrix;
-		PROCEDURE &Init*(CONST A,B: Matrix; VAR C:Matrix; Notify: Notifier; priority: LONGINT);
+		PROCEDURE &Init*(CONST A,B: Matrix; VAR C:Matrix; Notify: Notifier; priority: SIGNED32);
 		BEGIN
 			SELF.A:=ALIAS OF A;
 			SELF.B:=ALIAS OF B;
@@ -115,7 +115,7 @@ TYPE
 	ComputeMVObject*= OBJECT (ComputeObject) (* for operations of type "Vector := Matrix op Vector" ; *)
 		VAR A: Matrix;
 		B,C: Vector;
-		PROCEDURE &Init*(CONST A: Matrix; CONST B: Vector; VAR C:Vector; Notify: Notifier; priority: LONGINT);
+		PROCEDURE &Init*(CONST A: Matrix; CONST B: Vector; VAR C:Vector; Notify: Notifier; priority: SIGNED32);
 		BEGIN
 			SELF.A:=ALIAS OF A;
 			SELF.B:=ALIAS OF B;
@@ -141,7 +141,7 @@ TYPE
 		VAR A: Matrix;
 		B: Matrix;
 		s: Datatype;
-		PROCEDURE &Init*(CONST A: Matrix; VAR B: Matrix; s: Datatype; Notify: Notifier; priority: LONGINT);
+		PROCEDURE &Init*(CONST A: Matrix; VAR B: Matrix; s: Datatype; Notify: Notifier; priority: SIGNED32);
 		BEGIN
 			SELF.A:=ALIAS OF A;
 			SELF.B:=ALIAS OF B;
@@ -162,8 +162,8 @@ TYPE
 TYPE ComputeQueue=OBJECT
 	VAR first, (*linked list of objects waiting to compute*)
 		tail: ComputeObject;
-		nActive: LONGINT; (*currently computing processes*)
-		maxProcesses: LONGINT;
+		nActive: SIGNED32; (*currently computing processes*)
+		maxProcesses: SIGNED32;
 	PROCEDURE Add(object:ComputeObject);
 	BEGIN {EXCLUSIVE}
 		object.next:=first; first:=object;
@@ -213,7 +213,7 @@ TYPE ComputeQueue=OBJECT
 			W: Streams.Writer; R:Streams.Reader;
 			done*:BOOLEAN;
 
-		PROCEDURE &Request*(CONST Operation: ARRAY OF CHAR; Flops, SendSize, RecvSize: SIZE; priority: LONGINT);
+		PROCEDURE &Request*(CONST Operation: ARRAY OF CHAR; Flops, SendSize, RecvSize: SIZE; priority: SIGNED32);
 		BEGIN
 			(* choose server according to task characteristics *)
 
@@ -222,7 +222,7 @@ TYPE ComputeQueue=OBJECT
 		PROCEDURE SetMatrix(CONST M: Matrix);
 		VAR r,c:SIZE;
 		BEGIN
-			W.RawLInt(LEN(M,0)(LONGINT)); W.RawLInt(LEN(M,1)(LONGINT));
+			W.RawLInt(LEN(M,0)(SIGNED32)); W.RawLInt(LEN(M,1)(SIGNED32));
 			FOR r:=0 TO LEN(M,0)-1 DO
 				FOR c:=0 TO LEN(M,1)-1 DO
 					W.RawLReal(M[r,c])
@@ -231,7 +231,7 @@ TYPE ComputeQueue=OBJECT
 		END SetMatrix;
 
 		PROCEDURE GetMatrix(VAR M:Matrix; VAR code: ARRAY OF CHAR);
-		VAR rows,cols,r,c:LONGINT;
+		VAR rows,cols,r,c:SIGNED32;
 		BEGIN
 			R.RawLInt(rows); R.RawLInt(cols);
 			IF (LEN(M,0)#rows) OR (LEN(M,1)#cols) THEN NEW(M,rows,cols) END;
@@ -245,7 +245,7 @@ TYPE ComputeQueue=OBJECT
 	END ComputeAgent;
 
 
-VAR objects, cumulobjects*: LONGINT;
+VAR objects, cumulobjects*: SIGNED32;
 	Distributed*:BOOLEAN;
 
 

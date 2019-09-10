@@ -14,15 +14,15 @@ CONST
 	ERROR*=7; (** undefined error *)
 
 TYPE
-	Datatype* = LONGREAL;
-	Complex*=LONGCOMPLEX;
+	Datatype* = FLOAT64;
+	Complex*=COMPLEX64;
 
 	Tensor* = ARRAY [?] OF Datatype;
 	Hypercube* = ARRAY [*,*,*,*] OF Datatype;
 	Volume* = ARRAY [*,*,*] OF Datatype;
 	Matrix* = ARRAY [*,*] OF Datatype;
 	Vector* = ARRAY [*] OF Datatype;
-	ErrorHandler* = PROCEDURE ( code: LONGINT; CONST text: ARRAY OF CHAR );
+	ErrorHandler* = PROCEDURE ( code: SIGNED32; CONST text: ARRAY OF CHAR );
 
 	(** Matrix solvers are Objects suited for matrix decomposition and solving in two steps:
 	NEW(solver,A) or solver.Init(A) performs allocation and matrix decomposition;
@@ -31,7 +31,7 @@ TYPE
 	Alternatively, a one-step solution of a linear system can be done by using the  x:=SolveXY(A,b) procedure call *)
 
 	Solver* = OBJECT  (** generic template*)
-	VAR res*: LONGINT;
+	VAR res*: SIGNED32;
 		handleError*: ErrorHandler;
 		x*: Vector;   (** solution vector; can be initialized with approximate solution*)
 
@@ -63,7 +63,7 @@ TYPE
 	END Solver;
 
 VAR
-	EPS-: LONGREAL;
+	EPS-: FLOAT64;
 
 	PROCEDURE SolveGeneric*( VAR A: Matrix;  CONST b: Vector ): Vector;   (** example of procedural interface to solvers *)
 	END SolveGeneric;
@@ -74,14 +74,14 @@ VAR
 		NEW( solver, A );  RETURN solver;
 	END CreateGenericSolver;
 
-	PROCEDURE HandleError*( code: LONGINT;  CONST text: ARRAY OF CHAR );   (* default error handler *)
+	PROCEDURE HandleError*( code: SIGNED32;  CONST text: ARRAY OF CHAR );   (* default error handler *)
 	BEGIN
 		KernelLog.Enter;  KernelLog.String( "Matrix error " );  KernelLog.Int( code, 6 );  KernelLog.String( ": " );
 		KernelLog.String( text );  KernelLog.Ln;  KernelLog.Exit;
 	END HandleError;
 
-	PROCEDURE ComputeEps( ): REAL;   (*binary: last mantissa of REAL number*)
-	VAR x, y: REAL;
+	PROCEDURE ComputeEps( ): FLOAT32;   (*binary: last mantissa of FLOAT32 number*)
+	VAR x, y: FLOAT32;
 	BEGIN
 		x := 1;
 		LOOP
@@ -91,8 +91,8 @@ VAR
 		END;
 	END ComputeEps;
 
-	PROCEDURE ComputeEpsL( ): LONGREAL;   (*binary: last mantissa of LONGREAL number*)
-	VAR x, y: LONGREAL;
+	PROCEDURE ComputeEpsL( ): FLOAT64;   (*binary: last mantissa of FLOAT64 number*)
+	VAR x, y: FLOAT64;
 	BEGIN
 		x := 1;
 		LOOP

@@ -35,7 +35,7 @@ TYPE
 	Solver* = OBJECT (MatrixBase.Solver)
 	VAR q, q_1, tmp, w_1, w_2: Vector;
 		Tolerance*: Datatype;   (* tolerance of solution accuracy *)
-		nMaxIterations*, nIterations-: LONGINT;   (* maximum number of iterations and number of done iterations *)
+		nMaxIterations*, nIterations-: SIGNED32;   (* maximum number of iterations and number of done iterations *)
 		SysMatrix: Matrix;   (* copy of system matrix *)
 		Tracer*: Streams.Writer;
 		Tiny: Datatype;
@@ -123,7 +123,7 @@ TYPE
 
 		PROCEDURE MINRES( CONST A: Matrix;  CONST b: Vector;
 						  VAR x: Vector;  Tolerance: Datatype;
-						  nMaxIterations: LONGINT ): Vector;
+						  nMaxIterations: SIGNED32 ): Vector;
 		VAR a, alpha, beta, beta_1, c, c_1, d0, d1, d2, eta, s, s_1: Datatype;
 			residnrm: Datatype;
 		BEGIN
@@ -200,7 +200,7 @@ TYPE
 		PROCEDURE MINRESProcBased( MatrixToVector: MatrixToVectorProc;
 								   CONST b: Vector;
 								   VAR x: Vector;  Tolerance: Datatype;
-								   nMaxIterations: LONGINT ): Vector;
+								   nMaxIterations: SIGNED32 ): Vector;
 		VAR a, alpha, beta, beta_1, c, c_1, d0, d1, d2, eta, s, s_1: Datatype;
 			residnrm: Datatype;
 		BEGIN

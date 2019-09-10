@@ -25,7 +25,7 @@ TYPE
 		BEGIN
 		END Init;
 		(** ds is spacing.  *)
-		PROCEDURE Solve*(CONST b: Grid; VAR x: Grid;  ds, threshold: Datatype;  iterations: LONGINT;  Boundaries: Boundary );   (*TO DO: check for convergence*)
+		PROCEDURE Solve*(CONST b: Grid; VAR x: Grid;  ds, threshold: Datatype;  iterations: SIGNED32;  Boundaries: Boundary );   (*TO DO: check for convergence*)
 		BEGIN
 			(* Laplacian(A)=second derivative of x is usually modeled as A*x with A containing the coefficients for discrete approximation of the laplacian,
 		but here, the Laplacian computed by digital filtering takes its place; if done in the real domain, the approximation is equivalent to MatMul; if done in the
@@ -39,7 +39,7 @@ TYPE
 			END;
 		END Solve;
 
-		PROCEDURE SolveMultigrid*( CONST b: Grid; VAR x: Grid;  ds, threshold: Datatype;  minsize, iterations: LONGINT;  Boundaries: Boundary );
+		PROCEDURE SolveMultigrid*( CONST b: Grid; VAR x: Grid;  ds, threshold: Datatype;  minsize, iterations: SIGNED32;  Boundaries: Boundary );
 		BEGIN
 			alpha:= -ds*ds; beta:=2;
 			IF (LEN( temp, 0 ) # LEN( b, 0 )) OR (LEN( temp, 1 ) # LEN( b, 1 )) THEN NEW( temp, LEN( b, 0 ), LEN( b, 1 ) );  END;
@@ -77,7 +77,7 @@ TYPE
 		BEGIN
 		END Init;
 
-		PROCEDURE Solve*( CONST b:Grid; VAR x: Grid;  nu, dt, ds, threshold: Datatype;  iterations: LONGINT;  Boundaries: Boundary );
+		PROCEDURE Solve*( CONST b:Grid; VAR x: Grid;  nu, dt, ds, threshold: Datatype;  iterations: SIGNED32;  Boundaries: Boundary );
 		BEGIN
 			(* Laplacian(A)=second derivative of x is usually modeled as A*x with A containing the coefficients for discrete approximation of the laplacian,
 		but here, the Laplacian computed by digital filtering takes its place; if done in the real domain, the approximation is equivalent to MatMul; if done in the
@@ -92,8 +92,8 @@ TYPE
 			END;
 		END Solve;
 
-		PROCEDURE SolveMultigrid*( CONST b: Grid; VAR x: Grid;  nu, dt, ds, threshold: Datatype;  minsize, iterations: LONGINT;  Boundaries: Boundary );
-		VAR i:LONGINT;
+		PROCEDURE SolveMultigrid*( CONST b: Grid; VAR x: Grid;  nu, dt, ds, threshold: Datatype;  minsize, iterations: SIGNED32;  Boundaries: Boundary );
+		VAR i:SIGNED32;
 		BEGIN
 			alpha := ds * ds / (nu*dt);  beta := 2 + alpha;
 			IF (LEN( temp, 0 ) # LEN( b, 0 )) OR (LEN( temp, 1 ) # LEN( b, 1 )) THEN NEW( temp, LEN( b, 0 ), LEN( b, 1 ) );  END;
@@ -147,7 +147,7 @@ TYPE
 	apply the jacobi step to the whole data plane in its original format, which would correspond to the diagonal in the Jacobi Matrix formulation, at once, using a stencil like approach;
 	i.e., we do not need to convert the data explicitely into a sparse matrix for doing a smooting=Jacobi step *)
 	(*see also description in cited gpugems paper *)
-	VAR invbeta: Datatype;  lenx, leny: LONGINT;
+	VAR invbeta: Datatype;  lenx, leny: SIGNED32;
 	BEGIN
 		IF (LEN( x1, 0 ) # LEN( x, 0 )) OR (LEN( x1, 1 ) # LEN( x, 1 )) THEN NEW( x1, LEN( x, 0 ), LEN( x, 1 ) );  END;
 		lenx := LEN( x, 1 );  leny := LEN( x, 0 );  invbeta := 1 / beta;
@@ -161,7 +161,7 @@ TYPE
 		IF Boundaries # NIL THEN Boundaries( x ) END;
 	END JacobiStep;
 
-	PROCEDURE JacobiSteps( CONST b: Grid;  VAR x, x1: Grid;  alpha, beta: Datatype;  Boundaries: Boundary; repeats:LONGINT);
+	PROCEDURE JacobiSteps( CONST b: Grid;  VAR x, x1: Grid;  alpha, beta: Datatype;  Boundaries: Boundary; repeats:SIGNED32);
 	BEGIN
 		WHILE repeats>0 DO
 			JacobiStep(b,x,x1,alpha,beta,Boundaries);
@@ -172,7 +172,7 @@ TYPE
 	PROCEDURE Advect*( CONST source,  u, v: Grid;  VAR target: Grid;  dt, ds: Datatype; bilinear: BOOLEAN );
 	(*for each gridpoint in target grid, find value in source grid based on retrograd application of map u,v*)
 	(* to do: speed up by doing it linewise or slicewise *)
-	VAR x, y, ox, oy: LONGINT;  a, b: Datatype;
+	VAR x, y, ox, oy: SIGNED32;  a, b: Datatype;
 	BEGIN
 		FOR y := 0 TO LEN( source, 0 ) - 1 DO
 			FOR x := 0 TO LEN( source, 1 ) - 1 DO

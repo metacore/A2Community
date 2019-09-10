@@ -58,7 +58,7 @@ CONST
 
 	(*remove variability of data in direction given by vector; is related to projection to subspace*)
 	PROCEDURE EliminateDimension*(CONST a:Matrix; CONST b: Vector):Matrix;
-	VAR invb: Vector; a1, residual: Matrix; i:LONGINT;
+	VAR invb: Vector; a1, residual: Matrix; i:SIGNED32;
 	BEGIN
 		a1:=ProjectVectorsOnVector(a,b);
 		residual := a-a1;

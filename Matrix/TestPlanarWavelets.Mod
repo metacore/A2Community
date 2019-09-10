@@ -51,12 +51,12 @@ END Do2;
 
 PROCEDURE Do3*(context:Commands.Context);
 VAR
-	raw: ARRAY [?] OF INTEGER;
+	raw: ARRAY [?] OF SIGNED16;
 	data,result,result1,result2,result3: PlanarWavelets.Matrix;
 	analyzer: PlanarWavelets.Analyzer;
 	window: WMMatrix.Window;
 	filename: Files.FileName;
-	w,h: LONGINT;
+	w,h: SIGNED32;
 	f:Files.File; r:Files.Reader;
 BEGIN
 	IF context.arg.GetString(filename) & context.arg.GetInteger(h, FALSE) & context.arg.GetInteger(w,FALSE) THEN
@@ -91,12 +91,12 @@ END Do3;
 
 PROCEDURE Do4*(context:Commands.Context);
 VAR
-	raw: ARRAY [?] OF INTEGER;
+	raw: ARRAY [?] OF SIGNED16;
 	data,result,result1,result2,result3: PlanarWavelets.Matrix;
 	analyzer: PlanarWavelets.Analyzer;
 	window: WMMatrix.Window;
 	filename: Files.FileName;
-	w,h: LONGINT;
+	w,h: SIGNED32;
 	f:Files.File; r:Files.Reader;
 BEGIN
 	IF context.arg.GetString(filename) & context.arg.GetInteger(h, FALSE) & context.arg.GetInteger(w,FALSE) THEN
@@ -112,12 +112,12 @@ END Do4;
 
 PROCEDURE Do5*(context:Commands.Context);
 VAR
-	raw: ARRAY [?] OF INTEGER;
+	raw: ARRAY [?] OF SIGNED16;
 	data,result,result1,result2,result3: PlanarWavelets.Matrix;
 	analyzer: PlanarWavelets.Analyzer;
 	window: WMMatrix.Window;
 	filename: Files.FileName;
-	w,h: LONGINT;
+	w,h: SIGNED32;
 	f:Files.File; r:Files.Reader;
 BEGIN
 	IF context.arg.GetString(filename) & context.arg.GetInteger(h, FALSE) & context.arg.GetInteger(w,FALSE) THEN

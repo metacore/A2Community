@@ -151,14 +151,14 @@ SinCoeff=
 [   3.147982361891480E-003,   1.146209775441702E-003,  -8.020252059855142E-002,  -6.118574765875636E-001],
 [  -1.116022729640390E-002,   1.059015686111621E-002,  -6.846615396199357E-002,  -6.877658050487819E-001]];
 
-TYPE Datatype=REAL;
+TYPE Datatype=FLOAT32;
 
-PROCEDURE Dummy (a:REAL; CONST coeffs: ARRAY [4] OF REAL):REAL;
+PROCEDURE Dummy (a:FLOAT32; CONST coeffs: ARRAY [4] OF FLOAT32):FLOAT32;
 BEGIN
 	RETURN a
 END Dummy;
 
-PROCEDURE EvalSpline (a:REAL; CONST coeffs: ARRAY [4] OF REAL):REAL; (* problem with result when inlining in Do2, but would significantly speed up things*)
+PROCEDURE EvalSpline (a:FLOAT32; CONST coeffs: ARRAY [4] OF FLOAT32):FLOAT32; (* problem with result when inlining in Do2, but would significantly speed up things*)
 CONST ones=[1.0, 1.0, 1.0, 1.0];
 BEGIN
     CODE
@@ -181,32 +181,32 @@ BEGIN
       END;
 END EvalSpline;
 
-PROCEDURE nil(x:REAL):LONGINT;
+PROCEDURE nil(x:FLOAT32):SIGNED32;
 BEGIN
 	RETURN 0
 END nil;
 (*
-PROCEDURE -Truncate1(x:REAL):LONGINT; (*fast rounding - not working yet*)
+PROCEDURE -Truncate1(x:FLOAT32):SIGNED32; (*fast rounding - not working yet*)
 CODE{SYSTEM.i386, SYSTEM.SSE3, SYSTEM.FPU}
 	FISTTP [ESP+x]
 	ADD ESP,4
 END Truncate1;
 
 (*fast float-to-int conversions: see "Fast Floating Point To Integer Conversions by Michael Stoner,Intel  2012, discussing FISTP, FISTTP, and CVTTSS2SI"*)
-PROCEDURE -Truncate0(x:REAL):LONGINT; (*fast rounding towards zero*)
+PROCEDURE -Truncate0(x:FLOAT32):SIGNED32; (*fast rounding towards zero*)
 CODE{SYSTEM.i386, SYSTEM.SSE3, SYSTEM.FPU}
         CVTTSS2SI EAX, [ESP+x] ; convert single precision floating point to scalar DWORD
         ADD ESP, 4
 END Truncate0;
 
-PROCEDURE Truncate*(x:REAL):LONGINT;
+PROCEDURE Truncate*(x:FLOAT32):SIGNED32;
 BEGIN
 	RETURN Truncate0(x)
 END Truncate;
 
 *)
 (*
-	PROCEDURE -fastExp(x:LONGREAL):LONGREAL; (*approximation, relatively fast, inline, see https://codingforspeed.com/using-faster-exponential-approximation/ *)
+	PROCEDURE -fastExp(x:FLOAT64):FLOAT64; (*approximation, relatively fast, inline, see https://codingforspeed.com/using-faster-exponential-approximation/ *)
 	BEGIN
 		x:=1+ 1.0D0/1024 * x;
 		x:=x*x; x:=x*x; x:=x*x; x:=x*x;
@@ -217,7 +217,7 @@ END Truncate;
 *)
 	(*cubic B-spline approximation of tanh *)
 PROCEDURE tanhFast* (t: Datatype): Datatype; (* somewhat faster than tanh(), less accurate *)
-VAR sign:LONGINT;
+VAR sign:SIGNED32;
 BEGIN
 	CASE ENTIER(t) OF
 	|-3: RETURN -EvalSpline(-t-2, InterpolTanhCoeff03[2])
@@ -232,10 +232,10 @@ END tanhFast;
 
 	(*cubic B-spline approximation of tanh *)
 PROCEDURE tanhFast1* (t: Datatype): Datatype; (* somewhat faster than tanh(), less accurate *)
-VAR sign:LONGINT; et:LONGINT;
+VAR sign:SIGNED32; et:SIGNED32;
 BEGIN
 	IF ABS(t)<=1 THEN RETURN EvalSpline(0.5*(t+1), TanHCoeff21[1]);
-	ELSIF ABS(t)>PMath.expNegligible THEN (* REAL: 8.31776618958E+000  ; LONGREAL:  1.83684002848E+001*)
+	ELSIF ABS(t)>PMath.expNegligible THEN (* FLOAT32: 8.31776618958E+000  ; FLOAT64:  1.83684002848E+001*)
 		IF t>0 THEN RETURN 1.0
 		ELSE RETURN -1.0
 		END;
@@ -334,7 +334,7 @@ END tanh;
 
 (*
 PROCEDURE tanh1 (x: Datatype): Datatype; (* somewhat slower than tanh() *)
-VAR t:Datatype; i:LONGINT;
+VAR t:Datatype; i:SIGNED32;
 BEGIN
 	t:=10*x;
 	i:=ABS(Truncate0(t));
@@ -344,7 +344,7 @@ BEGIN
 	END;
 END tanh1;
 *)
-PROCEDURE logisticL*(x:LONGREAL):LONGREAL; (*! improve - remove double function call*)
+PROCEDURE logisticL*(x:FLOAT64):FLOAT64; (*! improve - remove double function call*)
 BEGIN
 	RETURN logistic0(SHORT(x))
 END logisticL;
@@ -445,7 +445,7 @@ END logistic0;
 
 
 PROCEDURE sin0 (x: Datatype): Datatype; (*somewhat faster when inlined, but then may trap??*)(*if noninlined, ~30% faster than Math.sin() *)
-VAR t:Datatype; i:LONGINT;
+VAR t:Datatype; i:SIGNED32;
 BEGIN
 	IF (x>Math.pi) THEN
 		i := ENTIER( x * invPi );
@@ -553,7 +553,7 @@ END cos;
 
 
 
-PROCEDURE fastExp(x:REAL):REAL; (*  approximation. decreasingly accurate for increasing x, and only faster than standard if inlined,  see https://codingforspeed.com/using-faster-exponential-approximation/ *)
+PROCEDURE fastExp(x:FLOAT32):FLOAT32; (*  approximation. decreasingly accurate for increasing x, and only faster than standard if inlined,  see https://codingforspeed.com/using-faster-exponential-approximation/ *)
 	BEGIN
 		IF x<2 THEN
 			x:=1+ 1.0E0/1024 * x; (*/1024/1024;  *) (*will increase accuracy for higher x *)
@@ -576,7 +576,7 @@ PROCEDURE fastExp(x:REAL):REAL; (*  approximation. decreasingly accurate for inc
 	END fastExp;
 
 
-PROCEDURE -fastExp2(x:LONGREAL):LONGREAL; (*  approximation. decreasingly accurate for increasing x, and only faster than standard if inlined,  see https://codingforspeed.com/using-faster-exponential-approximation/ *)
+PROCEDURE -fastExp2(x:FLOAT64):FLOAT64; (*  approximation. decreasingly accurate for increasing x, and only faster than standard if inlined,  see https://codingforspeed.com/using-faster-exponential-approximation/ *)
 CONST onePlus=1.0/1024; one=1.0;
 BEGIN
     CODE
@@ -602,7 +602,7 @@ BEGIN
       END;
 	END fastExp2;
 
-	PROCEDURE -scaledELU*(x:LONGREAL):LONGREAL;
+	PROCEDURE -scaledELU*(x:FLOAT64):FLOAT64;
 	CONST alpha=1.67326324235; lambda=1.050700987;
 			onePlus=1.0/1024; one=1.0;
 	BEGIN
@@ -636,7 +636,7 @@ BEGIN
       END;
 	END scaledELU;
 
-	PROCEDURE ScaledELU*(x:LONGREAL):LONGREAL;
+	PROCEDURE ScaledELU*(x:FLOAT64):FLOAT64;
 	CONST lambda=1.050700987;
 	BEGIN
 		IF x>0 THEN RETURN lambda*x
@@ -667,7 +667,7 @@ inline __m128 _mm_floor_ps2(const __m128& x){
 *)
 
 PROCEDURE Do*(context:Commands.Context);
-VAR i,j,k, t0,t1,t2,t3,t4,t5: LONGINT; x,y:REAL;
+VAR i,j,k, t0,t1,t2,t3,t4,t5: SIGNED32; x,y:FLOAT32;
 BEGIN
 	IF context.arg.GetInteger(i,FALSE) THEN END;
 
@@ -702,7 +702,7 @@ BEGIN
 END Do;
 
 PROCEDURE Do2*(context:Commands.Context);
-VAR i,j,t0,t1,t2,t3,t4: LONGINT; x,y:REAL;
+VAR i,j,t0,t1,t2,t3,t4: SIGNED32; x,y:FLOAT32;
 BEGIN
 	FOR i:=-10 TO 10 DO
 		x:=i/2;
@@ -735,14 +735,14 @@ BEGIN
 	context.out.Update;
 END Do2;
 
-PROCEDURE Do3(x:REAL);
-VAR y:LONGINT;
+PROCEDURE Do3(x:FLOAT32);
+VAR y:SIGNED32;
 BEGIN
 	y:=ENTIER(x)
 END Do3;
 
 PROCEDURE Do4*(context:Commands.Context);
-VAR i:LONGINT;
+VAR i:SIGNED32;
 BEGIN
 	context.out.Float(PMath.expNegligible,20);
 	context.out.Float(PMath.expNegligibleL,20);
@@ -760,7 +760,7 @@ BEGIN
 END Do4;
 
 PROCEDURE TestTanh*(context:Commands.Context);
-VAR x:LONGREAL; i:LONGINT;
+VAR x:FLOAT64; i:SIGNED32;
 BEGIN
 	FOR i:=-200 TO 200-1 DO
 		context.out.Float(tanh(i/20),20); context.out.Ln; context.out.Update;

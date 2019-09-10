@@ -3,7 +3,7 @@ MODULE TestMatrixStandardSolvers; (** AUTHOR ""; PURPOSE ""; *)
 IMPORT Base:=MatrixBase, Solvers:=MatrixStandardSolvers, MatrixTransforms, Util:= MatrixUtilities, Out:=KernelLog;
 
 PROCEDURE DoQR*;
-VAR QR: Solvers.QR; A,B,R, Ainv:Base.Matrix; b,x:Base.Vector; res:LONGINT;
+VAR QR: Solvers.QR; A,B,R, Ainv:Base.Matrix; b,x:Base.Vector; res:SIGNED32;
 BEGIN
 	A:=[[1,2,3,4],[4,3,3,1],[1,2,4,3],[2,2,2,3]]; b:=[2,3,4,5];
 
@@ -36,7 +36,7 @@ BEGIN
 END DoQR;
 
 PROCEDURE DoGaussJordan*;
-VAR GJ: Solvers.GaussJordan; A,B,R, Ainv:Base.Matrix; b,x:Base.Vector; res:LONGINT;
+VAR GJ: Solvers.GaussJordan; A,B,R, Ainv:Base.Matrix; b,x:Base.Vector; res:SIGNED32;
 BEGIN
 	A:=[[1,2,3,4],[4,3,3,1],[1,2,4,3],[2,2,2,3]]; b:=[2,3,4,5];
 
@@ -60,7 +60,7 @@ BEGIN
 END DoGaussJordan;
 
 PROCEDURE DoLU*;
-VAR LU: Solvers.LU; A,B,R, Ainv:Base.Matrix; b,x:Base.Vector; res:LONGINT;
+VAR LU: Solvers.LU; A,B,R, Ainv:Base.Matrix; b,x:Base.Vector; res:SIGNED32;
 BEGIN
 	A:=[[1,2,3,4],[4,3,3,1],[1,2,4,3],[2,2,2,3]]; b:=[2,3,4,5];
 
@@ -85,7 +85,7 @@ END DoLU;
 
 
 PROCEDURE DoGauss*;
-VAR G: Solvers.Gauss; A,B,R, Ainv:Base.Matrix; b,x:Base.Vector; res:LONGINT;
+VAR G: Solvers.Gauss; A,B,R, Ainv:Base.Matrix; b,x:Base.Vector; res:SIGNED32;
 BEGIN
 	A:=[[1,2,3,4],[4,3,3,1],[1,2,4,3],[2,2,2,3]]; b:=[2,3,4,5];
 
@@ -106,7 +106,7 @@ BEGIN
 END DoGauss;
 
 PROCEDURE DoCholesky*;
-VAR C: Solvers.Cholesky; A,B,R, Ainv:Base.Matrix; b,x:Base.Vector; res:LONGINT;
+VAR C: Solvers.Cholesky; A,B,R, Ainv:Base.Matrix; b,x:Base.Vector; res:SIGNED32;
 BEGIN
 	A:=[[1,2,3,4],[4,3,3,1],[1,2,4,3],[2,2,2,3]]; b:=[2,3,4,5]; (*NOT POSITIVE DEFINITE*)
 	(* TRY NOW WITH POSITIVE DEFINITE MATRIX !! *)
@@ -121,7 +121,7 @@ BEGIN
 END DoCholesky;
 (*
 PROCEDURE DoGaussAugmented*;
-VAR A,B: Base.Matrix; v:Base.Vector; res,i,j:LONGINT;
+VAR A,B: Base.Matrix; v:Base.Vector; res,i,j:SIGNED32;
 BEGIN
 	A:=[[1,2,3,4,2],[4,3,3,1,3],[1,2,4,3,4],[2,2,2,3,5]];;
 	Util.OutMatrix(A);
@@ -131,7 +131,7 @@ END DoGaussAugmented;*)
 
 
 PROCEDURE DoGaussElim*;
-VAR A,B: Base.Matrix; v:Base.Vector; res,i,j:LONGINT;
+VAR A,B: Base.Matrix; v:Base.Vector; res,i,j:SIGNED32;
 BEGIN
 	A:=[[1,2,3,4],[4,3,3,1],[1,2,4,3],[2,2,2,3]];
 	Util.OutMatrix(A);
@@ -141,7 +141,7 @@ END DoGaussElim;
 
 (*
 PROCEDURE DoQR2*;
-VAR A,B,Ainv:Matrix; b,x:Vector; res:LONGINT; index: IntVector;
+VAR A,B,Ainv:Matrix; b,x:Vector; res:SIGNED32; index: IntVector;
 BEGIN
 	A:=[[1,2,3,4],[4,3,3,1],[1,2,4,3],[2,2,2,3]]; b:=[2,3,4,5];
 	B:=A;

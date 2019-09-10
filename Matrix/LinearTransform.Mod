@@ -16,21 +16,21 @@ CONST
 	mirrorH* = Filters.mirrorH;  mirrorW* = Filters.mirrorW;
 	antimirrorH* = Filters.antimirrorH; antimirrorW* = Filters.antimirrorW;
 
-	PROCEDURE toSpline*( CONST in: Line;  VAR out: Line;  splinedegree: LONGINT );
+	PROCEDURE toSpline*( CONST in: Line;  VAR out: Line;  splinedegree: SIGNED32 );
 	BEGIN
 		IF splinedegree IN {0,1} THEN out:=in; RETURN END;
 		IF (LEN(out,0)=0) & (LEN(in,0)#0) THEN NEW( out, LEN(in,0)) END;
 		Filter( in, out, Filters.CreateSplineFilter( Filters.DirectBSpline0 + splinedegree ), mirrorH );  (* this boundary combination does not lead to perfect reconstructino at the boundaries when combined with the same boundariies in the inverse operation *)
 	END toSpline;
 
-	PROCEDURE fromSpline*( CONST in: Line;  VAR out: Line;  splinedegree: LONGINT);
+	PROCEDURE fromSpline*( CONST in: Line;  VAR out: Line;  splinedegree: SIGNED32);
 	BEGIN
 		IF splinedegree IN {0,1} THEN out:=in; RETURN END;
 		IF (LEN(out,0)=0) & (LEN(in,0)#0) THEN NEW( out, LEN(in,0)) END;
 		Filter( in, out, Filters.CreateSplineFilter( Filters.InverseBSpline0 + splinedegree ), mirrorH );
 	END fromSpline;
 
-	PROCEDURE Filter*( CONST data: Line;  VAR resdata: Line;  filter: Filters.Filter;  boundary: LONGINT );
+	PROCEDURE Filter*( CONST data: Line;  VAR resdata: Line;  filter: Filters.Filter;  boundary: SIGNED32 );
 	VAR convolver: LinearConvolve.Convolver;
 	BEGIN
 		IF filter = NIL THEN resdata := data;  RETURN END;
@@ -41,7 +41,7 @@ CONST
 
 	(* possible filters: Filters.CreateSplineFilter( Filters.LeastSquareSpline0Down2 + splinedegree ) *)  (*ToDo: IN_PLACE !!*)
 
-	PROCEDURE Reduce*( CONST data: Line;  VAR resdata: Line;  filter: Filters.Filter;  boundary: LONGINT );
+	PROCEDURE Reduce*( CONST data: Line;  VAR resdata: Line;  filter: Filters.Filter;  boundary: SIGNED32 );
 	VAR convolver: LinearConvolve.Convolver;
 	BEGIN
 		IF (LEN(resdata,0)=0) & (LEN(data,0)#0) THEN NEW( resdata, (LEN(data,0)+1)DIV 2) END;
@@ -52,7 +52,7 @@ CONST
 
 	(* possible filters: Filters.CreateSplineFilter( Filters.LeastSquareSpline0Up2 + splinedegree ) *)  (*todo:  in-place*)
 
-	PROCEDURE Expand*( CONST data: Line;  VAR resdata: Line;  filter: Filters.Filter; boundary: LONGINT );
+	PROCEDURE Expand*( CONST data: Line;  VAR resdata: Line;  filter: Filters.Filter; boundary: SIGNED32 );
 	VAR convolver: LinearConvolve.Convolver;
 	BEGIN
 	(*to do: check sizes, check filter*)  (*check for in-place*)
@@ -63,7 +63,7 @@ CONST
 	END Expand;
 
 (*
-	PROCEDURE clamp(x:LONGINT; low,high:LONGINT):LONGINT;
+	PROCEDURE clamp(x:SIGNED32; low,high:SIGNED32):SIGNED32;
 	BEGIN
 		(*RETURN MIN(high,MAX(x,low)); *)
 		IF x<low THEN RETURN low ELSIF x>high THEN RETURN high ELSE RETURN x END;
@@ -74,9 +74,9 @@ CONST
 (** Resampling of input data, starting from x0,y0, in increments of dx,dy; if upscaling (dx,dy>1), then )
 	Input: data: spline coefficients of "splinedegree"; allocated 'resdata' of desired size; boundary: see Filters.Mod for boundary types
 	Output: resampled data in 'resdata' *)
-	PROCEDURE Resample*( CONST data: Line;  VAR resdata: Line;  x0, y0, dx, dy: Datatype;  splinedegree, boundary: LONGINT );
-	VAR w: Line;  indices: ARRAY [ * ] OF LONGINT;
-		temp: Line;  x, y: LONGINT;  v: Signal;  x1,x2,y1,y2,Dx,Dy:LONGINT; ddx,ddy:Datatype;
+	PROCEDURE Resample*( CONST data: Line;  VAR resdata: Line;  x0, y0, dx, dy: Datatype;  splinedegree, boundary: SIGNED32 );
+	VAR w: Line;  indices: ARRAY [ * ] OF SIGNED32;
+		temp: Line;  x, y: SIGNED32;  v: Signal;  x1,x2,y1,y2,Dx,Dy:SIGNED32; ddx,ddy:Datatype;
 	BEGIN
 		NEW( temp, LEN( data, 0 ), LEN( resdata, 1 ) );
 		NEW( v, LEN( resdata, 1 ) );
@@ -114,7 +114,7 @@ CONST
 (*	PROCEDURE resample( CONST data: ARRAY OF Datatype;  VAR res: ARRAY OF Datatype );
 	END resample;
 
-	PROCEDURE Resample2D( CONST data: Line;  VAR resdata: Line;  filter: Filters.Filter;  directions: SET;  boundary: INTEGER );
+	PROCEDURE Resample2D( CONST data: Line;  VAR resdata: Line;  filter: Filters.Filter;  directions: SET;  boundary: SIGNED16 );
 	END Resample2D;
 *)
 *)
@@ -139,7 +139,7 @@ CONST
 	END Expand2;
 
 (* to do: make order of dimensions for analyse/reconstruct consistent (e.g., 1->2->3, on way back: 3->2->1 *)
-	PROCEDURE Wavelet*( CONST data: Line;  VAR resdata: Line;  wavelet: Wavelets.WaveletFamily;  boundary: INTEGER;  analyze: BOOLEAN );
+	PROCEDURE Wavelet*( CONST data: Line;  VAR resdata: Line;  wavelet: Wavelets.WaveletFamily;  boundary: SIGNED16;  analyze: BOOLEAN );
 	VAR waveconvolver: Wavelets.WaveletConvolver;
 	BEGIN
 		IF wavelet = NIL THEN HALT( 100 ) END;

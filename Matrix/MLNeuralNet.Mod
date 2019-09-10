@@ -12,7 +12,7 @@ Artificial Neural Network of arbitrary levels with arbitrary number of units of 
  normalize values to lower ones... => Normalize input and output range first to range  {-1 .. 1 }  !
 
  ToDo: Performance bottlenecks:
- - REAL instead of LONGREAL
+ - FLOAT32 instead of FLOAT64
  - SSE instead of scalar.
  - better All2 procedure.
  - for DBNs, packed boolean arrays may be considered together with SSE. Also, fixedpoint, e.g. 16Bit, may be good for parallelization and performance.
@@ -73,7 +73,7 @@ CONST
 
 
 TYPE
-	IntVector* = ARRAY [ * ] OF LONGINT;
+	IntVector* = ARRAY [ * ] OF SIGNED32;
 	Datatype* = MatrixBase.Datatype;
 	Vector* = MatrixBase.Vector;
 	Matrix* = MatrixBase.Matrix;
@@ -91,7 +91,7 @@ TYPE
 		dweights, (*weight change*)
 		oldweights: (*weights before last weight update, for momentum*)
 		   Matrix;
-		type*: LONGINT; (*linear, sigmoid, softmax etc*)
+		type*: SIGNED32; (*linear, sigmoid, softmax etc*)
 		Error*: Datatype;
 		next, last*: Layer;
 		eta, alpha, startweight, decay: Datatype;   (*decay of network weights -> leads to elimination of near-irrelevant nodes and smaller number of relevant weights*)
@@ -170,7 +170,7 @@ TYPE
 
 		PROCEDURE initWeights;
 		VAR
-			i, j: LONGINT;
+			i, j: SIGNED32;
 			deltaX, x: Datatype;
 		BEGIN
 			deltaX := 2 * startweight / (LEN( weights, 0 ) * LEN( weights, 1 ));  x := -startweight;
@@ -202,8 +202,8 @@ TYPE	RestrictedBoltzmannMachine* = OBJECT
 		out*, delta: Dataset;
 		hid, recon, v: Vector;
 		hidden3, reconstructed3, dout3: Dataset;
-		type*: LONGINT;
-		weightDecayType*:LONGINT; (* 0=non, 1=L1, 2=L2;   L2 dampens strong weights, L1 drives many less important weights to zero*)
+		type*: SIGNED32;
+		weightDecayType*:SIGNED32; (* 0=non, 1=L1, 2=L2;   L2 dampens strong weights, L1 drives many less important weights to zero*)
 		Error*, weightL2, weightL1: Datatype;
 		eta*, alpha*, weightDecay*, startweight: Datatype;
 		hidBias, visBias: Datatype; (*? should bias be  a matrix ? *)
@@ -229,7 +229,7 @@ TYPE	RestrictedBoltzmannMachine* = OBJECT
 			*)
 		END Init;
 
-		PROCEDURE Create*(nVisible, nHidden:LONGINT; function:Function; derivativeDelta:Function2; binary:BOOLEAN);
+		PROCEDURE Create*(nVisible, nHidden:SIGNED32; function:Function; derivativeDelta:Function2; binary:BOOLEAN);
 		BEGIN
 			NEW(hidden, 1, nHidden);
 			NEW(weights, nVisible, nHidden);
@@ -252,7 +252,7 @@ TYPE	RestrictedBoltzmannMachine* = OBJECT
 		*)
 		PROCEDURE ContrastiveDivergenceStep*( CONST visible: Matrix ): Matrix; (* or (CONST (visible, hidden:Matrix):Matrix; have Boolean/Bernoullian value *)
 		CONST GibbsSteps=1;
-		VAR i:LONGINT;
+		VAR i:SIGNED32;
 		BEGIN
 			hidden := visible * weights (*+ hidBias?*);
 
@@ -286,7 +286,7 @@ TYPE	RestrictedBoltzmannMachine* = OBJECT
 		(*
 		PROCEDURE ContrastiveDivergenceStepVector*( CONST visible: Vector ): Vector; (* or (CONST (visible, hidden:Matrix):Matrix; have Boolean/Bernoullian value *)
 		CONST GibbsSteps=1;
-		VAR i:LONGINT;
+		VAR i:SIGNED32;
 		BEGIN
 			hid := visible * weights + hidBias(*?*);
 
@@ -351,7 +351,7 @@ TYPE	RestrictedBoltzmannMachine* = OBJECT
 		END cost;
 
 		PROCEDURE Propagate*( CONST in: Dataset );
-		VAR j:LONGINT;
+		VAR j:SIGNED32;
 		BEGIN
 			IF DIM(in)=2 THEN
 				SameDimension(hiddenAll, [LEN(in,0), LEN(weights,1)]);
@@ -369,7 +369,7 @@ TYPE	RestrictedBoltzmannMachine* = OBJECT
 
 		(* includes chain of children - should this be kept or moved to DBN ?*)
 		PROCEDURE Evaluate*( CONST in: Dataset ): Dataset;
-		VAR j:LONGINT;
+		VAR j:SIGNED32;
 		BEGIN
 			IF DIM(in)=2 THEN
 				SameDimension(out, [LEN( in, 0 ), LEN( weights, 1 )] );
@@ -385,7 +385,7 @@ TYPE	RestrictedBoltzmannMachine* = OBJECT
 		END Evaluate;
 
 		PROCEDURE BackPropagate*( CONST out: Dataset);
-		VAR j:LONGINT;
+		VAR j:SIGNED32;
 		BEGIN
 			IF DIM(out)=2 THEN
 				SameDimension(reconstructed, [LEN(out,0), LEN(weights,0)]);
@@ -408,7 +408,7 @@ TYPE	RestrictedBoltzmannMachine* = OBJECT
 		(*to do: find out, if the implemented conjugate gradient procedure is beneficial, compared to simple backpropagation as in "Network" *)
 		(* conjugate gradient may be good or bad ...: http://www.researchgate.net/publication/3857463_Overfitting_and_neural_networks_conjugate_gradient_andbackpropagation *)
 		PROCEDURE BackPropError*( CONST in, dout: Dataset; useConjugateGradient:BOOLEAN):Dataset;
-		VAR i,j:LONGINT;
+		VAR i,j:SIGNED32;
 		BEGIN
 			(*! unfinished, untested *)
 
@@ -471,7 +471,7 @@ TYPE	RestrictedBoltzmannMachine* = OBJECT
 
 
 		PROCEDURE initWeights;
-		VAR i, j: LONGINT;  deltaX, x: Datatype;
+		VAR i, j: SIGNED32;  deltaX, x: Datatype;
 		BEGIN
 			(*deltaX := 2 * startweight / (LEN( weights, 0 ) * LEN( weights, 1 ));  x := -startweight;
 			FOR i := 0 TO LEN( weights, 0 ) - 1 DO
@@ -489,7 +489,7 @@ TYPE
 	Network* = OBJECT (MLBase.LearningMachine)
 	VAR InMatrix*, TargetMatrix*, ErrorMatrix*: Matrix;
 		ValidationIn*, ValidationTarget*, ValidationResult: Matrix;
-		Inputs, Outputs, trainingEpisodes*: LONGINT;
+		Inputs, Outputs, trainingEpisodes*: SIGNED32;
 		Layers*: Layer; (* linked list of Layers *)
 		trainingError*: Datatype;
 		eta*, alpha*, startweight*, decay*: Datatype;
@@ -517,9 +517,9 @@ TYPE
 			2nd level = first hidden level, type is Type[0]
 			Type of nodes in level i= Type[i-2]
 			last level = output level.*)
-		PROCEDURE Build*( CONST Nodes: IntVector;  CONST Type: IntVector );   (*(Nodes:ARRAY OF INTEGER; Type:ARRAY OF INTEGER):Layer;*)
+		PROCEDURE Build*( CONST Nodes: IntVector;  CONST Type: IntVector );   (*(Nodes:ARRAY OF SIGNED16; Type:ARRAY OF SIGNED16):Layer;*)
 		VAR
-			i: LONGINT;  L: Layer;
+			i: SIGNED32;  L: Layer;
 		BEGIN
 			Inputs := Nodes[0];  Outputs := Nodes[LEN( Nodes,0 ) - 1];
 			ASSERT( LEN( Nodes ) = LEN( Type ) + 1, 100 );  ASSERT( LEN( Nodes ) > 1, 101 );  i := 0;
@@ -539,7 +539,7 @@ TYPE
 
 		PROCEDURE Build2*(CONST Nodes: IntVector; CONST Type: IntVector; CONST InitWeights: Matrix); (*todo: initialize multiple layers*)
 		VAR
-			i: LONGINT;
+			i: SIGNED32;
 			L: Layer;
 		BEGIN
 			Build(Nodes,Type);
@@ -554,7 +554,7 @@ TYPE
 
 		(** Precondition: training data arranged in matrices:  Samples[samples,features]; Targets[samples, results] *)
 		PROCEDURE Learn*( CONST Samples, Targets: Matrix );
-		VAR episode:LONGINT; l:Layer;
+		VAR episode:SIGNED32; l:Layer;
 		BEGIN
 			InMatrix := Samples;  TargetMatrix := Targets;
 			FOR episode := 0 TO trainingEpisodes - 1 DO
@@ -629,12 +629,12 @@ TYPE	DeepBelieveNetwork*= OBJECT (MLBase.LearningMachine) (*! untested*)
 	*)
 		VAR
 			layers*, last: RestrictedBoltzmannMachine;
-			layercount:LONGINT;
+			layercount:SIGNED32;
 			persistent:ANY;
 			log*: Streams.Writer;
 			evaluation,reconstruction,delta: Dataset;
 			(*evaluation3,reconstruction3,delta3: ARRAY [*,*,*] OF Datatype;*)
-			error:LONGREAL;
+			error:FLOAT64;
 			filter: FilterProc;
 			randomLines:BOOLEAN;
 
@@ -655,7 +655,7 @@ TYPE	DeepBelieveNetwork*= OBJECT (MLBase.LearningMachine) (*! untested*)
 			*)
 		PROCEDURE & Build*( CONST nodes: IntVector; CONST types: IntVector; function:Function; derivativeDelta:Function2; binary: BOOLEAN );
 		VAR rbm: RestrictedBoltzmannMachine;
-			i:LONGINT;
+			i:SIGNED32;
 		BEGIN
 			DBNeta:=0.1;
 			layercount:=LEN(nodes,0)-1;
@@ -674,8 +674,8 @@ TYPE	DeepBelieveNetwork*= OBJECT (MLBase.LearningMachine) (*! untested*)
 
 		(* input: Matrix: rows=samples, columns =sample values
 		 3D input: first two dimensions=sampes, last dimension =sample values*)
-		PROCEDURE TrainUnsupervised*(CONST input:Dataset; iterations: LONGINT); (*! to do: reasonable progress output,e.g. residual on backpropagation*)
-		VAR rbm:RestrictedBoltzmannMachine; m,oldweights:Matrix; i,j,k,line, level,reportStep:LONGINT; t0,t1:LONGINT;
+		PROCEDURE TrainUnsupervised*(CONST input:Dataset; iterations: SIGNED32); (*! to do: reasonable progress output,e.g. residual on backpropagation*)
+		VAR rbm:RestrictedBoltzmannMachine; m,oldweights:Matrix; i,j,k,line, level,reportStep:SIGNED32; t0,t1:SIGNED32;
 			alias:Dataset;
 		BEGIN
 			rbm:=layers;
@@ -790,8 +790,8 @@ TYPE	DeepBelieveNetwork*= OBJECT (MLBase.LearningMachine) (*! untested*)
 		END TrainUnsupervised;
 
 				(* input: Matrix: rows=samples, columns =sample values*)
-		PROCEDURE TrainUnsupervisedBatch*(CONST input:ARRAY [*,*,*] OF Datatype; iterations: LONGINT); (*! to do: reasonable progress output,e.g. residual on backpropagation*)
-		VAR rbm:RestrictedBoltzmannMachine; m,oldweights:Matrix; i,j,level,reportStep:LONGINT; t0,t1:LONGINT;
+		PROCEDURE TrainUnsupervisedBatch*(CONST input:ARRAY [*,*,*] OF Datatype; iterations: SIGNED32); (*! to do: reasonable progress output,e.g. residual on backpropagation*)
+		VAR rbm:RestrictedBoltzmannMachine; m,oldweights:Matrix; i,j,level,reportStep:SIGNED32; t0,t1:SIGNED32;
 		BEGIN
 			ASSERT(DIM(input)=3, 200);
 			rbm:=layers;
@@ -858,8 +858,8 @@ TYPE	DeepBelieveNetwork*= OBJECT (MLBase.LearningMachine) (*! untested*)
 		END TrainUnsupervisedBatch;
 
 
-		PROCEDURE TrainSupervised*(CONST input,target:Dataset; iterations: LONGINT);
-		VAR i:LONGINT;
+		PROCEDURE TrainSupervised*(CONST input,target:Dataset; iterations: SIGNED32);
+		VAR i:SIGNED32;
 			rbm: RestrictedBoltzmannMachine;
 		BEGIN
 			FOR i:=0 TO iterations-1 DO
@@ -913,13 +913,13 @@ TYPE	DeepBelieveNetwork*= OBJECT (MLBase.LearningMachine) (*! untested*)
 	END DeepBelieveNetwork;
 
 	PROCEDURE SameDimension(VAR a:Dataset; CONST len:ARRAY [*] OF SIZE);
-	VAR d:LONGINT;
+	VAR d:SIGNED32;
 	BEGIN
 		IF (DIM(a)#LEN(len,0)) OR (LEN(a)#len) THEN NEW(a,len) END;
 	END SameDimension;
 
 	PROCEDURE All1(CONST m: ARRAY [?] OF Datatype; op: PROCEDURE(x:Datatype):Datatype):ARRAY [?] OF Datatype;
-	VAR i,j,k:LONGINT;
+	VAR i,j,k:SIGNED32;
 	BEGIN
 		SameDimension(RESULT, LEN(m));
 		CASE DIM(m) OF
@@ -947,7 +947,7 @@ TYPE	DeepBelieveNetwork*= OBJECT (MLBase.LearningMachine) (*! untested*)
 	END All1;
 
 	PROCEDURE All1V(VAR m: ARRAY [?] OF Datatype; op: PROCEDURE(VAR x:Datatype));
-	VAR i,j,k:LONGINT;
+	VAR i,j,k:SIGNED32;
 	BEGIN
 		CASE DIM(m) OF
 		|1:	FOR i:=0 TO LEN(m,0)-1 DO
@@ -974,7 +974,7 @@ TYPE	DeepBelieveNetwork*= OBJECT (MLBase.LearningMachine) (*! untested*)
 
 	(*apply a procedure operating on a line at a time to a matrix*)
 	PROCEDURE AllVec(CONST m: ARRAY [?] OF Datatype; op: PROCEDURE(VAR m: ARRAY[?] OF Datatype)  ):ARRAY [?] OF Datatype;
-	VAR i,j,k:LONGINT;
+	VAR i,j,k:SIGNED32;
 		temp: ARRAY[?] OF Datatype;
 	BEGIN
 		SameDimension(RESULT, LEN(m));
@@ -1005,8 +1005,8 @@ TYPE	DeepBelieveNetwork*= OBJECT (MLBase.LearningMachine) (*! untested*)
 		RETURN RESULT
 	END AllVec;
 
-	PROCEDURE Count(CONST a: Dataset):LONGINT;
-	VAR i:LONGINT; res:LONGINT;
+	PROCEDURE Count(CONST a: Dataset):SIGNED32;
+	VAR i:SIGNED32; res:SIGNED32;
 	BEGIN
 		res:=1;
 		FOR i:=0 TO DIM(a)-1 DO
@@ -1022,7 +1022,7 @@ TYPE	DeepBelieveNetwork*= OBJECT (MLBase.LearningMachine) (*! untested*)
 
 
 	PROCEDURE All2(CONST m1,m2: ARRAY [?] OF Datatype; op: PROCEDURE(x,y:Datatype):Datatype):ARRAY [?] OF Datatype;
-	VAR i, j: LONGINT;
+	VAR i, j: SIGNED32;
 	BEGIN
 		FOR i := 0 TO LEN( m1, 0 ) - 1 DO
 			FOR j := 0 TO LEN( m1, 1 ) - 1 DO RESULT[i, j] := op( m1[i, j], m2[i, j] );  END;
@@ -1046,7 +1046,7 @@ TYPE	DeepBelieveNetwork*= OBJECT (MLBase.LearningMachine) (*! untested*)
 	*)
 
 (*
-	PROCEDURE -Truncate0(x:REAL):LONGINT; (*fast truncation*)
+	PROCEDURE -Truncate0(x:FLOAT32):SIGNED32; (*fast truncation*)
 	CODE{SYSTEM.i386, SYSTEM.SSE3, SYSTEM.FPU}
 	        CVTTSS2SI EAX, [ESP+x] ; convert single precision floating point to scalar DWORD
 	        ADD ESP, 4
@@ -1108,7 +1108,7 @@ PROCEDURE TruncateStochastic(CONST m:Dataset):Dataset; (* version may depend on 
 		RETURN delta * 2* (1 - y) * y
 	END SymmetricLogisticDerivativeDelta;
 
-	PROCEDURE Tanh*( x: LONGREAL ): LONGREAL;
+	PROCEDURE Tanh*( x: FLOAT64 ): FLOAT64;
 	BEGIN
 		(*RETURN PMath.tanhL(x);*)
 		RETURN PMathSSE.tanh(SHORT(x))
@@ -1186,7 +1186,7 @@ PROCEDURE TruncateStochastic(CONST m:Dataset):Dataset; (* version may depend on 
 	(*working on data arrays*)
 	(*Normalize data using a sigmoid function to -1..0..1 using statistical descriptors *)
 	PROCEDURE SoftMaxTanhNormalize*(VAR x: ARRAY[?] OF Datatype);
-	VAR mean, sd:Datatype; N: LONGINT;
+	VAR mean, sd:Datatype; N: SIGNED32;
 	BEGIN
 		N:=Count(x);
 		x:=x-SUM(x)/N;
@@ -1205,7 +1205,7 @@ PROCEDURE TruncateStochastic(CONST m:Dataset):Dataset; (* version may depend on 
 	END SoftMax;
 
 	PROCEDURE SoftMaxNormalize*(VAR m: ARRAY[?] OF Datatype);
-	VAR N:LONGINT; sd: Datatype;
+	VAR N:SIGNED32; sd: Datatype;
 	BEGIN
 		N:=Count(m);
 		m:=m-SUM(m)/N;
@@ -1215,7 +1215,7 @@ PROCEDURE TruncateStochastic(CONST m:Dataset):Dataset; (* version may depend on 
 		m:=1/SUM(m) * m
 	END SoftMaxNormalize;
 
-	PROCEDURE NewLayer( InNodes, outNodes, type: LONGINT ): Layer;
+	PROCEDURE NewLayer( InNodes, outNodes, type: SIGNED32 ): Layer;
 	VAR L: Layer;
 	BEGIN
 		ASSERT( (InNodes > 0) & (outNodes > 0), 100 );  ASSERT( type IN {linear, sigmoid, softmax}, 101 );
@@ -1235,8 +1235,8 @@ PROCEDURE TruncateStochastic(CONST m:Dataset):Dataset; (* version may depend on 
 		f: Files.File;
 		r: Files.Reader;
 		filename: ARRAY 128 OF  CHAR;
-		numLines: LONGINT;
-		i,j: LONGINT;
+		numLines: SIGNED32;
+		i,j: SIGNED32;
 	BEGIN
 		filename:="layer0rawinput.MtA";
 		(*NEW(alldata,MIN(maxSamples, numLines DIV valuesPerSample),valuesPerSample);*)
@@ -1247,12 +1247,12 @@ PROCEDURE TruncateStochastic(CONST m:Dataset):Dataset; (* version may depend on 
 		f.Close();
 	END LoadDataFromFile;
 
-	PROCEDURE LoadTargetFromFile(VAR target: ARRAY[*,*] OF LONGINT);
+	PROCEDURE LoadTargetFromFile(VAR target: ARRAY[*,*] OF SIGNED32);
 	CONST
 		filename="train-labels.idx1-ubyte";
 		maxSamples=100;
 	VAR
-		numLabels: LONGINT;
+		numLabels: SIGNED32;
 	BEGIN
 		(*numLabels:=RBMFineTuning.LoadLabels(target, filename,maxSamples);  MNIST dataformat specific, omitted for now*)
 		HALT(100);
@@ -1265,7 +1265,7 @@ PROCEDURE TruncateStochastic(CONST m:Dataset):Dataset; (* version may depend on 
 		numOutput=200;
 	VAR
 		visBias,hidBias: ARRAY[*] OF Datatype;
-		i,j: LONGINT;
+		i,j: SIGNED32;
 		wab: ARRAY[*] OF Datatype;
 		f: Files.File;
 		r: Files.Reader;
@@ -1286,8 +1286,8 @@ PROCEDURE TruncateStochastic(CONST m:Dataset):Dataset; (* version may depend on 
 	END LoadWeightsFromFile;
 
 (* invent some training data for demo *)
-	PROCEDURE SampleData( Samples, InputNodes, OutputNodes: LONGINT;  VAR InMatrix, TargetMatrix: Matrix );
-	VAR i, j: LONGINT;
+	PROCEDURE SampleData( Samples, InputNodes, OutputNodes: SIGNED32;  VAR InMatrix, TargetMatrix: Matrix );
+	VAR i, j: SIGNED32;
 	BEGIN
 		(*Initialize input & output matrices with the corresponding, relatively arbitrary, datasets *)
 		NEW( InMatrix, Samples, InputNodes );
@@ -1327,8 +1327,8 @@ PROCEDURE TruncateStochastic(CONST m:Dataset):Dataset; (* version may depend on 
 	END BinarizeZero;
 
 	(* invent some training data for demo *)
-	PROCEDURE SampleDataBinary( Samples, InputNodes, OutputNodes: LONGINT;  VAR InMatrix, TargetMatrix: Matrix );
-	VAR i, j: LONGINT;
+	PROCEDURE SampleDataBinary( Samples, InputNodes, OutputNodes: SIGNED32;  VAR InMatrix, TargetMatrix: Matrix );
+	VAR i, j: SIGNED32;
 	BEGIN
 		(*Initialize input & output matrices with the corresponding, relatively arbitrary, datasets *)
 		NEW( InMatrix, Samples, InputNodes );
@@ -1354,8 +1354,8 @@ PROCEDURE TruncateStochastic(CONST m:Dataset):Dataset; (* version may depend on 
 
 
 	(* invent some training data for demo with one-hot output*)
-	PROCEDURE SampleData2( Samples, InputNodes, OutputNodes: LONGINT;  VAR InMatrix, TargetMatrix: Matrix );
-	VAR i, j: LONGINT;
+	PROCEDURE SampleData2( Samples, InputNodes, OutputNodes: SIGNED32;  VAR InMatrix, TargetMatrix: Matrix );
+	VAR i, j: SIGNED32;
 	BEGIN
 		(*Initialize input & output matrices with the corresponding, relatively arbitrary, datasets *)
 		NEW( InMatrix, Samples, InputNodes );
@@ -1378,8 +1378,8 @@ PROCEDURE TruncateStochastic(CONST m:Dataset):Dataset; (* version may depend on 
 	END SampleData2;
 
 	(* invent some embarrassingly simple training data*)
-	PROCEDURE SampleDataSimple( Samples, InputNodes, OutputNodes: LONGINT;  VAR InMatrix, TargetMatrix: Matrix );
-	VAR i: LONGINT;
+	PROCEDURE SampleDataSimple( Samples, InputNodes, OutputNodes: SIGNED32;  VAR InMatrix, TargetMatrix: Matrix );
+	VAR i: SIGNED32;
 	BEGIN
 		(*Initialize input & output matrices with the corresponding, relatively arbitrary, datasets *)
 		NEW( InMatrix, Samples, InputNodes );
@@ -1396,8 +1396,8 @@ PROCEDURE TruncateStochastic(CONST m:Dataset):Dataset; (* version may depend on 
 
 
 	(* worst case scenario: data have no hidden structure *)
-	PROCEDURE RandomData( Samples, InputNodes, OutputNodes: LONGINT;  VAR InMatrix, TargetMatrix: Matrix );
-	VAR i, j: LONGINT;
+	PROCEDURE RandomData( Samples, InputNodes, OutputNodes: SIGNED32;  VAR InMatrix, TargetMatrix: Matrix );
+	VAR i, j: SIGNED32;
 	BEGIN
 		(*Initialize input & output matrices with the corresponding, relatively arbitrary, datasets *)
 		NEW( InMatrix, Samples, InputNodes );
@@ -1420,13 +1420,13 @@ PROCEDURE TruncateStochastic(CONST m:Dataset):Dataset; (* version may depend on 
 	VAR
 		w01: Matrix;
 		samples: ARRAY[*,*] OF Datatype;
-		target: ARRAY [*,*] OF LONGINT;
+		target: ARRAY [*,*] OF SIGNED32;
 		Classification: Matrix;
 		Net: Network;
-		iterations:LONGINT;
-		layers:LONGINT;
-		layerVector, typeVector: ARRAY [*] OF LONGINT;
-		SSE: LONGREAL;
+		iterations:SIGNED32;
+		layers:SIGNED32;
+		layerVector, typeVector: ARRAY [*] OF SIGNED32;
+		SSE: FLOAT64;
 
 	BEGIN
 
@@ -1491,7 +1491,7 @@ PROCEDURE TruncateStochastic(CONST m:Dataset):Dataset; (* version may depend on 
 
 	PROCEDURE TestSigmoid*(context: Commands.Context);
 	VAR
-		dummy: LONGREAL;
+		dummy: FLOAT64;
 	BEGIN
 			dummy:=PMath.tanh(0.3); (*works fine*)
 			TRACE(ENTIER(1000*dummy));
@@ -1510,9 +1510,9 @@ PROCEDURE TruncateStochastic(CONST m:Dataset):Dataset; (* version may depend on 
 	PROCEDURE Test*(context:Commands.Context);
 	CONST Samples = 10;  InputNodes = 8;  FirstLayerNodes = 5;  outputNodes = 8;
 	VAR InMatrix, TargetMatrix, Classification: Matrix;  Net: Network;
-	iterations:LONGINT;
-		SSE: LONGREAL;
-		i,o,f,s,l:LONGINT;
+	iterations:SIGNED32;
+		SSE: FLOAT64;
+		i,o,f,s,l:SIGNED32;
 
 	BEGIN
 
@@ -1562,10 +1562,10 @@ PROCEDURE TruncateStochastic(CONST m:Dataset):Dataset; (* version may depend on 
 	PROCEDURE TestDeep*(context:Commands.Context);
 	CONST Samples = 40;  InputNodes = 8;  InnerNodes = 10;  outputNodes = 8;
 	VAR InMatrix, TargetMatrix, Classification: Matrix;  Net: Network;
-		iterations:LONGINT;
-		layers:LONGINT;
-		layerVector, typeVector: ARRAY [*] OF LONGINT;
-		SSE: LONGREAL;
+		iterations:SIGNED32;
+		layers:SIGNED32;
+		layerVector, typeVector: ARRAY [*] OF SIGNED32;
+		SSE: FLOAT64;
 	BEGIN
 		Out.String( "Neural Network Demo" );  Out.Ln;
 		(*create matrices depending on sample size and input/output number; example is for linear descent search;
@@ -1624,10 +1624,10 @@ PROCEDURE TruncateStochastic(CONST m:Dataset):Dataset; (* version may depend on 
 	PROCEDURE TestCO*;
 	CONST FirstLayerNodes = 12;
 	VAR InMatrix, TargetMatrix, InMatrixTrain, InMatrixTest, TargetMatrixTrain, TargetMatrixTest, Classification: Matrix; Net: Network;
-		insamples, outsamples, innodes, outnodes, row, col: LONGINT;
+		insamples, outsamples, innodes, outnodes, row, col: SIGNED32;
 		fileIn, fileOut: Files.File; inreader,outreader: Files.Reader;
-		SSE: LONGREAL;
-		l:LONGINT;
+		SSE: FLOAT64;
+		l:SIGNED32;
 	BEGIN
 		Out.String( "Neural Network Analysis of Cardiac Output" );  Out.Ln;
 
@@ -1708,11 +1708,11 @@ PROCEDURE TruncateStochastic(CONST m:Dataset):Dataset; (* version may depend on 
 	PROCEDURE TestCO2*(context:Commands.Context);
 	CONST InnerNodes = 12;
 	VAR InMatrix, TargetMatrix, InMatrixTrain, InMatrixTest, TargetMatrixTrain, TargetMatrixTest, Classification: Matrix; Net: Network;
-		insamples, outsamples, innodes, outnodes, row, col: LONGINT;
+		insamples, outsamples, innodes, outnodes, row, col: SIGNED32;
 		fileIn, fileOut: Files.File; inreader,outreader: Files.Reader;
-		iterations:LONGINT;
-		layers:LONGINT;
-		layerVector, typeVector: ARRAY [*] OF LONGINT;
+		iterations:SIGNED32;
+		layers:SIGNED32;
+		layerVector, typeVector: ARRAY [*] OF SIGNED32;
 
 	BEGIN
 		Out.String( "Neural Network Analysis of Cardiac Output" );  Out.Ln;
@@ -1806,7 +1806,7 @@ PROCEDURE TruncateStochastic(CONST m:Dataset):Dataset; (* version may depend on 
 
 	END TestCO2;
 
-	PROCEDURE DoNothing(x:LONGREAL):LONGREAL;
+	PROCEDURE DoNothing(x:FLOAT64):FLOAT64;
 	BEGIN
 		RETURN x;
 	END DoNothing;
@@ -1819,10 +1819,10 @@ PROCEDURE TruncateStochastic(CONST m:Dataset):Dataset; (* version may depend on 
 	END TestNegl;
 
 	PROCEDURE TestAll*(context:Commands.Context);
-	VAR a,b,c,d: ARRAY [*,*] OF LONGREAL;
-		cs: ARRAY [*,*] OF REAL;
-		x,y:REAL; X,Y:LONGREAL;
-		i,j, t0,t1,t2,t3,t4,t5,t6,t7,t8,t9,t10,t11,t12,t13,t14,t15,t16,t17,t18,t19:LONGINT;
+	VAR a,b,c,d: ARRAY [*,*] OF FLOAT64;
+		cs: ARRAY [*,*] OF FLOAT32;
+		x,y:FLOAT32; X,Y:FLOAT64;
+		i,j, t0,t1,t2,t3,t4,t5,t6,t7,t8,t9,t10,t11,t12,t13,t14,t15,t16,t17,t18,t19:SIGNED32;
 	BEGIN
 		IF ~context.arg.GetInteger(i,FALSE) THEN i:=1000 END;
 		NEW(a,i,i);
@@ -1881,10 +1881,10 @@ PROCEDURE TruncateStochastic(CONST m:Dataset):Dataset; (* version may depend on 
 	PROCEDURE TestDeepSoftmax*(context:Commands.Context);
 	CONST Samples = 40;  InputNodes = 8;  InnerNodes = 10;  outputNodes = 8;
 	VAR InMatrix, TargetMatrix, Classification: Matrix;  Net: Network;
-		iterations:LONGINT;
-		layers:LONGINT;
-		layerVector, typeVector: ARRAY [*] OF LONGINT;
-		SSE: LONGREAL;
+		iterations:SIGNED32;
+		layers:SIGNED32;
+		layerVector, typeVector: ARRAY [*] OF SIGNED32;
+		SSE: FLOAT64;
 	BEGIN
 		Out.String( "Neural Network Demo with softmax output" );  Out.Ln;
 		(*create matrices depending on sample size and input/output number; example is for linear descent search;
@@ -1940,11 +1940,11 @@ PROCEDURE TruncateStochastic(CONST m:Dataset):Dataset; (* version may depend on 
 	PROCEDURE TestWide*(context:Commands.Context);
 	CONST  outputNodes = 8;
 	VAR InMatrix, TargetMatrix, Classification: Matrix;  Net: Network;
-		samples, inputNodes, innerNodes, iterations:LONGINT;
-		layers:LONGINT;
-		layerVector, typeVector: ARRAY [*] OF LONGINT;
-		SSE: LONGREAL;
-		t0,t1:LONGINT;
+		samples, inputNodes, innerNodes, iterations:SIGNED32;
+		layers:SIGNED32;
+		layerVector, typeVector: ARRAY [*] OF SIGNED32;
+		SSE: FLOAT64;
+		t0,t1:SIGNED32;
 	BEGIN
 		Out.String( "Neural Network Demo" );  Out.Ln;
 		(*create matrices depending on sample size and input/output number; example is for linear descent search;
@@ -2028,9 +2028,9 @@ PROCEDURE TruncateStochastic(CONST m:Dataset):Dataset; (* version may depend on 
 	PROCEDURE TestRBM*(context:Commands.Context);
 	CONST Samples = 8;  InputNodes = 8;  FirstLayerNodes = 6;
 	VAR InMatrix, TargetMatrix, Reconstruction, r : Matrix;
-		iterations:LONGINT;
+		iterations:SIGNED32;
 		rbm: RestrictedBoltzmannMachine;
-		i:LONGINT;
+		i:SIGNED32;
 	BEGIN
 		Out.String( "Restricted Boltzmann Machine Demo" );  Out.Ln;
 
@@ -2069,9 +2069,9 @@ PROCEDURE TruncateStochastic(CONST m:Dataset):Dataset; (* version may depend on 
 	VAR InMatrix, TargetMatrix, Reconstruction,
 		h0,h1,h2, r0,r1,r2 : Matrix;
 		rv0, v:Vector;
-		iterations:LONGINT;
+		iterations:SIGNED32;
 		rbm,rbm1,rbm2: RestrictedBoltzmannMachine;
-		i:LONGINT;
+		i:SIGNED32;
 	BEGIN
 		Out.String( "Deep Believe Network Demo" );  Out.Ln;
 
@@ -2174,9 +2174,9 @@ PROCEDURE TruncateStochastic(CONST m:Dataset):Dataset; (* version may depend on 
 	CONST Samples = 8;  InputNodes = 8;  FirstLayerNodes = 6;
 	VAR InMatrix,  TargetMatrix,
 		h0,r0: Matrix;
-		iterations:LONGINT;
+		iterations:SIGNED32;
 		dbn:DeepBelieveNetwork;
-		sig:LONGINT;
+		sig:SIGNED32;
 	BEGIN
 		Out.String( "Deep Believe Network Demo" );  Out.Ln;
 		sig:=sigmoid;
@@ -2206,7 +2206,7 @@ PROCEDURE TruncateStochastic(CONST m:Dataset):Dataset; (* version may depend on 
 
 
 	PROCEDURE TestMM*(context:Commands.Context);
-	VAR iterations, i,t0,t1,t2,t3,t4,t5:LONGINT;
+	VAR iterations, i,t0,t1,t2,t3,t4,t5:SIGNED32;
 		a,b,c: Matrix;
 	BEGIN
 		IF ~context.arg.GetInteger(iterations,FALSE) THEN iterations:=100 END;

@@ -34,7 +34,7 @@ TYPE
 The spectral norm of a matrix A is the largest singular value of A or the square root of the largest eigenvalue of the positive-semidefinite matrix AA* .
 Its computation can be expensive. *)
 	PROCEDURE L2*( CONST A: Matrix ): Datatype;
-	VAR col: LONGINT;  norm: Datatype;
+	VAR col: SIGNED32;  norm: Datatype;
 	BEGIN
 		HALT( 100 );   (*not yet implemented*)
 		(* to compute the largest eigenvalue, the SVD algorithm or the Householder transform can be used for example. Because only a single eigenvalue is needed, the latter may be cheaper*)
@@ -69,8 +69,8 @@ Its computation can be expensive. *)
 	END Trace;
 
 	(** The matrix rank  *)
-	PROCEDURE Rank*( CONST A: Matrix ): LONGINT;
-	VAR sum: Datatype;  i: LONGINT;
+	PROCEDURE Rank*( CONST A: Matrix ): SIGNED32;
+	VAR sum: Datatype;  i: SIGNED32;
 	BEGIN
 		HALT(100);
 		RETURN 0
@@ -111,7 +111,7 @@ Its computation can be expensive. *)
 
 	(** compute condition number from eigenvalues *)
 	PROCEDURE ConditionNumber*( CONST eigenvalues: ARRAY [?] OF Datatype ): Datatype;   (* see to be improved*)
-	VAR max, min: LONGREAL;  i: SIZE;
+	VAR max, min: FLOAT64;  i: SIZE;
 	BEGIN
 		IF DIM(eigenvalues)=1 THEN (*eigenvalues stored in vector*)
 			max:=ABS(eigenvalues[0]); min:=max;

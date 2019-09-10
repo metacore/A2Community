@@ -48,11 +48,11 @@ TYPE
 	Then, use procedure InterpolateSpline to get interpolated value at position x; respectively at position x,y	*)
 	PROCEDURE InterpolateSpline*	( CONST Bcoeff: Vector (*	float*   *) ;   (* input B-spline array of coefficients *)
 																x: Datatype;   (* x coordinate where to interpolate *)
-																SplineDegree: LONGINT (* degree of the spline model *)
+																SplineDegree: SIGNED32 (* degree of the spline model *)
 																): Datatype;
 	VAR xWeight: ARRAY 6 OF Datatype;
 		xIndex: ARRAY 6 OF SIZE;
-		interpolated, w, w2, w4, t, t0, t1, val: Datatype;  Width, Width2: SIZE;  i, j, k: LONGINT;
+		interpolated, w, w2, w4, t, t0, t1, val: Datatype;  Width, Width2: SIZE;  i, j, k: SIGNED32;
 	BEGIN
 		ASSERT ( (SplineDegree >= 0) & (SplineDegree < 6), 101 );
 		(* compute the interpolation indexes *)
@@ -132,11 +132,11 @@ TYPE
 PROCEDURE InterpolateSplineN*	( CONST Bcoeff: Vector (*	float*   *) ;   (* input B-spline array of coefficients *)
 																VAR res: Vector;(*	result is in the signal domain, not a spline   *)
 																x: Datatype;   (* first x coordinate where to interpolate *)
-																SplineDegree: LONGINT (* degree of the spline model *)
+																SplineDegree: SIGNED32 (* degree of the spline model *)
 																);  (*this appears to be mirrorW boundaries, while the DirectBSpline Transform is mirrorH boundaries -> debug !*)
 	VAR xWeight: ARRAY 6 OF Datatype;
 		xIndex, xIndex2: ARRAY [6] OF SIZE;
-		interpolated, w, w2, w4, t, t0, t1, val, dx: Datatype;  Width, Width2, l, maxx: SIZE;  i, j, k, x0, len: LONGINT;
+		interpolated, w, w2, w4, t, t0, t1, val, dx: Datatype;  Width, Width2, l, maxx: SIZE;  i, j, k, x0, len: SIGNED32;
 	BEGIN
 		ASSERT ( (SplineDegree >= 0) & (SplineDegree < 6), 101 );
 		(* compute the interpolation indexes *)
@@ -224,12 +224,12 @@ PROCEDURE InterpolateSplineN*	( CONST Bcoeff: Vector (*	float*   *) ;   (* input
 	PROCEDURE InterpolateSpline2D*
 	( CONST Bcoeff: Matrix (*	float*   *) ;   (* input B-spline array of coefficients *)
 	x, y: Datatype;   (* x coordinate where to interpolate *)  (* y coordinate where to interpolate *)
-	SplineDegree: LONGINT (* degree of the spline model *)
+	SplineDegree: SIGNED32 (* degree of the spline model *)
 	): Datatype;
 	VAR xWeight, yWeight: ARRAY 6 OF Datatype;
 		xIndex, yIndex: ARRAY 6 OF SIZE;
 		interpolated, w, w2, w4, t, t0, t1, val: Datatype;
-		Width, Height, Width2, Height2: SIZE;  i, j, k: LONGINT;
+		Width, Height, Width2, Height2: SIZE;  i, j, k: SIGNED32;
 	BEGIN
 		ASSERT ( (SplineDegree > 0) & (SplineDegree < 6), 101 );
 		(* compute the interpolation indexes *)
@@ -348,7 +348,7 @@ PROCEDURE InterpolateSplineN*	( CONST Bcoeff: Vector (*	float*   *) ;   (* input
 	END InterpolateSpline2D;
 
 	PROCEDURE linear1D( CONST data: Vector;  x: Datatype ): Datatype;
-	VAR dx, xM, res: Datatype;  i: LONGINT;  lenX: SIZE;  X, X1: Datatype;
+	VAR dx, xM, res: Datatype;  i: SIGNED32;  lenX: SIZE;  X, X1: Datatype;
 	BEGIN
 		lenX := LEN( data, 0 );
 		IF (x < 0) OR (x > lenX - 1) THEN RETURN 0 END;
@@ -357,7 +357,7 @@ PROCEDURE InterpolateSplineN*	( CONST Bcoeff: Vector (*	float*   *) ;   (* input
 	END linear1D;
 
 	PROCEDURE linear2D( CONST data: Matrix;  x, y: Datatype ): Datatype;
-	VAR dx, dy, xM, yM, res: Datatype;  i, j, k: LONGINT; lenX, lenY: SIZE;
+	VAR dx, dy, xM, yM, res: Datatype;  i, j, k: SIGNED32; lenX, lenY: SIZE;
 		XY, X1Y, XY1, X1Y1: Datatype;
 	BEGIN
 		lenX := LEN( data, 1 );  lenY := LEN( data, 0 );
@@ -371,7 +371,7 @@ PROCEDURE InterpolateSplineN*	( CONST Bcoeff: Vector (*	float*   *) ;   (* input
 	END linear2D;
 
 	PROCEDURE linear3D( CONST data: Volume;  x, y, z: Datatype ): Datatype;
-	VAR dx, dy, dz, xM, yM, zM, res: Datatype;  i, j, k: LONGINT;  lenX, lenY, lenZ: SIZE;
+	VAR dx, dy, dz, xM, yM, zM, res: Datatype;  i, j, k: SIGNED32;  lenX, lenY, lenZ: SIZE;
 		XYZ, X1YZ, XY1Z, XYZ1, X1Y1Z, X1YZ1, XY1Z1, X1Y1Z1: Datatype;
 	BEGIN
 		lenX := LEN( data, 2 );  lenY := LEN( data, 1 );  lenZ := LEN( data, 0 );
@@ -394,7 +394,7 @@ PROCEDURE InterpolateSplineN*	( CONST Bcoeff: Vector (*	float*   *) ;   (* input
 	PROCEDURE linear4D( CONST data: Hypercube;
 										    x, y, z, t: Datatype ): Datatype;
 	VAR dx, dy, dz, dt, xM, yM, zM, tM, res: Datatype;
-		i, j, k, l: LONGINT; lenX, lenY, lenZ, lenT: SIZE;
+		i, j, k, l: SIGNED32; lenX, lenY, lenZ, lenT: SIZE;
 		XYZT, X1YZT, XY1ZT, XYZ1T, XYZT1, X1Y1ZT, X1YZ1T, X1YZT1, XY1Z1T, XY1ZT1, XYZ1T1, X1Y1Z1T, X1Y1ZT1, X1YZ1T1, XY1Z1T1, X1Y1Z1T1: Datatype;
 
 	BEGIN
@@ -436,7 +436,7 @@ PROCEDURE InterpolateSplineN*	( CONST Bcoeff: Vector (*	float*   *) ;   (* input
 
 	PROCEDURE InterpolateSplineTensor*( CONST Bcoeff: Tensor (*	float*   *) ;   (* input B-spline array of coefficients *)
 	CONST x: Vector;   (* x coordinate where to interpolate *)  (* y coordinate where to interpolate *)
-	SplineDegree: LONGINT (* degree of the spline model; currently implemented: degrees 2-5 *)
+	SplineDegree: SIGNED32 (* degree of the spline model; currently implemented: degrees 2-5 *)
 	): Datatype;
 	BEGIN
 		IF (DIM(Bcoeff)=LEN(x,0)) & (LEN(x)=3) THEN
@@ -449,13 +449,13 @@ PROCEDURE InterpolateSplineN*	( CONST Bcoeff: Vector (*	float*   *) ;   (* input
 	PROCEDURE InterpolateSpline3D*
 	( CONST Bcoeff: Volume (*	float*   *) ;   (* input B-spline array of coefficients *)
 	x, y, z: Datatype;   (* x coordinate where to interpolate *)  (* y coordinate where to interpolate *)
-	SplineDegree: LONGINT (* degree of the spline model; currently implemented: degrees 2-5 *)
+	SplineDegree: SIGNED32 (* degree of the spline model; currently implemented: degrees 2-5 *)
 	): Datatype;
 
 	VAR xWeight, yWeight, zWeight: ARRAY 6 OF Datatype;
 		xIndex, yIndex, zIndex: ARRAY 6 OF SIZE;
 		interpolated, w, w2, w4, t, t0, t1, u, v: Datatype;
-		Width, Height, Depth, Width2, Height2, Depth2: SIZE;  i, j, k, l: LONGINT;
+		Width, Height, Depth, Width2, Height2, Depth2: SIZE;  i, j, k, l: SIGNED32;
 	BEGIN
 		ASSERT ( (SplineDegree >= 0) & (SplineDegree < 6), 101 );
 		Width := LEN( Bcoeff, 2 );  Height := LEN( Bcoeff, 1 );  Depth := LEN( Bcoeff, 0 );
@@ -627,13 +627,13 @@ PROCEDURE InterpolateSplineN*	( CONST Bcoeff: Vector (*	float*   *) ;   (* input
 
 	PROCEDURE InterpolateSpline4D*( CONST Bcoeff: Hypercube (*	float*   *) ;   (* input B-spline array of coefficients *)
 																			x, y, z, tm: Datatype;   (* coordinates, where to interpolate *)
-																			SplineDegree: LONGINT (* degree of the spline model; currently implemented: degrees 0-5 *)
+																			SplineDegree: SIGNED32 (* degree of the spline model; currently implemented: degrees 0-5 *)
 																			): Datatype;
 
 	VAR xWeight, yWeight, zWeight, tWeight: ARRAY 6 OF Datatype;
 		xIndex, yIndex, zIndex, tIndex: ARRAY 6 OF SIZE;
 		interpolated, w, w2, w4, t, t0, t1, u, v, r: Datatype;
-		Width, Height, Depth, Time, Width2, Height2, Depth2, Time2: SIZE;  i, j, k, l, m: LONGINT;
+		Width, Height, Depth, Time, Width2, Height2, Depth2, Time2: SIZE;  i, j, k, l, m: SIGNED32;
 
 	BEGIN
 		ASSERT ( (SplineDegree >= 0) & (SplineDegree < 6), 101 );
@@ -848,7 +848,7 @@ PROCEDURE InterpolateSplineN*	( CONST Bcoeff: Vector (*	float*   *) ;   (* input
 	 END InterpolateSpline4D;
 (*
 	PROCEDURE Test2*;
-	VAR data: Vector;  x, y, z: REAL;  i, n: LONGINT;  v: Datatype;
+	VAR data: Vector;  x, y, z: FLOAT32;  i, n: SIGNED32;  v: Datatype;
 	CONST degree = 3;
 	BEGIN
 		In.Open;  In.Real( x );  In.LongInt( n );  NEW( data, n );
@@ -862,7 +862,7 @@ PROCEDURE InterpolateSplineN*	( CONST Bcoeff: Vector (*	float*   *) ;   (* input
 
 
 	PROCEDURE Test3*;
-	VAR data, res: Vector;  x, y, z: REAL;  i, n,m, degree: LONGINT;  v: Datatype;
+	VAR data, res: Vector;  x, y, z: FLOAT32;  i, n,m, degree: SIGNED32;  v: Datatype;
 	BEGIN
 		In.Open; In.LongInt(degree); In.LongInt( n ); In.LongInt( m ); In.Real(x);
 		NEW( data, n ); NEW(res,m);

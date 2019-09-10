@@ -31,7 +31,7 @@ TYPE Window*= OBJECT (WM.BufferWindow)
 
 	END Window;
 
-VAR InsertPosX,InsertPosY: LONGINT;
+VAR InsertPosX,InsertPosY: SIGNED32;
 
 PROCEDURE Integrate*(img:Raster.Image; CONST title: ARRAY OF CHAR); (** deprecated *)
 BEGIN

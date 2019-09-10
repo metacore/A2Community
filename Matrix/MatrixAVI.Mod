@@ -39,19 +39,19 @@ CONST
 		loop*=2;
 
 TYPE
-	Datatype=LONGREAL;
+	Datatype=FLOAT64;
 	Matrix=ARRAY [*,*] OF Datatype;
 	AVIMainHeader=RECORD
 		dwMicroSecPerFrame,
 		dwMaxBytesPerSec,
-		dwReserved1:	LONGINT;
+		dwReserved1:	SIGNED32;
 		dwFlags:			SET;
 		dwTotalFrames,
 		dwInitialFrames,
 		dwStreams,
 		dwSuggestedBufferSize,
 		dwWidth,
-		dwHeight: 	LONGINT;
+		dwHeight: 	SIGNED32;
 		dwReserved: ARRAY 16 OF CHAR;
 	END;
 
@@ -70,8 +70,8 @@ TYPE
 		dwLength,
 		dwSuggestedBufferSize,
 		dwQuality,
-		dwSampleSize:	LONGINT;
-		rcFrame: ARRAY 4 OF INTEGER; (*  left, top, xDim, yDim; left-top is relative to left-top edge of container *)
+		dwSampleSize:	SIGNED32;
+		rcFrame: ARRAY 4 OF SIGNED16; (*  left, top, xDim, yDim; left-top is relative to left-top edge of container *)
 	END;
 
 	AVIStreamData=RECORD
@@ -84,15 +84,15 @@ TYPE
 	BITMAPINFOHEADER=RECORD	(* video stream info *)
 		biSize,		(*40 Bytes*)
 		biWidth,
-		biHeight:LONGINT;
+		biHeight:SIGNED32;
 		biPlanes,
-		biBitCount: INTEGER;
+		biBitCount: SIGNED16;
 		biCompression,				(*0L for uncompressed RGB; 1 for RLE8; 2 for RLE4; 3 for Bitfields -see below - *)
 		biSizeImage,					(*   tDim*zDim*yDim*xDim  *)
 		biXPelsPerMeter,
 		biYPelsPerMeter,
 		biClrUsed,						(* IF uncompressed THEN 256 ELSE nr of colors used *)
-		biClrImportant: LONGINT;
+		biClrImportant: SIGNED32;
 	END;
 
 	RGBQUAD=ARRAY 4 OF CHAR;
@@ -104,12 +104,12 @@ TYPE
 
 	WAVEFORMATEX=RECORD		(* audio stream info *)
 		wFormatTag,
-		nChannels:	INTEGER;
+		nChannels:	SIGNED16;
 		nSamplesPerSec,
-		nAvgBytesPerSec: LONGINT;
+		nAvgBytesPerSec: SIGNED32;
 		nBlockAlign,
 		wBitsPerSample,
-		cbSize:		INTEGER;
+		cbSize:		SIGNED16;
 	END;
 
 VAR Comments*:BOOLEAN;
@@ -120,8 +120,8 @@ END writeByteFrame;
 PROCEDURE writeRGBFrame();
 END writeRGBFrame;
 
-PROCEDURE WriteLUT(VAR R: Files.Writer; lut:INTEGER);
-VAR i,j:INTEGER;
+PROCEDURE WriteLUT(VAR R: Files.Writer; lut:SIGNED16);
+VAR i,j:SIGNED16;
 BEGIN
 	CASE lut OF
 	gray:
@@ -162,8 +162,8 @@ BEGIN	(*use an input array of >5 Bytes to avoid the automatically appended 0X ch
 	R.Bytes(FOURCC,0,4)
 END WriteFOURCC;
 
-PROCEDURE WritePixelsUncompressed(VAR R:Files.Writer; CONST P:Matrix; NrBytes:INTEGER; gain:Datatype; offset:LONGINT);
-VAR line:POINTER TO ARRAY OF INTEGER; x,y:SIZE; Red,Green,Blue:INTEGER;
+PROCEDURE WritePixelsUncompressed(VAR R:Files.Writer; CONST P:Matrix; NrBytes:SIGNED16; gain:Datatype; offset:SIGNED32);
+VAR line:POINTER TO ARRAY OF SIGNED16; x,y:SIZE; Red,Green,Blue:SIGNED16;
 BEGIN
 	FOR y:=0 TO LEN(P,0)-1 DO
 		IF NrBytes=1 THEN
@@ -177,9 +177,9 @@ BEGIN
 END WritePixelsUncompressed;
 
 
-PROCEDURE WriteRLE8(VAR R:Files.Writer; CONST P:Matrix; NrBytes:INTEGER; gain:Datatype; offset:LONGINT); (** NrBytes=NrBytesPerPixel. Multiple frames not yet implemented *)
+PROCEDURE WriteRLE8(VAR R:Files.Writer; CONST P:Matrix; NrBytes:SIGNED16; gain:Datatype; offset:SIGNED32); (** NrBytes=NrBytesPerPixel. Multiple frames not yet implemented *)
 VAR pixIndex,encodeIndex,i,zDimSlices,index:SIZE; x,y,xDim,yDim,count:SIZE;
-	pixStore,encodeStore,line: POINTER TO ARRAY OF INTEGER;
+	pixStore,encodeStore,line: POINTER TO ARRAY OF SIGNED16;
 BEGIN
 	IF NrBytes>1 THEN Out.String("Bitdepth not currently supported :"); Out.Int(NrBytes,4); Out.Ln; RETURN END;
 	pixIndex:=0;
@@ -202,7 +202,7 @@ BEGIN
 			ELSIF (count>0) & (pixStore[index]=pixStore[index-1]) THEN
 				INC(count);
 				IF x=xDim-1 THEN
-					encodeStore[encodeIndex]:= INTEGER(count); INC(encodeIndex);
+					encodeStore[encodeIndex]:= SIGNED16(count); INC(encodeIndex);
 					encodeStore[encodeIndex]:=pixStore[index]; INC(encodeIndex);
 					IF y<yDim-1 THEN	(* end of line *)
 						encodeStore[encodeIndex]:= 0; INC(encodeIndex);
@@ -217,7 +217,7 @@ BEGIN
 					count:=0;
 				END;
 			ELSIF (count>0) & (pixStore[index]#pixStore[index-1]) THEN
-				encodeStore[encodeIndex]:= INTEGER(count); INC(encodeIndex);
+				encodeStore[encodeIndex]:= SIGNED16(count); INC(encodeIndex);
 				encodeStore[encodeIndex]:=pixStore[index-1]; INC(encodeIndex);
 				count:=1;
 				IF x=xDim-1 THEN
@@ -248,7 +248,7 @@ BEGIN
 			END;
 		END;
 	END;
-	R.RawLInt(encodeIndex(LONGINT));
+	R.RawLInt(encodeIndex(SIGNED32));
 	FOR i :=0 TO encodeIndex-1  DO R.Char(CHR(encodeStore[i])) END;
 END WriteRLE8;
 
@@ -259,7 +259,7 @@ BEGIN
 END Store;
 
 (** Store files as .avi ; for first try, see Store() ;  *)
-PROCEDURE StoreB*(CONST data:ARRAY [*] OF Matrix; filename:ARRAY OF CHAR; framesPerSec:REAL; compression, lut, normalize:INTEGER):Files.File;
+PROCEDURE StoreB*(CONST data:ARRAY [*] OF Matrix; filename:ARRAY OF CHAR; framesPerSec:FLOAT32; compression, lut, normalize:SIGNED16):Files.File;
 VAR R,Counter:Files.Writer;
 		F:Files.File;
 		saveFileSize,saveLIST1Size,saveList1subSize,savestrfSize,savestrnPos,saveJUNKsignature,saveLIST2Size,
@@ -272,8 +272,8 @@ VAR R,Counter:Files.Writer;
 		avimainheader:AVIMainHeader;
 		datasignature,FOURCC:ARRAY 5 OF CHAR;
 		string16:ARRAY 16 OF CHAR;
-		bytesperpixel:INTEGER;
-		(*compression:INTEGER;*)
+		bytesperpixel:SIGNED16;
+		(*compression:SIGNED16;*)
 		max,min, absmax:Datatype;
 
 	PROCEDURE WriteAVIMainHeader;
@@ -282,13 +282,13 @@ VAR R,Counter:Files.Writer;
 		R.RawLInt(500000 (*avimainheader.dwMaxBytesPerSec*));
 		R.RawLInt(avimainheader.dwReserved1);
 		avimainheader.dwFlags:={4}; R.RawSet(avimainheader.dwFlags);
-		avimainheader.dwTotalFrames:=LEN(data,0)(LONGINT);
+		avimainheader.dwTotalFrames:=LEN(data,0)(SIGNED32);
 		R.RawLInt(avimainheader.dwTotalFrames);
 		R.RawLInt(avimainheader.dwInitialFrames);
 		R.RawLInt(1(*avimainheader.dwStreams*));
 		R.RawLInt(4000000 (*avimainheader.dwSuggestedBufferSize*));
-		avimainheader.dwWidth:=xDim(LONGINT);
-		avimainheader.dwHeight:=yDim(LONGINT);
+		avimainheader.dwWidth:=xDim(SIGNED32);
+		avimainheader.dwHeight:=yDim(SIGNED32);
 		R.RawLInt(avimainheader.dwWidth);
 		R.RawLInt(avimainheader.dwHeight);
 		R.Bytes(avimainheader.dwReserved,0,16);
@@ -310,33 +310,33 @@ VAR R,Counter:Files.Writer;
 		R.RawLInt( 1 (*avimainheader.dwMicroSecPerFrame DIV 10000*) (*avistreamheader.dwScale*));
 		R.RawLInt(ENTIER(framesPerSec) (*avistreamheader.dwRate*));
 		R.RawLInt(avistreamheader.dwStart);
-		avistreamheader.dwLength:=LEN(data,0)(LONGINT);
+		avistreamheader.dwLength:=LEN(data,0)(SIGNED32);
 		R.RawLInt(avistreamheader.dwLength);
 		R.RawLInt(4000000(*avistreamheader.dwSuggestedBufferSize*));
 		R.RawLInt(10000 (*avistreamheader.dwQuality; (*-1=default quality*)*));
 		IF compression=0 THEN
-			avistreamheader.dwSampleSize:=(bytesperpixel*xDim*yDim)(LONGINT);
-		ELSE (*compression *) avistreamheader.dwSampleSize:=(xDim*yDim)(LONGINT); (*HALT(99);*)
+			avistreamheader.dwSampleSize:=(bytesperpixel*xDim*yDim)(SIGNED32);
+		ELSE (*compression *) avistreamheader.dwSampleSize:=(xDim*yDim)(SIGNED32); (*HALT(99);*)
 		END;
 		R.RawLInt(avistreamheader.dwSampleSize);
 		avistreamheader.rcFrame[0]:=0; R.RawInt(0);
 		avistreamheader.rcFrame[1]:=0; R.RawInt(0);
-		avistreamheader.rcFrame[2]:=INTEGER(xDim); R.RawInt(INTEGER(xDim));
-		avistreamheader.rcFrame[3]:=INTEGER(yDim); R.RawInt(INTEGER(yDim));
+		avistreamheader.rcFrame[2]:=SIGNED16(xDim); R.RawInt(SIGNED16(xDim));
+		avistreamheader.rcFrame[3]:=SIGNED16(yDim); R.RawInt(SIGNED16(yDim));
 	END WriteAVIStreamHeader;
 
 	PROCEDURE WriteBitmapInfoHeader;
 	BEGIN
 		R.RawLInt(40 (*bitmapinfoheader.biSize*));
-		R.RawLInt(xDim(LONGINT) (*bitmapinfoheader.biWidth*));
-		R.RawLInt(yDim(LONGINT) (*bitmapinfoheader.biHeight*));
+		R.RawLInt(xDim(SIGNED32) (*bitmapinfoheader.biWidth*));
+		R.RawLInt(yDim(SIGNED32) (*bitmapinfoheader.biHeight*));
 		R.RawInt(1 (*bitmapinfoheader.biPlanes*));
 		IF compression=0 THEN R.RawInt( 8*bytesperpixel (*IF NO COMPRESSION*) (*bitmapinfoheader.biBitCount*))
 		ELSIF compression=1 THEN R.RawInt(8)
 		END;
 		R.RawLInt( compression (*bitmapinfoheader.biCompression*));	(*0 for uncompressed RGB; 1 for RLE8; 2 for RLE4; 3 for Bitfields -see below - *)
-		IF compression=0 THEN R.RawLInt( (bytesperpixel*tDim*zDim*yDim*xDim)(LONGINT) (*bitmapinfoheader.biSizeImage*))
-		ELSIF compression=1 THEN R.RawLInt((tDim*zDim*yDim*xDim)(LONGINT))	(* may be 0 for uncompressed RGB *)
+		IF compression=0 THEN R.RawLInt( (bytesperpixel*tDim*zDim*yDim*xDim)(SIGNED32) (*bitmapinfoheader.biSizeImage*))
+		ELSIF compression=1 THEN R.RawLInt((tDim*zDim*yDim*xDim)(SIGNED32))	(* may be 0 for uncompressed RGB *)
 		END;
 		R.RawLInt( 2000 (*bitmapinfoheader.biXPelsPerMeter*));
 		R.RawLInt( 2000 (*bitmapinfoheader.biYPelsPerMeter*));
@@ -360,9 +360,9 @@ BEGIN
 	bytesperpixel:=1;
 	compression:=1;			(*0 for uncompressed RGB; 1 for RLE8; 2 for RLE4; 3 for Bitfields .. *)
 	(*IF compression>= 1 THEN Out.String("unimplemented compression"); Out.Ln; HALT(99); END;*)
-	NEW(savedbLength,tDim*zDim); (*"long" LONGINT ARRAY FOR uncompressed image data*)
-	NEW(savedcLength,tDim*zDim); (*"long" LONGINT ARRAY FOR uncompressed image data*)
-	NEW(dcLength,tDim*zDim); (*"int" LONGINT ARRAY for uncompressed image data*)
+	NEW(savedbLength,tDim*zDim); (*"long" SIGNED32 ARRAY FOR uncompressed image data*)
+	NEW(savedcLength,tDim*zDim); (*"long" SIGNED32 ARRAY FOR uncompressed image data*)
+	NEW(dcLength,tDim*zDim); (*"int" SIGNED32 ARRAY for uncompressed image data*)
 
 	F:=Files.New(filename);
 	NEW(R,F,0);
@@ -392,7 +392,7 @@ BEGIN
 									IF TRUE (*(compression=1) OR (bytesperpixel=1)*) THEN WriteLUT(R,lut);  END;
 									savestrnPos:=R.Pos();
 									R.Update;
-									Counter.SetPos(savestrfSize); Counter.RawLInt((savestrnPos-savestrfSize-4)(LONGINT));
+									Counter.SetPos(savestrfSize); Counter.RawLInt((savestrnPos-savestrfSize-4)(SIGNED32));
 									Counter.Update;
 									WriteFOURCC(R,"strn");
 									R.RawLInt(16); (* the length of the strn subchunk *)
@@ -400,12 +400,12 @@ BEGIN
 									R.Bytes(string16,0,15); R.Char(0X); (*! TO DO - CHECK FOR CORRECT STRING LENGHT *)
 									saveJUNKsignature := R.Pos();
 									R.Update;
-									Counter.SetPos(saveLIST1Size); Counter.RawLInt((saveJUNKsignature-saveLIST1Size-4)(LONGINT));
-									Counter.SetPos(saveList1subSize); Counter.RawLInt((saveJUNKsignature-saveList1subSize-4)(LONGINT));
+									Counter.SetPos(saveLIST1Size); Counter.RawLInt((saveJUNKsignature-saveLIST1Size-4)(SIGNED32));
+									Counter.SetPos(saveList1subSize); Counter.RawLInt((saveJUNKsignature-saveList1subSize-4)(SIGNED32));
 									Counter.Update;
 						WriteFOURCC(R,"JUNK");
 						paddingbytes:=(4084-saveJUNKsignature-8)(SIZE);
-						R.RawLInt(paddingbytes(LONGINT));
+						R.RawLInt(paddingbytes(SIGNED32));
 						FOR i:=0 TO paddingbytes DIV 2 -1 DO R.RawInt(0)END;
 			WriteFOURCC(R,"LIST");
 			saveLIST2Size:=R.Pos();
@@ -425,7 +425,7 @@ BEGIN
 					END;
 					WriteFOURCC(R,datasignature);
 					savedbLength[z]:=R.Pos();
-					R.RawLInt((bytesperpixel*xDim*yDim)(LONGINT));
+					R.RawLInt((bytesperpixel*xDim*yDim)(SIGNED32));
 					IF lut=gray THEN WritePixelsUncompressed(R,data[z],bytesperpixel, 254/absmax, 1);
 					ELSIF lut=flow THEN WritePixelsUncompressed(R,data[z],bytesperpixel, 127/absmax, 128);
 					END;
@@ -450,7 +450,7 @@ BEGIN
 			(*WriteIDXList *)
 			idx1Pos:=R.Pos();
 			R.Update;
-			Counter.SetPos(saveLIST2Size); Counter.RawLInt((idx1Pos-saveLIST2Size-4)(LONGINT));
+			Counter.SetPos(saveLIST2Size); Counter.RawLInt((idx1Pos-saveLIST2Size-4)(SIGNED32));
 			Counter.Update;
 			WriteFOURCC(R,"idx1");
 			saveidx1Length:=R.Pos();
@@ -466,24 +466,24 @@ BEGIN
 														0x0FFF0000L is AVIIFCompuse*)
 				ELSE R.RawSet({});END;
 				IF compression=0 THEN
-					R.RawLInt((savedbLength[z]-savemovi-4)(LONGINT));	(*WriteOffsetRelativeToMovi*)
-					R.RawLInt((bytesperpixel*xDim*yDim)(LONGINT));
+					R.RawLInt((savedbLength[z]-savemovi-4)(SIGNED32));	(*WriteOffsetRelativeToMovi*)
+					R.RawLInt((bytesperpixel*xDim*yDim)(SIGNED32));
 				ELSIF compression=1 THEN
-					R.RawLInt((savedcLength[z]-savemovi-4)(LONGINT));
-					R.RawLInt((dcLength[z])(LONGINT));
+					R.RawLInt((savedcLength[z]-savemovi-4)(SIGNED32));
+					R.RawLInt((dcLength[z])(SIGNED32));
 				END;
 			END;
 			R.Update;
 			endPos:=R.Pos();
-			Counter.SetPos(saveFileSize); Counter.RawLInt((endPos-saveFileSize-4)(LONGINT));
-			Counter.SetPos(saveidx1Length); Counter.RawLInt((endPos-saveidx1Length-4)(LONGINT));
+			Counter.SetPos(saveFileSize); Counter.RawLInt((endPos-saveFileSize-4)(SIGNED32));
+			Counter.SetPos(saveidx1Length); Counter.RawLInt((endPos-saveidx1Length-4)(SIGNED32));
 			Counter.Update;
 		Files.Register(F);
 		RETURN(F);
 	END StoreB;
 
 PROCEDURE Test*;
-VAR frames: ARRAY [*,*,*] OF Datatype; i:LONGINT; F:Files.File;
+VAR frames: ARRAY [*,*,*] OF Datatype; i:SIGNED32; F:Files.File;
 BEGIN
 	NEW(frames,30,100,100);
 	frames[..14, 30..50,30..50]:=1;

@@ -7,10 +7,10 @@ TYPE WavePacketLayerMN* = OBJECT (Conv.Layer)
 	VAR
 		analyzer: PlanarWavelets.Analyzer;
 		window: WMStack.Window;
-		levels, waveletType:LONGINT;
+		levels, waveletType:SIGNED32;
 		lenX, lenY: Conv.IntVector;
 
-	PROCEDURE &Init*(levels:LONGINT; waveletType:LONGINT; show: BOOLEAN);
+	PROCEDURE &Init*(levels:SIGNED32; waveletType:SIGNED32; show: BOOLEAN);
 	BEGIN
 		SELF.levels:=levels;
 		SELF.waveletType:=waveletType;
@@ -22,7 +22,7 @@ TYPE WavePacketLayerMN* = OBJECT (Conv.Layer)
 	END Init;
 
 	PROCEDURE Propagate*(CONST x: Conv.Dataset); (* [M,h,w] images, resulting in [M,L^2,h/L,w/L]*)
-	VAR i,L:LONGINT;
+	VAR i,L:SIGNED32;
 	BEGIN
 		ASSERT(DIM(x)=3, 200);(* implementation limitation*)
 		lenX:=LEN(x);
@@ -46,7 +46,7 @@ TYPE WavePacketLayerMN* = OBJECT (Conv.Layer)
 
 
 	PROCEDURE BackProp*(CONST dNext:Conv.Dataset);
-	VAR n:LONGINT;
+	VAR n:SIGNED32;
 	BEGIN
 		IF LEN(dIn)#lenX THEN NEW(dIn,lenX) END;
 		(* remember that wavelet decomposition is a linear operation*)
@@ -73,7 +73,7 @@ TYPE WavePacketLayerMN* = OBJECT (Conv.Layer)
 		END New;
 
 		PROCEDURE Propagate*(CONST x: Conv.Dataset);
-		VAR i:LONGINT;
+		VAR i:SIGNED32;
 		BEGIN
 			ASSERT(DIM(x)=4);
 			lenX:=LEN(x);
@@ -93,7 +93,7 @@ TYPE WavePacketLayerMN* = OBJECT (Conv.Layer)
 		END Propagate;
 
 		PROCEDURE 	Backprop*(CONST dNext:Conv.Dataset); (*to do: scaling ?*)
-		VAR i:LONGINT;
+		VAR i:SIGNED32;
 		BEGIN
 			IF dIn#lenX THEN NEW(dIn,lenX) END;
 			FOR i:=0 TO LEN(dIn,0)-1 DO
@@ -106,7 +106,7 @@ TYPE WavePacketLayerMN* = OBJECT (Conv.Layer)
 
 
 PROCEDURE Split4(CONST d:Conv.Matrix):Conv.Dataset; (*! to do: split recursive*)
-VAR len: ARRAY [3] OF LONGINT;
+VAR len: ARRAY [3] OF SIGNED32;
 BEGIN
 	len[0]:=4; len[1..2]:= (LEN(d)[0..1]+1) DIV 2;
 	IF LEN(RESULT)#len THEN NEW(RESULT, len) END;
@@ -118,7 +118,7 @@ BEGIN
 END Split4;
 
 PROCEDURE Split16(CONST d:Conv.Matrix):Conv.Dataset;
-VAR len2, len4: ARRAY [3] OF LONGINT;
+VAR len2, len4: ARRAY [3] OF SIGNED32;
 BEGIN
 	len2[0]:=4; len2[1..2]:= (LEN(d)[0..1]+1) DIV 2;
 	len4[0]:=16; len4[1..2]:= (len2[1..2]+1) DIV 2;
@@ -138,7 +138,7 @@ VAR a: Conv.Dataset;
 	wl:WavePacketLayerMN;
 	l4: Conv.ConvLayerMNM;
 	win: WMStack.Window;
-	i, levels:LONGINT;
+	i, levels:SIGNED32;
 BEGIN
 	IF ~context.arg.GetInteger(levels, FALSE) THEN levels:=1 END;
 	NEW(wl, levels, 0, FALSE);

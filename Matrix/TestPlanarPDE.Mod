@@ -14,7 +14,7 @@ TYPE
 
 	PROCEDURE TestDiffusion*;
 	CONST size = 200;
-	VAR d,dm1, p: Grid;  i: LONGINT;  c: Datatype;
+	VAR d,dm1, p: Grid;  i: SIGNED32;  c: Datatype;
 		D,P:WMMatrix.Window;
 		diffusion: PlanarPDE.Diffusion;
 	BEGIN
@@ -64,7 +64,7 @@ TYPE
 
 	PROCEDURE TestWave*;
 	CONST size = 128;
-	VAR d,dm1, p: Grid;  i: LONGINT;  c: Datatype;
+	VAR d,dm1, p: Grid;  i: SIGNED32;  c: Datatype;
 		D,P:WMMatrix.Window;
 		wave: PlanarPDE.Wave;
 	BEGIN

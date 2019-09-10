@@ -3,7 +3,7 @@ MODULE MLClassifier;   (**  AUTHOR "Patrick Hunziker"; PURPOSE "Machine Learning
 IMPORT MatrixBase;
 
 TYPE
-	Datatype* = LONGREAL;
+	Datatype* = FLOAT64;
 	Vector* = MatrixBase.Vector;
 	Matrix* = MatrixBase.Matrix;
 

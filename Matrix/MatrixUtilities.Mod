@@ -9,13 +9,13 @@ TYPE
 	Bytes2=ARRAY 2 OF CHAR;
 	Datatype* = MatrixBase.Datatype;  
 	Matrix* = MatrixBase.Matrix;  Vector* = MatrixBase.Vector;  Tensor*=ARRAY[?] OF Datatype;
-	IntVector*= ARRAY [*] OF SIZE; IntMatrix= ARRAY [*,*] OF LONGINT; IntTensor*=ARRAY[?] OF LONGINT;
+	IntVector*= ARRAY [*] OF SIZE; IntMatrix= ARRAY [*,*] OF SIGNED32; IntTensor*=ARRAY[?] OF SIGNED32;
 	BoolMatrix*= ARRAY [*,*] OF BOOLEAN;	BoolTensor*=ARRAY [?] OF BOOLEAN;
 	UnaryOp*=PROCEDURE(x:Datatype):Datatype;
 	BinaryOp*=PROCEDURE(x,y:Datatype):Datatype;
 	
 TYPE RandomGenerator*= OBJECT(Rand.Generator);
-		PROCEDURE Random*(CONST size: ARRAY [*] OF SIZE;  content: LONGINT ): Tensor;  
+		PROCEDURE Random*(CONST size: ARRAY [*] OF SIZE;  content: SIGNED32 ): Tensor;  
 		VAR i: SIZE;
 		BEGIN (*{EXCLUSIVE}*)
 			IF DIM(RESULT)=0 THEN NEW(RESULT, size) END;
@@ -32,7 +32,7 @@ TYPE RandomGenerator*= OBJECT(Rand.Generator);
 			END;  
 			RETURN RESULT
 		END Random;  	
-		PROCEDURE Dices*(CONST size: ARRAY [*] OF SIZE;  sides: LONGINT ): IntTensor;  
+		PROCEDURE Dices*(CONST size: ARRAY [*] OF SIZE;  sides: SIGNED32 ): IntTensor;  
 		VAR i: SIZE;
 		BEGIN (*{EXCLUSIVE}*)
 			IF DIM(RESULT)=0 THEN NEW(RESULT, size) END;
@@ -105,7 +105,7 @@ VAR  RG: RandomGenerator (*Rand.Generator*);
 
 (*inverted diagonal, whereby for very small elements, the inverse is set to zero. *)
 	PROCEDURE InvDiag*( CONST M: Matrix ): Vector;  
-	VAR x: Vector;  i: SIZE;  a: LONGREAL;
+	VAR x: Vector;  i: SIZE;  a: FLOAT64;
 	BEGIN 
 		NEW( x, MAX( LEN( M, 0 ), LEN( M, 1 ) ) );  
 		FOR i := 0 TO LEN( x,0 ) - 1 DO 
@@ -115,8 +115,8 @@ VAR  RG: RandomGenerator (*Rand.Generator*);
 		RETURN x
 	END InvDiag;  
 
-	PROCEDURE RandomVec*( m: LONGINT;  content: LONGINT ): Vector;  
-	VAR i: LONGINT;  A: Vector;  x:Datatype;
+	PROCEDURE RandomVec*( m: SIGNED32;  content: SIGNED32 ): Vector;  
+	VAR i: SIGNED32;  A: Vector;  x:Datatype;
 	BEGIN 
 		NEW( A, m );  
 		FOR i := 0 TO m - 1 DO 
@@ -128,8 +128,8 @@ VAR  RG: RandomGenerator (*Rand.Generator*);
 		RETURN A
 	END RandomVec;  
 
-	PROCEDURE RandomMatrix*( m, n: LONGINT;  content: LONGINT ): Matrix;  
-	VAR i, j: LONGINT;  A: Matrix;  x:Datatype;
+	PROCEDURE RandomMatrix*( m, n: SIGNED32;  content: SIGNED32 ): Matrix;  
+	VAR i, j: SIGNED32;  A: Matrix;  x:Datatype;
 	BEGIN 
 		NEW( A, m, n );  
 		FOR i := 0 TO m - 1 DO 
@@ -147,7 +147,7 @@ VAR  RG: RandomGenerator (*Rand.Generator*);
 		RETURN A
 	END RandomMatrix;  
 
-	PROCEDURE Random*(CONST size: ARRAY [*] OF SIZE;  content: LONGINT ): Tensor;  
+	PROCEDURE Random*(CONST size: ARRAY [*] OF SIZE;  content: SIGNED32 ): Tensor;  
 	VAR i: SIZE;
 	BEGIN 
 		IF DIM(RESULT)=0 THEN NEW(RESULT, size) END;
@@ -211,7 +211,7 @@ VAR  RG: RandomGenerator (*Rand.Generator*);
 	END RotateVec;  
 
 	(*mirror a tensor along the specified dimension.*)
-	PROCEDURE Mirror*(VAR a: Tensor; CONST dim: LONGINT);
+	PROCEDURE Mirror*(VAR a: Tensor; CONST dim: SIGNED32);
 	VAR
 		i: SIZE;
 		tmp: Tensor;
@@ -239,16 +239,16 @@ VAR  RG: RandomGenerator (*Rand.Generator*);
 		END;
 	END Mirror;
 
-	PROCEDURE RestrictionOp*( M, N, rowstep, origin: LONGINT;  CONST operator: Vector ): Matrix;  
-	VAR res: Matrix;  op: Vector;  row: LONGINT;  
+	PROCEDURE RestrictionOp*( M, N, rowstep, origin: SIGNED32;  CONST operator: Vector ): Matrix;  
+	VAR res: Matrix;  op: Vector;  row: SIGNED32;  
 	BEGIN 
 		NEW( res, M, N );  NEW( op, N );  op[.. MIN( LEN( operator,0 ), N ) - 1] := operator;  op := RotateVec( op, -origin );  
 		FOR row := 0 TO M - 1 DO res[row] := op;  op := RotateVec( op, rowstep );  END;  
 		RETURN res
 	END RestrictionOp;  
 
-	PROCEDURE ProlongationOp*( M, N, colstep, origin: LONGINT;  CONST operator: Vector ): Matrix;  
-	VAR res: Matrix;  op: Vector;  col: LONGINT;  
+	PROCEDURE ProlongationOp*( M, N, colstep, origin: SIGNED32;  CONST operator: Vector ): Matrix;  
+	VAR res: Matrix;  op: Vector;  col: SIGNED32;  
 	BEGIN 
 		NEW( res, M, N );  NEW( op, M );  op[.. MIN( LEN( operator,0 ), M ) - 1] := operator;  op := RotateVec( op, -origin );  
 		FOR col := 0 TO N - 1 DO res[.. , col] := op;  op := RotateVec( op, colstep );  END;  
@@ -346,7 +346,7 @@ VAR  RG: RandomGenerator (*Rand.Generator*);
 		RETURN RESULT
 	END BoolToIntMatrix;
 
-	PROCEDURE ReduceBool2*(CONST b: ARRAY [*,*] OF BOOLEAN; sampling:LONGINT): BoolMatrix; (*implementation limitation: even size*)
+	PROCEDURE ReduceBool2*(CONST b: ARRAY [*,*] OF BOOLEAN; sampling:SIGNED32): BoolMatrix; (*implementation limitation: even size*)
 	VAR y,x:SIZE;
 	BEGIN
 		IF LEN(RESULT,0)=0 THEN NEW(RESULT, (LEN(b,0)+1) DIV 2, (LEN(b,1)+1) DIV 2) END;
@@ -544,7 +544,7 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 		END;
 	END Out;
 	
-	PROCEDURE OutInt*(CONST t: ARRAY[?] OF LONGINT);
+	PROCEDURE OutInt*(CONST t: ARRAY[?] OF SIGNED32);
 	VAR i:SIZE;
 	BEGIN
 		IF DIM(t)>1 THEN
@@ -578,13 +578,13 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 		KernelLog.Ln;  
 	END OutLn;  
 
-	PROCEDURE OutFloat*( x: LONGREAL;  n, f, D: LONGINT );  
+	PROCEDURE OutFloat*( x: FLOAT64;  n, f, D: SIGNED32 );  
 	VAR s: ARRAY 64 OF CHAR;  
 	BEGIN 
 		Strings.FloatToStr( x, n, f, D, s );  KernelLog.String( s );  
 	END OutFloat;  
 	
-	PROCEDURE OutComplex*(c: ComplexMathL.COMPLEXTYPE; n, f, D: LONGINT);
+	PROCEDURE OutComplex*(c: ComplexMathL.COMPLEXTYPE; n, f, D: SIGNED32);
 	BEGIN
 		OutFloat(c.re,n,f,D); OutFloat(c.im,n,f,D); KernelLog.String("i"); KernelLog.Ln;
 	END OutComplex;
@@ -597,7 +597,7 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 		END;
 	END OutComplexVector;
 	
-	PROCEDURE Print*(w:Streams.Writer; CONST t: ARRAY[?] OF Datatype; n, f, D: LONGINT );
+	PROCEDURE Print*(w:Streams.Writer; CONST t: ARRAY[?] OF Datatype; n, f, D: SIGNED32 );
 	VAR i:SIZE;
 	BEGIN
 		IF DIM(t)>1 THEN
@@ -613,7 +613,7 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 		END;
 	END Print;
 	
-	PROCEDURE PrintInt*(w:Streams.Writer; CONST t: ARRAY[?] OF LONGINT);
+	PROCEDURE PrintInt*(w:Streams.Writer; CONST t: ARRAY[?] OF SIGNED32);
 	VAR i:SIZE;
 	BEGIN
 		IF DIM(t)>1 THEN
@@ -645,13 +645,13 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 		END;
 	END PrintSize;
 	
-	PROCEDURE WriteFloat*(W:Streams.Writer; x: LONGREAL;  n, f, D: LONGINT ); (* call Update() after writing *)
+	PROCEDURE WriteFloat*(W:Streams.Writer; x: FLOAT64;  n, f, D: SIGNED32 ); (* call Update() after writing *)
 	VAR s: ARRAY 64 OF CHAR;  
 	BEGIN 
 		Strings.FloatToStr( x, n, f, D, s );  W.String( s );  (*?   spaces ...? *)
 	END WriteFloat;
 	
-	PROCEDURE WriteArray*(W:Streams.Writer; CONST t: ARRAY [?] OF Datatype; n,f,D:LONGINT);(* call Update() after writing *)
+	PROCEDURE WriteArray*(W:Streams.Writer; CONST t: ARRAY [?] OF Datatype; n,f,D:SIGNED32);(* call Update() after writing *)
 	VAR len: ARRAY [*] OF SIZE; i:SIZE;
 	BEGIN
 		ASSERT(DIM(t)>0);
@@ -665,8 +665,8 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 		END;
 	END WriteArray;
 	
-	(*convert a tensor of DATATYPE (longreal) to datatype REAL*)
-	PROCEDURE MatrixToFloat*(CONST m: ARRAY[?] OF Datatype; VAR ret: ARRAY[?] OF REAL);
+	(*convert a tensor of DATATYPE (longreal) to datatype FLOAT32*)
+	PROCEDURE MatrixToFloat*(CONST m: ARRAY[?] OF Datatype; VAR ret: ARRAY[?] OF FLOAT32);
 	VAR
 		i: SIZE;
 	BEGIN
@@ -674,15 +674,15 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 		IF DIM(m)=1 THEN
 			ASSERT(LEN(m,0)=LEN(ret,0));
 			FOR i:=0 TO LEN(m,0)-1 DO
-				ret[i]:=REAL(m[i]);
+				ret[i]:=FLOAT32(m[i]);
 			END;
 		ELSE
 			MatrixToFloat(m[0,?],ret[0,?]);
 		END;
 	END MatrixToFloat;
 	
-	(*convert a tensor or REAL to DATATYPE*)
-	PROCEDURE FloatToMatrix*(CONST m: ARRAY[?] OF REAL ; VAR ret: ARRAY[?] OF Datatype);
+	(*convert a tensor or FLOAT32 to DATATYPE*)
+	PROCEDURE FloatToMatrix*(CONST m: ARRAY[?] OF FLOAT32 ; VAR ret: ARRAY[?] OF Datatype);
 	VAR
 		i: SIZE;
 	BEGIN
@@ -709,7 +709,7 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 		END;
 	END WriteLR;
 	
-	PROCEDURE WriteR*(W:Streams.Writer; CONST t: ARRAY [?] OF REAL);
+	PROCEDURE WriteR*(W:Streams.Writer; CONST t: ARRAY [?] OF FLOAT32);
 	VAR i:SIZE;
 	BEGIN
 		ASSERT(DIM(t)>0);
@@ -720,7 +720,7 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 		END;
 	END WriteR;
 		
-	PROCEDURE WriteRasSR*(W:Streams.Writer; CONST t: ARRAY [?] OF REAL);
+	PROCEDURE WriteRasSR*(W:Streams.Writer; CONST t: ARRAY [?] OF FLOAT32);
 	(*VAR i:SIZE; sr: Shortreal.SHORTREAL;
 	BEGIN
 		ASSERT(DIM(t)>0);
@@ -735,7 +735,7 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 		*)
 	END WriteRasSR;
 
-	PROCEDURE WriteUInt8*(W:Streams.Writer; CONST t: ARRAY [?] OF INTEGER);
+	PROCEDURE WriteUInt8*(W:Streams.Writer; CONST t: ARRAY [?] OF SIGNED16);
 	VAR i:SIZE;
 	BEGIN
 		ASSERT(DIM(t)>0);
@@ -747,7 +747,7 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 	END WriteUInt8;
 	
 	(* raw *)
-	PROCEDURE WriteInt*(W:Streams.Writer; CONST t: ARRAY [?] OF INTEGER);
+	PROCEDURE WriteInt*(W:Streams.Writer; CONST t: ARRAY [?] OF SIGNED16);
 	VAR i:SIZE;
 	BEGIN
 		ASSERT(DIM(t)>0);
@@ -759,7 +759,7 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 	END WriteInt;
 
 	(* raw *)
-	PROCEDURE WriteLInt*(W:Streams.Writer; CONST t: ARRAY [?] OF LONGINT);
+	PROCEDURE WriteLInt*(W:Streams.Writer; CONST t: ARRAY [?] OF SIGNED32);
 	VAR i:SIZE;
 	BEGIN
 		ASSERT(DIM(t)>0);
@@ -796,7 +796,7 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 	END WriteBool;
 	*)
 	
-	PROCEDURE WriteHeader*(W: Streams.Writer; datatype: LONGINT; CONST len: ARRAY [*] OF SIZE);
+	PROCEDURE WriteHeader*(W: Streams.Writer; datatype: SIGNED32; CONST len: ARRAY [*] OF SIZE);
 	VAR
 		i: SIZE;
 		comment:ARRAY 16 OF CHAR;
@@ -830,28 +830,28 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 		W.Update;
 	END StoreLR;
 
-	PROCEDURE StoreR*(W:Streams.Writer; CONST t: ARRAY [?] OF REAL);
+	PROCEDURE StoreR*(W:Streams.Writer; CONST t: ARRAY [?] OF FLOAT32);
 	BEGIN
 		WriteHeader(W, DatatypeR, LEN(t));
 		IF DIM(t)>0 THEN WriteR(W,t) END;
 		W.Update;
 	END StoreR;
 	
-	PROCEDURE StoreRasSR*(W:Streams.Writer; CONST t: ARRAY [?] OF REAL);
+	PROCEDURE StoreRasSR*(W:Streams.Writer; CONST t: ARRAY [?] OF FLOAT32);
 	BEGIN
 		WriteHeader(W, DatatypeSR, LEN(t));
 		IF DIM(t)>0 THEN WriteRasSR(W,t) END;
 		W.Update;
 	END StoreRasSR;
 	
-	PROCEDURE StoreInt*(W:Streams.Writer; CONST t: ARRAY [?] OF INTEGER);
+	PROCEDURE StoreInt*(W:Streams.Writer; CONST t: ARRAY [?] OF SIGNED16);
 	BEGIN
 		WriteHeader(W,DatatypeInt, LEN(t));
 		IF DIM(t)>0 THEN WriteInt(W,t) END;
 		W.Update;
 	END StoreInt;
 	
-	PROCEDURE StoreLInt*(W:Streams.Writer; CONST t: ARRAY [?] OF LONGINT);
+	PROCEDURE StoreLInt*(W:Streams.Writer; CONST t: ARRAY [?] OF SIGNED32);
 	BEGIN
 		WriteHeader(W,DatatypeLInt, LEN(t));
 		IF DIM(t)>0 THEN WriteLInt(W,t) END;
@@ -877,7 +877,7 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 		END;
 	END ReadLR;
 	
-	PROCEDURE ReadR*(R:Streams.Reader; VAR t: ARRAY [?] OF REAL);
+	PROCEDURE ReadR*(R:Streams.Reader; VAR t: ARRAY [?] OF FLOAT32);
 	VAR i:SIZE;
 	BEGIN
 		ASSERT(DIM(t)>0);
@@ -888,7 +888,7 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 		END;
 	END ReadR;
 	
-	PROCEDURE ReadRfromSR*(R:Streams.Reader; VAR t: ARRAY [?] OF REAL);
+	PROCEDURE ReadRfromSR*(R:Streams.Reader; VAR t: ARRAY [?] OF FLOAT32);
 	(*VAR i:SIZE; sr: Shortreal.SHORTREAL; b2: ARRAY 2 OF CHAR;
 	BEGIN
 		ASSERT(DIM(t)>0);
@@ -899,7 +899,7 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 		END;*)
 	END ReadRfromSR;
 
-	PROCEDURE ReadUInt8*(R:Streams.Reader; VAR t: ARRAY [?] OF INTEGER);
+	PROCEDURE ReadUInt8*(R:Streams.Reader; VAR t: ARRAY [?] OF SIGNED16);
 	VAR i:SIZE; c:CHAR;
 	BEGIN
 		ASSERT(DIM(t)>0);
@@ -910,7 +910,7 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 		END;
 	END ReadUInt8;
 	
-	PROCEDURE ReadInt*(R:Streams.Reader; VAR t: ARRAY [?] OF INTEGER);
+	PROCEDURE ReadInt*(R:Streams.Reader; VAR t: ARRAY [?] OF SIGNED16);
 	VAR i:SIZE;
 	BEGIN
 		ASSERT(DIM(t)>0);
@@ -921,7 +921,7 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 		END;
 	END ReadInt;
 	
-	PROCEDURE ReadLInt*(R:Streams.Reader; VAR t: ARRAY [?] OF LONGINT);
+	PROCEDURE ReadLInt*(R:Streams.Reader; VAR t: ARRAY [?] OF SIGNED32);
 	VAR i:SIZE;
 	BEGIN
 		ASSERT(DIM(t)>0);
@@ -933,7 +933,7 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 	END ReadLInt;
 
 	PROCEDURE ReadSize*(R:Streams.Reader; VAR t: ARRAY [?] OF SIZE);
-	VAR i:SIZE; h:HUGEINT;
+	VAR i:SIZE; h:SIGNED64;
 	BEGIN
 		ASSERT(DIM(t)>0);
 		IF  DIM(t)=1 THEN 
@@ -944,10 +944,10 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 	END ReadSize;
 
 	
-	PROCEDURE GetSizeVectorV1(r: Streams.Reader): ARRAY [*] OF LONGINT;
+	PROCEDURE GetSizeVectorV1(r: Streams.Reader): ARRAY [*] OF SIGNED32;
 	VAR 
-		i, k:LONGINT;
-		lenL: ARRAY [*] OF LONGINT;
+		i, k:SIGNED32;
+		lenL: ARRAY [*] OF SIGNED32;
 	BEGIN
 		IF r.GetInteger(k,FALSE) THEN 
 			NEW(lenL,k);
@@ -961,7 +961,7 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 	
 	PROCEDURE GetSizeVectorV2(r: Streams.Reader): ARRAY [*] OF SIZE;
 	VAR 
-		i,j, k:LONGINT;
+		i,j, k:SIGNED32;
 	BEGIN
 		IF r.GetInteger(k,FALSE) THEN 
 			NEW(RESULT,k);
@@ -977,9 +977,9 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 	END GetSizeVectorV2;
 	
 	(*parse header of .MtA files storing an ARRAY [?] OF Datatype, or ARRAY [*{*}] OF Datatype*)
-	PROCEDURE ParseHeader*(r:Streams.Reader; VAR version, datatype: LONGINT; VAR len: ARRAY [*] OF SIZE);
+	PROCEDURE ParseHeader*(r:Streams.Reader; VAR version, datatype: SIGNED32; VAR len: ARRAY [*] OF SIZE);
 	VAR 
-		i, j, k:LONGINT;
+		i, j, k:SIGNED32;
 		dontcare: BOOLEAN;
 		structure, datatypeString, versionString, comment: ARRAY 8 OF CHAR;
 	BEGIN
@@ -1010,7 +1010,7 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 	(* derive structure from header*)
 	PROCEDURE LoadLR*(R:Streams.Reader): ARRAY [?] OF Datatype;
 	VAR  len: ARRAY [*] OF SIZE;
-		version, datatype:LONGINT;
+		version, datatype:SIGNED32;
 	BEGIN
 		ParseHeader(R,version, datatype,len);
 		ASSERT(datatype=DatatypeLR);
@@ -1019,9 +1019,9 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 		RETURN RESULT
 	END LoadLR;
 
-	PROCEDURE LoadR*(R:Streams.Reader): ARRAY [?] OF REAL;
+	PROCEDURE LoadR*(R:Streams.Reader): ARRAY [?] OF FLOAT32;
 	VAR  len: ARRAY [*] OF SIZE;
-		version, datatype:LONGINT;
+		version, datatype:SIGNED32;
 	BEGIN
 		ParseHeader(R,version, datatype,len);
 		ASSERT(datatype=DatatypeR);
@@ -1031,9 +1031,9 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 	END LoadR;
 
 
-	PROCEDURE LoadRfromSR*(R:Streams.Reader): ARRAY [?] OF REAL;
+	PROCEDURE LoadRfromSR*(R:Streams.Reader): ARRAY [?] OF FLOAT32;
 	VAR  len: ARRAY [*] OF SIZE;
-		version, datatype:LONGINT;
+		version, datatype:SIGNED32;
 	BEGIN
 		ParseHeader(R,version, datatype,len);
 		ASSERT(datatype=DatatypeSR);
@@ -1043,9 +1043,9 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 	END LoadRfromSR;
 	
 	(* derive structure from header*)
-	PROCEDURE LoadInt*(R:Streams.Reader): ARRAY [?] OF INTEGER;
+	PROCEDURE LoadInt*(R:Streams.Reader): ARRAY [?] OF SIGNED16;
 	VAR  len: ARRAY [*] OF SIZE;
-		version, datatype: LONGINT;
+		version, datatype: SIGNED32;
 	BEGIN
 		ParseHeader(R,version, datatype,len);
 		ASSERT(datatype=DatatypeInt);
@@ -1055,9 +1055,9 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 	END LoadInt;
 	
 (* derive structure from header*)
-	PROCEDURE LoadLInt*(R:Streams.Reader): ARRAY [?] OF LONGINT;
+	PROCEDURE LoadLInt*(R:Streams.Reader): ARRAY [?] OF SIGNED32;
 	VAR  len: ARRAY [*] OF SIZE;
-		version, datatype: LONGINT;
+		version, datatype: SIGNED32;
 	BEGIN
 		ParseHeader(R,version, datatype,len);
 		ASSERT(datatype=DatatypeLInt);
@@ -1069,8 +1069,8 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 	(* derive structure from header*)
 	PROCEDURE LoadSize*(R:Streams.Reader): ARRAY [?] OF SIZE;
 	VAR  len: ARRAY [*] OF SIZE;
-		resultLInt:ARRAY [*] OF LONGINT;
-		version, datatype: LONGINT;
+		resultLInt:ARRAY [*] OF SIGNED32;
+		version, datatype: SIGNED32;
 	BEGIN
 		ParseHeader(R,version, datatype,len);
 		IF (version=1)&(datatype=DatatypeLInt) THEN datatype:=DatatypeSize END;(*!bug fix for  2018.4.27 to about 2018.8.15*) 
@@ -1088,9 +1088,9 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 	END LoadSize;
 
 (* derive structure from header*)
-	PROCEDURE LoadUInt8*(R:Streams.Reader): ARRAY [?] OF INTEGER;
+	PROCEDURE LoadUInt8*(R:Streams.Reader): ARRAY [?] OF SIGNED16;
 	VAR  len: ARRAY [*] OF SIZE;
-		version, datatype: LONGINT;
+		version, datatype: SIGNED32;
 	BEGIN
 		ParseHeader(R,version, datatype,len);
 		ASSERT(datatype=DatatypeUInt8);
@@ -1102,7 +1102,7 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 	
 (*
 	PROCEDURE Test*(context:Commands.Context);
-	VAR a,b: ARRAY [?] OF LONGREAL; len: ARRAY [*] OF LONGINT; f:Files.File; w:Files.Writer; r:Files.Reader;
+	VAR a,b: ARRAY [?] OF FLOAT64; len: ARRAY [*] OF SIGNED32; f:Files.File; w:Files.Writer; r:Files.Reader;
 	BEGIN
 		len:=[2,3,4];
 		NEW(a,len);
@@ -1124,8 +1124,8 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 		END;
 	END sign;  
 
-	PROCEDURE eps*( ): REAL;   (*binary: last mantissa of REAL number*)
-	VAR x, y: REAL;  
+	PROCEDURE eps*( ): FLOAT32;   (*binary: last mantissa of FLOAT32 number*)
+	VAR x, y: FLOAT32;  
 	BEGIN 
 		x := 1;  
 		LOOP 
@@ -1135,8 +1135,8 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 		END;  
 	END eps;  
 
-	PROCEDURE epsL*( ): LONGREAL;   (*binary: last mantissa of LONGREAL number*)
-	VAR x, y: LONGREAL;  
+	PROCEDURE epsL*( ): FLOAT64;   (*binary: last mantissa of FLOAT64 number*)
+	VAR x, y: FLOAT64;  
 	BEGIN 
 		x := 1;  
 		LOOP 
@@ -1174,7 +1174,7 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 		RETURN sum
 	END SumAbs;  
 	
-	PROCEDURE SizeMatch(CONST A,B: Matrix):LONGINT;
+	PROCEDURE SizeMatch(CONST A,B: Matrix):SIGNED32;
 	BEGIN
 		IF (LEN(A,0)=LEN(B,0)) & (LEN(A,1)=LEN(B,1)) THEN RETURN Equal
 		ELSIF (LEN(A,0)<=LEN(B,0)) & (LEN(A,1)<=LEN(B,1)) THEN RETURN Smaller
@@ -1252,7 +1252,7 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 	*)
 	
 	PROCEDURE Test*;
-	VAR t,t1:Tensor; len:ARRAY [*]OF SIZE; i:LONGINT;
+	VAR t,t1:Tensor; len:ARRAY [*]OF SIZE; i:SIGNED32;
 		f:Files.File; w:Files.Writer; r:Files.Reader;
 	BEGIN
 		NEW(len,0);

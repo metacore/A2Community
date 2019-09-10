@@ -24,7 +24,7 @@ sqrt(A) = V* sqrt(D) * Vinv
 
 (** input: matrix A; output: R = sqrt(A), and its inverse Rinv *)
 PROCEDURE SquareRoot*(CONST A: Matrix; VAR R, Rinv:Matrix); (*implemented using Denman-Beavers*)
-VAR tmpR: Matrix; Inv:MatrixStandardSolvers.LU; i:LONGINT;
+VAR tmpR: Matrix; Inv:MatrixStandardSolvers.LU; i:SIGNED32;
 BEGIN
 	R:=A;
 	IF (LEN(Rinv,0)#LEN(A,0)) OR (LEN(Rinv,1)#LEN(A,1))THEN NEW(Rinv,LEN(A,0),LEN(A,1)); END;

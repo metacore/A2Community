@@ -3,8 +3,8 @@ MODULE StatisticsCombinatorics; (** AUTHOR "Patrick Hunziker 2017"; PURPOSE "Lib
 IMPORT Random (*, Commands, MatrixUtilities*);
 
 (*Fisher Yates Algorithm: Random Permutation*)
-PROCEDURE Permutation*(N:LONGINT): ARRAY[*] OF LONGINT;
-VAR i, n:LONGINT; series: ARRAY [*] OF LONGINT;
+PROCEDURE Permutation*(N:SIGNED32): ARRAY[*] OF SIGNED32;
+VAR i, n:SIGNED32; series: ARRAY [*] OF SIGNED32;
 BEGIN
 	IF LEN(RESULT,0)#N THEN NEW(RESULT,N) END;
 	IF LEN(series,0)#N THEN NEW(series,N) END;
@@ -19,11 +19,11 @@ BEGIN
 END Permutation;
 
 (*in-place random permutation*)
-PROCEDURE Permute*(VAR A: ARRAY[*] OF LONGINT);
-VAR i: SIZE; j, n:LONGINT;
+PROCEDURE Permute*(VAR A: ARRAY[*] OF SIGNED32);
+VAR i: SIZE; j, n:SIGNED32;
 BEGIN
 	FOR i:=LEN(A,0)-1 TO 1 BY -1 DO
-		n:=sequence.Dice((i+1)(LONGINT));
+		n:=sequence.Dice((i+1)(SIGNED32));
 		j:=A[i];
 		A[i]:=A[n];
 		A[n]:=j;
@@ -33,7 +33,7 @@ END Permute;
 VAR sequence: Random.Sequence;
 (*
 PROCEDURE Test*(context:Commands.Context);
-VAR n:LONGINT; p:ARRAY [*] OF LONGINT;
+VAR n:SIGNED32; p:ARRAY [*] OF SIGNED32;
 BEGIN
 	IF context.arg.GetInteger(n,FALSE) THEN
 	p:=Permutation(n);

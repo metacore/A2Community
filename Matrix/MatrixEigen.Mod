@@ -78,7 +78,7 @@ CONST
 
 	PROCEDURE DropEigenvalue(CONST A:Matrix):Matrix;
 	CONST threshold=0.0001;
-	VAR i:LONGINT; v:Vector; B:Matrix; max:LONGINT;
+	VAR i:SIGNED32; v:Vector; B:Matrix; max:SIGNED32;
 	BEGIN
 		i:=0;
 		max:=LEN(A)-1;
@@ -106,7 +106,7 @@ CONST
 	PROCEDURE QREigen (CONST A: Matrix);
 	(* works for real symmetric matrices; still slow: eliminate one eigenvalue when it is found and reduce matrix size at each step*)
 	(*to do: use householder reduction to hessenberg form or similar as first step*)
-	VAR qr: MatrixStandardSolvers.QR; svd: MatrixSVD.Solver; dummy,A0, A1,Q,R: Matrix; k:LONGINT; (*needs work*)
+	VAR qr: MatrixStandardSolvers.QR; svd: MatrixSVD.Solver; dummy,A0, A1,Q,R: Matrix; k:SIGNED32; (*needs work*)
 	BEGIN
 		NEW(qr,dummy);
 		A0:=A;

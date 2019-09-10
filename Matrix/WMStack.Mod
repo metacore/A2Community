@@ -6,9 +6,9 @@ CONST 	signed=1;
 		heat=4;
 
 TYPE
-	Matrix= ARRAY [*,*] OF LONGREAL;
-	Stack= ARRAY [*,*,*] OF LONGREAL;
-	(*Stack= ARRAY [?] OF LONGREAL;*)
+	Matrix= ARRAY [*,*] OF FLOAT64;
+	Stack= ARRAY [*,*,*] OF FLOAT64;
+	(*Stack= ARRAY [?] OF FLOAT64;*)
 
 
 TYPE Model*= OBJECT (Models.Model)
@@ -17,9 +17,9 @@ TYPE Model*= OBJECT (Models.Model)
 
 TYPE Window*= OBJECT (WM.BufferWindow) (* or could use WM.DoubleBufferWindow or WMComponents.FormWindow) *)
 	VAR model*:Model;
-		max,min, gain*:LONGREAL;
+		max,min, gain*:FLOAT64;
 		exists:BOOLEAN;
-		type, orientation:LONGINT;
+		type, orientation:SIGNED32;
 		offset*,current*:SIZE;
 		mx0,my0,mx1,my1:SIZE;
 		dummy: Stack;
@@ -27,9 +27,9 @@ TYPE Window*= OBJECT (WM.BufferWindow) (* or could use WM.DoubleBufferWindow or 
 		source*:ANY;
 
 
-	PROCEDURE &Initialize*(CONST m: Stack; CONST title: ARRAY OF CHAR; orientation:LONGINT);
+	PROCEDURE &Initialize*(CONST m: Stack; CONST title: ARRAY OF CHAR; orientation:SIGNED32);
 
-	(*PROCEDURE &Initialize*(CONST m: ARRAY [*,*,*] OF LONGREAL; CONST title: ARRAY OF CHAR; orientation:LONGINT);*)
+	(*PROCEDURE &Initialize*(CONST m: ARRAY [*,*,*] OF FLOAT64; CONST title: ARRAY OF CHAR; orientation:SIGNED32);*)
 	BEGIN
 		ASSERT(DIM(m)=3,200);
 		SELF.orientation:=orientation;
@@ -51,7 +51,7 @@ TYPE Window*= OBJECT (WM.BufferWindow) (* or could use WM.DoubleBufferWindow or 
 		(*maxInterpolation:=1; => default bilinear interpolation;  maxInterpolation:=0; => nearest neighbour interpolation*)
 	END Initialize;
 
-	PROCEDURE SetOrientation*(orientation:LONGINT);
+	PROCEDURE SetOrientation*(orientation:SIGNED32);
 	VAR w,h: SIZE; m: WM.WindowManager;
 	BEGIN
 		IF (orientation#SELF.orientation) THEN
@@ -134,7 +134,7 @@ TYPE Window*= OBJECT (WM.BufferWindow) (* or could use WM.DoubleBufferWindow or 
 			Inputs.Release flag in flags. ucs contains the unicode equivalent of the key. Special input editors
 			send the generated unicode characters via KeyEvent.  *)
 	PROCEDURE KeyEvent(ucs : SIZE; flags : SET; keysym : SIZE);
-		VAR dz: LONGINT; s: ARRAY 16 OF CHAR;
+		VAR dz: SIGNED32; s: ARRAY 16 OF CHAR;
 		BEGIN
 			IF ~(Inputs.Release IN flags )THEN
 				IF keysym = Inputs.KsUp THEN
@@ -179,7 +179,7 @@ TYPE Window*= OBJECT (WM.BufferWindow) (* or could use WM.DoubleBufferWindow or 
 		END;
 	END SetImage;
 
-	PROCEDURE SetImageB*(CONST m: Stack; offset:LONGINT;gain: LONGREAL);
+	PROCEDURE SetImageB*(CONST m: Stack; offset:SIGNED32;gain: FLOAT64);
 	BEGIN
 		IF ~exists  & (LEN(m)>0) THEN
 			IF orientation=0 THEN Init(LEN(m,2), LEN(m,1), TRUE);
@@ -261,7 +261,7 @@ TYPE Window*= OBJECT (WM.BufferWindow) (* or could use WM.DoubleBufferWindow or 
 		*)
 	END Render;
 
-	PROCEDURE RenderScaled*(offset:LONGINT;gain: LONGREAL);
+	PROCEDURE RenderScaled*(offset:SIGNED32;gain: FLOAT64);
 	BEGIN
 		SELF.offset:=offset; SELF.gain:=gain;
 		Render;
@@ -278,10 +278,10 @@ TYPE Window*= OBJECT (WM.BufferWindow) (* or could use WM.DoubleBufferWindow or 
 
 END Window;
 
-VAR InsertPosX*,InsertPosY*, pos: LONGINT; (* default insertion point for new window *)
+VAR InsertPosX*,InsertPosY*, pos: SIGNED32; (* default insertion point for new window *)
 
 PROCEDURE GenerateName(prefix: Strings.String; VAR str: ARRAY OF CHAR);
-VAR  i,j:LONGINT; title: Files.FileName; c:CHAR;
+VAR  i,j:SIGNED32; title: Files.FileName; c:CHAR;
 BEGIN
 	i:=0; j:=0;
 	IF prefix#NIL THEN
@@ -303,7 +303,7 @@ END GenerateName;
 
 (*
 PROCEDURE AddWindow*(CONST m: Stack; CONST title: ARRAY OF CHAR); (*deprecated*)
-VAR pw: WM.BufferWindow; max,min:LONGREAL; type:BOOLEAN;
+VAR pw: WM.BufferWindow; max,min:FLOAT64; type:BOOLEAN;
 BEGIN
 	max:=MAX(m); min:=MIN(m);
 	IF orientation=0 THEN NEW(pw, LEN(m,2), LEN(m,1), TRUE);
@@ -327,9 +327,9 @@ END AddWindow;
 *)
 
 PROCEDURE RemoveWindows*(context:Commands.Context); (*! does this need a wait for termination ?  *)
-VAR manager:WM.WindowManager; number:LONGINT; w,remove:WM.Window; i:LONGINT;
+VAR manager:WM.WindowManager; number:SIGNED32; w,remove:WM.Window; i:SIGNED32;
 BEGIN {EXCLUSIVE}
-	IF (context=NIL) OR (~context.arg.GetInteger(i,FALSE)) THEN i:=MAX(LONGINT) END;
+	IF (context=NIL) OR (~context.arg.GetInteger(i,FALSE)) THEN i:=MAX(SIGNED32) END;
 	manager:=WM.GetDefaultManager();
 	manager.lock.AcquireWrite;
 	w:=manager.GetFirst();
@@ -362,7 +362,7 @@ IMPORT WMStack;
 
 PROCEDURE Test*;
 VAR window:WMStack.Window;
-	stack: ARRAY [*,*,*] OF LONGINT; (* or LONGREAL or other..*)
+	stack: ARRAY [*,*,*] OF SIGNED32; (* or FLOAT64 or other..*)
 BEGIN
 	(*have some data in a 3D array ready*)
 	NEW(stack, 40,100,100);

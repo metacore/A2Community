@@ -20,7 +20,7 @@ TYPE
 	*)
 	Classifier* = OBJECT(MLBase.LearningMachine)
 	VAR
-		kernType-: WORD;
+		kernType-: INTEGER;
 		kernParams-: Vector;
 		C: Scalar;
 		X1, X2: Matrix;
@@ -98,7 +98,7 @@ TYPE
 			REMARKS:
 				after you set a new type of kernel you must redo learning of the classifier!
 		*)
-		PROCEDURE SetKernel*(kernType: WORD; CONST kernParams: Vector);
+		PROCEDURE SetKernel*(kernType: INTEGER; CONST kernParams: Vector);
 		BEGIN
 			isTrained := FALSE; (* reset classifier *)
 

@@ -31,7 +31,7 @@ TYPE
 		OUTPUT:
 			Kernel matrix of size nSamples1 x nSamples2
 	*)
-	PROCEDURE KernelMtx*(CONST X1, X2: Matrix; kernType: WORD; CONST kernParams: Vector): Matrix;
+	PROCEDURE KernelMtx*(CONST X1, X2: Matrix; kernType: INTEGER; CONST kernParams: Vector): Matrix;
 	VAR
 		i, j: SIZE;
 		f: Scalar;

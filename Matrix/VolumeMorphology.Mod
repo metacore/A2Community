@@ -128,7 +128,7 @@ END SimpleErosion;
 PROCEDURE Erosion*(CONST volume,se:Volume):Volume;
 VAR
 	e,c:Volume;
-	k0,k1,k2,m0,m1,m2: LONGINT;
+	k0,k1,k2,m0,m1,m2: SIGNED32;
 BEGIN
 		HALT(200); (*! do do: use generic ALL operator. (will be delivered by Alexey for binary procedures)
 		use it with

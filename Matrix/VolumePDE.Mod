@@ -134,7 +134,7 @@ TYPE
 		END Init;
 
 		(*implicit solving BTCS*)
-		PROCEDURE Solve*(VAR x: Grid;  threshold: Datatype;  iterations: LONGINT;  Boundaries: Boundary );   (*TO DO: check for convergence*)
+		PROCEDURE Solve*(VAR x: Grid;  threshold: Datatype;  iterations: SIGNED32;  Boundaries: Boundary );   (*TO DO: check for convergence*)
 		BEGIN
 			(* Laplacian(A)=second derivative of x is usually modeled as A*x with A containing the coefficients for discrete approximation of the laplacian,
 		but here, the Laplacian computed by digital filtering takes its place; if done in the real domain, the approximation is equivalent to MatMul; if done in the
@@ -145,7 +145,7 @@ TYPE
 		END Solve;
 
 		(*implicit solving BTCS*)
-		PROCEDURE SolveMultigrid*( VAR x: Grid;  threshold: Datatype;  minsize, iterations, smoothings: LONGINT;  Boundaries: Boundary );
+		PROCEDURE SolveMultigrid*( VAR x: Grid;  threshold: Datatype;  minsize, iterations, smoothings: SIGNED32;  Boundaries: Boundary );
 		BEGIN
 			alpha:= 0; beta:=6;
 			IF (LEN( x, 0 ) > minsize) & (LEN(x,1)> minsize) & (LEN(x,2)> minsize) THEN
@@ -184,7 +184,7 @@ TYPE
 		END Init;
 
 		(*implicit solving BTCS*)
-		PROCEDURE Solve*(CONST b: Grid; VAR x: Grid;  ds, threshold: Datatype;  iterations: LONGINT;  Boundaries: Boundary );   (*TO DO: check for convergence*)
+		PROCEDURE Solve*(CONST b: Grid; VAR x: Grid;  ds, threshold: Datatype;  iterations: SIGNED32;  Boundaries: Boundary );   (*TO DO: check for convergence*)
 		BEGIN
 			(* Laplacian(A)=second derivative of x is usually modeled as A*x with A containing the coefficients for discrete approximation of the laplacian,
 		but here, the Laplacian computed by digital filtering takes its place; if done in the real domain, the approximation is equivalent to MatMul; if done in the
@@ -195,7 +195,7 @@ TYPE
 		END Solve;
 
 		(*implicit solving BTCS*)
-		PROCEDURE SolveMultigrid*( CONST b: Grid; VAR x: Grid;  ds, threshold: Datatype;  minsize, iterations, smoothings: LONGINT;  Boundaries: Boundary );
+		PROCEDURE SolveMultigrid*( CONST b: Grid; VAR x: Grid;  ds, threshold: Datatype;  minsize, iterations, smoothings: SIGNED32;  Boundaries: Boundary );
 		BEGIN
 			alpha:= -ds*ds; beta:=6;
 			IF (LEN( x, 0 ) > minsize) & (LEN(x,1)> minsize)& (LEN(x,2)> minsize) THEN
@@ -234,7 +234,7 @@ TYPE
 		END Init;
 
 		(*implicit solving BTCS*)
-		PROCEDURE Solve*( CONST b:Grid; VAR x: Grid;  nu, dt, ds, threshold: Datatype;  iterations: LONGINT;  Boundaries: Boundary );
+		PROCEDURE Solve*( CONST b:Grid; VAR x: Grid;  nu, dt, ds, threshold: Datatype;  iterations: SIGNED32;  Boundaries: Boundary );
 		BEGIN
 			(* Laplacian(A)=second derivative of x is usually modeled as A*x with A containing the coefficients for discrete approximation of the laplacian,
 		but here, the Laplacian computed by digital filtering takes its place; if done in the real domain, the approximation is equivalent to MatMul; if done in the
@@ -245,7 +245,7 @@ TYPE
 		END Solve;
 
 		(*implicit solving BTCS*)
-		PROCEDURE SolveMultigrid*( CONST b: Grid; VAR x: Grid;  nu, dt, ds, threshold: Datatype;  minsize, iterations, smoothings: LONGINT;  Boundaries: Boundary );
+		PROCEDURE SolveMultigrid*( CONST b: Grid; VAR x: Grid;  nu, dt, ds, threshold: Datatype;  minsize, iterations, smoothings: SIGNED32;  Boundaries: Boundary );
 		BEGIN
 			alpha := ds * ds  / (nu*dt);  beta := 6 + alpha;
 			IF (LEN( x, 0 ) > minsize) & (LEN(x,1)> minsize)& (LEN(x,2)> minsize) THEN
@@ -296,7 +296,7 @@ TYPE
 		END SolveExplicit;
 
 		(*implicit solving BTCS*)
-		PROCEDURE Solve*( CONST phim1,phi0 : Grid;  VAR x: Grid;  c, dt, ds, threshold: Datatype;  iterations: LONGINT;  Boundaries: Boundary );
+		PROCEDURE Solve*( CONST phim1,phi0 : Grid;  VAR x: Grid;  c, dt, ds, threshold: Datatype;  iterations: SIGNED32;  Boundaries: Boundary );
 		BEGIN
 			(* Laplacian(A)=second derivative of x is usually modeled as A*x with A containing the coefficients for discrete approximation of the laplacian,
 		but here, the Laplacian computed by digital filtering takes its place; if done in the real domain, the approximation is equivalent to MatMul; if done in the
@@ -309,7 +309,7 @@ TYPE
 		END Solve;
 
 			(*implicit solving BTCS*)
-		PROCEDURE SolveMultigrid*( CONST phim1,phi0:Grid;  VAR x: Grid;  c, dt, ds, threshold: Datatype;  minsize, iterations, smoothings: LONGINT;  Boundaries: Boundary );
+		PROCEDURE SolveMultigrid*( CONST phim1,phi0:Grid;  VAR x: Grid;  c, dt, ds, threshold: Datatype;  minsize, iterations, smoothings: SIGNED32;  Boundaries: Boundary );
 		BEGIN
 			alpha := ds * ds  / (c*c*dt*dt);  beta := 6 + alpha;
 			IF (LEN( x, 0 ) > minsize) & (LEN(x,1)> minsize)& (LEN(x,2)> minsize) THEN
@@ -489,7 +489,7 @@ TYPE
 		x := invbeta * x1;
 	END JacobiStep;
 
-	PROCEDURE JacobiSteps( CONST b: Grid;  VAR x, x1: Grid;  alpha, beta: Datatype;  Boundaries: Boundary; iterations:LONGINT);
+	PROCEDURE JacobiSteps( CONST b: Grid;  VAR x, x1: Grid;  alpha, beta: Datatype;  Boundaries: Boundary; iterations:SIGNED32);
 	BEGIN
 		WHILE iterations>0 DO
 			IF Boundaries # NIL THEN Boundaries( x ) END;
@@ -499,7 +499,7 @@ TYPE
 			IF Boundaries # NIL THEN Boundaries( x ) END;
 	END JacobiSteps;
 
-	PROCEDURE Cast2x2x2*(a0,a1,b0,b1,c0,c1,d0,d1: LONGREAL):ARRAY [2,2,2] OF LONGREAL;
+	PROCEDURE Cast2x2x2*(a0,a1,b0,b1,c0,c1,d0,d1: FLOAT64):ARRAY [2,2,2] OF FLOAT64;
 	BEGIN
 		RETURN [[[a0,a1],[b0,b1]],[[c0,c1],[d0,d1]]];
 	END Cast2x2x2;

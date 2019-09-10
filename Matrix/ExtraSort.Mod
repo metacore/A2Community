@@ -10,13 +10,13 @@ MODULE ExtraSort;
 TYPE
 	(*
 		DESCRIPTION:
-			Quick sort for LONGINT data
+			Quick sort for SIGNED32 data
 		INPUTS:
 			x[var] - array to sort
 	*)
-	PROCEDURE QuickSortLI*( VAR x: ARRAY [ * ] OF LONGINT);
+	PROCEDURE QuickSortLI*( VAR x: ARRAY [ * ] OF SIGNED32);
 
-		PROCEDURE QSort( VAR x: ARRAY [ * ] OF LONGINT; l, r: SIZE );
+		PROCEDURE QSort( VAR x: ARRAY [ * ] OF SIGNED32; l, r: SIZE );
 		VAR m: SIZE;
 		BEGIN
 			WHILE l < r DO
@@ -41,15 +41,15 @@ TYPE
 
 	(*
 		DESCRIPTION:
-			Quick sort for LONGINT data
+			Quick sort for SIGNED32 data
 		INPUTS:
 			x[var] - array to sort
 			ind[var] - sorting indices
 	*)
-	PROCEDURE QuickSortExLI*( VAR x: ARRAY [ * ] OF LONGINT;  VAR ind: ARRAY [ * ] OF SIZE );
+	PROCEDURE QuickSortExLI*( VAR x: ARRAY [ * ] OF SIGNED32;  VAR ind: ARRAY [ * ] OF SIZE );
 	VAR i: SIZE;
 
-		PROCEDURE QSort( VAR x: ARRAY [ * ] OF LONGINT;  VAR ind: ARRAY [ * ] OF SIZE;  l, r: SIZE );
+		PROCEDURE QSort( VAR x: ARRAY [ * ] OF SIGNED32;  VAR ind: ARRAY [ * ] OF SIZE;  l, r: SIZE );
 		VAR m: SIZE;
 		BEGIN
 			WHILE l < r DO
@@ -76,13 +76,13 @@ TYPE
 
 	(*
 		DESCRIPTION:
-			Quick sort for REAL data
+			Quick sort for FLOAT32 data
 		INPUTS:
 			x[var] - array to sort
 	*)
-	PROCEDURE QuickSortR*( VAR x: ARRAY [ * ] OF REAL);
+	PROCEDURE QuickSortR*( VAR x: ARRAY [ * ] OF FLOAT32);
 
-		PROCEDURE QSort( VAR x: ARRAY [ * ] OF REAL; l, r: SIZE );
+		PROCEDURE QSort( VAR x: ARRAY [ * ] OF FLOAT32; l, r: SIZE );
 		VAR m: SIZE;
 		BEGIN
 			WHILE l < r DO
@@ -108,15 +108,15 @@ TYPE
 
 	(*
 		DESCRIPTION:
-			Quick sort for REAL data
+			Quick sort for FLOAT32 data
 		INPUTS:
 			x[var] - array to sort
 			ind[var] - sorting indices
 	*)
-	PROCEDURE QuickSortExR*( VAR x: ARRAY [ * ] OF REAL;  VAR ind: ARRAY [ * ] OF SIZE );
+	PROCEDURE QuickSortExR*( VAR x: ARRAY [ * ] OF FLOAT32;  VAR ind: ARRAY [ * ] OF SIZE );
 	VAR i: SIZE;
 
-		PROCEDURE QSort( VAR x: ARRAY [ * ] OF REAL;  VAR ind: ARRAY [ * ] OF SIZE;  l, r: SIZE );
+		PROCEDURE QSort( VAR x: ARRAY [ * ] OF FLOAT32;  VAR ind: ARRAY [ * ] OF SIZE;  l, r: SIZE );
 		VAR m: SIZE;
 		BEGIN
 			WHILE l < r DO
@@ -143,13 +143,13 @@ TYPE
 
 	(*
 		DESCRIPTION:
-			Quick sort for LONGREAL data
+			Quick sort for FLOAT64 data
 		INPUTS:
 			x[var] - array to sort
 	*)
-	PROCEDURE QuickSortLR*( VAR x: ARRAY [ * ] OF LONGREAL);
+	PROCEDURE QuickSortLR*( VAR x: ARRAY [ * ] OF FLOAT64);
 
-		PROCEDURE QSort( VAR x: ARRAY [ * ] OF LONGREAL; l, r: SIZE );
+		PROCEDURE QSort( VAR x: ARRAY [ * ] OF FLOAT64; l, r: SIZE );
 		VAR m: SIZE;
 		BEGIN
 			WHILE l < r DO
@@ -174,15 +174,15 @@ TYPE
 
 	(*
 		DESCRIPTION:
-			Quick sort for LONGREAL data
+			Quick sort for FLOAT64 data
 		INPUTS:
 			x[var] - array to sort
 			ind[var] - sorting indices
 	*)
-	PROCEDURE QuickSortExLR*( VAR x: ARRAY [ * ] OF LONGREAL;  VAR ind: ARRAY [ * ] OF SIZE );
+	PROCEDURE QuickSortExLR*( VAR x: ARRAY [ * ] OF FLOAT64;  VAR ind: ARRAY [ * ] OF SIZE );
 	VAR i: SIZE;
 
-		PROCEDURE QSort( VAR x: ARRAY [ * ] OF LONGREAL;  VAR ind: ARRAY [ * ] OF SIZE;  l, r: SIZE );
+		PROCEDURE QSort( VAR x: ARRAY [ * ] OF FLOAT64;  VAR ind: ARRAY [ * ] OF SIZE;  l, r: SIZE );
 		VAR m: SIZE;
 		BEGIN
 			WHILE l < r DO
@@ -211,8 +211,8 @@ TYPE
 		procedures for internal use
 	*)
 
-	PROCEDURE InsertionSortLI( VAR x: ARRAY [ * ] OF LONGINT; l, r: SIZE );
-	VAR t: LONGINT;  i, j: SIZE;
+	PROCEDURE InsertionSortLI( VAR x: ARRAY [ * ] OF SIGNED32; l, r: SIZE );
+	VAR t: SIGNED32;  i, j: SIZE;
 	BEGIN
 		FOR i := l + 1 TO r DO
 			t := x[i];
@@ -229,8 +229,8 @@ TYPE
 		END;
 	END InsertionSortLI;
 
-	PROCEDURE InsertionSortExLI( VAR x: ARRAY [ * ] OF LONGINT;  VAR ind: ARRAY [ * ] OF SIZE;  l, r: SIZE );
-	VAR t: LONGINT;  i, j, k: SIZE;
+	PROCEDURE InsertionSortExLI( VAR x: ARRAY [ * ] OF SIGNED32;  VAR ind: ARRAY [ * ] OF SIZE;  l, r: SIZE );
+	VAR t: SIGNED32;  i, j, k: SIZE;
 	BEGIN
 		FOR i := l + 1 TO r DO
 			t := x[i];  k := ind[i];
@@ -247,8 +247,8 @@ TYPE
 		END;
 	END InsertionSortExLI;
 
-	PROCEDURE InsertionSortR( VAR x: ARRAY [ * ] OF REAL;  l, r: SIZE );
-	VAR t: REAL;  i, j: SIZE;
+	PROCEDURE InsertionSortR( VAR x: ARRAY [ * ] OF FLOAT32;  l, r: SIZE );
+	VAR t: FLOAT32;  i, j: SIZE;
 	BEGIN
 		FOR i := l + 1 TO r DO
 			t := x[i];
@@ -265,8 +265,8 @@ TYPE
 		END;
 	END InsertionSortR;
 
-	PROCEDURE InsertionSortExR( VAR x: ARRAY [ * ] OF REAL;  VAR ind: ARRAY [ * ] OF SIZE;  l, r: SIZE );
-	VAR t: REAL;  i, j, k: SIZE;
+	PROCEDURE InsertionSortExR( VAR x: ARRAY [ * ] OF FLOAT32;  VAR ind: ARRAY [ * ] OF SIZE;  l, r: SIZE );
+	VAR t: FLOAT32;  i, j, k: SIZE;
 	BEGIN
 		FOR i := l + 1 TO r DO
 			t := x[i];  k := ind[i];
@@ -283,8 +283,8 @@ TYPE
 		END;
 	END InsertionSortExR;
 
-	PROCEDURE InsertionSortLR( VAR x: ARRAY [ * ] OF LONGREAL;  l, r: SIZE );
-	VAR t: LONGREAL;  i, j: SIZE;
+	PROCEDURE InsertionSortLR( VAR x: ARRAY [ * ] OF FLOAT64;  l, r: SIZE );
+	VAR t: FLOAT64;  i, j: SIZE;
 	BEGIN
 		FOR i := l + 1 TO r DO
 			t := x[i];
@@ -301,8 +301,8 @@ TYPE
 		END;
 	END InsertionSortLR;
 
-	PROCEDURE InsertionSortExLR( VAR x: ARRAY [ * ] OF LONGREAL;  VAR ind: ARRAY [ * ] OF SIZE;  l, r: SIZE );
-	VAR t: LONGREAL;  i, j, k: SIZE;
+	PROCEDURE InsertionSortExLR( VAR x: ARRAY [ * ] OF FLOAT64;  VAR ind: ARRAY [ * ] OF SIZE;  l, r: SIZE );
+	VAR t: FLOAT64;  i, j, k: SIZE;
 	BEGIN
 		FOR i := l + 1 TO r DO
 			t := x[i];  k := ind[i];
@@ -319,8 +319,8 @@ TYPE
 		END;
 	END InsertionSortExLR;
 
-	PROCEDURE PartitionLI( VAR x: ARRAY [ * ] OF LONGINT;  l, r: SIZE ): SIZE;
-	VAR pivot, t: LONGINT;  i, j: SIZE;
+	PROCEDURE PartitionLI( VAR x: ARRAY [ * ] OF SIGNED32;  l, r: SIZE ): SIZE;
+	VAR pivot, t: SIGNED32;  i, j: SIZE;
 	BEGIN
 		pivot := x[(l + r) DIV 2];
 		(* work from both ends, swapping to keep   *)
@@ -341,8 +341,8 @@ TYPE
 		RETURN j;
 	END PartitionLI;
 
-	PROCEDURE PartitionExLI( VAR x: ARRAY [ * ] OF LONGINT;  VAR ind: ARRAY [ * ] OF SIZE;  l, r: SIZE ): SIZE;
-	VAR pivot, t: LONGINT;  i, j, k: SIZE;
+	PROCEDURE PartitionExLI( VAR x: ARRAY [ * ] OF SIGNED32;  VAR ind: ARRAY [ * ] OF SIZE;  l, r: SIZE ): SIZE;
+	VAR pivot, t: SIGNED32;  i, j, k: SIZE;
 	BEGIN
 		pivot := x[(l + r) DIV 2];
 		(* work from both ends, swapping to keep   *)
@@ -365,8 +365,8 @@ TYPE
 		RETURN j;
 	END PartitionExLI;
 
-	PROCEDURE PartitionR( VAR x: ARRAY [ * ] OF REAL;  l, r: SIZE ): SIZE;
-	VAR pivot, t: REAL;  i, j: SIZE;
+	PROCEDURE PartitionR( VAR x: ARRAY [ * ] OF FLOAT32;  l, r: SIZE ): SIZE;
+	VAR pivot, t: FLOAT32;  i, j: SIZE;
 	BEGIN
 		pivot := x[(l + r) DIV 2];
 		(* work from both ends, swapping to keep   *)
@@ -387,8 +387,8 @@ TYPE
 		RETURN j;
 	END PartitionR;
 
-	PROCEDURE PartitionExR( VAR x: ARRAY [ * ] OF REAL;  VAR ind: ARRAY [ * ] OF SIZE;  l, r: SIZE ): SIZE;
-	VAR pivot, t: REAL;  i, j, k: SIZE;
+	PROCEDURE PartitionExR( VAR x: ARRAY [ * ] OF FLOAT32;  VAR ind: ARRAY [ * ] OF SIZE;  l, r: SIZE ): SIZE;
+	VAR pivot, t: FLOAT32;  i, j, k: SIZE;
 	BEGIN
 		pivot := x[(l + r) DIV 2];
 		(* work from both ends, swapping to keep   *)
@@ -411,8 +411,8 @@ TYPE
 		RETURN j;
 	END PartitionExR;
 
-	PROCEDURE PartitionLR( VAR x: ARRAY [ * ] OF LONGREAL;  l, r: SIZE ): SIZE;
-	VAR pivot, t: LONGREAL;  i, j: SIZE;
+	PROCEDURE PartitionLR( VAR x: ARRAY [ * ] OF FLOAT64;  l, r: SIZE ): SIZE;
+	VAR pivot, t: FLOAT64;  i, j: SIZE;
 	BEGIN
 		pivot := x[(l + r) DIV 2];
 		(* work from both ends, swapping to keep   *)
@@ -433,8 +433,8 @@ TYPE
 		RETURN j;
 	END PartitionLR;
 
-	PROCEDURE PartitionExLR( VAR x: ARRAY [ * ] OF LONGREAL;  VAR ind: ARRAY [ * ] OF SIZE;  l, r: SIZE ): SIZE;
-	VAR pivot, t: LONGREAL;  i, j, k: SIZE;
+	PROCEDURE PartitionExLR( VAR x: ARRAY [ * ] OF FLOAT64;  VAR ind: ARRAY [ * ] OF SIZE;  l, r: SIZE ): SIZE;
+	VAR pivot, t: FLOAT64;  i, j, k: SIZE;
 	BEGIN
 		pivot := x[(l + r) DIV 2];
 		(* work from both ends, swapping to keep   *)
@@ -457,7 +457,7 @@ TYPE
 		RETURN j;
 	END PartitionExLR;
 
-	PROCEDURE QuickSortI*( CONST x: ARRAY [ * ] OF INTEGER;  VAR ind: ARRAY [ * ] OF SIZE );
+	PROCEDURE QuickSortI*( CONST x: ARRAY [ * ] OF SIGNED16;  VAR ind: ARRAY [ * ] OF SIZE );
 	BEGIN
 		HALT(100);
 	END QuickSortI;

@@ -14,7 +14,7 @@ TYPE StringObject=OBJECT
 		END StringObject;
 
 TYPE	ContextMenu* = OBJECT
-	VAR x,y: LONGINT;
+	VAR x,y: SIGNED32;
 		w:Streams.Writer;
 		name: Files.FileName;
 		menu: WMTrees.Tree;
@@ -36,8 +36,8 @@ TYPE	ContextMenu* = OBJECT
 		menu.Release;
 	END AddItem;
 
-	PROCEDURE Handle* (sender : ANY; x, y: LONGINT);
-	VAR gx,gy: LONGINT;
+	PROCEDURE Handle* (sender : ANY; x, y: SIGNED32);
+	VAR gx,gy: SIGNED32;
 	BEGIN
 		SELF.x:=x; SELF.y:=y;
 		sender(WMComponents.VisualComponent).ToWMCoordinates(x,y,gx,gy);
@@ -64,10 +64,10 @@ PROCEDURE GetStringObject(CONST str: ARRAY OF CHAR): ANY;
 
 PROCEDURE Test*(context:Commands.Context);
 VAR
-	dataSetI, labelSetI: ARRAY [?] OF INTEGER;
-	nSamples: LONGINT(*SIZE*);
-	i: LONGINT;
-	time, date, size: LONGINT;
+	dataSetI, labelSetI: ARRAY [?] OF SIGNED16;
+	nSamples: SIGNED32(*SIZE*);
+	i: SIGNED32;
+	time, date, size: SIGNED32;
 	enum:MatrixRaster.Enumerator;
 	flags: SET;
 	name:Files.FileName;

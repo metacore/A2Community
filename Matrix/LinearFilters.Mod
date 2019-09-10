@@ -179,7 +179,7 @@ CONST
 	Smooth* = 300;
 
 TYPE
-		Datatype*=LONGREAL;
+		Datatype*=FLOAT64;
 		Vector*= ARRAY [*] OF Datatype;
 		Filter*= OBJECT
 		END Filter;
@@ -203,7 +203,7 @@ TYPE
 			BEGIN
 			END Init;
 
-			PROCEDURE convolve*(VAR data:Vector; boundary: LONGINT); (*phase preservation, selectable boundaries*)
+			PROCEDURE convolve*(VAR data:Vector; boundary: SIGNED32); (*phase preservation, selectable boundaries*)
 			BEGIN
 			END convolve;
 
@@ -227,7 +227,7 @@ TYPE
 			hiAnalysis*,
 			loReconstruct*,
 			hiReconstruct*: FIRFilter;
-			defaultBoundary*:LONGINT;
+			defaultBoundary*:SIGNED32;
 			verifiedBoundaries*:SET
 		END WaveletFamily;
 *)
@@ -247,7 +247,7 @@ BEGIN
 	RETURN IIR;
 END CreateIIRFilter;
 
-PROCEDURE  CreateSplineFilter* (name: LONGINT):Filter;
+PROCEDURE  CreateSplineFilter* (name: SIGNED32):Filter;
 		(** Returns newly created spline filter; note that the result is of the basic type "Filter" and
 			the user may want to check if this  IS FIRFilter or IS IIRFilter; the convolution method
 			has to be chosen accordingly, and a type cast performed at procedure call of the convolution;
@@ -258,7 +258,7 @@ PROCEDURE  CreateSplineFilter* (name: LONGINT):Filter;
 	       i:SIZE;
 	       FIR:FIRFilter;
 	       IIR:IIRFilter;
-	       mid:LONGINT;
+	       mid:SIGNED32;
 	       coeff, coeffB:Vector;
 	BEGIN
 		CASE name OF

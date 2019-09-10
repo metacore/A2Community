@@ -17,7 +17,7 @@ TYPE
 
 	Solver* = OBJECT (MatrixBase.Solver)
 	VAR Tolerance*: Datatype;   (* tolerance of solution accuracy *)
-		nMaxIterations*, nIterations-: LONGINT;   (* maximum number of iterations and number of done iterations *)
+		nMaxIterations*, nIterations-: SIGNED32;   (* maximum number of iterations and number of done iterations *)
 		nRestart*: SIZE;   (* GMRES will restart every nRestart iterations *)
 		(* Total number of iterations = nMaxIterations*nRestart *)
 		SysMatrix: Matrix;   (* copy of system matrix *)
@@ -131,8 +131,8 @@ TYPE
 
 		PROCEDURE GMRES( CONST A: Matrix;  CONST b: Vector;
 						 VAR x: Vector;  Tolerance: Datatype;
-						 nMaxIterations: LONGINT;  nRestart: SIZE ): Vector;
-		VAR k, m, p: LONGINT;  hk_k1, gamma, d, residnrm: Datatype;  bRestart: BOOLEAN;
+						 nMaxIterations: SIGNED32;  nRestart: SIZE ): Vector;
+		VAR k, m, p: SIGNED32;  hk_k1, gamma, d, residnrm: Datatype;  bRestart: BOOLEAN;
 		BEGIN
 			nIterations := 0;  residnrm := 1;
 			WHILE (nIterations < nMaxIterations) & (residnrm > Tolerance) DO
@@ -216,8 +216,8 @@ TYPE
 		PROCEDURE GMRESProcBased( MatrixToVector: MatrixToVectorProc;
 								  CONST b: Vector;
 								  VAR x: Vector;  Tolerance: Datatype;
-								  nMaxIterations: LONGINT;  nRestart: SIZE ): Vector;
-		VAR k, m, p: LONGINT;  hk_k1, gamma, d, residnrm: Datatype;  bRestart: BOOLEAN;
+								  nMaxIterations: SIGNED32;  nRestart: SIZE ): Vector;
+		VAR k, m, p: SIGNED32;  hk_k1, gamma, d, residnrm: Datatype;  bRestart: BOOLEAN;
 		BEGIN
 			nIterations := 0;  residnrm := 1;
 			WHILE (nIterations < nMaxIterations) & (residnrm > Tolerance) DO

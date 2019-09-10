@@ -20,7 +20,7 @@ TYPE
 	VectorField* = RECORD x*,y*: ScalarField END;
 	TensorField* = RECORD xx*,xy*, yx*, yy*: ScalarField END;
 
-PROCEDURE dx* (CONST sf:ScalarField; sampling:LONGINT): ScalarField; (* to do: place result directly in return variable *)
+PROCEDURE dx* (CONST sf:ScalarField; sampling:SIGNED32): ScalarField; (* to do: place result directly in return variable *)
 VAR res:ScalarField;
 BEGIN
 	IF LEN(RESULT)=0 THEN NEW(RESULT, LEN(sf,0), LEN(sf,1)); END;
@@ -51,7 +51,7 @@ BEGIN
 	RETURN RESULT
 END dx;
 
-PROCEDURE dy* (CONST sf:ScalarField; sampling:LONGINT): ScalarField; (* to do: place result directly in return variable *)
+PROCEDURE dy* (CONST sf:ScalarField; sampling:SIGNED32): ScalarField; (* to do: place result directly in return variable *)
 VAR res:ScalarField;
 BEGIN
 	IF LEN(RESULT)=0 THEN NEW(RESULT, LEN(sf,0), LEN(sf,1)) END;
@@ -82,7 +82,7 @@ BEGIN
 END dy;
 
 (** Gradients : nabla sf*)
-PROCEDURE Grad* (CONST sf:ScalarField; sampling:LONGINT): VectorField;	(* reuse of target variable not implemented *)
+PROCEDURE Grad* (CONST sf:ScalarField; sampling:SIGNED32): VectorField;	(* reuse of target variable not implemented *)
 VAR grad: VectorField;
 BEGIN
 	IF LEN(grad.x)=0 THEN NEW(grad.x, LEN(sf,0), LEN(sf,1)) END;	(*compiler limitation here, call to the RETURN variable LEN(Grad.x) should be directly used. It appears that this is not allowed in the compiler*)
@@ -93,28 +93,28 @@ BEGIN
 END Grad;
 
 (* u dot grad sf *)
-PROCEDURE DirectionalDerivative*(CONST sf:ScalarField; CONST u: VectorField; sampling:LONGINT):ScalarField;
+PROCEDURE DirectionalDerivative*(CONST sf:ScalarField; CONST u: VectorField; sampling:SIGNED32):ScalarField;
 BEGIN
 	(*directional derivative is derivative along u; corresponds to inner product of partial derivative with vector u = <d/dx, d/dy> * <ux, uy>  *)
 	RETURN dx(sf, sampling) .* u.x + dy(sf, sampling) .* u.y
 END DirectionalDerivative;
 
 (** Divergence : nabla dot vf*)
-PROCEDURE Div*(CONST vf:VectorField; sampling:LONGINT):ScalarField; (* to do: place result directly in return variable *)
+PROCEDURE Div*(CONST vf:VectorField; sampling:SIGNED32):ScalarField; (* to do: place result directly in return variable *)
 BEGIN
 	RETURN dx(vf.x,sampling) + dy(vf.y, sampling);
 END Div;
 
 (** Rotation - Rot=Curl ; nabla cross vf
 is a vector field in general, but in 2D, it only consists of an "z", component, i.e. a scalar value*)
-PROCEDURE Rot* (CONST vf: VectorField; sampling:LONGINT): ScalarField;  (* to do: place result directly in return variable *)
+PROCEDURE Rot* (CONST vf: VectorField; sampling:SIGNED32): ScalarField;  (* to do: place result directly in return variable *)
 BEGIN
 	RETURN dx(vf.y, sampling) - dy(vf.x, sampling)
 END Rot;
 
 (**  Laplacian Operator, 'nabla square', i.e. nabla dot nabla
 see  http://en.wikipedia.org/wiki/Laplace_operator *)
-PROCEDURE Laplacian*(CONST sf:ScalarField; sampling:LONGINT): ScalarField;
+PROCEDURE Laplacian*(CONST sf:ScalarField; sampling:SIGNED32): ScalarField;
 BEGIN
  RETURN dx(dx(sf, sampling),sampling) + dy(dy(sf, sampling),sampling)
 END Laplacian;
@@ -134,7 +134,7 @@ In a sense, both the gradient and Jacobian are "first derivatives"  £ the forme
 the latter the first derivative of a vector function of several variables.
 In general, the gradient can be regarded as a special version of the Jacobian: it is the Jacobian of a scalar function of several variables.
 *)
-PROCEDURE Jacobian*(CONST vf:VectorField; sampling:LONGINT):TensorField; (** == TensorDerivative *)
+PROCEDURE Jacobian*(CONST vf:VectorField; sampling:SIGNED32):TensorField; (** == TensorDerivative *)
 VAR jac: TensorField;
 BEGIN
 	jac.xx := dx(vf.x, sampling);
@@ -150,14 +150,14 @@ that is, it describes the local curvature of a function of many variables.
 It corresponds to the Jacobian of the gradient , which in a sense is the "second derivative" of the scalar function of several variables in question.
 *)
 
-PROCEDURE Hessian*(CONST sf:ScalarField; sampling:LONGINT):TensorField;
+PROCEDURE Hessian*(CONST sf:ScalarField; sampling:SIGNED32):TensorField;
 VAR hes:TensorField;
 BEGIN
 	(*HALT(200);*)
 	RETURN  Jacobian(Grad(sf,sampling),sampling); (*! doe not compile   *)
 END Hessian;
 
-PROCEDURE VectorLaplacian*(CONST vf: VectorField; sampling:LONGINT): ScalarField; (* to do: place result directly in return variable *)
+PROCEDURE VectorLaplacian*(CONST vf: VectorField; sampling:SIGNED32): ScalarField; (* to do: place result directly in return variable *)
 BEGIN
  RETURN dx(dx(vf.x, sampling),sampling) + dy(dy(vf.y, sampling),sampling)
 END VectorLaplacian;
@@ -168,22 +168,22 @@ but rather a tensor of order 3.
 This can be thought of as a multi-dimensional array with dimensions m \times n \times n, which degenerates to the usual Hessian matrix for m = 1.
 *)
 
-PROCEDURE VectorHessian*(CONST vf: VectorField; sampling:LONGINT): TensorField; (* HALT: this is not yet correct, because tensor has diffferent shape than current tensorfield ! *)
+PROCEDURE VectorHessian*(CONST vf: VectorField; sampling:SIGNED32): TensorField; (* HALT: this is not yet correct, because tensor has diffferent shape than current tensorfield ! *)
 END VectorHessian;
 
 (** Nabla in cylindrical coordinates, see http://en.wikipedia.org/wiki/Del_in_cylindrical_and_spherical_coordinates
 Data precondition: Scalarfield[phi,r]; unit grid for r and phi; r0 for center of rotation *)
 
-PROCEDURE r(len, r0:LONGINT): Line;
-VAR line:Line; i:LONGINT;
+PROCEDURE r(len, r0:SIGNED32): Line;
+VAR line:Line; i:SIGNED32;
 BEGIN
 	NEW(line,len);
 	FOR i:=0 TO len-1 DO line[i]:= i-r0 END;
 	RETURN line;
 END r;
 
-PROCEDURE invr(len, r0:LONGINT): Line;
-VAR line:Line; i:LONGINT;
+PROCEDURE invr(len, r0:SIGNED32): Line;
+VAR line:Line; i:SIGNED32;
 BEGIN
 	NEW(line,len);
 	FOR i:=r0 TO len-1 DO line[i]:= 1/MAX(1,i-r0) END; (*CAVE: singularity at r=0 *)
@@ -191,8 +191,8 @@ BEGIN
 	RETURN line;
 END invr;
 
-PROCEDURE invr2(len, r0:LONGINT): Line;
-VAR line:Line; i:LONGINT;
+PROCEDURE invr2(len, r0:SIGNED32): Line;
+VAR line:Line; i:SIGNED32;
 BEGIN
 	NEW(line,len);
 	FOR i:=r0 TO len-1 DO line[i]:= 1/MAX(1,i-r0)/MAX(1,i-r0) END; (*CAVE: singularity at r=0 *)
@@ -206,61 +206,61 @@ BEGIN
 	FOR i:=0 TO LEN(p,0)-1 DO p[i]:=p[i] .* line END;
 END scalefieldbylinex;
 
-PROCEDURE CylGrad* (CONST sf:ScalarField; r0:LONGINT; sampling:LONGINT): VectorField;	(* reuse of target variable not implemented *)
+PROCEDURE CylGrad* (CONST sf:ScalarField; r0:SIGNED32; sampling:SIGNED32): VectorField;	(* reuse of target variable not implemented *)
 VAR grad: VectorField;
 BEGIN
 	IF LEN(grad.x)=0 THEN NEW(grad.x, LEN(sf,0), LEN(sf,1)) END;	(*BUG here, call to the RETURN variable LEN(Grad.x) should be directly used. It appears that this is not allowed in the compiler*)
 	IF LEN(grad.y)=0 THEN NEW(grad.y, LEN(sf,0), LEN(sf,1)) END;
 	grad.x:=dx(sf, sampling);
 	grad.y:=dy(sf, sampling);
-	scalefieldbylinex(grad.x, invr(LEN(grad.x,1)(LONGINT), LEN(grad.x,0)(LONGINT) DIV 2));
+	scalefieldbylinex(grad.x, invr(LEN(grad.x,1)(SIGNED32), LEN(grad.x,0)(SIGNED32) DIV 2));
 	RETURN grad;
 END CylGrad;
 
-PROCEDURE CylDiv*(CONST vx,vy:ScalarField; r0: LONGINT; phi: Scalar; sampling:LONGINT):ScalarField; (* to do: place result directly in return variable *)
+PROCEDURE CylDiv*(CONST vx,vy:ScalarField; r0: SIGNED32; phi: Scalar; sampling:SIGNED32):ScalarField; (* to do: place result directly in return variable *)
 VAR f: ScalarField;
 BEGIN
-	f := vx; scalefieldbylinex(f, r(LEN(f,1)(LONGINT), r0));
+	f := vx; scalefieldbylinex(f, r(LEN(f,1)(SIGNED32), r0));
 	RESULT:= dx(f,sampling) ;
 	f:= dy(vy, sampling);
 	f:= f / phi;
 	RESULT:= RESULT + f;
-	scalefieldbylinex(RESULT, invr(LEN(f,1)(LONGINT), r0));
+	scalefieldbylinex(RESULT, invr(LEN(f,1)(SIGNED32), r0));
 	RETURN RESULT
 END CylDiv;
 
 (** Rotation *)
-PROCEDURE CylRot* (CONST vx,vy: ScalarField; r0: LONGINT; phi: Scalar; sampling:LONGINT): ScalarField; (*is the sign correct ?*) (* to do: place result directly in return variable *)
+PROCEDURE CylRot* (CONST vx,vy: ScalarField; r0: SIGNED32; phi: Scalar; sampling:SIGNED32): ScalarField; (*is the sign correct ?*) (* to do: place result directly in return variable *)
 VAR f: ScalarField;
 BEGIN
-	f := vy; scalefieldbylinex(f, r(LEN(f,1)(LONGINT), r0));
+	f := vy; scalefieldbylinex(f, r(LEN(f,1)(SIGNED32), r0));
 	RESULT:= dx(f,sampling) ;
 	f:= dy(vx, sampling);
 	f:= f/phi;
 	RESULT:= RESULT - dy(vx, sampling);
-	scalefieldbylinex(RESULT, invr(LEN(f,1)(LONGINT), r0));
+	scalefieldbylinex(RESULT, invr(LEN(f,1)(SIGNED32), r0));
 	RETURN RESULT
 END CylRot;
 
 (**  Laplacian Operator, see  http://en.wikipedia.org/wiki/Laplace_operator *)
-PROCEDURE CylLaplacian*(CONST sf:ScalarField; r0:LONGINT; phi:Scalar; sampling:LONGINT): ScalarField;
+PROCEDURE CylLaplacian*(CONST sf:ScalarField; r0:SIGNED32; phi:Scalar; sampling:SIGNED32): ScalarField;
 VAR f,g: ScalarField;
 BEGIN
 	 f := dx(sf, sampling);
-	 scalefieldbylinex(f, r(LEN(f,1)(LONGINT), r0));
+	 scalefieldbylinex(f, r(LEN(f,1)(SIGNED32), r0));
 	 g:= dx(f, sampling);
-	 scalefieldbylinex(g, invr(LEN(f,1)(LONGINT), r0));
+	 scalefieldbylinex(g, invr(LEN(f,1)(SIGNED32), r0));
 	 RESULT:= g;
 	 f:=dy(sf, sampling);
 	 f:= f/phi;
 	 g:= dy(f,sampling);
 	 g:= g/phi;
-	 scalefieldbylinex(g, invr2(LEN(f,1)(LONGINT), r0));
+	 scalefieldbylinex(g, invr2(LEN(f,1)(SIGNED32), r0));
 	 RESULT:=RESULT + g;
 	 RETURN RESULT
 END CylLaplacian;
 
-PROCEDURE CylVectorLaplacian*(CONST vx,vy: ScalarField; sampling:LONGINT): ScalarField; (* to do: place result directly in return variable *)
+PROCEDURE CylVectorLaplacian*(CONST vx,vy: ScalarField; sampling:SIGNED32): ScalarField; (* to do: place result directly in return variable *)
 END CylVectorLaplacian;
 
 

@@ -19,17 +19,17 @@ TYPE
 	VectorField*=PlanarNabla.VectorField;
 
 (* nabla-based edge detector. For choice of 'sampling' parameters, see PlanarNabla.Mod *)
-PROCEDURE DifferentialEdgeMagnitude*(CONST p:ScalarField; sampling: LONGINT):ScalarField;
+PROCEDURE DifferentialEdgeMagnitude*(CONST p:ScalarField; sampling: SIGNED32):ScalarField;
 BEGIN
 	RETURN PlanarMath.Sqrt(PlanarMath.Sqr(PlanarNabla.dx(p,sampling)) + PlanarMath.Sqr(PlanarNabla.dy(p,sampling)));
 END DifferentialEdgeMagnitude;
 
-PROCEDURE DifferentialEdgeDirection*(CONST p:ScalarField; sampling:LONGINT):VectorField;
+PROCEDURE DifferentialEdgeDirection*(CONST p:ScalarField; sampling:SIGNED32):VectorField;
 BEGIN
 	RETURN PlanarNabla.Grad(p, sampling);
 END DifferentialEdgeDirection;
 
-PROCEDURE arctan2(x,y:LONGREAL):LONGREAL; (*arctan in range 0..2pi*)
+PROCEDURE arctan2(x,y:FLOAT64):FLOAT64; (*arctan in range 0..2pi*)
 BEGIN
 	IF (x>0) & (y>=0) THEN RETURN Mathe.arctan(y/x)
 	ELSIF (x>0) & (y<0) THEN RETURN Mathe.arctan(y/x)+2*Mathe.pi
@@ -39,8 +39,8 @@ BEGIN
 	END
 END arctan2;
 
-PROCEDURE DifferentialEdgeAngle*(CONST p:ScalarField; sampling:LONGINT):ScalarField; (*! needs speedup - parallelize how ?*)
-VAR vec:VectorField; x,y:LONGINT;
+PROCEDURE DifferentialEdgeAngle*(CONST p:ScalarField; sampling:SIGNED32):ScalarField; (*! needs speedup - parallelize how ?*)
+VAR vec:VectorField; x,y:SIGNED32;
 BEGIN
 	vec:=DifferentialEdgeDirection(p, sampling);
 	IF LEN(RESULT,0)=0 THEN NEW(RESULT, LEN(p,0), LEN(p,1)) END;
@@ -56,7 +56,7 @@ END DifferentialEdgeAngle;
 PROCEDURE Canny* (CONST in: ScalarField; NonMaxSuppression:BOOLEAN): ScalarField;
 VAR line: Line;
 	lines:ARRAY [*] OF Line;
-	i,j,j2,i1,i2,iM1,iM2,h,hM2,hM1,h1,h2,dir, width, height: LONGINT;
+	i,j,j2,i1,i2,iM1,iM2,h,hM2,hM1,h1,h2,dir, width, height: SIGNED32;
 	d1,deriv, pix, InvSqrt2: Datatype;
 	nil: ScalarField;
 BEGIN
@@ -115,7 +115,7 @@ BEGIN
 END Canny;
 
 PROCEDURE NonMaximaSuppression*(CONST in:ScalarField):ScalarField; (* only partly working at the moment*)
-VAR l, l0,l1,l2,l00: Line; out:ScalarField; i,j,len:LONGINT;
+VAR l, l0,l1,l2,l00: Line; out:ScalarField; i,j,len:SIGNED32;
 BEGIN
 	NEW(out,LEN(in,0),LEN(in,1));
 	len:=LEN(in,0);

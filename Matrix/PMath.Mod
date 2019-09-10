@@ -5,26 +5,26 @@ CONST wordlengthlongint=32;
 	LongOne*=1.0D000;
 	(*EpsL*=1.11022302463E-16;
 	Eps*=5.9604645E-08;*)
-VAR OneDivLn10*:REAL;
+VAR OneDivLn10*:FLOAT32;
 		Comments*:BOOLEAN;
-		NaN*, Inf*,Eps*:REAL;
-		NaNL*,InfL*,EpsL*:LONGREAL;
-		expNegligible*:REAL;
-		expNegligibleL*:LONGREAL;
+		NaN*, Inf*,Eps*:FLOAT32;
+		NaNL*,InfL*,EpsL*:FLOAT64;
+		expNegligible*:FLOAT32;
+		expNegligibleL*:FLOAT64;
 
-PROCEDURE log*(x:REAL):REAL;
+PROCEDURE log*(x:FLOAT32):FLOAT32;
 BEGIN
 RETURN Math.ln(x)*OneDivLn10;
 END log;
 
-PROCEDURE power*(base,exponent:LONGREAL):REAL;
+PROCEDURE power*(base,exponent:FLOAT64):FLOAT32;
 BEGIN
 	IF ABS(base)<Eps THEN RETURN 0
 	ELSE RETURN SHORT(MathL.exp(exponent*MathL.ln(base)));
 	END;
 END power;
 
-PROCEDURE powerL*(base,exponent:LONGREAL):LONGREAL;
+PROCEDURE powerL*(base,exponent:FLOAT64):FLOAT64;
 BEGIN
 	(*IF ABS(base)<EpsL THEN RETURN 0 *)
 	IF ABS(base)<=0 THEN RETURN 0 (* should rather trap on negative argument*)
@@ -32,8 +32,8 @@ BEGIN
 	END;
 END powerL;
 
-PROCEDURE intpower*(base:REAL; exponent:LONGINT):REAL;
-VAR res:REAL; i:LONGINT;
+PROCEDURE intpower*(base:FLOAT32; exponent:SIGNED32):FLOAT32;
+VAR res:FLOAT32; i:SIGNED32;
 BEGIN
 res:=1;
 FOR i:=0 TO exponent-1 DO res:=res*base END;
@@ -41,7 +41,7 @@ RETURN res
 END intpower;
 
 (*
-PROCEDURE ShortEnt*(CONST in:ARRAY OF REAL; VAR out:ARRAY OF INTEGER);
+PROCEDURE ShortEnt*(CONST in:ARRAY OF FLOAT32; VAR out:ARRAY OF SIGNED16);
 
 (** Sehr rasches SHORT(ENTIER()) fuer Arrays; von P Reali, 1/01*)
 
@@ -83,9 +83,9 @@ Loop:
 
    DEC   ECX
 
-   FLD   DWORD [ESI][ECX*4]  ; in: REAL
+   FLD   DWORD [ESI][ECX*4]  ; in: FLOAT32
 
-   FISTP WORD [EDI][ECX*2]   ; out: INTEGER
+   FISTP INTEGER [EDI][ECX*2]   ; out: SIGNED16
 
    WAIT
 
@@ -103,20 +103,20 @@ END ShortEnt;
 *)
 
 
-PROCEDURE powerof2*(n:LONGINT):LONGINT;
-VAR i:LONGINT;
+PROCEDURE powerof2*(n:SIGNED32):SIGNED32;
+VAR i:SIGNED32;
 BEGIN
 i:=0;
 BIT.LSETBIT (i, SHORT(SHORT(n)));
 RETURN i
 END powerof2;
 
-PROCEDURE round*(x:REAL):LONGINT;
+PROCEDURE round*(x:FLOAT32):SIGNED32;
 BEGIN
 	RETURN ENTIER(x+0.5);
 END round;
 
-PROCEDURE sigmoid*(x:REAL):REAL;
+PROCEDURE sigmoid*(x:FLOAT32):FLOAT32;
 BEGIN
 	IF x>upperExp THEN RETURN 1
 	ELSIF (-x)>upperExp THEN RETURN 0
@@ -124,7 +124,7 @@ BEGIN
 	END;
 END sigmoid;
 
-PROCEDURE invsigmoid*(x:REAL):REAL;
+PROCEDURE invsigmoid*(x:FLOAT32):FLOAT32;
 BEGIN
 	IF x>1 THEN RETURN Inf
 	ELSIF x=1 THEN RETURN 16
@@ -136,7 +136,7 @@ BEGIN
 	END;
 END invsigmoid;
 
-PROCEDURE invsigmoidL*(x:LONGREAL):LONGREAL;
+PROCEDURE invsigmoidL*(x:FLOAT64):FLOAT64;
 BEGIN
 	IF x>1 THEN RETURN InfL
 	ELSIF x=1 THEN RETURN 16
@@ -148,9 +148,9 @@ BEGIN
 	END;
 END invsigmoidL;
 
-PROCEDURE pythag* (a,b: REAL): REAL;
+PROCEDURE pythag* (a,b: FLOAT32): FLOAT32;
 (**calculates sqrt(aSquare+bSquare) without destructive under- or overflow*)
-VAR absa, absb: REAL;
+VAR absa, absb: FLOAT32;
 BEGIN
 		absa := ABS(a);
 		absb := ABS(b);
@@ -161,7 +161,7 @@ BEGIN
 END pythag;
 
 
-PROCEDURE fastExp(x:LONGREAL):LONGREAL; (*  decreasingly accurate for increasing x, and only faster than standard if inlined,  see https://codingforspeed.com/using-faster-exponential-approximation/ *)
+PROCEDURE fastExp(x:FLOAT64):FLOAT64; (*  decreasingly accurate for increasing x, and only faster than standard if inlined,  see https://codingforspeed.com/using-faster-exponential-approximation/ *)
 	BEGIN
 		IF x<2 THEN
 			x:=1+ 1.0D0/1024 * x; (*/1024/1024;  *) (*will increase accuracy for higher x *)
@@ -184,8 +184,8 @@ PROCEDURE fastExp(x:LONGREAL):LONGREAL; (*  decreasingly accurate for increasing
 	END fastExp;
 
 
-PROCEDURE tanh*( x: REAL ): REAL; (*secured against overflow - from MathRe.Mod*)
-VAR abs, exp, expM, exp2xM1, res: REAL;
+PROCEDURE tanh*( x: FLOAT32 ): FLOAT32; (*secured against overflow - from MathRe.Mod*)
+VAR abs, exp, expM, exp2xM1, res: FLOAT32;
 BEGIN
 	abs := ABS( x );
 	IF abs < 1 THEN exp2xM1 := Math.exp( 2 * abs ) - 1;  res := sign( x ) * exp2xM1 / (2 + exp2xM1)
@@ -195,8 +195,8 @@ BEGIN
 	RETURN res
 END tanh;
 
-PROCEDURE tanhL*( x: LONGREAL ): LONGREAL; (*secured against overflow - from MathRe.Mod*)
-VAR abs, exp, expM, exp2xM1, res: LONGREAL;
+PROCEDURE tanhL*( x: FLOAT64 ): FLOAT64; (*secured against overflow - from MathRe.Mod*)
+VAR abs, exp, expM, exp2xM1, res: FLOAT64;
 BEGIN
 	abs := ABS( x );
 	IF abs < 1 THEN exp2xM1 := MathL.exp( 2 * abs ) - 1;  res := sign( x ) * exp2xM1 / (2 + exp2xM1)
@@ -207,7 +207,7 @@ BEGIN
 	RETURN res
 END tanhL;
 
-PROCEDURE logistic*( x: REAL): REAL;  (* logistic function as nonlinear element for unit response *)
+PROCEDURE logistic*( x: FLOAT32): FLOAT32;  (* logistic function as nonlinear element for unit response *)
 BEGIN
 	IF x >= expNegligible THEN RETURN 1
 	ELSIF (-x) > expNegligible THEN RETURN 0
@@ -215,7 +215,7 @@ BEGIN
 	END;
 END logistic;
 
-PROCEDURE logisticL*( x: LONGREAL): LONGREAL;  (* logistic function as nonlinear element for unit response *)
+PROCEDURE logisticL*( x: FLOAT64): FLOAT64;  (* logistic function as nonlinear element for unit response *)
 BEGIN
 	IF x >= expNegligibleL THEN RETURN 1
 	ELSIF (-x) > expNegligibleL THEN RETURN 0
@@ -224,21 +224,21 @@ BEGIN
 END logisticL;
 
 (*
-PROCEDURE tanhL*(x:LONGREAL):LONGREAL;
-VAR e:LONGREAL;
+PROCEDURE tanhL*(x:FLOAT64):FLOAT64;
+VAR e:FLOAT64;
 BEGIN
 	e:=MathL.exp(2*x);
 	RETURN (e-1)/(e+1)
 END tanhL;
 *)
 
-PROCEDURE sign* (x:LONGREAL):SHORTINT;
+PROCEDURE sign* (x:FLOAT64):SIGNED8;
 BEGIN
 	IF x>=0 THEN RETURN 1 ELSE RETURN -1 END;
 END sign;
 
-PROCEDURE max*(CONST Data:ARRAY OF LONGINT):LONGINT;
-VAR res:LONGINT; len,i:SIZE;
+PROCEDURE max*(CONST Data:ARRAY OF SIGNED32):SIGNED32;
+VAR res:SIGNED32; len,i:SIZE;
 BEGIN
 	len:=LEN(Data);
 	IF LEN(Data)=0 THEN res:= 0
@@ -248,8 +248,8 @@ BEGIN
 	RETURN res;
 END max;
 
-PROCEDURE min*(CONST Data:ARRAY OF LONGINT):LONGINT;
-VAR res:LONGINT; len,i:SIZE;
+PROCEDURE min*(CONST Data:ARRAY OF SIGNED32):SIGNED32;
+VAR res:SIGNED32; len,i:SIZE;
 BEGIN
 	len:=LEN(Data);
 	IF LEN(Data)=0 THEN res:= 0
@@ -259,43 +259,43 @@ BEGIN
 	RETURN res;
 END min;
 
-PROCEDURE Max*(x,y:LONGINT):LONGINT;
+PROCEDURE Max*(x,y:SIGNED32):SIGNED32;
 BEGIN IF x>=y THEN RETURN x ELSE RETURN y END
 END Max;
 
-PROCEDURE Min*(x,y:LONGINT):LONGINT;
+PROCEDURE Min*(x,y:SIGNED32):SIGNED32;
 BEGIN IF x<=y THEN RETURN x ELSE RETURN y END
 END Min;
 
-PROCEDURE Clamp*(x,min,max:LONGINT):LONGINT;
+PROCEDURE Clamp*(x,min,max:SIGNED32):SIGNED32;
 BEGIN
 	RETURN MIN(max, MAX(min,x))
 END Clamp;
 
 
-PROCEDURE RMax*(x,y:LONGREAL):LONGREAL;
+PROCEDURE RMax*(x,y:FLOAT64):FLOAT64;
 BEGIN IF x>=y THEN RETURN x ELSE RETURN y END
 END RMax;
 
-PROCEDURE rMax*(x,y:REAL):REAL;
+PROCEDURE rMax*(x,y:FLOAT32):FLOAT32;
 BEGIN IF x>=y THEN RETURN x ELSE RETURN y END
 END rMax;
 
-PROCEDURE RMin*(x,y:LONGREAL):LONGREAL;
+PROCEDURE RMin*(x,y:FLOAT64):FLOAT64;
 BEGIN IF x<=y THEN RETURN x ELSE RETURN y END
 END RMin;
 
-PROCEDURE rMin*(x,y:REAL):REAL;
+PROCEDURE rMin*(x,y:FLOAT32):FLOAT32;
 BEGIN IF x<y THEN RETURN x ELSE RETURN y END
 END rMin;
 
-PROCEDURE rescaleInt*(x,minIn,maxIn,minOut,maxOut:INTEGER):INTEGER;
+PROCEDURE rescaleInt*(x,minIn,maxIn,minOut,maxOut:SIGNED16):SIGNED16;
 BEGIN
 IF x>maxIn THEN x:=maxIn ELSIF x<minIn THEN x:=minIn END;
 RETURN SHORT(round( (x-minIn)/(maxIn-minIn)*(maxOut-minOut)+minOut))
 END rescaleInt;
 
-(*PROCEDURE IsPowerOf2*(i:LONGINT):BOOLEAN;
+(*PROCEDURE IsPowerOf2*(i:SIGNED32):BOOLEAN;
 BEGIN
 	IF i=1 THEN RETURN TRUE
 	ELSIF i<1 THEN RETURN FALSE
@@ -304,8 +304,8 @@ BEGIN
 	END;
 END IsPowerOf2;*)
 
-PROCEDURE IsPowerOf2*(n:LONGINT):BOOLEAN;
-VAR i,cnt:SHORTINT;
+PROCEDURE IsPowerOf2*(n:SIGNED32):BOOLEAN;
+VAR i,cnt:SIGNED8;
 BEGIN
 	i:=wordlengthlongint-1;
 	cnt:=0;
@@ -317,8 +317,8 @@ BEGIN
 END IsPowerOf2;
 
 
-(*PROCEDURE RoundToPowerOf2*(i:LONGINT):LONGINT;
-VAR number,n:LONGINT;
+(*PROCEDURE RoundToPowerOf2*(i:SIGNED32):SIGNED32;
+VAR number,n:SIGNED32;
 BEGIN
 	n:=0; number:=i;
 	IF i>=2 THEN REPEAT number:=number DIV 2; INC(n) UNTIL number<1;
@@ -328,8 +328,8 @@ BEGIN
 	END;
 END RoundToPowerOf2;*)
 
-PROCEDURE RoundToPowerOf2*(n:LONGINT):LONGINT;
-VAR i:SHORTINT;
+PROCEDURE RoundToPowerOf2*(n:SIGNED32):SIGNED32;
+VAR i:SIGNED8;
 BEGIN
 i:=wordlengthlongint-1;
 WHILE (i>0)&~BIT.BIT(n,i) DO DEC(i) END;
@@ -338,7 +338,7 @@ WHILE i>=0 DO BIT.LCLRBIT(n,i); DEC(i) END;
 RETURN n
 END RoundToPowerOf2;
 
-PROCEDURE ASCIIHex2SInt(c:CHAR):SHORTINT;
+PROCEDURE ASCIIHex2SInt(c:CHAR):SIGNED8;
 	BEGIN
 		CASE c OF
 			"0": RETURN 0;
@@ -361,8 +361,8 @@ PROCEDURE ASCIIHex2SInt(c:CHAR):SHORTINT;
 		END;
 	END ASCIIHex2SInt;
 
-PROCEDURE ASCIIHexInt*(CONST A:ARRAY OF CHAR):INTEGER;
-VAR res:INTEGER; i,len:SIZE;
+PROCEDURE ASCIIHexInt*(CONST A:ARRAY OF CHAR):SIGNED16;
+VAR res:SIGNED16; i,len:SIZE;
 BEGIN
 	len:=LEN(A);
 	IF len>4 THEN len:=4 END;
@@ -375,8 +375,8 @@ BEGIN
 	RETURN res
 END ASCIIHexInt;
 
-PROCEDURE ASCIIHexLInt*(CONST A:ARRAY OF CHAR):LONGINT;
-VAR res: LONGINT; i,len:SIZE;
+PROCEDURE ASCIIHexLInt*(CONST A:ARRAY OF CHAR):SIGNED32;
+VAR res: SIGNED32; i,len:SIZE;
 BEGIN
 	len:=LEN(A);
 	IF len>8 THEN len:=8 END;
@@ -389,23 +389,23 @@ BEGIN
 	RETURN res
 END ASCIIHexLInt;
 
-PROCEDURE eps*():REAL;
-VAR x,y:REAL;
+PROCEDURE eps*():FLOAT32;
+VAR x,y:FLOAT32;
 BEGIN
 	x:=0.5;
 	WHILE (1-x<1)&(1-x>0) DO y:=x; x:=x/2 END;
 	RETURN y
 END eps;
 
-PROCEDURE epsL*():LONGREAL;
-VAR x,y:LONGREAL;
+PROCEDURE epsL*():FLOAT64;
+VAR x,y:FLOAT64;
 BEGIN
 	x:=0.5;
 	WHILE (1-x<1)&(1-x>0) DO y:=x; x:=x/2 END;
 	RETURN y
 END epsL;
 
-PROCEDURE arctan2*(x,y: REAL): REAL; (*arctan in range 0..2pi*)
+PROCEDURE arctan2*(x,y: FLOAT32): FLOAT32; (*arctan in range 0..2pi*)
 BEGIN
 	IF (x>0) & (y>=0) THEN RETURN Math.arctan(y/x)
 	ELSIF (x>0) & (y<0) THEN RETURN Math.arctan(y/x)+2*Math.pi
@@ -417,7 +417,7 @@ BEGIN
 END arctan2;
 
 
-PROCEDURE arctan2L*(x,y:LONGREAL):LONGREAL; (*arctan in range 0..2pi*)
+PROCEDURE arctan2L*(x,y:FLOAT64):FLOAT64; (*arctan in range 0..2pi*)
 BEGIN
 	IF (x>0) & (y>=0) THEN RETURN MathL.arctan(y/x)
 	ELSIF (x>0) & (y<0) THEN RETURN MathL.arctan(y/x)+2*MathL.pi

@@ -97,7 +97,7 @@ TYPE
 
 	(** deconvolution is division in Fourier domain:  (a+bi )/(c+di) = (ac+bd)/(c*c+d*d), i*(bc-ad)/(c*c+d*d) *)
 	PROCEDURE DeConvolution*( CONST in1, in2: TwoD;  VAR outR, outI: TwoD );
-	VAR R1, I1, R2, I2, nil, tmpR, tmpI: TwoD; i:LONGINT;
+	VAR R1, I1, R2, I2, nil, tmpR, tmpI: TwoD; i:SIGNED32;
 	BEGIN
 		FFT( in1, nil, R1, I1, {0, 1} );
 		FFT(in2, nil, R2, I2, {0, 1} );

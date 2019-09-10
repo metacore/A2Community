@@ -15,7 +15,7 @@ TYPE
 	IterativeSolver* = OBJECT (Base.Solver)
 		VAR A-: Matrix;
 			residual*: Vector;
-			maxIterations*,  iteration*: LONGINT;
+			maxIterations*,  iteration*: SIGNED32;
 			threshold*: Datatype;
 			Norm*: PROCEDURE {DELEGATE} ( CONST v: Vector ): Datatype;   (** method to compute residual *)
 
@@ -252,18 +252,18 @@ TYPE
 	END LogV;
 
 
-	PROCEDURE OutFloat( x: LONGREAL );
+	PROCEDURE OutFloat( x: FLOAT64 );
 	VAR s: ARRAY 64 OF CHAR;
 	BEGIN
 		Strings.FloatToStr( x, 6, 6, 0, s );  Out.String( s );
 	END OutFloat;
 
-	PROCEDURE DummyHandler( i:LONGINT; s: ARRAY OF CHAR );
+	PROCEDURE DummyHandler( i:SIGNED32; s: ARRAY OF CHAR );
 	BEGIN
 	END DummyHandler;
 
 	PROCEDURE Test*;
-	VAR A: Matrix;  b, x: Vector;  i: LONGINT;  timer: Kernel.MilliTimer;  gs: GaussSeidel; gss: GaussSeidelSOR; j: Jacobi; cg: ConjugateGradient;
+	VAR A: Matrix;  b, x: Vector;  i: SIGNED32;  timer: Kernel.MilliTimer;  gs: GaussSeidel; gss: GaussSeidelSOR; j: Jacobi; cg: ConjugateGradient;
 	BEGIN
 		A := [[3, 1, 1, 0], [1, 5, 2, 1], [2, 1, 6, 2], [1, 2, 3, 7]];  b := [1, 2, 3, 2];  (* Gauss Seidel and Jacobi require diagonally dominant matrices for guaranteed convergence *)
 

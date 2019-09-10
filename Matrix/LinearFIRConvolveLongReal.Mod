@@ -3,7 +3,7 @@ MODULE LinearFIRConvolveLongReal;	(** Patrick Hunziker & dk(assembler)   **)
 
 IMPORT Util:=MatrixUtilities;
 
-PROCEDURE Convolve*(CONST filter:ARRAY[*]  OF LONGREAL; CONST data:ARRAY [*] OF LONGREAL; VAR result:ARRAY [*] OF LONGREAL);
+PROCEDURE Convolve*(CONST filter:ARRAY[*]  OF FLOAT64; CONST data:ARRAY [*] OF FLOAT64; VAR result:ARRAY [*] OF FLOAT64);
 VAR d,filterlen,reslen:SIZE;
 BEGIN
 	filterlen:=LEN(filter,0);
@@ -14,8 +14,8 @@ BEGIN
 END Convolve;
 
 (*
-PROCEDURE Convolve*(CONST filter:ARRAY[*]  OF LONGREAL; VAR data,result:ARRAY [*] OF LONGREAL);
-VAR diffrlfl :LONGINT;
+PROCEDURE Convolve*(CONST filter:ARRAY[*]  OF FLOAT64; VAR data,result:ARRAY [*] OF FLOAT64);
+VAR diffrlfl :SIGNED32;
 CODE {SYSTEM.i386, SYSTEM.FPU}
 		;28[EBP] : LEN(filter)
 		; 20[EBP] : LEN(data,0)
@@ -60,7 +60,7 @@ CODE {SYSTEM.i386, SYSTEM.FPU}
 END Convolve;
 *)
 
-PROCEDURE ConvolveDown2*(CONST filter:ARRAY[*]  OF LONGREAL;  CONST data:ARRAY [*] OF LONGREAL;VAR result:ARRAY [*] OF LONGREAL; shift:LONGINT);
+PROCEDURE ConvolveDown2*(CONST filter:ARRAY[*]  OF FLOAT64;  CONST data:ARRAY [*] OF FLOAT64;VAR result:ARRAY [*] OF FLOAT64; shift:SIGNED32);
 VAR d,filterlen,datalen,resPos:SIZE;
 BEGIN
 	(** precondition: shift IN {0,1} ; this is used for even/odd algorithm variants *)
@@ -75,8 +75,8 @@ BEGIN
 END ConvolveDown2;
 
 (*
-PROCEDURE ConvolveDown2*(CONST filter:ARRAY[*]  OF LONGREAL; VAR data,result:ARRAY [*] OF LONGREAL; shift:LONGINT);
-VAR diffdlfl :LONGINT;
+PROCEDURE ConvolveDown2*(CONST filter:ARRAY[*]  OF FLOAT64; VAR data,result:ARRAY [*] OF FLOAT64; shift:SIGNED32);
+VAR diffdlfl :SIGNED32;
 CODE {SYSTEM.i386, SYSTEM.FPU}
 		;32[EBP] : LEN(filter)
 		;24[EBP] : LEN(data,0)
@@ -136,7 +136,7 @@ endouterloop:
 END ConvolveDown2;
 *)
 
-PROCEDURE ConvolveUp2*(CONST filter:ARRAY[*]  OF LONGREAL; CONST data: ARRAY [*] OF LONGREAL;VAR result:ARRAY [*] OF LONGREAL; shift:LONGINT);
+PROCEDURE ConvolveUp2*(CONST filter:ARRAY[*]  OF FLOAT64; CONST data: ARRAY [*] OF FLOAT64;VAR result:ARRAY [*] OF FLOAT64; shift:SIGNED32);
 	(** upsampling by 2 and convolution with filter; admissible types should include all basic Oberon number types *)
 VAR f,d,filterlen,reslen,filterstart:SIZE;
 BEGIN
@@ -155,8 +155,8 @@ BEGIN
 END ConvolveUp2;
 
 (*
-PROCEDURE ConvolveUp2*(CONST filter:ARRAY[*]  OF LONGREAL; VAR data,result:ARRAY [*] OF LONGREAL; shift:LONGINT);
-VAR diffrlfl :LONGINT;
+PROCEDURE ConvolveUp2*(CONST filter:ARRAY[*]  OF FLOAT64; VAR data,result:ARRAY [*] OF FLOAT64; shift:SIGNED32);
+VAR diffrlfl :SIGNED32;
 CODE {SYSTEM.i386, SYSTEM.FPU}
 		;32[EBP] : LEN(filter)
 		;24[EBP] : LEN(data,0)

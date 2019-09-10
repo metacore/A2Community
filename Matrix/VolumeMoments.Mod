@@ -12,7 +12,7 @@ TYPE
 Precondition:
 Postcondition:
 *)
-	PROCEDURE Moment*( CONST from: Cube;  degreeX, degreeY, degreeZ: LONGINT ): Cube;
+	PROCEDURE Moment*( CONST from: Cube;  degreeX, degreeY, degreeZ: SIGNED32 ): Cube;
 	VAR MomentFilter0, MomentFilter1, MomentFilter2, filter: Filters.Filter;
 	BEGIN
 		ASSERT( LEN( from, 0 ) > 0 );

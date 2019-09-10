@@ -67,7 +67,7 @@ VAR
 (*
 (*not yet tested/activated*)
 PROCEDURE cubenewton (p,q,r: Datatype; VAR v3: Vector);
-VAR j,k,n3: LONGINT; corr, deriv, err, root: Datatype;
+VAR j,k,n3: SIGNED32; corr, deriv, err, root: Datatype;
 BEGIN
 	FOR j:=0 TO LEN(v3)-1 DO
 		FOR k:=0 TO 3 DO
@@ -88,7 +88,7 @@ END new;
 
 (** Find real roots of cubic equation x3 +px2 +qx +r = 0 ; method: D.E. Littlewood, "A University Algebra" pp.173; *)
 	PROCEDURE Cubic*( p, q, r: Datatype ): Vector;  (*If result target is already an allocated vector with length >= number of eigenvalues, it is reused in the existing length; otherwise, a new vector of minimum necessary length (length 1..3) is given*)
-	VAR n3: LONGINT;
+	VAR n3: SIGNED32;
 		po3, po3sq, qo3, po3q, uo3, u2o3, uo3sq4, uo3cu4, v, v0, vsq, wsq: Datatype;
 		m1, m2, mcube, muo3, s, scube, t, cosk, rt3sink, sinsqk: Datatype;
 		v2, v3: Vector;
@@ -217,7 +217,7 @@ END new;
 *)
 
 BEGIN
-	rt3 := MathL.sqrt( 3 );  Max := MathL.sqrt( MAX( LONGREAL ) );
+	rt3 := MathL.sqrt( 3 );  Max := MathL.sqrt( MAX( FLOAT64 ) );
 END MatrixPolynomEq.
 
 (*
@@ -265,7 +265,7 @@ PROCEDURE quartic(a,b,c,d: Datatype; VAR rts: ARRAY [4] OF Datatype);
      21 Jan 1989  Don Herbison-Evans
 *)
   VAR
-  	j,k,nq,nr: LONGINT;
+  	j,k,nq,nr: SIGNED32;
   	odd, even: Datatype;
    	roots: ARRAY [4] OF Datatype;
 BEGIN

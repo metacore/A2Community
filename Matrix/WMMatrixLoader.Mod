@@ -15,12 +15,12 @@ CONST
 	MaxIntensity*=1;
 	SumIntensity*=2;
 
-PROCEDURE Load*(CONST name:Files.FileName; orientation:LONGINT; options:Options.Options): WMWindowManager.Window;
+PROCEDURE Load*(CONST name:Files.FileName; orientation:SIGNED32; options:Options.Options): WMWindowManager.Window;
 VAR d: ARRAY [?] OF MatrixBase.Datatype;
 	d2: ARRAY [*,*] OF MatrixBase.Datatype;
-	dr: ARRAY [?] OF REAL;
-	d16: ARRAY [?] OF INTEGER;
-	d32: ARRAY[?] OF LONGINT;
+	dr: ARRAY [?] OF FLOAT32;
+	d16: ARRAY [?] OF SIGNED16;
+	d32: ARRAY[?] OF SIGNED32;
 	len: ARRAY [*] OF SIZE;
 	f:Files.File;
 	r:Files.Reader;
@@ -29,7 +29,7 @@ VAR d: ARRAY [?] OF MatrixBase.Datatype;
 	tWindow: WMTensor.Window;
 	title: Files.FileName;
 	i,x,y,z,xx,yy: SIZE;
-	datatype, version:LONGINT;
+	datatype, version:SIGNED32;
 	max: MatrixBase.Datatype;
 BEGIN
 	f:=Files.Old(name);
@@ -141,7 +141,7 @@ BEGIN
 END Load;
 
 PROCEDURE Open*(context:Commands.Context);
-VAR name: Files.FileName; w:WMWindowManager.Window; orientation:LONGINT;
+VAR name: Files.FileName; w:WMWindowManager.Window; orientation:SIGNED32;
 VAR options : Options.Options;
 BEGIN
 	NEW(options);
@@ -154,11 +154,11 @@ BEGIN
 	END;
 END Open;
 
-PROCEDURE Import*(fileName: Files.FileName):ARRAY [?] OF INTEGER; (** filename ~ *)
+PROCEDURE Import*(fileName: Files.FileName):ARRAY [?] OF SIGNED16; (** filename ~ *)
 VAR
 	name : Files.FileName;
 	pw : WMWindowManager.BufferWindow;
-	res, x : WORD;
+	res, x : INTEGER;
 	w, h : SIZE;
 	dec : Codecs.ImageDecoder;
 	rdr : Streams.Reader;
@@ -166,8 +166,8 @@ VAR
 	icon : WMGraphics.Image;
 	canvas : WMGraphics.BufferCanvas;
 	errStr: ARRAY 128 OF CHAR;
-	result: ARRAY [?] OF INTEGER;
-	err: ARRAY [1,10,10] OF INTEGER;
+	result: ARRAY [?] OF SIGNED16;
+	err: ARRAY [1,10,10] OF SIGNED16;
 BEGIN
 	Strings.GetExtension(fileName, name, ext);
 	Strings.UpperCase(ext);
@@ -196,7 +196,7 @@ END Import;
 
 PROCEDURE Do*(context:Commands.Context);
 VAR fn: Files.FileName;
-	data: ARRAY [?] OF INTEGER;
+	data: ARRAY [?] OF SIGNED16;
 	i:SIZE;
 	window:WMMatrix.Window;
 BEGIN

@@ -46,7 +46,7 @@ TYPE PCA*= OBJECT (MatrixBase.Solver)
 			END;
 		END PrincipalComponents;
 
-		PROCEDURE LargestComponents*(M:LONGINT): Matrix; (*returns Y with reduced size (not YT ! )*)
+		PROCEDURE LargestComponents*(M:SIGNED32): Matrix; (*returns Y with reduced size (not YT ! )*)
 		BEGIN
 			ASSERT(initialized & (M#0));
 			(*HALT(200); (* would work if sorting was plugged in *)

@@ -13,7 +13,7 @@ CONST 	signed=1;
 (*! to do: improve current limitation to subtensor[0,?] display. Generalize to 1D, 2D and 5D+ data*)
 
 TYPE
-	Tensor= ARRAY [?] OF LONGREAL;
+	Tensor= ARRAY [?] OF FLOAT64;
 
 TYPE Model*= OBJECT (Models.Model)
 		VAR m*, r*,g*,b*: Tensor;
@@ -21,15 +21,15 @@ TYPE Model*= OBJECT (Models.Model)
 
 TYPE Window*= OBJECT (WM.BufferWindow) (* or could use WM.DoubleBufferWindow or WMComponents.FormWindow) *)
 	VAR model*:Model;
-		max,min, gain*:LONGREAL;
+		max,min, gain*:FLOAT64;
 		exists:BOOLEAN;
-		type, orientation,cur3:LONGINT;
+		type, orientation,cur3:SIGNED32;
 		offset*,current*:SIZE;
 		mx0,my0,mx1,my1:SIZE;
 		baseTitle, title: ARRAY 256 OF CHAR;
 		source*:ANY;
 
-	PROCEDURE &Initialize*(CONST m: Tensor; CONST title: ARRAY OF CHAR; orientation:LONGINT);
+	PROCEDURE &Initialize*(CONST m: Tensor; CONST title: ARRAY OF CHAR; orientation:SIGNED32);
 	BEGIN
 		ASSERT(DIM(m) IN {2, 3,4}, 200);
 		ASSERT(LEN(m)>0, 201);
@@ -62,7 +62,7 @@ TYPE Window*= OBJECT (WM.BufferWindow) (* or could use WM.DoubleBufferWindow or 
 		(*maxInterpolation:=1; => default bilinear interpolation;  maxInterpolation:=0; => nearest neighbour interpolation*)
 	END Initialize;
 
-	PROCEDURE SetOrientation*(orientation:LONGINT);
+	PROCEDURE SetOrientation*(orientation:SIGNED32);
 	VAR w,h: SIZE; m: WM.WindowManager;
 	BEGIN
 		IF (orientation#SELF.orientation) & (LEN(model.m)>0) THEN
@@ -156,7 +156,7 @@ TYPE Window*= OBJECT (WM.BufferWindow) (* or could use WM.DoubleBufferWindow or 
 			Inputs.Release flag in flags. ucs contains the unicode equivalent of the key. Special input editors
 			send the generated unicode characters via KeyEvent.  *)
 	PROCEDURE KeyEvent(ucs : SIZE; flags : SET; keysym : SIZE);
-		VAR dz: LONGINT; s: ARRAY 16 OF CHAR; dim:SIZE;
+		VAR dz: SIGNED32; s: ARRAY 16 OF CHAR; dim:SIZE;
 		BEGIN
 			IF ~(Inputs.Release IN flags )THEN
 				dim:=MAX(DIM(model.m),DIM(model.r));
@@ -219,7 +219,7 @@ TYPE Window*= OBJECT (WM.BufferWindow) (* or could use WM.DoubleBufferWindow or 
 		END;
 	END SetImage;
 
-	PROCEDURE SetImageB*(CONST m: Tensor; offset:LONGINT;gain: LONGREAL);
+	PROCEDURE SetImageB*(CONST m: Tensor; offset:SIGNED32;gain: FLOAT64);
 	BEGIN
 		IF ~exists  & (LEN(m)>0) THEN
 			IF DIM(m)=2 THEN
@@ -341,7 +341,7 @@ TYPE Window*= OBJECT (WM.BufferWindow) (* or could use WM.DoubleBufferWindow or 
 		PostInvalidate;
 	END Render;
 
-	PROCEDURE RenderScaled*(offset:LONGINT;gain: LONGREAL);
+	PROCEDURE RenderScaled*(offset:SIGNED32;gain: FLOAT64);
 	BEGIN
 		SELF.offset:=offset; SELF.gain:=gain;
 		Render;
@@ -357,10 +357,10 @@ TYPE Window*= OBJECT (WM.BufferWindow) (* or could use WM.DoubleBufferWindow or 
 
 END Window;
 
-VAR InsertPosX*,InsertPosY*, pos: LONGINT; (* default insertion point for new window *)
+VAR InsertPosX*,InsertPosY*, pos: SIGNED32; (* default insertion point for new window *)
 
 PROCEDURE GenerateName(prefix: Strings.String; VAR str: ARRAY OF CHAR);
-VAR  i,j:LONGINT; title: Files.FileName; c:CHAR;
+VAR  i,j:SIGNED32; title: Files.FileName; c:CHAR;
 BEGIN
 	i:=0; j:=0;
 	IF prefix#NIL THEN
@@ -381,9 +381,9 @@ BEGIN
 END GenerateName;
 
 PROCEDURE RemoveWindows*(context:Commands.Context); (*! does this need a wait for termination ?  *)
-VAR manager:WM.WindowManager; w,remove:WM.Window; i:LONGINT;
+VAR manager:WM.WindowManager; w,remove:WM.Window; i:SIGNED32;
 BEGIN {EXCLUSIVE}
-	IF (context=NIL) OR (~context.arg.GetInteger(i,FALSE)) THEN i:=MAX(LONGINT) END;
+	IF (context=NIL) OR (~context.arg.GetInteger(i,FALSE)) THEN i:=MAX(SIGNED32) END;
 	manager:=WM.GetDefaultManager();
 	manager.lock.AcquireWrite;
 	w:=manager.GetFirst();
@@ -402,7 +402,7 @@ END RemoveAllWindows;
 
 PROCEDURE Test*;
 VAR window:Window;
-	tensor: ARRAY [?] OF LONGINT; (* or LONGREAL or other..*)
+	tensor: ARRAY [?] OF SIGNED32; (* or FLOAT64 or other..*)
 BEGIN
 	(*have some data in a 3D array ready*)
 	NEW(tensor, 4, 50,100,120);
@@ -437,7 +437,7 @@ IMPORT WMStack;
 
 PROCEDURE Test*;
 VAR window:Window;
-	tensor: ARRAY [*,*,*,*] OF LONGINT; (* or LONGREAL or other..*)
+	tensor: ARRAY [*,*,*,*] OF SIGNED32; (* or FLOAT64 or other..*)
 BEGIN
 	(*have some data in a 3D array ready*)
 	NEW(stack, 440,100,100);

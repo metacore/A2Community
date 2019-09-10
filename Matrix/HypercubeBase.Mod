@@ -7,7 +7,7 @@ CONST
 	cachefraction = 0.5;   (* how much of cache should be used for temporary data structure. This might be a good starting point for  ATLAS like machine-adaptive optimizations *)
 
 TYPE
-	Datatype* = LONGREAL;
+	Datatype* = FLOAT64;
 	OneD = ARRAY [*] OF Datatype;
 	TwoD = ARRAY [*,*] OF Datatype;
 	ThreeD = ARRAY [*,*,*] OF Datatype;
@@ -19,7 +19,7 @@ TYPE
 
 VAR
 	Comments: BOOLEAN;
-	(*debug*) t1, t2, t0: LONGINT;  testscale: INTEGER;
+	(*debug*) t1, t2, t0: SIGNED32;  testscale: SIGNED16;
 
 	(** applies a procedure 'linehandler' to all lines of a 3D dataset in the indicated directions. Avoids cache misses by copying the data into a work array that fits into the cache.*)
 	PROCEDURE HandleLines4D*( CONST cube: FourD;  VAR rescube: FourD;
@@ -241,20 +241,20 @@ VAR
 
 (*
 	PROCEDURE copy( CONST in: OneD;  VAR in2: OneD );
-	VAR i: LONGINT;
+	VAR i: SIGNED32;
 	BEGIN
 		FOR i := 0 TO LEN( in ) - 1 DO in2[i] := in[i];  END;
 	END copy;
 
 	PROCEDURE out( CONST in: OneD;  VAR in2: OneD );
-	VAR i: LONGINT;
+	VAR i: SIGNED32;
 	BEGIN
 		FOR i := 0 TO LEN( in ) - 1 DO Out.Int( ENTIER( in[i] ), 6 );  (*Out.Int(  in2[i] , 6 );*) END;
 		Out.Ln;
 	END out;
 
 	PROCEDURE Test*;
-	VAR x, y, z, s, t, rep, time, i, j: LONGINT;  cube, rescube: FourD;
+	VAR x, y, z, s, t, rep, time, i, j: SIGNED32;  cube, rescube: FourD;
 	BEGIN
 		In.Open;  In.LongInt( s );  In.LongInt( rep );
 		IF In.Done THEN

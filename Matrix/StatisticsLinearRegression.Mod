@@ -356,7 +356,7 @@ BEGIN
 END TestEngine;
 
 PROCEDURE TestFprobability*; (* compute probability from F-value *)
-VAR df1,df2:LONGINT; F:LONGINT;
+VAR df1,df2:SIGNED32; F:SIGNED32;
 BEGIN
 	FOR F:=1 TO 5 DO
 		Util.OutVector([F*F]);

@@ -6,7 +6,7 @@ TYPE
 	Datatype = VolumePDE.Datatype;
 	Grid = VolumePDE.Grid;
 
-	PROCEDURE outrealfix(x:LONGREAL);
+	PROCEDURE outrealfix(x:FLOAT64);
 	VAR s: ARRAY 64 OF CHAR;
 	BEGIN
 		Utilities.FloatToStr(x,6,3,0,s);
@@ -15,7 +15,7 @@ TYPE
 
 PROCEDURE TestDiffusion*;
 	CONST size = 64;
-	VAR d, p: Grid;  i: LONGINT;  nu: Datatype;
+	VAR d, p: Grid;  i: SIGNED32;  nu: Datatype;
 		D,P:WMMatrix.Window;
 		diffusion: VolumePDE.Diffusion;
 	BEGIN
@@ -32,7 +32,7 @@ PROCEDURE TestDiffusion*;
 
 PROCEDURE TestWave*;
 	CONST size = 65;
-	VAR d,dm1, p: Grid;  i: LONGINT;  c: Datatype;
+	VAR d,dm1, p: Grid;  i: SIGNED32;  c: Datatype;
 		D,P:WMMatrix.Window;
 		wave: VolumePDE.Wave;
 	BEGIN
@@ -53,7 +53,7 @@ PROCEDURE TestWave*;
 
 	PROCEDURE TestPoisson*;
 	CONST size = 64;
-	VAR d, p: Grid;  i: LONGINT;
+	VAR d, p: Grid;  i: SIGNED32;
 		D,P:WMMatrix.Window;
 		poisson: VolumePDE.Poisson;
 	BEGIN
@@ -68,7 +68,7 @@ PROCEDURE TestWave*;
 
 PROCEDURE TestAdvection*;
 CONST size=64;
-VAR d,u,v,w,p, p1: Grid; 	D,P:WMMatrix.Window;  i:LONGINT;
+VAR d,u,v,w,p, p1: Grid; 	D,P:WMMatrix.Window;  i:SIGNED32;
 BEGIN
 	NEW(d,size,size,size); (*original data*)
 	NEW(u,size,size,size); NEW(v,size,size,size); NEW(w,size,size,size);  (*3D advection vector*)

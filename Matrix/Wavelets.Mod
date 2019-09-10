@@ -43,7 +43,7 @@ CONST
 	ShiftOrthoCubicSpline* = 71;
 
 TYPE
-	Datatype* = LONGREAL;
+	Datatype* = FLOAT64;
 	FIRFilter* = LinearFilters.FIRFilter;
 	Dataarray* = ARRAY [ * ] OF Datatype;
 	FilterCoeffs* = ARRAY [ * ] OF Datatype;
@@ -55,9 +55,9 @@ TYPE
 			hiAnalysis*,
 			loReconstruct*,
 			hiReconstruct*: FIRFilter;
-			defaultBoundary*:LONGINT;
+			defaultBoundary*:SIGNED32;
 			verifiedBoundaries*:SET;
-		PROCEDURE &Init*(wavelet:LONGINT);
+		PROCEDURE &Init*(wavelet:SIGNED32);
 			BEGIN
 				CreateWaveletFamily(SELF,wavelet);
 			END Init;
@@ -68,12 +68,12 @@ TYPE
 	WaveletConvolver* = OBJECT
 	VAR temp, tmpLo, tmpHi, tmpResLo, tmpResHi: Dataarray;
 		wavelet-: WaveletFamily;
-		boundary*,shift*:LONGINT;
+		boundary*,shift*:SIGNED32;
 		upHiCoeffs,upLoCoeffs,downHiCoeffs,downLoCoeffs:Dataarray;
 
 		Clow,Chigh: LinearConvolve.Convolver;
 
-		PROCEDURE &Init*(wavelet:WaveletFamily; boundary:LONGINT);
+		PROCEDURE &Init*(wavelet:WaveletFamily; boundary:SIGNED32);
 		VAR i:SIZE;
 		BEGIN
 			SELF.wavelet:=wavelet;
@@ -257,7 +257,7 @@ TYPE
 
 	PROCEDURE ChangeEvenSignReflect( F: FIRFilter ): FIRFilter;
 	(* Change sign of even items of filter, and reflect the filter,  to get hiReconstruct filter from loReconstruct filter in wavelet*)
-	VAR res: FIRFilter;  coeff: FilterCoeffs;  i: SIZE;  factor: LONGINT;
+	VAR res: FIRFilter;  coeff: FilterCoeffs;  i: SIZE;  factor: SIGNED32;
 	BEGIN
 		NEW( coeff, LEN( F.coeff,0) );  factor := 1;
 		FOR i := 0 TO LEN( F.coeff,0) - 1 DO coeff[i] := factor * F.coeff[LEN( coeff,0) - i - 1];  factor := -factor;  END;
@@ -266,7 +266,7 @@ TYPE
 
 	PROCEDURE ChangeOddSignReflect( F: FIRFilter ): FIRFilter;
 	(* Change sign of odd items of filter, and reflect the filter, to get hiAnalysis filter from loAnalysis filter in wavelet*)
-	VAR res: FIRFilter;  coeff: FilterCoeffs;  i: SIZE;  factor: LONGINT;
+	VAR res: FIRFilter;  coeff: FilterCoeffs;  i: SIZE;  factor: SIGNED32;
 	BEGIN
 		NEW( coeff, LEN( F.coeff,0) );  factor := -1;
 		FOR i := 0 TO LEN( F.coeff,0) - 1 DO coeff[i] := factor * F.coeff[LEN( coeff,0) - i - 1];  factor := -factor;  END;
@@ -298,15 +298,15 @@ TYPE
 		FOR i := 0 TO mid - 1 DO val := a[i];  a[i] := a[mid - i - 1];  a[mid - i - 1] := val;  val := a[mid + i];  a[mid + i] := a[len - 1 - i];  a[len - 1 - i] := val;  END;
 	END SwapHalfs;
 
-	PROCEDURE NewWaveletFamily*( waveletname: LONGINT):WaveletFamily;
+	PROCEDURE NewWaveletFamily*( waveletname: SIGNED32):WaveletFamily;
 	VAR F:WaveletFamily;
 	BEGIN
 		NEW(F,waveletname);
 		RETURN F
 	END NewWaveletFamily;
 
-	PROCEDURE CreateWaveletFamily*( F:WaveletFamily; waveletname: LONGINT );
-	VAR coeff: FilterCoeffs;  i: LONGINT;
+	PROCEDURE CreateWaveletFamily*( F:WaveletFamily; waveletname: SIGNED32 );
+	VAR coeff: FilterCoeffs;  i: SIGNED32;
 	BEGIN
 		(** create 1D Wavelet filters family ,including:
 			loAnalysis: analysis lowpass  filter;
@@ -518,10 +518,10 @@ TYPE
 (** show wavelet filters in WaveletFamily *)
 VAR FF: WaveletFamily;
 		h,g,ih,ig:FIRFilter;
-       len,i:LONGINT;
-       r:REAL;
+       len,i:SIGNED32;
+       r:FLOAT32;
        c:CHAR;
-       waveletname:INTEGER;
+       waveletname:SIGNED16;
    BEGIN
    Out.Ln;
 		Out.String("Orthogonal wavelet:");Out.Ln;

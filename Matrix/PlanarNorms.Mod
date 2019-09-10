@@ -22,7 +22,7 @@ BEGIN
 	RETURN tmp+*tmp
 END PowerComplex;
 
-PROCEDURE TotalVariation*(CONST p:Plane; sampling:LONGINT): Datatype; (* to do: optimize *)
+PROCEDURE TotalVariation*(CONST p:Plane; sampling:SIGNED32): Datatype; (* to do: optimize *)
 BEGIN
 	RETURN SUM(PlanarMath.Sqrt(PlanarMath.Sqr(PlanarNabla.dx(p,sampling))
 									+ PlanarMath.Sqr(PlanarNabla.dy(p,sampling))))

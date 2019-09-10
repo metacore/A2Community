@@ -25,7 +25,7 @@ CONST
 	CGOLD = 0.38196601125010515179;   (* 2 - GOLD *)
 
 TYPE
-	Real* = LONGREAL;
+	Real* = FLOAT64;
 	Vector* = ARRAY [ * ] OF Real;
 	Matrix* = ARRAY [ * , * ] OF Real;
 
@@ -112,8 +112,8 @@ VAR
                       NONCONV
   ---------------------------------------------------------------------- *)
 
-	PROCEDURE GoldSearch*( Func: TFunc;  A, B: Real;  MaxIter: LONGINT;  Tol: Real;  VAR Xmin, Ymin: Real ): LONGINT;
-	VAR C, Fa, Fb, Fc, F1, F2, MinTol, X0, X1, X2, X3: Real;  Iter: LONGINT;
+	PROCEDURE GoldSearch*( Func: TFunc;  A, B: Real;  MaxIter: SIGNED32;  Tol: Real;  VAR Xmin, Ymin: Real ): SIGNED32;
+	VAR C, Fa, Fb, Fc, F1, F2, MinTol, X0, X1, X2, X3: Real;  Iter: SIGNED32;
 	(*
 		PROCEDURE minBrack( VAR A, B, C, Fa, Fb, Fc: Real );
 		BEGIN
@@ -160,7 +160,7 @@ VAR
   	OK
       NONCONV
   ---------------------------------------------------------------------- *)
-	PROCEDURE Simplex*( Func: TFuncNVar;  VAR X: Vector;  MaxIter: LONGINT;  Tol: Real;  VAR Fmin: Real ): LONGINT;
+	PROCEDURE Simplex*( Func: TFuncNVar;  VAR X: Vector;  MaxIter: SIGNED32;  Tol: Real;  VAR Fmin: Real ): SIGNED32;
 	CONST Step = 1.50;   (* Step used to construct the initial simplex *)
 	VAR P: Matrix;   (* Simplex coordinates *)
 		F: Vector;   (* Function values *)
@@ -174,10 +174,10 @@ VAR
 		I, J: SIZE;   (* Loop variables *)
 		Iter: SIZE;   (* Iteration count *)
 		Corr, MaxCorr: Real;   (* Corrections *)
-		Sum: Real;  Flag: BOOLEAN;  i: LONGINT;  Ubound: SIZE;
+		Sum: Real;  Flag: BOOLEAN;  i: SIGNED32;  Ubound: SIZE;
 
 		PROCEDURE UpdateSimplex( Y: Real;  CONST Q: Vector );   (* Update "worst" vertex & function value *)
-		VAR i: LONGINT;
+		VAR i: SIGNED32;
 		BEGIN
 			F[H] := Y;  P[H, .. ] := Q[.. ];
 		END UpdateSimplex;
@@ -288,8 +288,8 @@ VAR
   Possible results  : OK
                       NONCONV
   ---------------------------------------------------------------------- *)
-	PROCEDURE LinMin*( Func: TFuncNVar;  VAR X, DeltaX: Vector;  MaxIter: LONGINT;  Tol: Real;  VAR Fmin: Real ): LONGINT;
-	VAR I, ErrCode: LONGINT;  R: Real;  ofunc:OFunc;
+	PROCEDURE LinMin*( Func: TFuncNVar;  VAR X, DeltaX: Vector;  MaxIter: SIGNED32;  Tol: Real;  VAR Fmin: Real ): SIGNED32;
+	VAR I, ErrCode: SIGNED32;  R: Real;  ofunc:OFunc;
 	BEGIN
 		(* Initialize function object *)
     	NEW(ofunc,Func,X,DeltaX);
@@ -301,8 +301,8 @@ VAR
 		RETURN ErrCode;
 	END LinMin;
 
-	PROCEDURE LinMin2( oFunc: OFunc; VAR X, DeltaX: Vector;  MaxIter: LONGINT;  Tol: Real;  VAR Fmin: Real ): LONGINT;
-	VAR I, ErrCode: LONGINT;  R: Real;
+	PROCEDURE LinMin2( oFunc: OFunc; VAR X, DeltaX: Vector;  MaxIter: SIGNED32;  Tol: Real;  VAR Fmin: Real ): SIGNED32;
+	VAR I, ErrCode: SIGNED32;  R: Real;
 	BEGIN
 		oFunc.Init(oFunc.Func, X,DeltaX); (*still too much copy overhead ... here*)
 		(* Perform golden search *)
@@ -414,8 +414,8 @@ VAR
                       BIGLAMBDA
                       NONCONV
   ---------------------------------------------------------------------- *) (* to do: eliminate redundant object createin in LinMin called from Marquardt *)
-	PROCEDURE Marquardt*( Func: TFuncNVar;  HessGrad: THessGrad;  VAR X: Vector;  MaxIter: LONGINT;  Tol: Real;  VAR Fmin: Real;
-											    VAR Hinv: Matrix ): LONGINT;
+	PROCEDURE Marquardt*( Func: TFuncNVar;  HessGrad: THessGrad;  VAR X: Vector;  MaxIter: SIGNED32;  Tol: Real;  VAR Fmin: Real;
+											    VAR Hinv: Matrix ): SIGNED32;
 	CONST LAMBDA0 = 1.0E-2;   (* Initial lambda value *)
 		LAMBDAMAX = 1.0E+3;   (* Highest lambda value *)
 		FTOL = 1.0E-10;   (* Tolerance on function decrease *)
@@ -431,9 +431,9 @@ VAR
 		LambdaOk: BOOLEAN;   (* Successful Lambda decrease *)
 		Conv: BOOLEAN;   (* Convergence reached *)
 		Done: BOOLEAN;   (* Iterations DOne *)
-		Iter: LONGINT;   (* Iteration count *)
-		ErrCode: LONGINT;   (* Error code *)
-		Ubound: LONGINT;
+		Iter: SIGNED32;   (* Iteration count *)
+		ErrCode: SIGNED32;   (* Error code *)
+		Ubound: SIGNED32;
 		ofunc:OFunc;
 		GaussJordan: MatrixStandardSolvers.GaussJordan;
 
@@ -444,8 +444,8 @@ VAR
 				RETURN Func(X+ r * DeltaX);
 			END f1dim;
 
-		PROCEDURE linMin*( MaxIter: LONGINT;  Tol: Real;  VAR Fmin: Real ): LONGINT;
-		VAR I, ErrCode: LONGINT;  R: Real;
+		PROCEDURE linMin*( MaxIter: SIGNED32;  Tol: Real;  VAR Fmin: Real ): SIGNED32;
+		VAR I, ErrCode: SIGNED32;  R: Real;
 		BEGIN
 			(* Perform golden search *)
 			ErrCode := GoldSearch( f1dim,  0.0D0, 1.0D0, MaxIter, Tol, R, Fmin );
@@ -544,9 +544,9 @@ VAR
   Possible results : OK
                      NONCONV
   ---------------------------------------------------------------------- *)
-	PROCEDURE BFGS*( Func: TFuncNVar;  Gradient: TGradient;  VAR X: Vector;  MaxIter: LONGINT;  Tol: Real;  VAR Fmin: Real;
-									  VAR Hinv: Matrix ): LONGINT;
-	VAR I: SIZE; J, Iter, ErrCode: LONGINT;  DeltaXmax, Gmax, P1, P2, R1, R2: Real;
+	PROCEDURE BFGS*( Func: TFuncNVar;  Gradient: TGradient;  VAR X: Vector;  MaxIter: SIGNED32;  Tol: Real;  VAR Fmin: Real;
+									  VAR Hinv: Matrix ): SIGNED32;
+	VAR I: SIZE; J, Iter, ErrCode: SIGNED32;  DeltaXmax, Gmax, P1, P2, R1, R2: Real;
 		OldX, DeltaX, dX, G, OldG, dG, HdG, R1dX, R2HdG, U, P2U: Vector;  Conv: BOOLEAN;  one: Real;
 		(*ofunc:OFunc;*)
 	BEGIN

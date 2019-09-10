@@ -17,10 +17,10 @@ CONST
 	FUNC*= 4; (** function model*)
 
 TYPE
-		Datatype*=LONGREAL;
+		Datatype*=FLOAT64;
 		Matrix*=ARRAY [*,*] OF Datatype;
 		RealPoint=ARRAY [*] OF Datatype;
-		IntPoint=ARRAY [*] OF LONGINT;
+		IntPoint=ARRAY [*] OF SIGNED32;
 
 TYPE Point* = POINTER TO RECORD
 				x,y: Datatype;
@@ -40,12 +40,12 @@ TYPE Model*=OBJECT(Models.Model);
 
 TYPE MatrixModel*= OBJECT (Model)
 		VAR matrix:Matrix;
-			dataorder:LONGINT;
+			dataorder:SIGNED32;
 	END MatrixModel;
 
 TYPE OldMatrixModel*= OBJECT (Model)
 		VAR matrix:POINTER TO ARRAY OF ARRAY OF Datatype;
-			dataorder:LONGINT;
+			dataorder:SIGNED32;
 	END OldMatrixModel;
 
 TYPE FunctionModel*= OBJECT (Model)
@@ -63,9 +63,9 @@ TYPE PointListModel*= OBJECT(Model)
 (* graphical components *)
 TYPE Curve= OBJECT
 	VAR
-		linecol*: LONGINT;
-		linestyle*: LONGINT;
-		beg*, end*: LONGINT;
+		linecol*: SIGNED32;
+		linestyle*: SIGNED32;
+		beg*, end*: SIGNED32;
 		next: Curve;
 	END Curve;
 
@@ -74,21 +74,21 @@ TYPE Graph= OBJECT
 		model* : Models.Model;
 		curves*: Curve;
 		autoscaleX*, autoscaleY*,autoscaleZ*: BOOLEAN;
-		X0, Y0, Z0, W, H, Z:LONGINT;
-		minx, miny, maxx, maxy, scalex,scaley :LONGREAL;
+		X0, Y0, Z0, W, H, Z:SIGNED32;
+		minx, miny, maxx, maxy, scalex,scaley :FLOAT64;
 	END Graph;
 
 TYPE Window*= OBJECT (WM.BufferWindow)
 	VAR
 		model: MatrixModel; (*! to do: drop this model and exclusively use graph.model *)
 		graph: Graph;
-		width,height:LONGINT;
+		width,height:SIGNED32;
 		projection:Matrix;
 		hightclue, depthclue:BOOLEAN;
-		windowposX,windowposY:LONGINT;
-		background:LONGINT;
+		windowposX,windowposY:SIGNED32;
+		background:SIGNED32;
 
-	PROCEDURE &Create*(width,height:LONGINT; backgroundRGBA: LONGINT; CONST title:ARRAY OF CHAR);
+	PROCEDURE &Create*(width,height:SIGNED32; backgroundRGBA: SIGNED32; CONST title:ARRAY OF CHAR);
 	BEGIN
 		SELF.width:=width; SELF.height:=height;
 		SELF.background:=backgroundRGBA;
@@ -123,7 +123,7 @@ TYPE Window*= OBJECT (WM.BufferWindow)
 		graph.curves:=NIL;
 		FOR i:=0 TO n-1 DO
 			NEW(curve); curve.next:=graph.curves;  graph.curves:=curve;
-			curve.linecol:= (i * 011000000H +077FF00H-i*01100H+ 077H)(LONGINT);
+			curve.linecol:= (i * 011000000H +077FF00H-i*01100H+ 077H)(SIGNED32);
 		END;
 	END AllocateCurves;
 
@@ -152,7 +152,7 @@ TYPE Window*= OBJECT (WM.BufferWindow)
 		IF LEN(projection,0)=3 THEN SELF.projection:= projection ELSE SELF.projection:=[[1,0,0],[0,1,0],[0,0,1]] END;
 	END SetProjection;
 
-	PROCEDURE SetDataorder*(dataorder:LONGINT);
+	PROCEDURE SetDataorder*(dataorder:SIGNED32);
 	VAR func: FunctionModel;
 	BEGIN
 
@@ -168,13 +168,13 @@ TYPE Window*= OBJECT (WM.BufferWindow)
 		c: Curve;
 		(* 3D*)
 		x,y:SIZE;
-		depth,col:LONGINT;
-		x0,y0,z0:LONGREAL;
+		depth,col:SIGNED32;
+		x0,y0,z0:FLOAT64;
 		p,len:RealPoint; p0,p1: IntPoint;
-		scale:LONGREAL; zscale,zrange,minz: LONGREAL;
+		scale:FLOAT64; zscale,zrange,minz: FLOAT64;
 		(*function*)
 		step:Datatype;
-		steps: LONGINT;
+		steps: SIGNED32;
 		error: ARRAY 64 OF CHAR;
 		oldp,newp:Point;
 	BEGIN
@@ -311,9 +311,9 @@ TYPE Window*= OBJECT (WM.BufferWindow)
 END Window;
 
 PROCEDURE RemoveWindows*(context:Commands.Context);
-VAR manager:WM.WindowManager; w,remove:WM.Window; i:LONGINT;
+VAR manager:WM.WindowManager; w,remove:WM.Window; i:SIGNED32;
 BEGIN {EXCLUSIVE}
-	IF (context=NIL) OR (~context.arg.GetInteger(i,FALSE)) THEN i:=MAX(LONGINT) END;
+	IF (context=NIL) OR (~context.arg.GetInteger(i,FALSE)) THEN i:=MAX(SIGNED32) END;
 	manager:=WM.GetDefaultManager();
 	manager.lock.AcquireWrite;
 	w:=manager.GetFirst();
@@ -331,14 +331,14 @@ BEGIN
 END RemoveAllWindows;
 
 (* cyclic symmetry *)
-PROCEDURE clamp(x0,x1:LONGINT; VAR x:LONGINT);
+PROCEDURE clamp(x0,x1:SIGNED32; VAR x:SIGNED32);
 BEGIN
 	x:= (x-x0) MOD (x1+1-x0) + x0;
 END clamp;
 
 (*
 (*finite boundary*)
-PROCEDURE clamp(x0,x1:LONGINT; VAR x:LONGINT);
+PROCEDURE clamp(x0,x1:SIGNED32; VAR x:SIGNED32);
 BEGIN
 	IF x<x0 THEN x:=x0
 	ELSIF x>x1 THEN x:=x1
@@ -353,7 +353,7 @@ END sqr;
 
 (*
 PROCEDURE line(VAR m:Display; p0,p1:IntPoint);
-VAR bx,bz,x,z,x0,z0, dx,dz, sigx,sigz,depth :LONGINT;
+VAR bx,bz,x,z,x0,z0, dx,dz, sigx,sigz,depth :SIGNED32;
 BEGIN
 	x0:=p0[0];	z0:=p0[2];  depth:=p0[1]; (*to do: use this for depth rendering*)
 	bx := p1[0]-p0[0];
@@ -384,17 +384,17 @@ BEGIN
 END line;
 *)
 
-PROCEDURE Render*(CONST data:Matrix; size:LONGINT; VAR projection:  Matrix);
+PROCEDURE Render*(CONST data:Matrix; size:SIGNED32; VAR projection:  Matrix);
 VAR w:Window;
 BEGIN
-	NEW(w,512,512,LONGINT(0FFFFFFFFH),"Rendering");
+	NEW(w,512,512,SIGNED32(0FFFFFFFFH),"Rendering");
 	w.Show;
 	w.SetProjection(projection);
 	w.Set(data);
 	w.Render;
 END Render;
 
-PROCEDURE Sample(i:LONGINT):Matrix;
+PROCEDURE Sample(i:SIGNED32):Matrix;
 VAR data: Matrix; x,y:SIZE;
 BEGIN
 	NEW(data,10,20);

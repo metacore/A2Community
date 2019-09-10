@@ -7,7 +7,7 @@ CONST
 	cachefraction = 0.5;   (* how much of cache should be used for temporary data structure. This might be a good starting point for  ATLAS like machine-adaptive optimizations *)
 
 TYPE
-	Datatype* = LONGREAL;
+	Datatype* = FLOAT64;
 	OneD = ARRAY [*] OF Datatype;
 	TwoD = ARRAY [*,*] OF Datatype;
 	ThreeD = ARRAY [*,*,*] OF Datatype;
@@ -182,7 +182,7 @@ VAR
 
 (*
 	PROCEDURE Test*;
-	VAR x, y, z, s, rep, time, i, j: LONGINT;  cube, rescube: ThreeD;
+	VAR x, y, z, s, rep, time, i, j: SIGNED32;  cube, rescube: ThreeD;
 	BEGIN
 		In.Open;  In.LongInt( s );  In.LongInt( rep );
 		IF In.Done THEN

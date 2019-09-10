@@ -23,11 +23,11 @@ TYPE
 	VAR temp, temp2, tmpLo, tmpResLo, coeffs: Dataarray;
 		gain:Datatype; (*for iir convolution*)
 		filter-: Filters.Filter;
-		boundary*,shift*: LONGINT;
+		boundary*,shift*: SIGNED32;
 		tmp:SIZE;
 
 		(** Filters need to have their coefficients already transposed g(-tau)  for good  performance  *)
-		PROCEDURE &Init*(filter:Filters.Filter; boundary: LONGINT);
+		PROCEDURE &Init*(filter:Filters.Filter; boundary: SIGNED32);
 		VAR i:SIZE;
 		BEGIN
 			SELF.filter:=filter;
@@ -97,7 +97,7 @@ TYPE
 				ELSE HALT( 100 );
 				END;
 				(*
-				HALT( this is for REAL data); LDSPConvolveSIMD.ConvolveR4_SSE( ADDRESSOF(coeffs[0])(*addrK*), ADDRESSOF(temp[0])(*addrX*), ADDRESSOF(temp2[0])(*addrY*), LEN( temp ) );
+				HALT( this is for FLOAT32 data); LDSPConvolveSIMD.ConvolveR4_SSE( ADDRESSOF(coeffs[0])(*addrK*), ADDRESSOF(temp[0])(*addrX*), ADDRESSOF(temp2[0])(*addrY*), LEN( temp ) );
 				*)
 				(*LDSPConvolve386.ConvolveLR(coeffs, temp,temp2);*)
 				FIR.Convolve( coeffs, temp,  temp2 );
@@ -115,7 +115,7 @@ TYPE
 
 		(*
 		PROCEDURE convPar;
-		VAR i, step, filterlen:LONGINT;
+		VAR i, step, filterlen:SIGNED32;
 		BEGIN
 			NEW(filter0, (LEN(coeffs,0)*SIZEOF(Datatype) +15 ) DIV 16)
 			NEW(filter1, LEN(filter0);
@@ -260,8 +260,8 @@ OFormatter.Format *
 
 --------------------------------
 "FIR à trous filter" from DSPCWT.Mod
-	PROCEDURE firConvolveMirrorATrous( in: Data;  VAR out: Data;  filter: DSPFilters.FIRFilter;  iup: LONGINT );
-	VAR nx, nw, i, k, k1, k2, kn, k0: LONGINT;  yaux: LONGREAL;
+	PROCEDURE firConvolveMirrorATrous( in: Data;  VAR out: Data;  filter: DSPFilters.FIRFilter;  iup: SIGNED32 );
+	VAR nx, nw, i, k, k1, k2, kn, k0: SIGNED32;  yaux: FLOAT64;
 	BEGIN
 		IF (out = NIL ) OR (LEN( out^ ) < LEN( in^ )) THEN NEW( out, LEN( in^ ) ) END;
 		nx := LEN( in^ );  nw := LEN( filter.coeff^ );  kn := 2 * nx;
@@ -283,7 +283,7 @@ OFormatter.Format *
 
 
 "IIR à trous" filter from DSPCWT.Mod:
-	PROCEDURE iirConvolveMirrorATrous*( in: Data;  VAR out: Data;  filter: DSPFilters.IIRFilter;  iup: LONGINT );
+	PROCEDURE iirConvolveMirrorATrous*( in: Data;  VAR out: Data;  filter: DSPFilters.IIRFilter;  iup: SIGNED32 );
 	(**	Discrete recursive convolution:
 				signal has infinite, periodic support  2*LEN(in)
 				data [LEN(in)..2*LEN(in)-1] = mirror image of data[0..LEN(in)-1]
@@ -293,8 +293,8 @@ OFormatter.Format *
 	CONST OneDivLn10 = 0.434294483456101D0;
 		tolerance = -15.9;   (*log10(eps) *)
 
-	VAR i, j, k, n, n2: LONGINT;  x0, pole: LONGREAL;
-		tempfilter: POINTER TO ARRAY OF LONGREAL;
+	VAR i, j, k, n, n2: SIGNED32;  x0, pole: FLOAT64;
+		tempfilter: POINTER TO ARRAY OF FLOAT64;
 	BEGIN
 		ASSERT ( (in # NIL ) & (filter # NIL ) & (LEN( filter.poles^ ) > 0), 100 );
 		IF (out = NIL ) OR (LEN( out ) < LEN( in )) THEN NEW( out, LEN( in^ ) ) END;   (*ASSERT(LEN(in)<=LEN(out),101);*)

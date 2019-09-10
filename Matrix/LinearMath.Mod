@@ -34,7 +34,7 @@ TYPE
 	END Sqr;
 
 	PROCEDURE Sqrt*(CONST in:Array):Array;
-	VAR i:LONGINT;
+	VAR i:SIGNED32;
 	BEGIN
 		IF LEN(RESULT,0)=0 THEN NEW(RESULT,LEN(in,0)) END;
 		RESULT:=ALL(in, Mathe.sqrt);
@@ -45,7 +45,7 @@ TYPE
 	END Sqrt;
 
 	PROCEDURE Sin*(CONST in:Array):Array;
-	VAR i:LONGINT;
+	VAR i:SIGNED32;
 	BEGIN
 		IF LEN(RESULT,0)=0 THEN NEW(RESULT,LEN(in,0)) END;
 		RESULT:=ALL(in, Mathe.sin);
@@ -56,7 +56,7 @@ TYPE
 	END Sin;
 
 	PROCEDURE Cos*(CONST in:Array):Array;
-	VAR i:LONGINT;
+	VAR i:SIGNED32;
 	BEGIN
 		IF LEN(RESULT,0)=0 THEN NEW(RESULT,LEN(in,0)) END;
 		RESULT:=ALL(in, Mathe.cos);
@@ -67,7 +67,7 @@ TYPE
 	END Cos;
 
 	PROCEDURE Arctan*(CONST in:Array):Array;
-	VAR i:LONGINT;
+	VAR i:SIGNED32;
 	BEGIN
 		IF LEN(RESULT,0)=0 THEN NEW(RESULT,LEN(in,0)) END;
 		RESULT:=ALL(in, Mathe.arctan);
@@ -85,7 +85,7 @@ TYPE
 	END Tanh;
 
 	PROCEDURE Ln*(CONST in:Array):Array;
-	VAR i:LONGINT;
+	VAR i:SIGNED32;
 	BEGIN
 		IF LEN(RESULT,0)=0 THEN NEW(RESULT,LEN(in,0)) END;
 		RESULT:=ALL(in, Mathe.ln);
@@ -114,15 +114,15 @@ TYPE
 	END ComplexMultiplication;
 
 	PROCEDURE ComplexSqrt*( CONST R,I:Array; VAR outR,outI:Array);
-	VAR cplx,root:NbrCplx.Complex; i:SIZE; re,im:REAL;
+	VAR cplx,root:NbrCplx.Complex; i:SIZE; re,im:FLOAT32;
 	BEGIN
 		FOR i:=0 TO LEN(R,0)-1 DO
 			IF LEN(I)=0 THEN NbrCplx.Set(SHORT(R[i]),0, cplx);
-			ELSE NbrCplx.Set(SHORT(R[i]),SHORT(I[i]), cplx); (*hack: NbrCplx can be compiled for REAL or LONGREAL*)
+			ELSE NbrCplx.Set(SHORT(R[i]),SHORT(I[i]), cplx); (*hack: NbrCplx can be compiled for FLOAT32 or FLOAT64*)
 			END;
 			root:=MathCplx.Sqrt(cplx);
 			NbrCplx.Get(root, re,im);
-			outR[i]:=re; outI[i]:=im; (*hack: NbrCplx can be compiled for REAL or LONGREAL*)
+			outR[i]:=re; outI[i]:=im; (*hack: NbrCplx can be compiled for FLOAT32 or FLOAT64*)
 		END;
 	END ComplexSqrt;
 

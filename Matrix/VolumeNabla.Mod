@@ -26,13 +26,13 @@ CONST
 
 
 TYPE
-	Datatype* = LONGREAL;
+	Datatype* = FLOAT64;
 	ScalarField* = ARRAY [*,*,*] OF Datatype;
 	VectorField* = ARRAY [*,*,*,*] OF Datatype; (* dimension in first index: [3, *,*,*]  *)
 	Field= ARRAY [*,*,*,*] OF Datatype; (* scalar & vector quantity at a point *)
 	TensorField* = ARRAY [*,*,*,*,*] OF Datatype;
 
-PROCEDURE dx* (CONST sf:ScalarField; sampling:LONGINT): ScalarField;	(*to do: implement exact computation*)
+PROCEDURE dx* (CONST sf:ScalarField; sampling:SIGNED32): ScalarField;	(*to do: implement exact computation*)
 BEGIN
 	IF LEN(RESULT,0)=0 THEN NEW(RESULT, LEN(sf,0), LEN(sf,1), LEN(sf,2)) END;
 	CASE sampling OF
@@ -51,7 +51,7 @@ BEGIN
 	RETURN RESULT
 END dx;
 
-PROCEDURE dy* (CONST sf:ScalarField; sampling:LONGINT): ScalarField;
+PROCEDURE dy* (CONST sf:ScalarField; sampling:SIGNED32): ScalarField;
 BEGIN
 	IF LEN(RESULT,0)=0 THEN NEW(RESULT, LEN(sf,0), LEN(sf,1), LEN(sf,2)) END;
 	CASE sampling OF
@@ -70,7 +70,7 @@ BEGIN
 	 RETURN RESULT
 END dy;
 
-PROCEDURE dz* (CONST sf:ScalarField; sampling:LONGINT): ScalarField;
+PROCEDURE dz* (CONST sf:ScalarField; sampling:SIGNED32): ScalarField;
 BEGIN
 	IF LEN(RESULT)=0 THEN NEW(RESULT, LEN(sf,0), LEN(sf,1), LEN(sf,2)) END;
 	CASE sampling OF
@@ -88,7 +88,7 @@ BEGIN
 	RETURN RESULT
 END dz;
 
-PROCEDURE Grad* (CONST sf:ScalarField; sampling:LONGINT):VectorField;
+PROCEDURE Grad* (CONST sf:ScalarField; sampling:SIGNED32):VectorField;
 BEGIN
 	IF  LEN(RESULT,0)=0 THEN NEW(RESULT, 3, LEN(sf,0), LEN(sf,1), LEN(sf,2)); END;
 	RESULT[x,..,..,..]:=dx(sf, sampling);
@@ -99,20 +99,20 @@ END Grad;
 
 (* u dot grad sf *) (* corresponds to "advective derivative" or "material derivative"*)
 (*directional derivative is derivative along u; corresponds to inner product of partial derivative with vector u = <d/dx, d/dy, d/dz> * <ux, uy, uz>  *)
-PROCEDURE DirectionalDerivative*(CONST sf:ScalarField; CONST u: VectorField; sampling:LONGINT):ScalarField;
+PROCEDURE DirectionalDerivative*(CONST sf:ScalarField; CONST u: VectorField; sampling:SIGNED32):ScalarField;
 BEGIN
 	RETURN u[x].*dx(sf, sampling) + u[y].*dy(sf, sampling) + u[z].*dz(sf, sampling)
 END DirectionalDerivative;
 
 (** Divergence operator *)
-PROCEDURE Div*(CONST vf:VectorField; sampling:LONGINT):ScalarField;
+PROCEDURE Div*(CONST vf:VectorField; sampling:SIGNED32):ScalarField;
 BEGIN
 	IF LEN(RESULT)=0 THEN NEW(RESULT, LEN(vf,1), LEN(vf,2), LEN(vf,3)) END;
 	RETURN dx(vf[x,..,..,..],sampling) + dy(vf[y,..,..,..], sampling) + dz(vf[z,..,..,..], sampling);
 END Div;
 
 (** Rotation or Curl operator *)
-PROCEDURE Rot* (CONST vf: VectorField; sampling:LONGINT): VectorField;
+PROCEDURE Rot* (CONST vf: VectorField; sampling:SIGNED32): VectorField;
 BEGIN
 	IF  LEN(RESULT,0)=0 THEN NEW(RESULT, LEN(vf)); END;
 	RESULT[x,..,..,..]:=dy(vf[x,..,..,..], sampling) - dz(vf[x,..,..,..], sampling);
@@ -122,7 +122,7 @@ BEGIN
 END Rot;
 
 (**  Laplacian Operator, see  http://en.wikipedia.org/wiki/Laplace_operator *)
-PROCEDURE Laplacian*(CONST sf:ScalarField; sampling:LONGINT): ScalarField;
+PROCEDURE Laplacian*(CONST sf:ScalarField; sampling:SIGNED32): ScalarField;
 BEGIN
 	IF  LEN(RESULT,0)=0 THEN NEW(RESULT, LEN(sf)); END;
 	RETURN dx(dx(sf, sampling),sampling) + dy(dy(sf, sampling),sampling) + dz(dz(sf, sampling),sampling)
@@ -143,7 +143,7 @@ In a sense, both the gradient and Jacobian are "first derivatives" . the former 
 the latter the first derivative of a vector function of several variables.
 In general, the gradient can be regarded as a special version of the Jacobian: it is the Jacobian of a scalar function of several variables.
 *)
-PROCEDURE Jacobian*(CONST vf:VectorField; sampling:LONGINT):TensorField; (** == TensorDerivative *)
+PROCEDURE Jacobian*(CONST vf:VectorField; sampling:SIGNED32):TensorField; (** == TensorDerivative *)
 BEGIN
 	IF LEN(RESULT,0)=0 THEN NEW(RESULT,3, 3, LEN(RESULT,1), LEN(RESULT,2), LEN(RESULT,3)) END;
 	RESULT[x,..,..,..,..] := Grad(vf[x], sampling);
@@ -156,14 +156,14 @@ END Jacobian;
 The Hessian matrix (or simply the Hessian) is the square matrix of second-order partial derivatives of a scalar function;
 that is, it describes the local curvature of a function of many variables.
 *)
-PROCEDURE Hessian*(CONST sf:ScalarField; sampling:LONGINT):TensorField;
+PROCEDURE Hessian*(CONST sf:ScalarField; sampling:SIGNED32):TensorField;
 BEGIN
 	RETURN Jacobian(Grad(sf, sampling),sampling);
 END Hessian;
 
 
 (** Laplacian of Vector Field, see http://en.wikipedia.org/wiki/Vector_Laplacian *)
-PROCEDURE VectorLaplacian*(CONST vf:VectorField; sampling:LONGINT): VectorField;
+PROCEDURE VectorLaplacian*(CONST vf:VectorField; sampling:SIGNED32): VectorField;
 BEGIN
  IF LEN(RESULT,0)=0 THEN NEW(RESULT, LEN(vf,0), LEN(vf,1), LEN(vf,2), 3); END;
  RESULT[x,..,..,..] := Laplacian(vf[x,..,..,..], sampling);
@@ -178,7 +178,7 @@ but rather a tensor of order 3.
 This can be thought of as a multi-dimensional array with dimensions m \times n \times n, which degenerates to the usual Hessian matrix for m = 1.
 *)
 
-PROCEDURE VectorHessian*(CONST vf: VectorField; sampling:LONGINT): TensorField; (* HALT: this is not yet correct, because tensor has diffferent shape than current tensorfield ! *)
+PROCEDURE VectorHessian*(CONST vf: VectorField; sampling:SIGNED32): TensorField; (* HALT: this is not yet correct, because tensor has diffferent shape than current tensorfield ! *)
 BEGIN
  HALT (200);
 END VectorHessian;

@@ -3,9 +3,9 @@ IMPORT MatrixBase, Mathe:=MathL;
 
 TYPE Matrix=MatrixBase.Matrix;
 		Datatype=MatrixBase.Datatype;
-		Color=LONGINT;
-		Curve1D=PROCEDURE{DELEGATE}(x:Datatype; c:Color; penwidth:Datatype):LONGINT;
-		Curve2D=PROCEDURE{DELEGATE}(t:Datatype; VAR x,y: LONGINT; c:Color; penwidth:Datatype);
+		Color=SIGNED32;
+		Curve1D=PROCEDURE{DELEGATE}(x:Datatype; c:Color; penwidth:Datatype):SIGNED32;
+		Curve2D=PROCEDURE{DELEGATE}(t:Datatype; VAR x,y: SIGNED32; c:Color; penwidth:Datatype);
 
 PROCEDURE Inside(x:SIZE; lower,upper:SIZE):BOOLEAN;
 BEGIN
@@ -42,7 +42,7 @@ BEGIN
 	END;
 END Line;
 
-PROCEDURE Dot*(x,y:LONGINT);
+PROCEDURE Dot*(x,y:SIGNED32);
 END Dot;
 
 PROCEDURE Graph*(curve:Curve1D);
@@ -66,10 +66,10 @@ END Rectangle;
 
 
 
-PROCEDURE Arrow*(VAR m:Matrix; x0,y0,x1,y1:LONGINT; value:Datatype);
+PROCEDURE Arrow*(VAR m:Matrix; x0,y0,x1,y1:SIGNED32; value:Datatype);
 CONST pi=3.1516; headscale= 0.25;
 	(*ShowZero=FALSE;*)
-VAR size:LONGINT; alpha, head: LONGREAL;
+VAR size:SIGNED32; alpha, head: FLOAT64;
 BEGIN
 	alpha:=arctan2(x1-x0,y1-y0);
 	size:=MAX(ABS(x1-x0), ABS(y1-y0));

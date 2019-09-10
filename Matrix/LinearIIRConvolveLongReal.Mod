@@ -2,10 +2,10 @@ MODULE LinearIIRConvolveLongReal ;	(**  AUTHOR "Patrick Hunziker"; PURPOSE "";  
 IMPORT math:=MathL;
 CONST	finite* = 0;  periodic* = 1;  mirrorH* = 2;  mirrorW* = 3;  antimirrorH* = 4;  antimirrorW* = 5;
 	OneDivLn10= 0.434294483456101D0;
-		(*tolerance=-15.9;*) (*log10(eps) LONGREAL*)
+		(*tolerance=-15.9;*) (*log10(eps) FLOAT64*)
 		tolerance=-7.2;
 
-TYPE Datatype=LONGREAL;
+TYPE Datatype=FLOAT64;
 
 PROCEDURE ConvolveFinite*(CONST in: ARRAY [*] OF Datatype; VAR out: ARRAY [*] OF Datatype; CONST poles: ARRAY [*] OF Datatype; gain: Datatype);
 (**	Discrete recursive convolution:
@@ -34,7 +34,7 @@ PROCEDURE ConvolveFiniteB*(CONST in: ARRAY [*] OF Datatype; VAR out: ARRAY [*] O
 				kernel is given by its real poles
 		Preconditions:
 				input and output may use the same array*)
-VAR i,j:LONGINT; pole:Datatype;
+VAR i,j:SIGNED32; pole:Datatype;
 BEGIN
 	ASSERT(LEN(poles,0)>0,100);
 	ASSERT(LEN(in,0)<=LEN(out),101);

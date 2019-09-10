@@ -11,7 +11,7 @@ move left/right of the data is equivalent to approximate rotation around the cen
 
 IMPORT Random, Files, Commands, WMMatrix, WMGraphics, MatrixRaster, WMArrayPanel;
 
-TYPE Datatype* = LONGREAL;
+TYPE Datatype* = FLOAT64;
 TYPE Array* = ARRAY [?] OF Datatype;
 	Tensor*=Array;
 	Matrix* = ARRAY [*,*] OF Datatype;
@@ -44,10 +44,10 @@ BEGIN
 END Max;
 
 PROCEDURE Sample(CONST m: Array):Datatype;
-VAR x,y: LONGINT;
+VAR x,y: SIGNED32;
 BEGIN
-	IF LEN(m,1)<=1 THEN x:=0 ELSE x:=rand.Dice(LONGINT(LEN(m,1))) END; 
-	IF LEN(m,0)<=1 THEN y:=0 ELSE y:=rand.Dice(LONGINT(LEN(m,0))) END;
+	IF LEN(m,1)<=1 THEN x:=0 ELSE x:=rand.Dice(SIGNED32(LEN(m,1))) END; 
+	IF LEN(m,0)<=1 THEN y:=0 ELSE y:=rand.Dice(SIGNED32(LEN(m,0))) END;
 	IF LEN(m,1)*LEN(m,0)>0 THEN RETURN m[y, x] ELSE RETURN 0 END;(*catch zero size subblocks*)
 END Sample;
 
@@ -58,7 +58,7 @@ BEGIN
 END Gridpoints;
 
 
-PROCEDURE GetFovea*(CONST m:Matrix; centerX,centerY: SIZE; innerBlockSize, shells: LONGINT): Matrix; (* *)
+PROCEDURE GetFovea*(CONST m:Matrix; centerX,centerY: SIZE; innerBlockSize, shells: SIGNED32): Matrix; (* *)
 VAR img: Image; i, x,y, len, slen:SIZE;
 BEGIN
 	NEW(img, shells+1, 12); (* blocks*)
@@ -90,7 +90,7 @@ BEGIN
 	RETURN img
 END GetFovea;
 
-PROCEDURE GetFovea2*(CONST m:Matrix; centerX,centerY:SIZE; innerBlockSize, shells: LONGINT): Matrix; (* *)
+PROCEDURE GetFovea2*(CONST m:Matrix; centerX,centerY:SIZE; innerBlockSize, shells: SIGNED32): Matrix; (* *)
 VAR img: Image; i, x,y, len, slen:SIZE;
 BEGIN
 	NEW(img, 2*shells+1, 12); (* subblocks *)
@@ -136,7 +136,7 @@ BEGIN
 	RETURN img
 END GetFovea2;
 
-PROCEDURE GetFoveaA2*(CONST m:Tensor; centerX,centerY: SIZE; innerBlockSize, shells: LONGINT; func: ArrayFunction): Tensor; (*! tbd: which index position is layer index ? *)
+PROCEDURE GetFoveaA2*(CONST m:Tensor; centerX,centerY: SIZE; innerBlockSize, shells: SIGNED32; func: ArrayFunction): Tensor; (*! tbd: which index position is layer index ? *)
 VAR img0, img: Tensor; i, x,y, len, slen, layer:SIZE;
 BEGIN
 	img0:=m;
@@ -184,7 +184,7 @@ BEGIN
 	RETURN img
 END GetFoveaA2;
 
-PROCEDURE GetFoveaSampledA2*(CONST m:Tensor; centerX,centerY: SIZE; innerBlockSize, shells: LONGINT): Tensor; (*! tbd: which index position is layer index ? *)
+PROCEDURE GetFoveaSampledA2*(CONST m:Tensor; centerX,centerY: SIZE; innerBlockSize, shells: SIGNED32): Tensor; (*! tbd: which index position is layer index ? *)
 VAR img0, img: Tensor; i, x,y, len, slen, layer:SIZE;
 BEGIN
 	img0:=m;
@@ -234,7 +234,7 @@ BEGIN
 END GetFoveaSampledA2;
 
 
-PROCEDURE GetFoveaSampled2*(CONST m:Matrix; centerX,centerY: SIZE; innerBlockSize, shells: LONGINT): Matrix; (* *)
+PROCEDURE GetFoveaSampled2*(CONST m:Matrix; centerX,centerY: SIZE; innerBlockSize, shells: SIGNED32): Matrix; (* *)
 VAR img: Image; i, x,y, len, slen:SIZE;
 BEGIN
 	NEW(img, 2*shells+1, 12); (* subblocks *)
@@ -282,7 +282,7 @@ END GetFoveaSampled2;
 
 
 
-PROCEDURE GetFoveaSampled*(CONST m:Matrix; centerX,centerY: SIZE; innerBlockSize, shells: LONGINT): Matrix; (* *)
+PROCEDURE GetFoveaSampled*(CONST m:Matrix; centerX,centerY: SIZE; innerBlockSize, shells: SIGNED32): Matrix; (* *)
 VAR img: Image; i, x,y, len:SIZE;
 BEGIN
 	NEW(img, shells+1, 12);
@@ -311,8 +311,8 @@ BEGIN
 	RETURN img
 END GetFoveaSampled;
 
-PROCEDURE ReconstructFovea*(CONST img:Matrix; (*centerX,centerY: SIZE; *)innerBlockSize, shells: LONGINT): Matrix; (* *)
-VAR m: Image; i, x,y, len, size:LONGINT;
+PROCEDURE ReconstructFovea*(CONST img:Matrix; (*centerX,centerY: SIZE; *)innerBlockSize, shells: SIGNED32): Matrix; (* *)
+VAR m: Image; i, x,y, len, size:SIGNED32;
 BEGIN
 	size := 2 * innerBlockSize;
 	FOR i:=0 TO shells-1 DO
@@ -344,8 +344,8 @@ BEGIN
 	RETURN m
 END ReconstructFovea;
 
-PROCEDURE ReconstructFovea2*(CONST img:Matrix; (*centerX,centerY: SIZE; *)innerBlockSize, shells: LONGINT): Matrix; (* *)
-VAR m: Image; i, x,y, len, slen, size:LONGINT;
+PROCEDURE ReconstructFovea2*(CONST img:Matrix; (*centerX,centerY: SIZE; *)innerBlockSize, shells: SIGNED32): Matrix; (* *)
+VAR m: Image; i, x,y, len, slen, size:SIGNED32;
 BEGIN
 	size := 2 * innerBlockSize;
 	FOR i:=0 TO shells-1 DO
@@ -392,7 +392,7 @@ BEGIN
 	RETURN m
 END ReconstructFovea2;
 
-PROCEDURE ReconstructFoveaA2*(CONST img:Tensor; innerBlockSize, shells: LONGINT): Tensor; (* *)
+PROCEDURE ReconstructFoveaA2*(CONST img:Tensor; innerBlockSize, shells: SIGNED32): Tensor; (* *)
 VAR m: Tensor; i, x,y, len, slen, size, layer:SIZE;
 BEGIN
 	ASSERT(DIM(img)=3, 202); (*implementation limitation*)
@@ -497,7 +497,7 @@ END TestA;
 
 PROCEDURE Test1*(context:Commands.Context); (* 1 layer, quadratic blocks in periphery*)
 VAR 
-	raster3 : ARRAY [*,*,*] OF INTEGER;
+	raster3 : ARRAY [*,*,*] OF SIGNED16;
 	raster, recon, fovea: Matrix;
 	im,fo, re: WMMatrix.Window;
 	img: WMGraphics.Image;
@@ -524,7 +524,7 @@ END Test1;
 
 PROCEDURE Test2*(context:Commands.Context); (* 1 layer, split blocks in pheriphery*)
 VAR 
-	raster3 : ARRAY [*,*,*] OF INTEGER;
+	raster3 : ARRAY [*,*,*] OF SIGNED16;
 	raster, recon, fovea: Matrix;
 	im,fo, re: WMMatrix.Window;
 	img: WMGraphics.Image;
@@ -550,10 +550,10 @@ END Test2;
 
 PROCEDURE TestA2*(context:Commands.Context); (*n layers, split blocks in periphery. use Mean() of each block for encoding*)
 VAR 
-	raster3 : ARRAY [*,*,*] OF INTEGER;
+	raster3 : ARRAY [*,*,*] OF SIGNED16;
 	raster, recon, fovea: Tensor;
 	img: WMGraphics.Image;
-	blockSize, nShells:LONGINT; len, x,y, size, i:SIZE;
+	blockSize, nShells:SIGNED32; len, x,y, size, i:SIZE;
 	name: Files.FileName;
 BEGIN
 	IF ~context.arg.GetString(name) THEN COPY("Yellow_Duck.jpg",name) END;
@@ -564,8 +564,8 @@ BEGIN
 	len:=LEN(raster,1); 
 	size := 2 * blockSize;
 	FOR i:=0 TO nShells-1 DO size:=size * 2 END;
-	x:=size DIV 2 + rand.Dice(LONGINT(LEN(raster,2)-size));
-	y:=size DIV 2 + rand.Dice(LONGINT(LEN(raster,1)-size));
+	x:=size DIV 2 + rand.Dice(SIGNED32(LEN(raster,2)-size));
+	y:=size DIV 2 + rand.Dice(SIGNED32(LEN(raster,1)-size));
 	fovea:=GetFoveaA2(raster, x, y, blockSize, nShells, Mean); (* compressed averaging sampling*)
 	recon:=ReconstructFoveaA2(fovea, blockSize, nShells);
 	IF name#oldName THEN 
@@ -578,11 +578,11 @@ END TestA2;
 
 PROCEDURE TestSampledA2*(context:Commands.Context); (*n layers, split blocks in periphery; sample each block at position [random,random]*)
 VAR 
-	raster3 : ARRAY [*,*,*] OF INTEGER;
+	raster3 : ARRAY [*,*,*] OF SIGNED16;
 	raster, recon, fovea: Tensor;
 	img: WMGraphics.Image;
 	len, x, y:SIZE;
-	blockSize, nShells:LONGINT;
+	blockSize, nShells:SIGNED32;
 	name: Files.FileName;
 BEGIN
 	IF ~context.arg.GetString(name) THEN COPY("Yellow_Duck.jpg",name) END;
@@ -605,10 +605,10 @@ END TestSampledA2;
 
 PROCEDURE TestGridpointsA2*(context:Commands.Context); (*n layers, split blocks in periphery. Sample at pos[0,0] of each block*)
 VAR 
-	raster3 : ARRAY [*,*,*] OF INTEGER;
+	raster3 : ARRAY [*,*,*] OF SIGNED16;
 	raster, recon, fovea: Tensor;
 	img: WMGraphics.Image;
-	len, x, y:SIZE; blockSize, nShells:LONGINT;
+	len, x, y:SIZE; blockSize, nShells:SIGNED32;
 	name: Files.FileName;
 BEGIN
 	IF ~context.arg.GetString(name) THEN COPY("Yellow_Duck.jpg",name) END;
@@ -632,7 +632,7 @@ END TestGridpointsA2;
 
 PROCEDURE TestSampled2*(context:Commands.Context);
 VAR 
-	raster3 : ARRAY [*,*,*] OF INTEGER;
+	raster3 : ARRAY [*,*,*] OF SIGNED16;
 	raster, recon, fovea: Matrix;
 	im,fo, re: WMMatrix.Window;
 	img: WMGraphics.Image;
@@ -658,11 +658,11 @@ END TestSampled2;
 
 PROCEDURE Test3*(context:Commands.Context);
 VAR 
-	raster3 : ARRAY [*,*,*] OF INTEGER;
+	raster3 : ARRAY [*,*,*] OF SIGNED16;
 	raster, recon, fovea: Matrix;
 	im,fo, re: WMMatrix.Window;
 	img: WMGraphics.Image;
-	blockSize, domainSize, shells:LONGINT;
+	blockSize, domainSize, shells:SIGNED32;
 	len, i, x, y:SIZE;
 	name: Files.FileName;
 	mode: ARRAY 32 OF CHAR;
@@ -679,8 +679,8 @@ BEGIN
 	FOR i:=0 TO shells-1 DO domainSize:=domainSize*2 END;
 	ASSERT(domainSize <= LEN(raster),200);
 	
-	x:=domainSize DIV 2 + rand.Dice(LONGINT(LEN(raster,1)-domainSize)); 
-	y:=domainSize DIV 2 + rand.Dice(LONGINT(LEN(raster,0)-domainSize));
+	x:=domainSize DIV 2 + rand.Dice(SIGNED32(LEN(raster,1)-domainSize)); 
+	y:=domainSize DIV 2 + rand.Dice(SIGNED32(LEN(raster,0)-domainSize));
 	
 	IF mode="" THEN fovea:=GetFovea2(raster, x, y, blockSize, shells); (* compressed averaging sampling*)
 	ELSE fovea:=GetFoveaSampled2(raster, x, y, blockSize, shells); 

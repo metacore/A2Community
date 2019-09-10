@@ -112,11 +112,11 @@ TYPE Labeler*=OBJECT
 			RoiSize=128;
 			NSamples=64;
 	VAR
-		dataSetI, labelSetI: ARRAY [?] OF INTEGER;
+		dataSetI, labelSetI: ARRAY [?] OF SIGNED16;
 		positions: ARRAY [*,*] OF SIZE;
 		nSamples: SIZE;
 		i: SIZE;
-		time, date: LONGINT; 
+		time, date: SIGNED32; 
 		size: Files.Size;
 		enum:MatrixRaster.Enumerator;
 		flags: SET;
@@ -133,8 +133,8 @@ TYPE Labeler*=OBJECT
 		minWidth,minHeight:SIZE;
 		l:Location;
 		dx,dy: SIZE;
-		threshold2:LONGINT; (*squared threshold*)
-		scale:LONGREAL;
+		threshold2:SIGNED32; (*squared threshold*)
+		scale:FLOAT64;
 
 	PROCEDURE &Init*(CONST mask: ARRAY OF CHAR; w, dataWriter: Streams.Writer; scaling:BOOLEAN);
 	BEGIN

@@ -16,8 +16,8 @@ TYPE Datatype=MatrixBase.Datatype;
 		RETURN x = 1
 	END IsPowerOfTwo;
 
-	PROCEDURE NumberOfBitsNeeded(x: SIZE): LONGINT;
-		VAR n: LONGINT;
+	PROCEDURE NumberOfBitsNeeded(x: SIZE): SIGNED32;
+		VAR n: SIGNED32;
 	BEGIN
 		n := 0;
 		WHILE x > 1 DO
@@ -26,8 +26,8 @@ TYPE Datatype=MatrixBase.Datatype;
 		RETURN n
 	END NumberOfBitsNeeded;
 
-	PROCEDURE ReverseBits(x, n: LONGINT): LONGINT;
-		VAR i, rev: LONGINT;
+	PROCEDURE ReverseBits(x, n: SIGNED32): SIGNED32;
+		VAR i, rev: SIGNED32;
 	BEGIN
 		rev := 0; i := 0;
 		WHILE i < n DO
@@ -40,7 +40,7 @@ TYPE Datatype=MatrixBase.Datatype;
 	PROCEDURE Transform(fullAngle: Datatype; nSamples: SIZE; CONST realIn, imagIn: Array;  VAR  realOut, imagOut: Array); (*SSE2 would allow much faster version*)
 		VAR
 			angle, alpha, beta, ar, ai, tr, ti, tmp: Datatype;
-			nBits, i, j, k, n, size, end: LONGINT;
+			nBits, i, j, k, n, size, end: SIGNED32;
 	BEGIN
 		ASSERT((nSamples > 1) & IsPowerOfTwo(nSamples));
 		nBits := NumberOfBitsNeeded(nSamples);
@@ -88,10 +88,10 @@ TYPE Datatype=MatrixBase.Datatype;
 	END FFT;
 
 	(* frequency = index / (nSamples / SamplingRate) *)
-	PROCEDURE Frequency*(nSamples, index: LONGINT; CONST realIn, imagIn: Array; VAR realOut, imagOut: Datatype);
+	PROCEDURE Frequency*(nSamples, index: SIGNED32; CONST realIn, imagIn: Array; VAR realOut, imagOut: Datatype);
 		VAR
 			beta, cos1, cos2, cos3, sin1, sin2, sin3, theta: Datatype;
-			i: LONGINT;
+			i: SIGNED32;
 	BEGIN
 		realOut := 0.0; imagOut := 0.0;
 		theta := 2*Mathe.pi * index / nSamples;
@@ -144,7 +144,7 @@ TYPE Datatype=MatrixBase.Datatype;
 
 	(** deconvolution is division in Fourier domain:  (a+bi )/(c+di) = (ac+bd)/(c*c+d*d), i*(bc-ad)/(c*c+d*d) *)
 	PROCEDURE DeConvolution*( CONST in1, in2: Array;  VAR outR, outI: Array );
-	VAR R1, I1, R2, I2, nil, tmpR, tmpI,rsqr: Array; i:LONGINT;
+	VAR R1, I1, R2, I2, nil, tmpR, tmpI,rsqr: Array; i:SIGNED32;
 	BEGIN
 		FFT( in1, nil, R1, I1 );
 		FFT(in2, nil, R2, I2 );

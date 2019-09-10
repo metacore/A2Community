@@ -27,13 +27,13 @@ TYPE
 	(** LU is a standard direct solver for square linear systems of equations; it is related to Gauss elimination; this version uses row pivoting*)
 	LU* = OBJECT (Base.Solver);
 	VAR lu: Matrix;   (*if LU decomposition needs to be exported, think of its permutated state by Index *)
-		pivot*:LONGINT; (** switch off pivoting by setting this to NONE. default is FULL *)
+		pivot*:SIGNED32; (** switch off pivoting by setting this to NONE. default is FULL *)
 		Index: ARRAY [*] OF SIZE;
 		V: Vector;
 		tRow: Vector;
 		temp:Matrix;
 		Ut, A1: Matrix; (*temp structures for special versions*)
-		timetotal-, timeRowRowMul-, timeMatVecMul-: LONGINT;
+		timetotal-, timeRowRowMul-, timeMatVecMul-: SIGNED32;
 		timer: Kernel.MilliTimer;
 
 		PROCEDURE & Init*( CONST A: Matrix );   (*initialize and - if LEN(A,0) > 0  -  decompose immediately *)
@@ -89,7 +89,7 @@ TYPE
 
 		(*		(*decompose with row pivoting*)
 		PROCEDURE decomposeNoRowFlip( VAR A: Matrix );
-		VAR I, Imax, J: LONGINT;  Pvt, T: Datatype;  Ubound: LONGINT;
+		VAR I, Imax, J: SIGNED32;  Pvt, T: Datatype;  Ubound: SIGNED32;
 		BEGIN
 			IF LEN( Index,0 ) # LEN( A,0 ) THEN NEW( Index, LEN( A , 0 ) ) ELSE Index := 0;  END;   (*reset*)
 			IF pivot#ROW THEN res:=Base.NOTIMPLEMENTED; handleError(res,"MatrixStandardSolvers.LU: this pivot version is not implemented"); RETURN END;
@@ -297,7 +297,7 @@ TYPE
 
 		(*
 		PROCEDURE Inverse*():Matrix;  (*OK*)
-		VAR Identity:Matrix; i:LONGINT;
+		VAR Identity:Matrix; i:SIGNED32;
 		BEGIN
 			NEW(Identity, LEN( lu, 0 ), LEN(lu,1));
 			FOR i:=0 TO LEN(Identity,0)-1 DO Identity[i,i]:=1.0; END;
@@ -336,7 +336,7 @@ TYPE
 
 		(*
 		PROCEDURE Inverse():Matrix;
-		VAR I, Ip, J, K: LONGINT;  Sum: Datatype;  Ubound: LONGINT; luInv:Matrix;
+		VAR I, Ip, J, K: SIGNED32;  Sum: Datatype;  Ubound: SIGNED32; luInv:Matrix;
 		BEGIN
 			IF (LEN( luInv,0 ) # LEN( lu, 0)) OR (LEN( luInv ,1) # LEN( lu, 1 )) THEN NEW( luInv, LEN( lu, 0 ), LEN(lu,1) ) END;
 			Ubound := LEN( lu ) - 1;   (*TODO:check matrix dimensions*)
@@ -392,7 +392,7 @@ TYPE
 	Gauss* = OBJECT (Base.Solver)
 	VAR
 		A:Matrix; tRow: Vector;
-		pivot* : LONGINT;
+		pivot* : SIGNED32;
 
 		PROCEDURE & Init*( CONST A: Matrix );
 		VAR
@@ -474,7 +474,7 @@ TYPE
 		tRow, tCol, Pivot: Vector;
 		PRow, PCol: IntVector;
 		Ubound: SIZE;
-		pivot*:LONGINT;
+		pivot*:SIGNED32;
 
 		PROCEDURE & Init*( CONST A: Matrix );
 		VAR

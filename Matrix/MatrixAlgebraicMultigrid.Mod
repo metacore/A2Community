@@ -28,9 +28,9 @@ TYPE
 		A: Matrix;
 		b: Vector;
 		coarse:Solver;
-		level, gamma:INTEGER;
-		presmooth,postsmooth:INTEGER;
-		omega:REAL;
+		level, gamma:SIGNED16;
+		presmooth,postsmooth:SIGNED16;
+		omega:FLOAT32;
 
 		PROCEDURE & Init*( CONST A: Base.Matrix );   (*Can be called with zero length matrix to generate generic kind of solver; can be initialized with matrix later*)
 		BEGIN
@@ -57,7 +57,7 @@ TYPE
 		END Solve;
 
 		PROCEDURE SolveNoCopy*( VAR M:Matrix; CONST b: Vector ): Vector;  (* generic solving, no internal copy of system matrix*)
-		VAR B:Matrix; i,j:LONGINT;
+		VAR B:Matrix; i,j:SIGNED32;
 		BEGIN
 			IF level = 0 THEN
 					B:=M; (*hack because direct solver is LU solver which may change A *)

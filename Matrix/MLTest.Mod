@@ -11,7 +11,7 @@ IMPORT
 	MLBase, MLKernels, MLKernelMeans, MLRidgeRegression, TensorIO, Out:=KernelLog, Streams, ExtraTime, ExtraRandom;
 
 TYPE
-	INT = LONGINT;
+	INT = SIGNED32;
 	Scalar = MLBase.Scalar;
 	Vector = MLBase.Vector;
 	Matrix = MLBase.Matrix;

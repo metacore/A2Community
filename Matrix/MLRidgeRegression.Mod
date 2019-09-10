@@ -18,7 +18,7 @@ TYPE
 	Regressor* = OBJECT(MLBase.LearningMachine)
 	VAR
 		lambda-: Scalar;
-		kernType-: WORD;
+		kernType-: INTEGER;
 		kernParams-: Vector;
 		X: Matrix;
 		alphas: Vector;
@@ -39,7 +39,7 @@ TYPE
 			REMARKS:
 				after you set a new type of kernel you must redo learning of the regressor!
 		*)
-		PROCEDURE SetKernel*(kernType: WORD; CONST kernParams: Vector);
+		PROCEDURE SetKernel*(kernType: INTEGER; CONST kernParams: Vector);
 		BEGIN
 			isTrained := FALSE; (* reset classifier *)
 

@@ -12,7 +12,7 @@ TYPE
 (* Laplacian of Gaussian: apply after some weighted window function, e.g. a Gaussian or Spline Window, and sampling strategy.
 Support of Window Defines the Responsivity of the operator. Use sampling modes from PlanarNabla.Mod *)
 (*! not yet finished: support width. Best used in a scale-space setup, i.e. multiresolution or multiple Gauss Support *)
-PROCEDURE LaplacianOfGaussian*(CONST p:ScalarField; sampling:LONGINT):ScalarField;
+PROCEDURE LaplacianOfGaussian*(CONST p:ScalarField; sampling:SIGNED32):ScalarField;
 BEGIN
 	RETURN PlanarNabla.Laplacian(p, sampling);
 END LaplacianOfGaussian;

@@ -15,7 +15,7 @@ CONST
 (*! to do: improve current limitation to subtensor[0,?] display. Generalize to 1D, 2D and 5D+ data. implement lookup table display*)
 
 TYPE
-	Tensor= ARRAY [?] OF LONGREAL;
+	Tensor= ARRAY [?] OF FLOAT64;
 
 TYPE Data*= OBJECT (Models.Model)
 		VAR m*, r*,g*,b*: Tensor;
@@ -31,10 +31,10 @@ TYPE TYPE Panel*= OBJECT (WMStandardComponents.ImagePanel) (*! tbd: convert some
 		VAR data*:Data; (*is also in model property*)
 		orientation-: WMProperties.Int32Property;
 		displayMode-:WMProperties.Int32Property;
-		type, cur3:LONGINT;
+		type, cur3:SIGNED32;
 		mx0,my0,mx1,my1:SIZE;
 		current*,offset*:SIZE;
-		max,min, gain*:LONGREAL;
+		max,min, gain*:FLOAT64;
 		baseTitle, title: ARRAY 256 OF CHAR;
 		img0 : WMGraphics.Image;
 
@@ -115,7 +115,7 @@ TYPE TYPE Panel*= OBJECT (WMStandardComponents.ImagePanel) (*! tbd: convert some
 			Inputs.Release flag in flags. ucs contains the unicode equivalent of the key. Special input editors
 			send the generated unicode characters via KeyEvent.  *)
 	PROCEDURE KeyEvent*(ucs : SIZE; flags : SET; VAR keysym : SIZE);
-		VAR dz: LONGINT; s: ARRAY 32 OF CHAR; dim:SIZE;
+		VAR dz: SIGNED32; s: ARRAY 32 OF CHAR; dim:SIZE;
 		BEGIN
 			IF ~(Inputs.Release IN flags )THEN
 				dim:=MAX(DIM(data.m),DIM(data.r));
@@ -128,9 +128,9 @@ TYPE TYPE Panel*= OBJECT (WMStandardComponents.ImagePanel) (*! tbd: convert some
 					ELSE DEC(cur3);
 					END;
 				ELSIF keysym = Inputs.KsRight THEN
-					orientation.Set((orientation.Get()+1) MOD dim(LONGINT)); current:=0;
+					orientation.Set((orientation.Get()+1) MOD dim(SIGNED32)); current:=0;
 				ELSIF keysym = Inputs.KsLeft THEN
-					orientation.Set((orientation.Get()-1) MOD dim(LONGINT)); current:=0;
+					orientation.Set((orientation.Get()-1) MOD dim(SIGNED32)); current:=0;
 				ELSE
 					KeyEvent^(ucs,flags,keysym); RETURN
 				END;
@@ -147,7 +147,7 @@ TYPE TYPE Panel*= OBJECT (WMStandardComponents.ImagePanel) (*! tbd: convert some
 			END;
 		END KeyEvent;
 
-	PROCEDURE SetOrientation*(orientation:LONGINT );
+	PROCEDURE SetOrientation*(orientation:SIGNED32 );
 	BEGIN
 		ASSERT(orientation<DIM(data.m),201);
 		SELF.orientation.Set(orientation);
@@ -169,7 +169,7 @@ TYPE TYPE Panel*= OBJECT (WMStandardComponents.ImagePanel) (*! tbd: convert some
 		END;
 	END SetArray;
 
-	PROCEDURE SetArrayCustom*(CONST m: Tensor; offset:LONGINT;gain: LONGREAL);
+	PROCEDURE SetArrayCustom*(CONST m: Tensor; offset:SIGNED32;gain: FLOAT64);
 	BEGIN
 		IF LEN(m)>0 THEN
 			data.m:=ALIAS OF m;
@@ -327,7 +327,7 @@ BEGIN
 	COPY(title, str);
 END GenerateName;
 
-OPERATOR "SUM"*(CONST t:Tensor; dim: LONGINT):Tensor; (*implementation limitation: 3D*)
+OPERATOR "SUM"*(CONST t:Tensor; dim: SIGNED32):Tensor; (*implementation limitation: 3D*)
 VAR res: Tensor;i:SIZE;
 BEGIN
 	IF dim=0 THEN
@@ -341,8 +341,8 @@ BEGIN
 END "SUM";
 
 
-OPERATOR "MAX"*(CONST t:Tensor; dim: LONGINT):Tensor; (*implementation limitation: 3D*)
-VAR res: Tensor;i:LONGINT; a,b: SIZE;
+OPERATOR "MAX"*(CONST t:Tensor; dim: SIGNED32):Tensor; (*implementation limitation: 3D*)
+VAR res: Tensor;i:SIGNED32; a,b: SIZE;
 BEGIN
 	IF dim=0 THEN
 		NEW(res, LEN(t)[1..]);
@@ -382,7 +382,7 @@ VAR d : Data;
 BEGIN NEW(d); RETURN d
 END GenData;
 
-PROCEDURE GetPanel*(CONST tensor: ARRAY [?] OF LONGREAL): Panel;
+PROCEDURE GetPanel*(CONST tensor: ARRAY [?] OF FLOAT64): Panel;
 VAR	panel:Panel;
 BEGIN
 	NEW(panel);
@@ -393,8 +393,8 @@ END GetPanel;
 
 (*
 
-PROCEDURE AddWindow*(CONST tensor: ARRAY [?] OF LONGREAL; CONST title: ARRAY OF CHAR);
-VAR window:WMComponents.FormWindow; w,h:LONGINT;
+PROCEDURE AddWindow*(CONST tensor: ARRAY [?] OF FLOAT64; CONST title: ARRAY OF CHAR);
+VAR window:WMComponents.FormWindow; w,h:SIGNED32;
 	panel:Panel;
 BEGIN
 	NEW(panel);
@@ -412,7 +412,7 @@ BEGIN
 END AddWindow;
 *)
 
-PROCEDURE AddWindow*(CONST tensor: ARRAY [?] OF LONGREAL; CONST title: ARRAY OF CHAR);
+PROCEDURE AddWindow*(CONST tensor: ARRAY [?] OF FLOAT64; CONST title: ARRAY OF CHAR);
 VAR window:WMComponents.FormWindow;
 	w,h:SIZE;
 	panel:Panel;
@@ -420,7 +420,7 @@ BEGIN
 	IF DIM(tensor)>1 THEN w:=LEN(tensor)[DIM(tensor)-1]; h:=LEN(tensor)[DIM(tensor)-2];
 	ELSE w:=400; h:=400;
 	END;
-	NEW(window, LONGINT(w), LONGINT(h), FALSE);
+	NEW(window, SIGNED32(w), SIGNED32(h), FALSE);
 	window.SetTitle(Strings.NewString(title));
 	INCL(window.flags, WM.FlagStorable); (* allow storing of data interactively, through right-click on navigator icon*)
 	panel:=GetPanel(tensor);
@@ -435,7 +435,7 @@ END AddWindow;
 PROCEDURE  Test*(context:Commands.Context); (*deprecated -  will be eliminated from source*)
 VAR window:WMComponents.FormWindow;
 	panel:Panel;
-	tensor: ARRAY [?] OF LONGREAL; (* or LONGREAL or other..*)
+	tensor: ARRAY [?] OF FLOAT64; (* or FLOAT64 or other..*)
 BEGIN
 	log:=context.out;
 	(*have some data in a 3D array ready*)

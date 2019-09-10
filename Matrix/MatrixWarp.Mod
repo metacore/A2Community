@@ -9,7 +9,7 @@ TYPE
 
 (** warps a rectangle "in" according to warp maps dX,dY containing relative dislocation in pixels.
 currently expects spline coefficient volume and delivers voxel values (not in spline domain) *)
-PROCEDURE Warp2D*(CONST in: Matrix; VAR out:Matrix; CONST dX,dY:Matrix; splinedegree:LONGINT); (**spline degrees currently implemented: 0-5 (0=piecewise constant, 1=piecewise linear, 2=quadratic...)*)
+PROCEDURE Warp2D*(CONST in: Matrix; VAR out:Matrix; CONST dX,dY:Matrix; splinedegree:SIGNED32); (**spline degrees currently implemented: 0-5 (0=piecewise constant, 1=piecewise linear, 2=quadratic...)*)
 VAR val:Datatype; x,y,z:SIZE; lout:Vector;(* temp lines *)
 BEGIN
 	IF (LEN(dX)=0) OR (LEN(dY)=0) THEN HALT(100) END;
@@ -27,7 +27,7 @@ END Warp2D;
 	This is a 'backward' warp in that each 'out' voxel gets data from the interpolated position from the 'in' volume.
 	(map corresponds to out volume).
 	Precondition: Size(in)~size(out)=Size(dX)=Size(dY)=Size(dZ) *)
-PROCEDURE Warp3D*(CONST in: Cube; VAR out:Cube; CONST dX,dY,dZ:Cube; splinedegree:LONGINT); (**spline degrees currently implemented: 0-5 (0=piecewise constant, 1=piecewise linear, 2=quadratic...)*)
+PROCEDURE Warp3D*(CONST in: Cube; VAR out:Cube; CONST dX,dY,dZ:Cube; splinedegree:SIGNED32); (**spline degrees currently implemented: 0-5 (0=piecewise constant, 1=piecewise linear, 2=quadratic...)*)
 VAR val:Datatype; x,y,z:SIZE; dx,dy,dz:Datatype; lout:Vector;
 BEGIN
 	IF (LEN(dX)=0) OR (LEN(dY)=0) OR (LEN(dZ)=0) THEN HALT(100) END;
@@ -46,9 +46,9 @@ END Warp3D;
 currently expects spline coefficient volume and delivers voxel values (not in spline domain).
 In contrast to the procedure Warp3D above, the map /in/out volumes can have different sizes; however, map volumes must have consistent size..
 More generic, but SLOW. *)
-PROCEDURE Warp3Dgeneral*(CONST in: Cube; VAR out:Cube; CONST dX,dY,dZ:Cube; splinedegree:LONGINT); (**spline degrees currently implemented: 0-5 (0=piecewise constant, 1=piecewise linear, 2=cubic...)*)
+PROCEDURE Warp3Dgeneral*(CONST in: Cube; VAR out:Cube; CONST dX,dY,dZ:Cube; splinedegree:SIGNED32); (**spline degrees currently implemented: 0-5 (0=piecewise constant, 1=piecewise linear, 2=cubic...)*)
 VAR val:Datatype; x,y,z:SIZE; dx,dy,dz:Datatype; lout:Vector;
-		xFactor, yFactor, zFactor, xScale,yScale,zScale: REAL;
+		xFactor, yFactor, zFactor, xScale,yScale,zScale: FLOAT32;
 BEGIN
 	xFactor := LEN(in,2) / LEN(dX,2); xScale:= LEN(in,2)/LEN(out,2);
 	yFactor := LEN(in,1) / LEN(dX,1); yScale:= LEN(in,1)/LEN(out,1);

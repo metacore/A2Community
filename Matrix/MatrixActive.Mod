@@ -26,7 +26,7 @@ CONST
 	High*=Objects.High;
 
 TYPE
-	Datatype*=LONGREAL;
+	Datatype*=FLOAT64;
 	BaseVector* = ARRAY [*] OF Datatype; (*MatrixBase.Vector*)
 	BaseMatrix* = ARRAY [*,*] OF Datatype;(*MatrixBase.Matrix*)
 
@@ -37,7 +37,7 @@ TYPE
 			vec*:BaseVector;
 			val*:Datatype;
 			locked:BOOLEAN; (*nonreentrant lock *)
-			readers:LONGINT; (*reentrant read-only locks*)
+			readers:SIGNED32; (*reentrant read-only locks*)
 		PROCEDURE Lock; BEGIN {EXCLUSIVE} AWAIT((~locked)&(readers=0)); locked:=TRUE END Lock;
 		PROCEDURE UnLock; BEGIN{EXCLUSIVE} locked:=FALSE END UnLock;
 		PROCEDURE IncLock; BEGIN{EXCLUSIVE} INC(readers) END IncLock;
@@ -65,9 +65,9 @@ TYPE
 TYPE
 	Op= OBJECT
 		VAR l,r,res:Matrix;
-			op:LONGINT;
+			op:SIGNED32;
 			solver:Solver;
-		PROCEDURE &Set(op: LONGINT; priority: LONGINT; CONST l,r:Matrix; VAR res:Matrix);
+		PROCEDURE &Set(op: SIGNED32; priority: SIGNED32; CONST l,r:Matrix; VAR res:Matrix);
 		BEGIN
 			(*BEGIN{EXCLUSIVE} AWAIT((r#NIL)&(l#NIL)) END; (*experiment*)*)
 			Objects.SetPriority(priority);
@@ -100,7 +100,7 @@ TYPE
 	END Op;
 
 VAR w:Writer;
-	computingObjectCount-: LONGINT;
+	computingObjectCount-: SIGNED32;
 
 OPERATOR ":="*(VAR l: Matrix; CONST r: BaseMatrix );
 	BEGIN

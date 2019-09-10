@@ -7,16 +7,16 @@ VAR rand:Rand.Generator;
 
 TYPE Enumerator*=OBJECT(Files.Enumerator) (*extract single or multiple images from file directory using path, mask; yield tensor data *)
 		VAR currentImg*: WMGraphics.Image;
-			array: ARRAY [?] OF INTEGER;
+			array: ARRAY [?] OF SIGNED16;
 			w*,h*, depth*:SIZE;
-			scale*: LONGINT;
+			scale*: SIGNED32;
 
 		PROCEDURE &Init*;
 		BEGIN
 			w:=100; h:=100;
 		END Init;
 
-		PROCEDURE GetImage*(VAR name:ARRAY OF CHAR; VAR flags:SET; VAR time, date: LONGINT; VAR size: Files.Size ):WMGraphics.Image; (*get next image*)
+		PROCEDURE GetImage*(VAR name:ARRAY OF CHAR; VAR flags:SET; VAR time, date: SIGNED32; VAR size: Files.Size ):WMGraphics.Image; (*get next image*)
 		BEGIN
 			currentImg:=NIL;
 			WHILE HasMoreEntries() & (currentImg=NIL) DO
@@ -29,46 +29,46 @@ TYPE Enumerator*=OBJECT(Files.Enumerator) (*extract single or multiple images fr
 			RETURN currentImg
 		END GetImage;
 
-		PROCEDURE SetRoiSize*(w,h, scale: LONGINT);
+		PROCEDURE SetRoiSize*(w,h, scale: SIGNED32);
 		BEGIN
 			SELF.w:=w; SELF.h:=h;
 			ASSERT(scale=1, 300);SELF.scale:=scale;
 		END SetRoiSize;
 
-		PROCEDURE GetBGR*(img: Raster.Image): ARRAY [?] OF INTEGER; (* yield [BGR,height, width] of current image.   *)
+		PROCEDURE GetBGR*(img: Raster.Image): ARRAY [?] OF SIGNED16; (* yield [BGR,height, width] of current image.   *)
 		BEGIN
 			(*! implementation limitation: scaling not yet implemented *)
-			ImageToArray(img, array); (*img is BGRA, array is [4,..,..] OF INTEGER*)
+			ImageToArray(img, array); (*img is BGRA, array is [4,..,..] OF SIGNED16*)
 			RETURN array [0..2,?];
 			(*	RETURN array[0,*,*] + array[1,*,*] + array[2,*,*]; (*grayscale*)			*)
 		END GetBGR;
 
-		PROCEDURE GetGray*(img: Raster.Image): ARRAY [?] OF INTEGER; (* yield [height, width].  of current image*)
+		PROCEDURE GetGray*(img: Raster.Image): ARRAY [?] OF SIGNED16; (* yield [height, width].  of current image*)
 		BEGIN
 			(*! implementation limitation: scaling not yet implemented *)
-			ImageToArray(img, array); (*img is BGRA, array is [4,..,..] OF INTEGER*)
+			ImageToArray(img, array); (*img is BGRA, array is [4,..,..] OF SIGNED16*)
 			RETURN array[0,*,*] + array[1,*,*] + array[2,*,*]; (*grayscale*)
 		END GetGray;
 
 
-		PROCEDURE GetRoiBGR*(img: Raster.Image; VAR x,y:SIZE): ARRAY [?] OF INTEGER; (* yield ROI[BGR,h,w] of current image;  use "Random" for random position within window*)
+		PROCEDURE GetRoiBGR*(img: Raster.Image; VAR x,y:SIZE): ARRAY [?] OF SIGNED16; (* yield ROI[BGR,h,w] of current image;  use "Random" for random position within window*)
 		BEGIN
-			IF x=Random THEN x:= rand.Dice((img.width-w)(LONGINT)) END; (*! implementation limitation: scaling not yet implemented *)
-			IF y=Random THEN y:= rand.Dice((img.height-h)(LONGINT)) END;
-			ImageToArray(img, array); (*img is BGRA, array is [4,..,..] OF INTEGER*)
+			IF x=Random THEN x:= rand.Dice((img.width-w)(SIGNED32)) END; (*! implementation limitation: scaling not yet implemented *)
+			IF y=Random THEN y:= rand.Dice((img.height-h)(SIGNED32)) END;
+			ImageToArray(img, array); (*img is BGRA, array is [4,..,..] OF SIGNED16*)
 			RETURN array [0..2,y..y+h-1, x..x+w-1];
 		END GetRoiBGR;
 
-		PROCEDURE GetRoiGray*(img: Raster.Image; VAR x,y:SIZE): ARRAY [?] OF INTEGER; (* yield ROI[h,w] of current Image.  use "Random" for random position within window*)
+		PROCEDURE GetRoiGray*(img: Raster.Image; VAR x,y:SIZE): ARRAY [?] OF SIGNED16; (* yield ROI[h,w] of current Image.  use "Random" for random position within window*)
 		BEGIN
-			IF x=Random THEN x:= rand.Dice((img.width-w)(LONGINT)) END; (*! implementation limitation: scaling not yet implemented *)
-			IF y=Random THEN y:= rand.Dice((img.height-h)(LONGINT)) END;
-			ImageToArray(img, array); (*img is BGRA, array is [4,..,..] OF INTEGER*)
+			IF x=Random THEN x:= rand.Dice((img.width-w)(SIGNED32)) END; (*! implementation limitation: scaling not yet implemented *)
+			IF y=Random THEN y:= rand.Dice((img.height-h)(SIGNED32)) END;
+			ImageToArray(img, array); (*img is BGRA, array is [4,..,..] OF SIGNED16*)
 			RETURN array[0,y..y+h-1, x..x+w-1] + array[1,y..y+h-1, x..x+w-1] + array[2,y..y+h-1, x..x+w-1]; (*BGR to grayscale*) (*!! ROI IS MISSING*)
 		END GetRoiGray;
 
 		(* from an image, extract a stack of ROIs with random positions, that are also returned  *)
-		PROCEDURE GetRoiStackRandom*(img: Raster.Image; depth, colorPlanes: SIZE; VAR positions: ARRAY [*,*] OF SIZE): ARRAY [?] OF INTEGER;
+		PROCEDURE GetRoiStackRandom*(img: Raster.Image; depth, colorPlanes: SIZE; VAR positions: ARRAY [*,*] OF SIZE): ARRAY [?] OF SIGNED16;
 		VAR i:SIZE;
 		BEGIN
 			SELF.depth:=depth;
@@ -91,7 +91,7 @@ TYPE Enumerator*=OBJECT(Files.Enumerator) (*extract single or multiple images fr
 
 	END Enumerator;
 
-PROCEDURE SIntToImage*(CONST data:ARRAY [*,*] OF SHORTINT; VAR palette: ARRAY [*,*] OF LONGINT; im:Raster.Image); (*palette values in range 0..10000H*)
+PROCEDURE SIntToImage*(CONST data:ARRAY [*,*] OF SIGNED8; VAR palette: ARRAY [*,*] OF SIGNED32; im:Raster.Image); (*palette values in range 0..10000H*)
 VAR F:Raster.Format; pal:Raster.Palette; i,x,y:SIZE;
 BEGIN
 	IF (LEN(data,0)=0) OR (LEN(data,1)=0) THEN RETURN END;
@@ -121,7 +121,7 @@ BEGIN
 	END;
 END SIntToImage;
 
-PROCEDURE SIntRGBToImage*(CONST data:ARRAY [*,*,*] OF SHORTINT; im:Raster.Image);
+PROCEDURE SIntRGBToImage*(CONST data:ARRAY [*,*,*] OF SIGNED8; im:Raster.Image);
 VAR F:Raster.Format; pal:Raster.Palette; i,x,y:SIZE;
 BEGIN
 	IF (LEN(data,0)=0) OR (LEN(data,1)=0) THEN RETURN END;
@@ -137,8 +137,8 @@ BEGIN
 END SIntRGBToImage;
 
 
-PROCEDURE IntToImage*(CONST data:ARRAY [*,*] OF INTEGER; VAR palette: ARRAY [*,*] OF LONGINT; im:Raster.Image);  (*data >=0; palette values in range 0..10000H*)
-VAR F:Raster.Format; pal:Raster.Palette; max,valI,i,col:LONGINT;x,y:SIZE;
+PROCEDURE IntToImage*(CONST data:ARRAY [*,*] OF SIGNED16; VAR palette: ARRAY [*,*] OF SIGNED32; im:Raster.Image);  (*data >=0; palette values in range 0..10000H*)
+VAR F:Raster.Format; pal:Raster.Palette; max,valI,i,col:SIGNED32;x,y:SIZE;
 BEGIN
 	IF (LEN(data,0)=0) OR (LEN(data,1)=0) THEN RETURN END;
 	F:=Raster.BGR888;
@@ -146,8 +146,8 @@ BEGIN
 	Raster.Create(im,LEN(data,1),LEN(data,0),F);
 	IF LEN(palette)=0 THEN
 		NEW(palette, max+1,3);
-		FOR col:=0 TO LEN(palette,0)(LONGINT)-1 DO
-			valI:=col*10000H DIV LEN(palette,0)(LONGINT); palette[col,0]:=valI; palette[col,1]:=valI; palette[col,2]:=valI
+		FOR col:=0 TO LEN(palette,0)(SIGNED32)-1 DO
+			valI:=col*10000H DIV LEN(palette,0)(SIGNED32); palette[col,0]:=valI; palette[col,1]:=valI; palette[col,2]:=valI
 		END;
 	END;
 	FOR y:=0 TO LEN(data,0)-1 DO
@@ -160,8 +160,8 @@ BEGIN
 	END;
 END IntToImage;
 
-PROCEDURE LIntToImage*(CONST data:ARRAY [*,*] OF LONGINT; VAR palette: ARRAY [*,*] OF LONGINT; im:Raster.Image); (*palette values in range 0..10000H*)
-VAR F:Raster.Format; pal:Raster.Palette; max,valI,i,col:LONGINT; x,y:SIZE;
+PROCEDURE LIntToImage*(CONST data:ARRAY [*,*] OF SIGNED32; VAR palette: ARRAY [*,*] OF SIGNED32; im:Raster.Image); (*palette values in range 0..10000H*)
+VAR F:Raster.Format; pal:Raster.Palette; max,valI,i,col:SIGNED32; x,y:SIZE;
 BEGIN
 	IF (LEN(data,0)=0) OR (LEN(data,1)=0) THEN RETURN END;
 	F:=Raster.BGR888;
@@ -170,8 +170,8 @@ BEGIN
 	Raster.Create(im,LEN(data,1),LEN(data,0),F);
 	IF LEN(palette)=0 THEN
 		NEW(palette, max+1,3);
-		FOR col:=0 TO LEN(palette,0)(LONGINT)-1 DO
-			valI:=col*10000H DIV LEN(palette,0)(LONGINT); palette[col,0]:=valI; palette[col,1]:=valI; palette[col,2]:=valI
+		FOR col:=0 TO LEN(palette,0)(SIGNED32)-1 DO
+			valI:=col*10000H DIV LEN(palette,0)(SIGNED32); palette[col,0]:=valI; palette[col,1]:=valI; palette[col,2]:=valI
 		END;
 	END;
 	FOR y:=0 TO LEN(data,0)-1 DO
@@ -184,8 +184,8 @@ BEGIN
 	END;
 END LIntToImage;
 
-PROCEDURE CombineLIntToImage*(CONST data,data1:ARRAY [*,*] OF LONGINT; VAR palette, palette1: ARRAY [*,*] OF LONGINT; threshold:LONGINT; im:Raster.Image); (*palette values in range 0..10000H; threshold indicates minimum value of data1 to take precedence over data*)
-VAR F:Raster.Format; pal:Raster.Palette; max,valI, valI1,i,col:LONGINT;x,y:SIZE;
+PROCEDURE CombineLIntToImage*(CONST data,data1:ARRAY [*,*] OF SIGNED32; VAR palette, palette1: ARRAY [*,*] OF SIGNED32; threshold:SIGNED32; im:Raster.Image); (*palette values in range 0..10000H; threshold indicates minimum value of data1 to take precedence over data*)
+VAR F:Raster.Format; pal:Raster.Palette; max,valI, valI1,i,col:SIGNED32;x,y:SIZE;
 BEGIN
 	IF (LEN(data,0)=0) OR (LEN(data,1)=0) OR (LEN(data,0)#LEN(data1,0)) OR (LEN(data,1)#LEN(data1,1)) THEN RETURN END;
 	F:=Raster.BGR888;
@@ -194,14 +194,14 @@ BEGIN
 	Raster.Create(im,LEN(data,1),LEN(data,0),F);
 	IF LEN(palette)=0 THEN
 		NEW(palette, max+1,3);
-		FOR col:=0 TO LEN(palette,0)(LONGINT)-1 DO
-			valI:=col*10000H DIV LEN(palette,0)(LONGINT); palette[col,0]:=valI; palette[col,1]:=valI; palette[col,2]:=valI
+		FOR col:=0 TO LEN(palette,0)(SIGNED32)-1 DO
+			valI:=col*10000H DIV LEN(palette,0)(SIGNED32); palette[col,0]:=valI; palette[col,1]:=valI; palette[col,2]:=valI
 		END;
 	END;
 	IF LEN(palette1)=0 THEN
 		NEW(palette1, max+1,3);
-		FOR col:=0 TO LEN(palette1,0)(LONGINT)-1 DO
-			valI:=col*10000H DIV LEN(palette1,0)(LONGINT); palette1[col,0]:=valI;  palette1[col,1]:=10000H - valI-1; palette1[col,2]:=10000H - valI-1
+		FOR col:=0 TO LEN(palette1,0)(SIGNED32)-1 DO
+			valI:=col*10000H DIV LEN(palette1,0)(SIGNED32); palette1[col,0]:=valI;  palette1[col,1]:=10000H - valI-1; palette1[col,2]:=10000H - valI-1
 		END;
 	END;
 	FOR y:=0 TO LEN(data,0)-1 DO
@@ -221,8 +221,8 @@ BEGIN
 	END;
 END CombineLIntToImage;
 
-PROCEDURE LIntBGRAToImage*(CONST data:ARRAY [*,*,*] OF SHORTINT; im:Raster.Image);
-VAR F:Raster.Format; pal:Raster.Palette; i,col:LONGINT; x,y: SIZE; putMode:Raster.Mode;
+PROCEDURE LIntBGRAToImage*(CONST data:ARRAY [*,*,*] OF SIGNED8; im:Raster.Image);
+VAR F:Raster.Format; pal:Raster.Palette; i,col:SIGNED32; x,y: SIZE; putMode:Raster.Mode;
 BEGIN
 	IF (LEN(data,0)=0) OR (LEN(data,1)=0) THEN RETURN END;
 	Raster.InitMode(putMode, Raster.srcCopy);
@@ -236,8 +236,8 @@ BEGIN
 END LIntBGRAToImage;
 
 
-PROCEDURE RealToImage*(CONST data:ARRAY [*,*] OF REAL; offset:SIZE; gain:LONGREAL; im:Raster.Image);
-VAR F:Raster.Format; pal:Raster.Palette; max,valI,i,col:LONGINT; x,y:SIZE; val:REAL; palette:ARRAY [*,*] OF LONGINT;
+PROCEDURE RealToImage*(CONST data:ARRAY [*,*] OF FLOAT32; offset:SIZE; gain:FLOAT64; im:Raster.Image);
+VAR F:Raster.Format; pal:Raster.Palette; max,valI,i,col:SIGNED32; x,y:SIZE; val:FLOAT32; palette:ARRAY [*,*] OF SIGNED32;
 BEGIN
 	IF (LEN(data,0)=0) OR (LEN(data,1)=0) THEN RETURN END;
 	F:=Raster.BGR888;
@@ -253,8 +253,8 @@ BEGIN
 	END;
 END RealToImage;
 
-PROCEDURE LRealToImage*(CONST data:ARRAY [*,*] OF LONGREAL; offset:SIZE; gain:LONGREAL; im:Raster.Image);
-VAR F:Raster.Format; pal:Raster.Palette; max,valI,i,col:LONGINT; x,y:SIZE; val:LONGREAL; palette:ARRAY [*,*] OF LONGINT;
+PROCEDURE LRealToImage*(CONST data:ARRAY [*,*] OF FLOAT64; offset:SIZE; gain:FLOAT64; im:Raster.Image);
+VAR F:Raster.Format; pal:Raster.Palette; max,valI,i,col:SIGNED32; x,y:SIZE; val:FLOAT64; palette:ARRAY [*,*] OF SIGNED32;
 BEGIN
 	IF (LEN(data,0)=0) OR (LEN(data,1)=0) THEN RETURN END;
 	F:=Raster.BGR888;
@@ -271,8 +271,8 @@ BEGIN
 END LRealToImage;
 
 
-PROCEDURE LRealToImageBR*(CONST data:ARRAY [*,*] OF LONGREAL; offset:SIZE; gain:LONGREAL; im:Raster.Image);
-VAR F:Raster.Format; pal:Raster.Palette; max,valI,i,col:LONGINT; x,y:SIZE; val:LONGREAL; palette:ARRAY [*,*] OF LONGINT;
+PROCEDURE LRealToImageBR*(CONST data:ARRAY [*,*] OF FLOAT64; offset:SIZE; gain:FLOAT64; im:Raster.Image);
+VAR F:Raster.Format; pal:Raster.Palette; max,valI,i,col:SIGNED32; x,y:SIZE; val:FLOAT64; palette:ARRAY [*,*] OF SIGNED32;
 BEGIN
 	IF (LEN(data,0)=0) OR (LEN(data,1)=0) THEN RETURN END;
 	F:=Raster.BGR888;
@@ -294,8 +294,8 @@ BEGIN
 	END;
 END LRealToImageBR;
 
-PROCEDURE LRealToImageHeat*(CONST data:ARRAY [*,*] OF LONGREAL; offset:SIZE; gain:LONGREAL; im:Raster.Image);
-VAR F:Raster.Format; pal:Raster.Palette; max,valI,i,col:LONGINT; x,y:SIZE; val:LONGREAL; palette:ARRAY [*,*] OF LONGINT;
+PROCEDURE LRealToImageHeat*(CONST data:ARRAY [*,*] OF FLOAT64; offset:SIZE; gain:FLOAT64; im:Raster.Image);
+VAR F:Raster.Format; pal:Raster.Palette; max,valI,i,col:SIGNED32; x,y:SIZE; val:FLOAT64; palette:ARRAY [*,*] OF SIGNED32;
 BEGIN
 	IF (LEN(data,0)=0) OR (LEN(data,1)=0) THEN RETURN END;
 	F:=Raster.BGR888;
@@ -323,8 +323,8 @@ BEGIN
 	END;
 END LRealToImageHeat;
 
-PROCEDURE LRealToImageLUT*(CONST data:ARRAY [*,*] OF LONGREAL; offset:SIZE; gain:LONGREAL; im:Raster.Image);
-VAR F:Raster.Format; max,valI,i,col:LONGINT; x,y: SIZE; val:LONGREAL; palette:ARRAY [*,*] OF LONGINT;
+PROCEDURE LRealToImageLUT*(CONST data:ARRAY [*,*] OF FLOAT64; offset:SIZE; gain:FLOAT64; im:Raster.Image);
+VAR F:Raster.Format; max,valI,i,col:SIGNED32; x,y: SIZE; val:FLOAT64; palette:ARRAY [*,*] OF SIGNED32;
 BEGIN
 	IF (LEN(data,0)=0) OR (LEN(data,1)=0) THEN RETURN END;
 
@@ -344,9 +344,9 @@ END LRealToImageLUT;
 
 
 
-PROCEDURE LRealRGBToImage*(CONST R,G,B:ARRAY [*,*] OF LONGREAL; im:Raster.Image);
+PROCEDURE LRealRGBToImage*(CONST R,G,B:ARRAY [*,*] OF FLOAT64; im:Raster.Image);
 VAR x,y, w,h:SIZE;
-	gain, r,g,b :LONGREAL;
+	gain, r,g,b :FLOAT64;
 BEGIN
 	w:=LEN(R,1); h:=LEN(R,0);
 	r:=MAX(R); IF Reals.IsNaNL(r) THEN r:=0 END;
@@ -363,7 +363,7 @@ BEGIN
 	END;
 END LRealRGBToImage;
 
-PROCEDURE LRealRGBToImageB*(CONST R,G,B:ARRAY [*,*] OF LONGREAL;  offset, gain:LONGREAL; im:Raster.Image);
+PROCEDURE LRealRGBToImageB*(CONST R,G,B:ARRAY [*,*] OF FLOAT64;  offset, gain:FLOAT64; im:Raster.Image);
 VAR x,y, w,h:SIZE;
 BEGIN
 	w:=LEN(R,1); h:=LEN(R,0);
@@ -378,7 +378,7 @@ BEGIN
 END LRealRGBToImageB;
 
 PROCEDURE BoolToImage*(CONST data:ARRAY [*,*] OF BOOLEAN; im:Raster.Image);
-VAR y,x:SIZE; val:REAL; SIntData: ARRAY [*,*] OF SHORTINT; palette: ARRAY [*,*] OF LONGINT;
+VAR y,x:SIZE; val:FLOAT32; SIntData: ARRAY [*,*] OF SIGNED8; palette: ARRAY [*,*] OF SIGNED32;
 BEGIN
 	NEW(SIntData,LEN(data,0),LEN(data,1));
 	FOR y:=0 TO LEN(data,0)-1 DO
@@ -389,7 +389,7 @@ BEGIN
 	SIntToImage(SIntData, palette, im);
 END BoolToImage;
 
-PROCEDURE ImageToArray*(img:Raster.Image; VAR data: ARRAY [?] OF INTEGER);
+PROCEDURE ImageToArray*(img:Raster.Image; VAR data: ARRAY [?] OF SIGNED16);
 VAR row,col,p: SIZE;
 BEGIN
 	p:=0;
@@ -433,15 +433,15 @@ END ImageToArray;
 
 
 (*
-PROCEDURE IntegrateLReal(CONST m: ARRAY OF LONGREAL);
-VAR max:LONGREAL;
+PROCEDURE IntegrateLReal(CONST m: ARRAY OF FLOAT64);
+VAR max:FLOAT64;
 BEGIN
 	max:=MAX(m); min:=MIN(m);
 
 END IntegrateLReal;
 *)
 
-PROCEDURE Clamp(val:LONGINT; min,max:LONGINT):LONGINT;
+PROCEDURE Clamp(val:SIGNED32; min,max:SIGNED32):SIGNED32;
 BEGIN
 	IF val>max THEN RETURN max
 	ELSIF val<min THEN RETURN min
@@ -452,15 +452,15 @@ END Clamp;
 
 PROCEDURE Test*;
 VAR
-	s:ARRAY [*,*] OF SHORTINT;
-	i:ARRAY [*,*] OF INTEGER;
-	l:ARRAY [*,*] OF LONGINT;
-	r:ARRAY [*,*] OF REAL;
-	lr:ARRAY [*,*] OF LONGREAL;
-	p:ARRAY [*,*] OF LONGINT;
-	ind:LONGINT;
+	s:ARRAY [*,*] OF SIGNED8;
+	i:ARRAY [*,*] OF SIGNED16;
+	l:ARRAY [*,*] OF SIGNED32;
+	r:ARRAY [*,*] OF FLOAT32;
+	lr:ARRAY [*,*] OF FLOAT64;
+	p:ARRAY [*,*] OF SIGNED32;
+	ind:SIGNED32;
 	pw, pw1, pw2, pw3, pw4, pw5 : WM.BufferWindow;
-	res, w, h, x : LONGINT;
+	res, w, h, x : SIGNED32;
 
 BEGIN
 

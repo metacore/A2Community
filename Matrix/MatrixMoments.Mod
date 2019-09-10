@@ -9,7 +9,7 @@ TYPE
 	Datatype = MatrixBase.Datatype;
 	Matrix = ARRAY [ * , * ] OF Datatype;
 
-	PROCEDURE Moment*( CONST from: Matrix;  degreeX, degreeY: LONGINT ): Matrix;
+	PROCEDURE Moment*( CONST from: Matrix;  degreeX, degreeY: SIGNED32 ): Matrix;
 	VAR MomentFilter0, MomentFilter1, MomentFilter2: Filters.Filter;
 	BEGIN
 		ASSERT( LEN( from, 0 ) > 0 );

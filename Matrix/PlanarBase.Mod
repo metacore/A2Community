@@ -17,7 +17,7 @@ TYPE
 
 VAR
 	Comments: BOOLEAN;
-	(*debug*) t1, t2, t0: LONGINT;  testscale: INTEGER;
+	(*debug*) t1, t2, t0: SIGNED32;  testscale: SIGNED16;
 
 	(** applies a procedure 'linehandler' to all lines of a 3D dataset in the indicated directions. Avoids cache misses by copying the data into a work array that fits into the cache.*)
 	PROCEDURE HandleLines2D*( CONST cube: TwoD;  VAR rescube: TwoD;
@@ -70,7 +70,7 @@ VAR
 
 (*
 	PROCEDURE Test*;
-	VAR x, y, z, s, rep, time, i, j: LONGINT;  cube, rescube: TwoD;
+	VAR x, y, z, s, rep, time, i, j: SIGNED32;  cube, rescube: TwoD;
 	BEGIN
 		In.Open;  In.LongInt( s );  In.LongInt( rep );
 		IF In.Done THEN

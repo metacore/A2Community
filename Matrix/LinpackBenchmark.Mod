@@ -34,10 +34,10 @@ TYPE
 	END Transpose;
 
 	(* compare linpack based on several programming paradigms *)
-	PROCEDURE Linpack( size: LONGINT; details:BOOLEAN);
-	VAR A, A1, A2, B, C, R, dummy: Matrix;  x, b, r: Vector;  a,c, c1:LONGREAL;
-		timer: Kernel.MilliTimer;  t, t1, i, j: LONGINT;  loops:LONGINT; ops, flops: LONGREAL;
-		residual, result: LONGREAL;
+	PROCEDURE Linpack( size: SIGNED32; details:BOOLEAN);
+	VAR A, A1, A2, B, C, R, dummy: Matrix;  x, b, r: Vector;  a,c, c1:FLOAT64;
+		timer: Kernel.MilliTimer;  t, t1, i, j: SIGNED32;  loops:SIGNED32; ops, flops: FLOAT64;
+		residual, result: FLOAT64;
 		lu: MatrixStandardSolvers.LU; blu: MatrixBlockSolvers.LU; bluA:MatrixBlockSolvers.LUAgent;
 		Strassen: MatrixFastMatrixMultiply.Strassen;
 	BEGIN
@@ -781,12 +781,12 @@ END;
 	END Linpack;
 
 	(* Linpack based on Block LU algorithms implemented with active objects *)
-	PROCEDURE LinpackBlockLUA( size: LONGINT; details:BOOLEAN);
+	PROCEDURE LinpackBlockLUA( size: SIGNED32; details:BOOLEAN);
 	VAR A, A1,  R: Matrix;  x, b, r: Vector;
-		timer: Kernel.MilliTimer;  t,t0,  t1, i, j: LONGINT;  loops:LONGINT; ops, flops0, flops, flops1: LONGREAL;
-		residual: LONGREAL;
+		timer: Kernel.MilliTimer;  t,t0,  t1, i, j: SIGNED32;  loops:SIGNED32; ops, flops0, flops, flops1: FLOAT64;
+		residual: FLOAT64;
 		lu: MatrixStandardSolvers.LU; blu: MatrixBlockSolvers.LU; bluA:MatrixBlockSolvers.LUAgent;
-		blocksize:LONGINT;
+		blocksize:SIGNED32;
 	BEGIN
 		IF size < 40 THEN loops := 3000
 		ELSIF size < 100 THEN loops := 500
@@ -865,7 +865,7 @@ PROCEDURE TransposeExplicit(VAR a: Matrix);
 VAR
 	b,c: Vector;
 	i,j, len:SIZE;
-	res:LONGREAL;
+	res:FLOAT64;
 BEGIN
 	NEW(b, LEN(a,1));
 	FOR i:=0 TO LEN(a,0)-1 DO
@@ -899,19 +899,19 @@ END TransposeExplicit;
 
 	PROCEDURE TestMatMul*;
 	CONST MaxSize = 2048;
-	VAR size,iterations,t:LONGINT;
+	VAR size,iterations,t:SIGNED32;
 		A,A1,B:Matrix;
-		A2,A21,B2: ARRAY[2,2] OF REAL;
-		A3,A31,B3: ARRAY[3,3] OF REAL;
-		A4,A41,B4: ARRAY [4,4] OF REAL;
-		timer: Kernel.MilliTimer; ops,flops:LONGREAL;
+		A2,A21,B2: ARRAY[2,2] OF FLOAT32;
+		A3,A31,B3: ARRAY[3,3] OF FLOAT32;
+		A4,A41,B4: ARRAY [4,4] OF FLOAT32;
+		timer: Kernel.MilliTimer; ops,flops:FLOAT64;
 	BEGIN
 		size:=2;
 		WHILE size<=MaxSize DO
 			Out.String( "MatMul  size       " );  Out.Int(size,6);
 			Kernel.GC;
 			A:=MatrixUtilities.RandomMatrix( size,size, MatrixUtilities.Uniform); A1:=A; B:=A;
-			 CASE size OF (*test operation on "hardwired" matrix size using static ARRAY OF REAL *)
+			 CASE size OF (*test operation on "hardwired" matrix size using static ARRAY OF FLOAT32 *)
 				2:
 					A2:=SHORT(A[0..1,0..1]); A21:=SHORT(A1[0..1,0..1]); B2:=SHORT(B[0..1,0..1]);
 					Kernel.SetTimer( timer, 0 );
@@ -941,7 +941,7 @@ END TransposeExplicit;
 			flops := ops / (t / 1000);   (*per second*)
 			Out.String( "; iterations, time, flops: " ); Out.Int( iterations, 10 ); Out.String( " " );  Out.Int( t, 6 );  Out.String( "ms  " );
 			MatrixUtilities.OutFloat( flops / 1000000, 12, 1 ,0);  Out.String( " MFLOPs  " );
-			IF size IN {2,3,4} THEN Out.String(" for small arrays, currently performant on static ARRAY OF REAL size only; dynamic arrays and LONGREAL arrays need work") END;
+			IF size IN {2,3,4} THEN Out.String(" for small arrays, currently performant on static ARRAY OF FLOAT32 size only; dynamic arrays and FLOAT64 arrays need work") END;
 			Out.Ln;
 			size:=size*2;
 		END;

@@ -6,7 +6,7 @@ IMPORT Mathe:=MathL, Streams, Strings, KernelLog;
 CONST Pi=3.14159265358979323846;
 
 TYPE
-	Datatype*=LONGREAL;
+	Datatype*=FLOAT64;
 
 	COMPLEXTYPE * = RECORD re*,im*: Datatype END; (*complex number in component representation*)
 	POLAR * = RECORD abs*,arg*: Datatype END; (*complex number in polar representation*)
@@ -656,7 +656,7 @@ END Abs;
 PROCEDURE Arg*( x: COMPLEXTYPE ): Datatype;
 VAR arg: Datatype;
 	PROCEDURE ArcTan( xn, xd: Datatype): Datatype;
-	VAR sn, sd: LONGINT;  atan, ratio: Datatype;
+	VAR sn, sd: SIGNED32;  atan, ratio: Datatype;
 	BEGIN
 		IF xn < 0 THEN sn := -1
 		ELSIF xn = 0 THEN sn := 0
@@ -688,13 +688,13 @@ BEGIN
 	s.RawLReal(c.re); s.RawLReal(c.im);
 END Write;
 
-PROCEDURE OutFloat(x: LONGREAL;  n, f, D: LONGINT );
+PROCEDURE OutFloat(x: FLOAT64;  n, f, D: SIGNED32 );
 	VAR str: ARRAY 64 OF CHAR;
 	BEGIN
 		Strings.FloatToStr( x, n, f, D, str );  KernelLog.String( str );
 	END OutFloat;
 
-PROCEDURE Out*(c:COMPLEXTYPE; n, f, D: LONGINT );
+PROCEDURE Out*(c:COMPLEXTYPE; n, f, D: SIGNED32 );
 BEGIN
 	OutFloat(c.re,n,f,D); OutFloat(c.im,n,f,D); KernelLog.String("i"); KernelLog.Ln;
 END Out;

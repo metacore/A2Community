@@ -3,7 +3,7 @@ CONST
 	x=0; y=1; z=2; t=3;
 	projected=0;
 TYPE
-	Datatype* = LONGREAL;
+	Datatype* = FLOAT64;
 	ScalarField* = ARRAY [*,*,*,*] OF Datatype;
 	VectorField* = ARRAY [*,*,*,*,*] OF Datatype;
 	TensorField* = ARRAY [?] OF Datatype;

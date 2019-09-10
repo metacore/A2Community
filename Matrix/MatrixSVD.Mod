@@ -15,7 +15,7 @@ TYPE
 		tv, tv2, tv3, tv4, tv5: Vector;
 		isSorted-:BOOLEAN;
 		threshold*: Real;   (** for level of accuracy; default = 1.0D-10*)
-		iterations*: LONGINT;   (** for detection of non-convergence; default = 30*)
+		iterations*: SIGNED32;   (** for detection of non-convergence; default = 30*)
 		zero, mag: Real;
 		index-,null: IntVector; (* ordering of diagonal matrix w with descending magnitude *)
 
@@ -168,7 +168,7 @@ TYPE
 		END decompose;
 
 		PROCEDURE Solve*( CONST b: Vector ): Vector;
-		VAR val: LONGREAL;  i: SIZE;
+		VAR val: FLOAT64;  i: SIZE;
 		BEGIN
 			IF (LEN( tmp, 0 ) # LEN( w, 0 )) OR (LEN( tmp, 1 ) # LEN( w, 1 )) THEN NEW( tmp, LEN( w, 0 ), LEN( w, 1 ) );  ELSE tmp := 0 END;
 			IF LEN( tv ) # LEN( u, 0 ) THEN NEW( tv, LEN( u, 0 ) ) ELSE tv := 0 END;
@@ -194,7 +194,7 @@ TYPE
 
 
 		PROCEDURE PseudoInverse*( ): Matrix;
-		VAR val: LONGREAL;  i: SIZE;
+		VAR val: FLOAT64;  i: SIZE;
 		BEGIN
 			IF (LEN( tmp, 0 ) # LEN( w, 0 )) OR (LEN( tmp, 1 ) # LEN( w, 1 )) THEN NEW( tmp, LEN( w, 0 ), LEN( w, 1 ) );  ELSE tmp := 0 END;
 			tmp2 := 0;
@@ -207,7 +207,7 @@ TYPE
 
 	END Solver;
 
-	PROCEDURE All( VAR M: Matrix;  f: PROCEDURE ( x: LONGREAL ): LONGREAL ): Matrix;
+	PROCEDURE All( VAR M: Matrix;  f: PROCEDURE ( x: FLOAT64 ): FLOAT64 ): Matrix;
 	VAR i, j: SIZE;
 	BEGIN
 		FOR i := 0 TO LEN( M, 0 ) - 1 DO
@@ -250,7 +250,7 @@ TYPE
 		IF i < j THEN RETURN i ELSE RETURN j;  END;
 	END MinI;
 
-	PROCEDURE sign( x: Real ): LONGINT;
+	PROCEDURE sign( x: Real ): SIGNED32;
 	BEGIN
 		IF x >= 0 THEN RETURN 1 ELSE RETURN -1 END;
 	END sign;
@@ -299,7 +299,7 @@ END SVD_Decompose;
 
 (*
 	PROCEDURE LogV( CONST m: Vector );
-	VAR i, j: LONGINT;
+	VAR i, j: SIGNED32;
 	BEGIN
 		IF LEN(m)=0 THEN Out.String("zero size matrix"); Out.Ln; RETURN; END;
 			FOR i := 0 TO LEN(m) - 1 DO
@@ -310,7 +310,7 @@ END SVD_Decompose;
 
 
 	PROCEDURE Log( CONST m: Matrix );
-	VAR i, j: LONGINT;
+	VAR i, j: SIGNED32;
 	BEGIN
 		IF LEN(m)=0 THEN Out.String("zero size matrix"); Out.Ln; RETURN; END;
 		FOR j := 0 TO LEN(m,0) - 1 DO
@@ -323,7 +323,7 @@ END SVD_Decompose;
 	END Log;
 
 	PROCEDURE Test*;
-	VAR a, U, W, V, VT: Matrix;  b,x: Vector; scale, zero: Real;  s: Solver;  i,t0,t1:LONGINT;
+	VAR a, U, W, V, VT: Matrix;  b,x: Vector; scale, zero: Real;  s: Solver;  i,t0,t1:SIGNED32;
 	BEGIN
 		Out.Enter;
 		Out.Ln;  Out.String( "-------Singular Value Decomposition Test-------------" );

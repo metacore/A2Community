@@ -47,10 +47,10 @@ MODULE StatisticsFunctions;
 IMPORT BasicMath:=MathL;
 
 (* ----------------------------------------------------------------------
-	Floating point TYPE (Default = LONGREAL)
+	Floating point TYPE (Default = FLOAT64)
 	---------------------------------------------------------------------- *)
 
-		TYPE Float = LONGREAL;
+		TYPE Float = FLOAT64;
 	TabCoef = ARRAY [10] OF Float;
 
 (* ----------------------------------------------------------------------
@@ -85,7 +85,7 @@ CONST
 	Machine-dependent CONSTants
 	---------------------------------------------------------------------- *)
 
-(* constants for use with Float=LONGREAL; These constants are still approximate
+(* constants for use with Float=FLOAT64; These constants are still approximate
 and could profit from improved definition, preferably in machine-dependent base modules*)
 CONST
 	MACHEP = 2.220446049250E-16;		 (* Floating point precision: 2^(-52) *)
@@ -117,27 +117,27 @@ CONST
 	NFACT = 33;	(* The factorials of the first NFACT integers are stored
 								 in a table *)
 VAR
-	MathErr * : LONGINT;	(* Error code from the latest function evaluation *)
+	MathErr * : SIGNED32;	(* Error code from the latest function evaluation *)
 	FactArray : ARRAY [NFACT+1] OF Float;	(* Table of factorials *)
 	StirfSTIR,GamSmallS,GamSmallSN,StirfLP,GammaP,GammaQ,LnGammaP,LnGammaQ,
 	InvNormP0,InvNormQ0,InvNormP1,InvNormQ1,InvNormP2,InvNormQ2,InvNormP3,
 	InvNormQ3:	TabCoef ;
-	I : LONGINT;
+	I : SIGNED32;
 
 (* interface
  ------- Error handling function-------------
-PROCEDURE MathError : LONGINT;	(* Error code from the last function call *)
+PROCEDURE MathError : SIGNED32;	(* Error code from the last function call *)
 
  ------- Minimum, maximum, sign and exchange---------------
 PROCEDURE FMin(X, Y : Float) : Float;			(* Minimum of 2 reals *)
 PROCEDURE FMax(X, Y : Float) : Float;			(* Maximum of 2 reals *)
-PROCEDURE IMin(X, Y : LONGINT) : LONGINT;	(* Minimum of 2 integers *)
-PROCEDURE IMax(X, Y : LONGINT) : LONGINT;	(* Maximum of 2 integers *)
-PROCEDURE Sgn(X : Float) : LONGINT;				(* Sign (returns 1 IF X = 0) *)
-PROCEDURE Sgn0(X : Float) : LONGINT;			 (* Sign (returns 0 IF X = 0) *)
+PROCEDURE IMin(X, Y : SIGNED32) : SIGNED32;	(* Minimum of 2 integers *)
+PROCEDURE IMax(X, Y : SIGNED32) : SIGNED32;	(* Maximum of 2 integers *)
+PROCEDURE Sgn(X : Float) : SIGNED32;				(* Sign (returns 1 IF X = 0) *)
+PROCEDURE Sgn0(X : Float) : SIGNED32;			 (* Sign (returns 0 IF X = 0) *)
 
 PROCEDURE FSwap(VAR X, Y : Float);				(* Exchange 2 reals *)
-PROCEDURE ISwap(VAR X, Y : LONGINT);			(* Exchange 2 integers *)
+PROCEDURE ISwap(VAR X, Y : SIGNED32);			(* Exchange 2 integers *)
 
  ------ Assembler functions	---------------
  (None in this version)
@@ -150,7 +150,7 @@ PROCEDURE Log(X : Float) : Float;										(* Natural log *)
 PROCEDURE Log2(X : Float) : Float;									 (* Log, base 2 *)
 PROCEDURE Log10(X : Float) : Float;									(* Decimal log *)
 PROCEDURE LogA(X, A : Float) : Float;								(* Log, base A *)
-PROCEDURE IntPower(X : Float; N : LONGINT) : Float;	(* X^N *)
+PROCEDURE IntPower(X : Float; N : SIGNED32) : Float;	(* X^N *)
 PROCEDURE Power(X, Y : Float) : Float;							 (* X^Y, X >= 0 *)
 PROCEDURE Pythag(X, Y : Float) : Float;							(* Sqrt(X^2 + Y^2) *)
 PROCEDURE Logistic(X : Float) : Float;  (* logistic function as nonlinear element for unit response *)
@@ -175,10 +175,10 @@ PROCEDURE ArcTanh(X : Float) : Float;	(* Inverse hyperbolic tangent *)
 PROCEDURE SinhCosh(X : Float; var SinhX, CoshX : Float);	(* Sinh & Cosh *)
 
 ---------- Special functions ------------------------
-PROCEDURE Fact(N : LONGINT) : Float;				 (* Factorial *)
-PROCEDURE Binomial(N, K : LONGINT) : Float;	(* Binomial coef. C(N,K) *)
+PROCEDURE Fact(N : SIGNED32) : Float;				 (* Factorial *)
+PROCEDURE Binomial(N, K : SIGNED32) : Float;	(* Binomial coef. C(N,K) *)
 PROCEDURE Gamma(X : Float) : Float;					(* Gamma PROCEDURE *)
-PROCEDURE SgnGamma(X : Float) : LONGINT;		 (* Sign of Gamma PROCEDURE *)
+PROCEDURE SgnGamma(X : Float) : SIGNED32;		 (* Sign of Gamma PROCEDURE *)
 PROCEDURE LnGamma(X : Float) : Float;				(* Log(|Gamma(X)|) *)
 PROCEDURE IGamma(A, X : Float) : Float;			(* Incomplete Gamma PROCEDURE *)
 PROCEDURE JGamma(A, X : Float) : Float;			(* Complement of IGamma *)
@@ -188,12 +188,12 @@ PROCEDURE Erf(X : Float) : Float;						(* Error PROCEDURE *)
 PROCEDURE Erfc(X : Float) : Float;					 (* Complement of Erf *)
 
 -------- Binomial distribution with probability P and number of repetitions N----
-PROCEDURE PBinom(N : LONGINT; P : Float; K : LONGINT) : Float; (* Prob(X = K) *)
-PROCEDURE FBinom(N : LONGINT; P : Float; K : LONGINT) : Float; (* Prob(X <= K) *)
+PROCEDURE PBinom(N : SIGNED32; P : Float; K : SIGNED32) : Float; (* Prob(X = K) *)
+PROCEDURE FBinom(N : SIGNED32; P : Float; K : SIGNED32) : Float; (* Prob(X <= K) *)
 
 --------------------- Poisson distribution with mean Mu-----------
-PROCEDURE PPoisson(Mu : Float; K : LONGINT) : Float;	(* Prob(X = K) *)
-PROCEDURE FPoisson(Mu : Float; K : LONGINT) : Float;	(* Prob(X <= K) *)
+PROCEDURE PPoisson(Mu : Float; K : SIGNED32) : Float;	(* Prob(X = K) *)
+PROCEDURE FPoisson(Mu : Float; K : SIGNED32) : Float;	(* Prob(X <= K) *)
 
 ---------------- Standard normal distribution--------------------
 PROCEDURE DNorm(X : Float) : Float;		(* Density of standard normal *)
@@ -203,18 +203,18 @@ PROCEDURE InvNorm(P : Float) : Float;	(* Inverse of FNorm : returns X
 																				such that Prob(U <= X) = P*)
 
 -----------------	Student distribution with Nu d.o.f.-------------
-PROCEDURE DStudent(Nu : LONGINT; X : Float) : Float;	(* Density of t *)
-PROCEDURE FStudent(Nu : LONGINT; X : Float) : Float;	(* Prob(t <= X) *)
-PROCEDURE PStudent(Nu : LONGINT; X : Float) : Float;	(* Prob(|t| >= |X|) *)
+PROCEDURE DStudent(Nu : SIGNED32; X : Float) : Float;	(* Density of t *)
+PROCEDURE FStudent(Nu : SIGNED32; X : Float) : Float;	(* Prob(t <= X) *)
+PROCEDURE PStudent(Nu : SIGNED32; X : Float) : Float;	(* Prob(|t| >= |X|) *)
 
 ---------------- Khi-2 distribution with Nu d.o.f.----------------
-PROCEDURE DKhi2(Nu : LONGINT; X : Float) : Float;	(* Density of Khi2 *)
-PROCEDURE FKhi2(Nu : LONGINT; X : Float) : Float;	(* Prob(Khi2 <= X) *)
-PROCEDURE PKhi2(Nu : LONGINT; X : Float) : Float;	(* Prob(Khi2 >= X) *)
+PROCEDURE DKhi2(Nu : SIGNED32; X : Float) : Float;	(* Density of Khi2 *)
+PROCEDURE FKhi2(Nu : SIGNED32; X : Float) : Float;	(* Prob(Khi2 <= X) *)
+PROCEDURE PKhi2(Nu : SIGNED32; X : Float) : Float;	(* Prob(Khi2 >= X) *)
 
 ----------- Fisher-Snedecor distribution with Nu1 and Nu2 d.o.f.-------
-PROCEDURE DSnedecor(Nu1, Nu2 : LONGINT; X : Float) : Float;	(* Density of F *)
-PROCEDURE FSnedecor(Nu1, Nu2 : LONGINT; X : Float) : Float;	(* Prob(F <= X) *)
+PROCEDURE DSnedecor(Nu1, Nu2 : SIGNED32; X : Float) : Float;	(* Density of F *)
+PROCEDURE FSnedecor(Nu1, Nu2 : SIGNED32; X : Float) : Float;	(* Prob(F <= X) *)
 PROCEDURE PSnedecor(Nu1, Nu2 : SIZE; X : Float) : Float;	(* Prob(F >= X) *)
 
 ------------- Exponential distribution------------------
@@ -236,7 +236,7 @@ PROCEDURE FGamma(A, B, X : Float) : Float;	(* Prob( <= X) *)
 	Error handling procedures
 	---------------------------------------------------------------------- *)
 
-	PROCEDURE DefaultVal(ErrCode : LONGINT) : Float;
+	PROCEDURE DefaultVal(ErrCode : SIGNED32) : Float;
 	(* Sets the global variable MathErr and the PROCEDURE default value
 		according to the error code *)
 	BEGIN
@@ -251,7 +251,7 @@ PROCEDURE FGamma(A, B, X : Float) : Float;	(* Prob( <= X) *)
 		END;
 	END DefaultVal;
 
-	PROCEDURE MathError*() : LONGINT;	(* Error code from the last function call *)
+	PROCEDURE MathError*() : SIGNED32;	(* Error code from the last function call *)
 	BEGIN
 		RETURN MathErr;
 	END MathError;
@@ -274,14 +274,14 @@ PROCEDURE FGamma(A, B, X : Float) : Float;	(* Prob( <= X) *)
 		END;
 	END FMax;
 
-	PROCEDURE IMin*(X, Y : LONGINT) : LONGINT;	(* Minimum of 2 integers *)
+	PROCEDURE IMin*(X, Y : SIGNED32) : SIGNED32;	(* Minimum of 2 integers *)
 	BEGIN
 		IF X <= Y THEN RETURN X
 		ELSE RETURN Y;
 		END;
 	END IMin;
 
-	PROCEDURE IMax*(X, Y : LONGINT) : LONGINT;	(* Maximum of 2 integers *)
+	PROCEDURE IMax*(X, Y : SIGNED32) : SIGNED32;	(* Maximum of 2 integers *)
 	BEGIN
 		IF X >= Y THEN RETURN X
 		ELSE RETURN	Y
@@ -297,23 +297,23 @@ PROCEDURE FGamma(A, B, X : Float) : Float;	(* Prob( <= X) *)
 		Y := Temp;
 	END FSwap;
 
-	PROCEDURE ISwap*(VAR X, Y : LONGINT);			(* Exchange 2 integers *)
+	PROCEDURE ISwap*(VAR X, Y : SIGNED32);			(* Exchange 2 integers *)
 	VAR
-		Temp : LONGINT;
+		Temp : SIGNED32;
 	BEGIN
 		Temp := X;
 		X := Y;
 		Y := Temp;
 	END ISwap;
 
-	PROCEDURE Sgn*(X : Float) : LONGINT;				(* Sign (returns 1 IF X = 0) *)
+	PROCEDURE Sgn*(X : Float) : SIGNED32;				(* Sign (returns 1 IF X = 0) *)
 	BEGIN
 		IF X >= 0.0 THEN RETURN 1
 		ELSE RETURN - 1
 		END;
 	END Sgn;
 
-	PROCEDURE Sgn0*(X : Float) : LONGINT;			 (* Sign (returns 0 IF X = 0) *)
+	PROCEDURE Sgn0*(X : Float) : SIGNED32;			 (* Sign (returns 0 IF X = 0) *)
 	BEGIN
 		IF X > 0.0 THEN RETURN 1
 		ELSIF X = 0.0 THEN RETURN 0
@@ -419,10 +419,10 @@ PROCEDURE FGamma(A, B, X : Float) : Float;	(* Prob( <= X) *)
 		END;
 	END LogA;
 
-	PROCEDURE IntPower*(X : Float; N : LONGINT) : Float;
+	PROCEDURE IntPower*(X : Float; N : SIGNED32) : Float;
 	(* Computes X^N by REPEATed multiplications *)
 	VAR
-		M : LONGINT;
+		M : SIGNED32;
 		T : Float;
 	BEGIN
 		MathErr := FNOK;
@@ -653,7 +653,7 @@ PROCEDURE FGamma(A, B, X : Float) : Float;	(* Prob( <= X) *)
 	---------------------------------------------------------------------- *)
 
 
-	PROCEDURE PolEvl*(VAR X : Float; CONST Coef : TabCoef; N : LONGINT) : Float;
+	PROCEDURE PolEvl*(VAR X : Float; CONST Coef : TabCoef; N : SIGNED32) : Float;
 (* ----------------------------------------------------------------------
 	Evaluates polynomial of degree N:
 
@@ -672,21 +672,21 @@ PROCEDURE FGamma(A, B, X : Float) : Float;	(* Prob( <= X) *)
 	---------------------------------------------------------------------- *)
 	VAR
 		Ans : Float;
-		I : LONGINT;
+		I : SIGNED32;
 	BEGIN
 		Ans := Coef[0];
 		FOR I := 1 TO N DO Ans := Ans * X + Coef[I] END;
 		RETURN Ans;
 	END PolEvl;
 
-	PROCEDURE P1Evl*(VAR X : Float; CONST Coef : TabCoef; N : LONGINT) : Float;
+	PROCEDURE P1Evl*(VAR X : Float; CONST Coef : TabCoef; N : SIGNED32) : Float;
 (* ----------------------------------------------------------------------
 	Evaluate polynomial when coefficient of X is 1.0.
 	Otherwise same as PolEvl.
 	---------------------------------------------------------------------- *)
 	VAR
 		Ans : Float;
-		I : LONGINT;
+		I : SIGNED32;
 	BEGIN
 		Ans := X + Coef[0];
 		FOR I := 1 TO N - 1 DO
@@ -695,7 +695,7 @@ PROCEDURE FGamma(A, B, X : Float) : Float;	(* Prob( <= X) *)
 		RETURN Ans;
 	END P1Evl;
 
-	PROCEDURE SgnGamma*(X : Float) : LONGINT;
+	PROCEDURE SgnGamma*(X : Float) : SIGNED32;
 	BEGIN
 		IF X > 0.0 THEN RETURN 1
 		ELSIF ODD(ENTIER(ABS(X))) THEN RETURN 1
@@ -754,7 +754,7 @@ PROCEDURE FGamma(A, B, X : Float) : Float;	(* Prob( <= X) *)
 
 	PROCEDURE Gamma*(X : Float) : Float;
 	VAR
-		SgnGam, N : LONGINT;
+		SgnGam, N : SIGNED32;
 		A, X1, Z : Float;
 	BEGIN
 		MathErr := FNOK;
@@ -814,7 +814,7 @@ PROCEDURE FGamma(A, B, X : Float) : Float;	(* Prob( <= X) *)
 
 	PROCEDURE LnGamma*(X : Float) : Float;
 	VAR
-		N : LONGINT;
+		N : SIGNED32;
 		A, X1, Z : Float;
 	BEGIN
 		MathErr := FNOK;
@@ -948,7 +948,7 @@ PROCEDURE FGamma(A, B, X : Float) : Float;	(* Prob( <= X) *)
 		RETURN Ans * Ax;
 	END JGamma;
 
-	PROCEDURE Fact*(N : LONGINT) : Float;
+	PROCEDURE Fact*(N : SIGNED32) : Float;
 	BEGIN
 		MathErr := FNOK;
 		IF N < 0 THEN RETURN DefaultVal(FNDOMAIN)
@@ -958,9 +958,9 @@ PROCEDURE FGamma(A, B, X : Float) : Float;	(* Prob( <= X) *)
 		END;
 	END Fact;
 
-	PROCEDURE Binomial*(N, K : LONGINT) : Float;
+	PROCEDURE Binomial*(N, K : SIGNED32) : Float;
 	VAR
-		I, N1 : LONGINT;
+		I, N1 : SIGNED32;
 		Prod : Float;
 	BEGIN
 		MathErr := FNOK;
@@ -982,7 +982,7 @@ PROCEDURE FGamma(A, B, X : Float) : Float;	(* Prob( <= X) *)
 	(* Computes Beta(X, Y) = Gamma(X) * Gamma(Y) / Gamma(X + Y) *)
 	VAR
 		Lx, Ly, Lxy : Float;
-		SgnBeta : LONGINT;
+		SgnBeta : SIGNED32;
 	BEGIN
 		MathErr := FNOK;
 		SgnBeta := SgnGamma(X) * SgnGamma(Y) * SgnGamma(X + Y);
@@ -999,7 +999,7 @@ PROCEDURE FGamma(A, B, X : Float) : Float;	(* Prob( <= X) *)
 	(* Power series for incomplete beta integral. Use when B*X is small *)
 	VAR
 		S, T, U, V, T1, Z, Ai : Float;
-		N : LONGINT;
+		N : SIGNED32;
 	BEGIN
 		Ai := 1.0 / A;
 		U := (1.0 - B) * X;
@@ -1040,7 +1040,7 @@ PROCEDURE CFrac1*(A, B, X : Float) : Float;
 		Xk, Pk, Pkm1, Pkm2, Qk, Qkm1, Qkm2,
 		K1, K2, K3, K4, K5, K6, K7, K8,
 		R, T, Ans, Thresh : Float;
-		N : LONGINT;
+		N : SIGNED32;
 		CDone:BOOLEAN;
 	BEGIN
 	CDone:=FALSE;
@@ -1125,7 +1125,7 @@ PROCEDURE CFrac1*(A, B, X : Float) : Float;
 		Xk, Pk, Pkm1, Pkm2, Qk, Qkm1, Qkm2,
 		K1, K2, K3, K4, K5, K6, K7, K8,
 		R, T, Z, Ans, Thresh : Float;
-		N : LONGINT;
+		N : SIGNED32;
 		CDone:BOOLEAN;
 	BEGIN
 	CDone:=FALSE;
@@ -1308,7 +1308,7 @@ PROCEDURE CFrac1*(A, B, X : Float) : Float;
 	Probability functions
 	---------------------------------------------------------------------- *)
 
-	PROCEDURE PBinom*(N : LONGINT; P : Float; K : LONGINT) : Float;
+	PROCEDURE PBinom*(N : SIGNED32; P : Float; K : SIGNED32) : Float;
 	BEGIN
 		MathErr := FNOK;
 		IF (P < 0.0) OR (P > 1.0) OR (N <= 0) OR (N < K) THEN RETURN DefaultVal(FNDOMAIN)
@@ -1318,7 +1318,7 @@ PROCEDURE CFrac1*(A, B, X : Float) : Float;
 		END;
 	END PBinom;
 
-	PROCEDURE FBinom*(N : LONGINT; P : Float; K : LONGINT) : Float;
+	PROCEDURE FBinom*(N : SIGNED32; P : Float; K : SIGNED32) : Float;
 	BEGIN
 		MathErr := FNOK;
 		IF (P < 0.0) OR (P > 1.0) OR (N <= 0) OR (N < K) THEN RETURN DefaultVal(FNDOMAIN)
@@ -1328,10 +1328,10 @@ PROCEDURE CFrac1*(A, B, X : Float) : Float;
 		END;
 	END FBinom;
 
-	PROCEDURE PPoisson*(Mu : Float; K : LONGINT) : Float;
+	PROCEDURE PPoisson*(Mu : Float; K : SIGNED32) : Float;
 	VAR
 		P : Float;
-		I : LONGINT;
+		I : SIGNED32;
 	BEGIN
 		MathErr := FNOK;
 		IF (Mu <= 0.0) OR (K < 0) THEN RETURN DefaultVal(FNDOMAIN)
@@ -1343,7 +1343,7 @@ PROCEDURE CFrac1*(A, B, X : Float) : Float;
 		END;
 	END PPoisson;
 
-	PROCEDURE FPoisson*(Mu : Float; K : LONGINT) : Float;
+	PROCEDURE FPoisson*(Mu : Float; K : SIGNED32) : Float;
 	BEGIN
 		MathErr := FNOK;
 		IF (Mu <= 0.0) OR (K < 0) THEN RETURN DefaultVal(FNDOMAIN)
@@ -1373,7 +1373,7 @@ PROCEDURE CFrac1*(A, B, X : Float) : Float;
 	---------------------------------------------------------------------- *)
 	VAR
 		X, Y, Z, Y2, X0, X1 : Float;
-		Code : LONGINT;
+		Code : SIGNED32;
 	BEGIN
 		IF (P <= 0.0) OR (P >= 1.0) THEN RETURN DefaultVal(FNDOMAIN) END;
 
@@ -1416,7 +1416,7 @@ PROCEDURE CFrac1*(A, B, X : Float) : Float;
 		END;
 	END PNorm;
 
-	PROCEDURE DStudent*(Nu : LONGINT; X : Float) : Float;
+	PROCEDURE DStudent*(Nu : SIGNED32; X : Float) : Float;
 	VAR
 		L, P, Q : Float;
 	BEGIN
@@ -1432,7 +1432,7 @@ PROCEDURE CFrac1*(A, B, X : Float) : Float;
 		END;
 	END DStudent;
 
-	PROCEDURE FStudent*(Nu : LONGINT; X : Float) : Float;
+	PROCEDURE FStudent*(Nu : SIGNED32; X : Float) : Float;
 	BEGIN
 		MathErr := FNOK;
 		IF Nu < 1 THEN RETURN DefaultVal(FNDOMAIN)
@@ -1440,7 +1440,7 @@ PROCEDURE CFrac1*(A, B, X : Float) : Float;
 		END;
 	END FStudent;
 
-	PROCEDURE PStudent*(Nu : LONGINT; X : Float) : Float;
+	PROCEDURE PStudent*(Nu : SIGNED32; X : Float) : Float;
 	BEGIN
 		MathErr := FNOK;
 		IF Nu < 1 THEN RETURN DefaultVal(FNDOMAIN)
@@ -1450,13 +1450,13 @@ PROCEDURE CFrac1*(A, B, X : Float) : Float;
 
 
 
-	PROCEDURE DKhi2*(Nu : LONGINT; X : Float) : Float;
+	PROCEDURE DKhi2*(Nu : SIGNED32; X : Float) : Float;
 	BEGIN
 		MathErr := FNOK;
 		RETURN DGamma(0.5 * Nu, 0.5, X);
 	END DKhi2;
 
-	PROCEDURE FKhi2*(Nu : LONGINT; X : Float) : Float;
+	PROCEDURE FKhi2*(Nu : SIGNED32; X : Float) : Float;
 	BEGIN
 		MathErr := FNOK;
 		IF (Nu < 1) OR (X <= 0.0) THEN RETURN DefaultVal(FNDOMAIN)
@@ -1464,7 +1464,7 @@ PROCEDURE CFrac1*(A, B, X : Float) : Float;
 		END;
 	END FKhi2;
 
-	PROCEDURE PKhi2*(Nu : LONGINT; X : Float) : Float;
+	PROCEDURE PKhi2*(Nu : SIGNED32; X : Float) : Float;
 	BEGIN
 		MathErr := FNOK;
 		IF (Nu < 1) OR (X <= 0.0) THEN RETURN DefaultVal(FNDOMAIN)
@@ -1472,7 +1472,7 @@ PROCEDURE CFrac1*(A, B, X : Float) : Float;
 		END;
 	END PKhi2;
 
-	PROCEDURE DSnedecor*(Nu1, Nu2 : LONGINT; X : Float) : Float;
+	PROCEDURE DSnedecor*(Nu1, Nu2 : SIGNED32; X : Float) : Float;
 	VAR
 		P1, P2, R, S, L : Float;
 	BEGIN
@@ -1491,7 +1491,7 @@ PROCEDURE CFrac1*(A, B, X : Float) : Float;
 		END;
 	END DSnedecor;
 
-	PROCEDURE FSnedecor*(Nu1, Nu2 : LONGINT; X : Float) : Float;
+	PROCEDURE FSnedecor*(Nu1, Nu2 : SIGNED32; X : Float) : Float;
 	BEGIN
 		MathErr := FNOK;
 		IF (Nu1 < 1) OR (Nu2 < 1) OR (X <= 0.0) THEN RETURN DefaultVal(FNDOMAIN)

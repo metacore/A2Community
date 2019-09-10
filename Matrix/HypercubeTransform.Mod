@@ -15,7 +15,7 @@ CONST
 	antimirrorW* = Filters.antimirrorW;
 
 
-	PROCEDURE toSpline4D*( CONST in: Hypercube;  VAR out: Hypercube;  splinedegree: INTEGER;
+	PROCEDURE toSpline4D*( CONST in: Hypercube;  VAR out: Hypercube;  splinedegree: SIGNED16;
 												 directions: SET );
 	BEGIN
 		Filter4D( in, out,
@@ -23,7 +23,7 @@ CONST
 					    directions, mirrorH );
 	END toSpline4D;
 
-	PROCEDURE fromSpline4D*( CONST in: Hypercube;  VAR out: Hypercube;  splinedegree: INTEGER;
+	PROCEDURE fromSpline4D*( CONST in: Hypercube;  VAR out: Hypercube;  splinedegree: SIGNED16;
 													 directions: SET );
 	BEGIN
 		Filter4D( in, out,
@@ -32,7 +32,7 @@ CONST
 	END fromSpline4D;
 
 	PROCEDURE Filter4D*( CONST data: Hypercube;  VAR resdata: Hypercube;
-										   filter: Filters.Filter;  directions: SET;  boundary: INTEGER );
+										   filter: Filters.Filter;  directions: SET;  boundary: SIGNED16 );
 	VAR linehandler: HypercubeBase.LineHandler;
 		convolver: Convolutions.Convolver;
 	BEGIN
@@ -43,7 +43,7 @@ CONST
 
 	(* possible filters: Filters.CreateSplineFilter( Filters.LeastSquareSpline0Down2 + splinedegree ) *)  (*ToDo: IN_PLACE !!*)
 	PROCEDURE Reduce4D*( CONST data: Hypercube;  VAR resdata: Hypercube;
-											  filter: Filters.Filter;  directions: SET;  boundary: INTEGER );
+											  filter: Filters.Filter;  directions: SET;  boundary: SIGNED16 );
 	VAR temp, temp2,temp3: Hypercube;  convolver: Convolutions.Convolver;
 	BEGIN
 		IF filter = NIL THEN HALT( 100 ) END;
@@ -112,7 +112,7 @@ CONST
 
 	(* possible filters: Filters.CreateSplineFilter( Filters.LeastSquareSpline0Up2 + splinedegree ) *)  (*todo:  in-place*)
 	PROCEDURE Expand4D*( CONST data: Hypercube;  VAR resdata: Hypercube;
-											   filter: Filters.Filter;  directions: SET;  boundary: INTEGER );
+											   filter: Filters.Filter;  directions: SET;  boundary: SIGNED16 );
 	VAR temp, temp2,temp3: Hypercube;  convolver: Convolutions.Convolver;
 	BEGIN
 	(*to do: check sizes, check filter*)  (*check for in-place*)
@@ -174,7 +174,7 @@ CONST
 	END resample;
 
 	PROCEDURE Resample4D( CONST data: Hypercube;  VAR resdata: Hypercube;
-											   filter: Filters.Filter;  directions: SET;  boundary: INTEGER);
+											   filter: Filters.Filter;  directions: SET;  boundary: SIGNED16);
 	BEGIN
 	END Resample4D;
 
@@ -182,7 +182,7 @@ CONST
 (* to do: make order of dimensions for analyse/reconstruct consistent (e.g., 1->2->3, on way back: 3->2->1 *)
 	PROCEDURE Wavelet4D*( CONST data: Hypercube;  VAR resdata: Hypercube;
 											    wavelet: Wavelets.WaveletFamily;  directions: SET;
-											    boundary: INTEGER;  analyze: BOOLEAN );
+											    boundary: SIGNED16;  analyze: BOOLEAN );
 	VAR waveconvolver: Wavelets.WaveletConvolver;
 	BEGIN
 		IF wavelet = NIL THEN HALT( 100 ) END;

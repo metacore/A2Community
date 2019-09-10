@@ -17,7 +17,7 @@ TYPE Transformer  = OBJECT (* allow reuse of temporary structures - important fo
 	END Transformer;
 
 
-	PROCEDURE toSpline3D*( CONST in: Cube;  VAR out: Cube;  splinedegree: INTEGER;
+	PROCEDURE toSpline3D*( CONST in: Cube;  VAR out: Cube;  splinedegree: SIGNED16;
 												 directions: SET );
 	BEGIN
 		Filter3D( in, out,
@@ -25,7 +25,7 @@ TYPE Transformer  = OBJECT (* allow reuse of temporary structures - important fo
 					    directions, mirrorH );
 	END toSpline3D;
 
-	PROCEDURE fromSpline3D*( CONST in: Cube;  VAR out: Cube;  splinedegree: INTEGER;
+	PROCEDURE fromSpline3D*( CONST in: Cube;  VAR out: Cube;  splinedegree: SIGNED16;
 													 directions: SET );
 	BEGIN
 		Filter3D( in, out,
@@ -34,7 +34,7 @@ TYPE Transformer  = OBJECT (* allow reuse of temporary structures - important fo
 	END fromSpline3D;
 
 	PROCEDURE Filter3D*( CONST data: Cube;  VAR resdata: Cube;
-										   filter: Filters.Filter;  directions: SET;  boundary: INTEGER );
+										   filter: Filters.Filter;  directions: SET;  boundary: SIGNED16 );
 	VAR linehandler: VolumeBase.LineHandler;
 		convolver: Convolution.Convolver;
 	BEGIN
@@ -72,7 +72,7 @@ TYPE Transformer  = OBJECT (* allow reuse of temporary structures - important fo
 
 	(* possible filters: Filters.CreateSplineFilter( Filters.LeastSquareSpline0Down2 + splinedegree ) *)  (*ToDo: IN_PLACE !!*)
 	PROCEDURE Reduce3D*( CONST data: Cube;  VAR resdata: Cube;
-											  filter: Filters.Filter;  directions: SET;  boundary: INTEGER );
+											  filter: Filters.Filter;  directions: SET;  boundary: SIGNED16 );
 	VAR temp, temp2: Cube;  convolver: Convolution.Convolver;
 	BEGIN
 		directions := directions * {0,1,2};
@@ -108,7 +108,7 @@ TYPE Transformer  = OBJECT (* allow reuse of temporary structures - important fo
 
 	(* possible filters: Filters.CreateSplineFilter( Filters.LeastSquareSpline0Up2 + splinedegree ) *)  (*todo:  in-place*)
 	PROCEDURE Expand3D*( CONST data: Cube;  VAR resdata: Cube;
-											   filter: Filters.Filter;  directions: SET;  boundary: INTEGER );
+											   filter: Filters.Filter;  directions: SET;  boundary: SIGNED16 );
 	VAR temp, temp2: Cube;  convolver: Convolution.Convolver;
 	BEGIN
 	(*to do: check sizes, check filter*)  (*check for in-place*)
@@ -169,7 +169,7 @@ TYPE Transformer  = OBJECT (* allow reuse of temporary structures - important fo
 	END resample;
 
 	PROCEDURE Resample3D( CONST data: Cube;  VAR resdata: Cube;
-											   filter: Filters.Filter;  directions: SET;  boundary: INTEGER);
+											   filter: Filters.Filter;  directions: SET;  boundary: SIGNED16);
 	BEGIN
 	END Resample3D;
 
@@ -210,7 +210,7 @@ TYPE Transformer  = OBJECT (* allow reuse of temporary structures - important fo
 		END;
 	END MirrorZ;
 
-	PROCEDURE ProjectSum*(CONST g: Cube; orientation:LONGINT ): Rect;
+	PROCEDURE ProjectSum*(CONST g: Cube; orientation:SIGNED32 ): Rect;
 	VAR i:SIZE;
 	BEGIN
 		IF orientation=0 THEN
@@ -226,7 +226,7 @@ TYPE Transformer  = OBJECT (* allow reuse of temporary structures - important fo
 		RETURN RESULT
 	END ProjectSum;
 
-	PROCEDURE ProjectMax*(CONST g: Cube; orientation:LONGINT ): Rect;
+	PROCEDURE ProjectMax*(CONST g: Cube; orientation:SIGNED32 ): Rect;
 	VAR x,y:SIZE;
 	BEGIN
 		IF orientation=0 THEN
@@ -279,7 +279,7 @@ TYPE Transformer  = OBJECT (* allow reuse of temporary structures - important fo
 (* to do: make order of dimensions for analyse/reconstruct consistent (e.g., 1->2->3, on way back: 3->2->1 *)
 	PROCEDURE Wavelet3D*( CONST data: Cube;  VAR resdata: Cube;
 											    wavelet: Wavelets.WaveletFamily;  directions: SET;
-											    boundary: INTEGER;  analyze: BOOLEAN );
+											    boundary: SIGNED16;  analyze: BOOLEAN );
 	VAR waveconvolver: Wavelets.WaveletConvolver;
 	BEGIN
 		IF wavelet = NIL THEN HALT( 100 ) END;

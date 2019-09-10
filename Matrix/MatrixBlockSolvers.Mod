@@ -53,7 +53,7 @@ VAR A11inv, L21, U12, S: Matrix;
 	direct:BOOLEAN;
 
 (*precondition: Matrix A (N*N) *)
-PROCEDURE & Init*(VAR A:Matrix; blocksize:LONGINT);
+PROCEDURE & Init*(VAR A:Matrix; blocksize:SIGNED32);
 VAR U11: Matrix; (*u11,u11inv: ARRAY [4,4] OF Vectors.Datatype;*)
 BEGIN;
 	IF LEN(A,0)=0 THEN rows1:=0; RETURN
@@ -124,13 +124,13 @@ TYPE LUB* = OBJECT
 VAR A11inv: Vectors.Matrix4x4;
 	L21, U12, S: Matrix;
 	x:Vector;
-	rows1:LONGINT;
+	rows1:SIGNED32;
 	quadsolver: LU; (*for recursion in solving S*)
 	lu,luS: MatrixStandardSolvers.LU; (*for inverting A11 and solving S in last recursion*)
 	direct:BOOLEAN;
 
 (*precondition: Matrix A (N*N) *)
-PROCEDURE & Init*(VAR A:Matrix; blocksize:LONGINT);
+PROCEDURE & Init*(VAR A:Matrix; blocksize:SIGNED32);
 VAR U11: Vectors.Matrix4x4;
 BEGIN;
 	IF LEN(A,0)=0 THEN rows1:=0; RETURN
@@ -264,12 +264,12 @@ TYPE  LUAgent*= OBJECT
 		lu: MatrixStandardSolvers.LU;
 		datasize, blocksize:SIZE;
 		x,y: Vector;
-		id, recursionlevel:LONGINT;
+		id, recursionlevel:SIGNED32;
 		notify:Notifier;
 		direct:BOOLEAN;
-		priority:LONGINT; (*experimental -not fully implemented*)
+		priority:SIGNED32; (*experimental -not fully implemented*)
 
-	PROCEDURE & Init*(datasize,blocksize:SIZE; notify:Notifier; prio: LONGINT);
+	PROCEDURE & Init*(datasize,blocksize:SIZE; notify:Notifier; prio: SIGNED32);
 	BEGIN {EXCLUSIVE}
 		id:=ident; INC(ident);
 		priority:=MIN(Objects.High,MAX(prio,Objects.Low));
@@ -402,11 +402,11 @@ TYPE  LUAgent*= OBJECT
 TYPE Inverse* = OBJECT
 VAR A11inv, L21, U12, A21, S: Matrix;
 	x:Vector;
-	rows1:LONGINT;
+	rows1:SIGNED32;
 	quadsolver: LU; (*for recursion in solving S*)
 	lu,luS: MatrixStandardSolvers.LU; (*for inverting A11 and solving S in last recursion*)
 	direct:BOOLEAN;
-	priority: LONGINT;
+	priority: SIGNED32;
 
 (*
 (*
@@ -422,7 +422,7 @@ Inv(M):=
 *)
 
 (*precondition: Matrix A (N*N) *)
-PROCEDURE & Init(VAR A:Matrix; blocksize:LONGINT);
+PROCEDURE & Init(VAR A:Matrix; blocksize:SIGNED32);
 VAR U11, dummy: Matrix;
 BEGIN;
 	IF LEN(A,0)=0 THEN rows1:=0; RETURN
@@ -496,13 +496,13 @@ TYPE LUActive*= OBJECT
 		lu: MatrixStandardSolvers.LU;
 		datasize, blocksize:SIZE;
 		x,y: Vector;
-		id:LONGINT;
+		id:SIGNED32;
 		filling:SET;
 		notify:Notifier;
 		done, childdone, direct, initialized:BOOLEAN;
-		priority:LONGINT; (*experimental -not fully implemented*)
+		priority:SIGNED32; (*experimental -not fully implemented*)
 
-	PROCEDURE & Init(datasize, blocksize:SIZE; notify:Notifier; prio: LONGINT);  (* only first quadrant is expected to be ready*)
+	PROCEDURE & Init(datasize, blocksize:SIZE; notify:Notifier; prio: SIGNED32);  (* only first quadrant is expected to be ready*)
 	VAR a11: Matrix;
 	BEGIN
 		id:=ident; INC(ident);
@@ -525,7 +525,7 @@ END Init;
 		done:=TRUE
 	END Done;
 
-	PROCEDURE FillQuadrant(q:LONGINT);
+	PROCEDURE FillQuadrant(q:SIGNED32);
 	BEGIN {EXCLUSIVE}
 		INCL(filling, q);
 	END FillQuadrant;
@@ -643,7 +643,7 @@ END Init;
 
 TYPE Notifier = PROCEDURE {DELEGATE};
 
-VAR ident: LONGINT;
+VAR ident: SIGNED32;
 
 
 
@@ -679,7 +679,7 @@ END TestB;
 *)
 
 PROCEDURE Test0*;
-VAR A, A0, B, Inv: Matrix; b,x: Vector; lu:MatrixStandardSolvers.LU;timer:Kernel.MilliTimer; t:LONGINT;
+VAR A, A0, B, Inv: Matrix; b,x: Vector; lu:MatrixStandardSolvers.LU;timer:Kernel.MilliTimer; t:SIGNED32;
 BEGIN
 	A:=Util.RandomMatrix(1024,1024, Util.DiagDominant);
 	B:=Util.RandomMatrix(1,1024, Util.Uniform); b:=B[0];
@@ -693,7 +693,7 @@ BEGIN
 END Test0;
 
 PROCEDURE Test1*;
-VAR A, A0,B: Matrix; b,x: Vector; blu: LU; timer:Kernel.MilliTimer; t:LONGINT;
+VAR A, A0,B: Matrix; b,x: Vector; blu: LU; timer:Kernel.MilliTimer; t:SIGNED32;
 BEGIN
 	A:=Util.RandomMatrix(1024,1024, Util.DiagDominant);
 	B:=Util.RandomMatrix(1,1024, Util.Uniform); b:=B[0];
@@ -711,7 +711,7 @@ END Test1;
 
 PROCEDURE Test2*;
 CONST size=1024;
-VAR A, A0,A1,B: Matrix; b,b1,x,x1: Vector; blu: LUAgent; lu:LU; timer:Kernel.MilliTimer; t:LONGINT;
+VAR A, A0,A1,B: Matrix; b,b1,x,x1: Vector; blu: LUAgent; lu:LU; timer:Kernel.MilliTimer; t:SIGNED32;
 BEGIN
 	A:=Util.RandomMatrix(size,size, Util.DiagDominant);
 	B:=Util.RandomMatrix(1,size, Util.Uniform); b:=B[0]; b1:=b;
@@ -739,7 +739,7 @@ END Test2;
 
 PROCEDURE Test3*;
 CONST size=128;
-VAR A, A0,A1,B: Matrix; b,b1,x,x1: Vector; blu: LUActive; lu:LU; timer:Kernel.MilliTimer; t:LONGINT;
+VAR A, A0,A1,B: Matrix; b,b1,x,x1: Vector; blu: LUActive; lu:LU; timer:Kernel.MilliTimer; t:SIGNED32;
 	A2: MatrixActive.Matrix;
 BEGIN
 	A:=Util.RandomMatrix(size,size, Util.DiagDominant);
@@ -771,7 +771,7 @@ END Test3;
 
 
 PROCEDURE TestLUAgent*;
-VAR A, A0, B, Inv: Matrix; b,x: Vector; lu:MatrixStandardSolvers.LU; blu:LUAgent; timer:Kernel.MilliTimer; t:LONGINT;
+VAR A, A0, B, Inv: Matrix; b,x: Vector; lu:MatrixStandardSolvers.LU; blu:LUAgent; timer:Kernel.MilliTimer; t:SIGNED32;
 BEGIN
 	A:=Util.RandomMatrix(200,200, Util.DiagDominant);
 	B:=Util.RandomMatrix(1,200, Util.Uniform); b:=B[0];
@@ -785,7 +785,7 @@ END TestLUAgent;
 
 PROCEDURE TestLUAgent1*;
 CONST size=1024;
-VAR A, A0,B: Matrix; b,x: Vector; blu: LUAgent; t:LONGINT; timer: Kernel.MilliTimer;
+VAR A, A0,B: Matrix; b,x: Vector; blu: LUAgent; t:SIGNED32; timer: Kernel.MilliTimer;
 BEGIN
 	ComputeObjects.cumulobjects:=0;
 	A:=Util.RandomMatrix(size,size, Util.DiagDominant);

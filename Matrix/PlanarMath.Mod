@@ -38,7 +38,7 @@ TYPE
 	END Sqr;
 
 	PROCEDURE Sqrt*(CONST in:Array):Array;
-	VAR i:LONGINT;
+	VAR i:SIGNED32;
 	BEGIN
 		IF LEN(RESULT)#LEN(in) THEN NEW(RESULT,LEN(in,0),LEN(in,1)) END;
 		RESULT:=ALL(in, Mathe.sqrt);
@@ -49,7 +49,7 @@ TYPE
 	END Sqrt;
 
 	PROCEDURE Sin*(CONST in:Array):Array;
-	VAR i:LONGINT;
+	VAR i:SIGNED32;
 	BEGIN
 		IF LEN(RESULT)#LEN(in) THEN NEW(RESULT,LEN(in,0),LEN(in,1)) END;
 		RESULT:=ALL(in, Mathe.sin);
@@ -60,7 +60,7 @@ TYPE
 	END Sin;
 
 	PROCEDURE Cos*(CONST in:Array):Array;
-	VAR i:LONGINT;
+	VAR i:SIGNED32;
 	BEGIN
 		IF LEN(RESULT)#LEN(in) THEN NEW(RESULT,LEN(in,0),LEN(in,1)) END;
 		RESULT:=ALL(in, Mathe.cos);
@@ -71,7 +71,7 @@ TYPE
 	END Cos;
 
 	PROCEDURE Arctan*(CONST in:Array):Array;
-	VAR i:LONGINT;
+	VAR i:SIGNED32;
 	BEGIN
 		IF LEN(RESULT)#LEN(in) THEN NEW(RESULT,LEN(in,0),LEN(in,1)) END;
 		RESULT:=ALL(in, Mathe.arctan);
@@ -90,7 +90,7 @@ TYPE
 
 
 	PROCEDURE Ln*(CONST in:Array):Array;
-	VAR i:LONGINT;
+	VAR i:SIGNED32;
 	BEGIN
 		IF LEN(RESULT)#LEN(in) THEN NEW(RESULT,LEN(in,0),LEN(in,1)) END;
 		RESULT:=ALL(in, Mathe.ln);
