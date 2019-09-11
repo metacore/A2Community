@@ -110,14 +110,14 @@ CONST
 
 TYPE 
 	FIICCPROFILE* = RECORD
-		flags*: INTEGER;	(* ! info flag *)
-		size*: LONGINT;		(* ! profile's size measured in bytes *)
+		flags*: SIGNED16;	(* ! info flag *)
+		size*: SIGNED32;		(* ! profile's size measured in bytes *)
 		data*: ADDRESS;		(* ! points to a block of contiguous memory containing the profile *)
 	END;
 	
 CONST
 	(* I/O image format identifiers. *)
-TYPE IMAGE_FORMAT* = LONGINT;
+TYPE IMAGE_FORMAT* = SIGNED32;
 CONST
 	FIF_UNKNOWN* = -1;
 	FIF_BMP* = 0;
@@ -161,7 +161,7 @@ CONST
 	FIF_JXR* = 36;
 	
 	(* Image type used in FreeImage.*)
-TYPE IMAGE_TYPE* = LONGINT;
+TYPE IMAGE_TYPE* = SIGNED32;
 CONST
 	FIT_UNKNOWN* = 0;	(* unknown type *)
 	FIT_BITMAP* = 1;	(* standard image		: 1-, 4-, 8-, 16-, 24-, 32-bit *)
@@ -178,7 +178,7 @@ CONST
 	FIT_RGBAF* = 12;	(* 128-bit RGBA float image	: 4 x 32-bit IEEE floating point *)
 
 	(* Image color type used in FreeImage. *)
-TYPE IMAGE_COLOR_TYPE* = LONGINT;
+TYPE IMAGE_COLOR_TYPE* = SIGNED32;
 CONST
 	FIC_MINISWHITE* = 0;	(* min value is white *)
 	FIC_MINISBLACK* = 1;	(* min value is black *)
@@ -188,14 +188,14 @@ CONST
 	FIC_CMYK* = 5;		(* CMYK color model *)
 
 	(* Color quantization algorithms. Constants used in FreeImage_ColorQuantize. *)
-TYPE IMAGE_QUANTIZE* = LONGINT;
+TYPE IMAGE_QUANTIZE* = SIGNED32;
 CONST
 	FIQ_WUQUANT* = 0;	(* Xiaolin Wu color quantization algorithm *)
 	FIQ_NNQUANT* = 1;	(* NeuQuant neural-net quantization algorithm by Anthony Dekker *)
 	FIQ_LFPQUANT* = 2;	(* Lossless Fast Pseudo-Quantization Algorithm by Carsten Klein *)
 
 	(* Dithering algorithms. Constants used FreeImage_Dither. *)
-TYPE IMAGE_DITHER* = LONGINT;
+TYPE IMAGE_DITHER* = SIGNED32;
 CONST
 	FID_FS* = 0;		(* Floyd & Steinberg error diffusion *)
 	FID_BAYER4x4* = 1;	(* Bayer ordered dispersed dot dithering (order 2 dithering matrix)*)
@@ -206,7 +206,7 @@ CONST
 	FID_BAYER16x16* = 6;	(* Bayer ordered dispersed dot dithering (order 4 dithering matrix)*)
 
 	(* Lossless JPEG transformations Constants used in FreeImage_JPEGTransform	*)
-TYPE IMAGE_JPEG_OPERATION* = LONGINT;
+TYPE IMAGE_JPEG_OPERATION* = SIGNED32;
 CONST
 	FIJPEG_OP_NONE* = 0;		(* no transformation *)
 	FIJPEG_OP_FLIP_H* = 1;		(* horizontal flip *)
@@ -218,14 +218,14 @@ CONST
 	FIJPEG_OP_ROTATE_270* = 7;	(* 270-degree clockwise (or 90 ccw) *)
 
 	(* Tone mapping operators. Constants used in FreeImage_ToneMapping. *)
-TYPE IMAGE_TMO* = LONGINT;
+TYPE IMAGE_TMO* = SIGNED32;
 CONST
 	FITMO_DRAGO03* = 0;	(* Adaptive logarithmic mapping (F. Drago, 2003) *)
 	FITMO_REINHARD05* = 1;	(* Dynamic range reduction inspired by photoreceptor physiology (E. Reinhard, 2005) *)
 	FITMO_FATTAL02* = 2;	(* Gradient domain high dynamic range compression (R. Fattal, 2002) *)
 
 	(* Upsampling / downsampling filters. Constants used in FreeImage_Rescale. *)
-TYPE IMAGE_FILTER* = LONGINT;
+TYPE IMAGE_FILTER* = SIGNED32;
 CONST
 	FILTER_BOX* = 0;	(* Box, pulse, Fourier window, 1st order (constant) b-spline *)
 	FILTER_BICUBIC* = 1;	(* Mitchell & Netravali's two-param cubic filter *)
@@ -235,7 +235,7 @@ CONST
 	FILTER_LANCZOS3* = 5;	(* Lanczos3 filter *)
 
 	(* Color channels. Constants used in color manipulation routines. *)
-TYPE IMAGE_COLOR_CHANNEL* = LONGINT;
+TYPE IMAGE_COLOR_CHANNEL* = SIGNED32;
 CONST
 	FICC_RGB* = 0;		(* Use red, green and blue channels *)
 	FICC_RED* = 1;		(* Use red channel *)
@@ -252,7 +252,7 @@ CONST
 	(*  Tag data type information (based on TIFF specifications)
 	Note: RATIONALs are the ratio of two 32-bit integer values. *)
 		
-TYPE IMAGE_MDTYPE* = LONGINT;
+TYPE IMAGE_MDTYPE* = SIGNED32;
 CONST
 	FIDT_NOTYPE* = 0;	(* placeholder *)
 	FIDT_BYTE* = 1;		(* 8-bit unsigned integer *)
@@ -274,7 +274,7 @@ CONST
 	FIDT_IFD8* = 18;	(* 64-bit unsigned integer (offset) *)
 
 	(*  Metadata models supported by FreeImage *)
-TYPE IMAGE_MDMODEL* = LONGINT;
+TYPE IMAGE_MDMODEL* = SIGNED32;
 CONST
 	FIMD_NODATA* = -1;
 	FIMD_COMMENTS* = 0;		(* single comment or keywords *)
@@ -291,7 +291,7 @@ CONST
 	FIMD_EXIF_RAW* = 11;		(* Exif metadata as a raw buffer *)
 
 	(*  Load / Save flag constants  *)
-TYPE  IMAGE_FLAGS* = LONGINT;
+TYPE  IMAGE_FLAGS* = SIGNED32;
 CONST
 	FIF_LOAD_NOPIXELS* = 8000H; (* loading: load the image header only (not supported by all plugins, default to full loading) *)
 
@@ -427,17 +427,17 @@ TYPE
 
 	PtrBITMAPINFOHEADER* = POINTER {UNTRACED, UNSAFE} TO BITMAPINFOHEADER;
 	BITMAPINFOHEADER* = RECORD 
-		biSize*: LONGINT;
-		biWidth*: LONGINT;
-		biHeight*: LONGINT;
-		biPlanes*: INTEGER;
-		biBitCount*: INTEGER;
-		biCompression*: LONGINT;
-		biSizeImage*: LONGINT;
-		biXPelsPerMeter*: LONGINT;
-		biYPelsPerMeter*: LONGINT;
-		biClrUsed*: LONGINT;
-		biClrImportant*: LONGINT;
+		biSize*: SIGNED32;
+		biWidth*: SIGNED32;
+		biHeight*: SIGNED32;
+		biPlanes*: SIGNED16;
+		biBitCount*: SIGNED16;
+		biCompression*: SIGNED32;
+		biSizeImage*: SIGNED32;
+		biXPelsPerMeter*: SIGNED32;
+		biYPelsPerMeter*: SIGNED32;
+		biClrUsed*: SIGNED32;
+		biClrImportant*: SIGNED32;
 	END;
 
 
@@ -449,38 +449,38 @@ TYPE
 
 	(* 48-bit RGB *)
 	 FIRGB16* = RECORD
-		red*: INTEGER;
-		green*: INTEGER;
-		blue*: INTEGER
+		red*: SIGNED16;
+		green*: SIGNED16;
+		blue*: SIGNED16
 	END;
 
 	(* 64-bit RGBA *)
 	 FIRGBA16* = RECORD
-		red*: INTEGER;
-		green*: INTEGER;
-		blue*: INTEGER;
-		alpha*: INTEGER
+		red*: SIGNED16;
+		green*: SIGNED16;
+		blue*: SIGNED16;
+		alpha*: SIGNED16
 	END;
 
 	(* 96-bit RGB Float *)
 	 FIRGBF* = RECORD
-		red*: REAL;
-		green*: REAL;
-		blue*: REAL
+		red*: FLOAT32;
+		green*: FLOAT32;
+		blue*: FLOAT32
 	END;
 
 	(* 128-bit RGBA Float	*)
 	FIRGBAF* = RECORD
-		red*: REAL;
-		green*: REAL;
-		blue*: REAL;
-		alpha*: REAL
+		red*: FLOAT32;
+		green*: FLOAT32;
+		blue*: FLOAT32;
+		alpha*: FLOAT32
 	END;
 
-		(* Data structure for COMPLEX type (complex number) *)
+		(* Data structure for COMPLEX32 type (complex number) *)
 	FICOMPLEX* = RECORD
-		r*: LONGREAL; (* real part *)
-		i*: LONGREAL; (* imaginary part *)
+		r*: FLOAT64; (* real part *)
+		i*: FLOAT64; (* imaginary part *)
 	END;
 
 	LUT* = ARRAY  256 OF CHAR; (* aded for compatibility to v3.10.0, GetAdjustColorsLookupTable, etc. *)
@@ -489,10 +489,10 @@ TYPE
 	(*! used for easy accessing to pixels of various image types, see Scanline procs. ( Necati ) *)
 	PtrLineRGB* = POINTER {UNTRACED, UNSAFE}TO ARRAY OF RGBTRIPLE; (* for accessing 24 bit lines, RGB *)
 	PtrLineRGBA* = POINTER {UNTRACED, UNSAFE} TO ARRAY OF RGBQUAD; (* for accessing 32 bit lines, RGBA *)
-	PtrFISINT16* = POINTER {UNTRACED, UNSAFE} TO ARRAY OF INTEGER; (* for 16 bit integers *)
-	PtrFIINT32* = POINTER {UNTRACED, UNSAFE} TO ARRAY OF LONGINT; (* for 32 bit integers *)
-	PtrFIFLOAT* = POINTER {UNTRACED, UNSAFE} TO ARRAY OF REAL; (* for 32 bit real *)
-	PtrFIDOUBLE* = POINTER {UNTRACED, UNSAFE}TO ARRAY OF LONGREAL; (* for 64 bit real *)
+	PtrFISINT16* = POINTER {UNTRACED, UNSAFE} TO ARRAY OF SIGNED16; (* for 16 bit integers *)
+	PtrFIINT32* = POINTER {UNTRACED, UNSAFE} TO ARRAY OF SIGNED32; (* for 32 bit integers *)
+	PtrFIFLOAT* = POINTER {UNTRACED, UNSAFE} TO ARRAY OF FLOAT32; (* for 32 bit real *)
+	PtrFIDOUBLE* = POINTER {UNTRACED, UNSAFE}TO ARRAY OF FLOAT64; (* for 64 bit real *)
 
 	PtrFICOMPLEX* = POINTER {UNTRACED, UNSAFE} TO ARRAY OF FICOMPLEX; (* 2x64 bits real, Complex *)
 	PtrFIRGB16* = POINTER {UNTRACED, UNSAFE} TO ARRAY OF FIRGB16; (* for 48-bit RGB, 3x16 bits *)
@@ -505,11 +505,11 @@ TYPE
 
 	(* File IO routines *)
 	FHandle* =  ADDRESS;
-	PSint* = POINTER {UNTRACED, UNSAFE} TO ARRAY OF INTEGER;
-	Pint* = POINTER {UNTRACED, UNSAFE} TO ARRAY OF LONGINT;
-	FI_ReadProc* = PROCEDURE {PlatformCC} (buffer: ADDRESS; size: LONGINT; count: LONGINT; handle: FHandle): LONGINT;
-	FI_WriteProc* = PROCEDURE {PlatformCC} (buffer: ADDRESS; size: LONGINT; count: LONGINT; handle: FHandle): LONGINT;
-	FI_SeekProc* = PROCEDURE {PlatformCC} (handle: FHandle; offset: LONGINT; origin: LONGINT): PSint;
+	PSint* = POINTER {UNTRACED, UNSAFE} TO ARRAY OF SIGNED16;
+	Pint* = POINTER {UNTRACED, UNSAFE} TO ARRAY OF SIGNED32;
+	FI_ReadProc* = PROCEDURE {PlatformCC} (buffer: ADDRESS; size: SIGNED32; count: SIGNED32; handle: FHandle): SIGNED32;
+	FI_WriteProc* = PROCEDURE {PlatformCC} (buffer: ADDRESS; size: SIGNED32; count: SIGNED32; handle: FHandle): SIGNED32;
+	FI_SeekProc* = PROCEDURE {PlatformCC} (handle: FHandle; offset: SIGNED32; origin: SIGNED32): PSint;
 	FI_TellProc* = PROCEDURE {PlatformCC} (handle: FHandle): Pint;
 
 	
@@ -552,8 +552,8 @@ VAR
 	SetOutputMessageStdCall-: PROCEDURE {PlatformCC} (omf: OutputMessageFunctionStdCall);
 
 	(* Allocate/Clone/Unload routines -------------------------------- *)
-	Allocate-: PROCEDURE {PlatformCC} (width, height: LONGINT; bpp: LONGINT; red_mask, green_mask, blue_mask: LONGINT): FIBITMAP;
-	AllocateT-: PROCEDURE {PlatformCC} (type: IMAGE_TYPE; width, height: LONGINT; bpp: LONGINT; red_mask, green_mask, blue_mask: LONGINT): FIBITMAP;
+	Allocate-: PROCEDURE {PlatformCC} (width, height: SIGNED32; bpp: SIGNED32; red_mask, green_mask, blue_mask: SIGNED32): FIBITMAP;
+	AllocateT-: PROCEDURE {PlatformCC} (type: IMAGE_TYPE; width, height: SIGNED32; bpp: SIGNED32; red_mask, green_mask, blue_mask: SIGNED32): FIBITMAP;
 	Clone-: PROCEDURE {PlatformCC}(dib: FIBITMAP): FIBITMAP;
 	Unload-: PROCEDURE {PlatformCC} (dib: FIBITMAP);
 
@@ -562,33 +562,33 @@ VAR
 
 	(* Load/Save routines -------------------------------- *)
 	Load-: PROCEDURE {PlatformCC} (fif: IMAGE_FORMAT; CONST filename: ARRAY OF CHAR; flags: IMAGE_FLAGS): FIBITMAP;
-	LoadU-: PROCEDURE {PlatformCC} (fif: IMAGE_FORMAT; CONST filename: ARRAY OF CHAR16; flags: IMAGE_FLAGS): FIBITMAP;
+	LoadU-: PROCEDURE {PlatformCC} (fif: IMAGE_FORMAT; CONST filename: ARRAY OF CHAR; flags: IMAGE_FLAGS): FIBITMAP;
 	Save-: PROCEDURE {PlatformCC}(fif: IMAGE_FORMAT; dib: FIBITMAP; CONST filename: ARRAY OF CHAR; flags: IMAGE_FLAGS): BOOLEAN;
-	SaveU-: PROCEDURE {PlatformCC} (fif: IMAGE_FORMAT; dib: FIBITMAP; CONST filename: ARRAY OF CHAR16; flags: IMAGE_FLAGS): BOOLEAN;
-	(*LoadFromHandle-: PROCEDURE {PlatformCC} (fif: IMAGE_FORMAT; io: FreeImageIO; hadle: LONGINT; flags: LONGINT): FIBITMAP;
-	SaveToHandle-: PROCEDURE {PlatformCC} (fif: IMAGE_FORMAT; dib: FIBITMAP; io: FreeImageIO ; handle: LONGINT;  flags: LONGINT): BOOLEAN;
+	SaveU-: PROCEDURE {PlatformCC} (fif: IMAGE_FORMAT; dib: FIBITMAP; CONST filename: ARRAY OF CHAR; flags: IMAGE_FLAGS): BOOLEAN;
+	(*LoadFromHandle-: PROCEDURE {PlatformCC} (fif: IMAGE_FORMAT; io: FreeImageIO; hadle: SIGNED32; flags: SIGNED32): FIBITMAP;
+	SaveToHandle-: PROCEDURE {PlatformCC} (fif: IMAGE_FORMAT; dib: FIBITMAP; io: FreeImageIO ; handle: SIGNED32;  flags: SIGNED32): BOOLEAN;
 	*)
 
 
 	(* Memory I/O stream routines  -------------------------------- *)
 
 	(* NOT TESTED *)
-	OpenMemory-: PROCEDURE {PlatformCC} (data: ADDRESS; size_in_bytes: LONGINT): FIMEMORY;
+	OpenMemory-: PROCEDURE {PlatformCC} (data: ADDRESS; size_in_bytes: SIGNED32): FIMEMORY;
 	CloseMemory-: PROCEDURE {PlatformCC} (stream: FIMEMORY);
-	LoadFromMemory-: PROCEDURE {PlatformCC}  (fif: IMAGE_FORMAT; stream: FIMEMORY; flags: LONGINT): FIBITMAP;
-	SaveToMemory-: PROCEDURE {PlatformCC}  (fif: IMAGE_FORMAT; dib: FIBITMAP; stream: FIMEMORY; flags: LONGINT): BOOLEAN;
-	TellMemory-: PROCEDURE {PlatformCC}  (stream: FIMEMORY): LONGINT;
-	SeekMemory-: PROCEDURE {PlatformCC}  (stream: FIMEMORY; offset: LONGINT; origin: LONGINT): BOOLEAN;
-	AcquireMemory-: PROCEDURE {PlatformCC}  (stream: FIMEMORY;  VAR data: ADDRESS; VAR size_in_bytes: LONGINT): BOOLEAN;
-	ReadMemory-: PROCEDURE {PlatformCC}(buffer: ADDRESS; size: LONGINT; count: LONGINT; stream: FIMEMORY): LONGINT;
-	WriteMemory-: PROCEDURE {PlatformCC} (buffer: ADDRESS; size: LONGINT; count: LONGINT; stream: FIMEMORY): LONGINT;
-	LoadMultiBitmapFromMemory-: PROCEDURE {PlatformCC}  (fif: IMAGE_FORMAT; stream: FIMEMORY; flags: LONGINT): FIMULTIBITMAP;
-	SaveMultiBitmapToMemory-: PROCEDURE {PlatformCC} (fif: IMAGE_FORMAT; bitmap: FIMULTIBITMAP; stream: FIMEMORY; flags: LONGINT): BOOLEAN;
+	LoadFromMemory-: PROCEDURE {PlatformCC}  (fif: IMAGE_FORMAT; stream: FIMEMORY; flags: SIGNED32): FIBITMAP;
+	SaveToMemory-: PROCEDURE {PlatformCC}  (fif: IMAGE_FORMAT; dib: FIBITMAP; stream: FIMEMORY; flags: SIGNED32): BOOLEAN;
+	TellMemory-: PROCEDURE {PlatformCC}  (stream: FIMEMORY): SIGNED32;
+	SeekMemory-: PROCEDURE {PlatformCC}  (stream: FIMEMORY; offset: SIGNED32; origin: SIGNED32): BOOLEAN;
+	AcquireMemory-: PROCEDURE {PlatformCC}  (stream: FIMEMORY;  VAR data: ADDRESS; VAR size_in_bytes: SIGNED32): BOOLEAN;
+	ReadMemory-: PROCEDURE {PlatformCC}(buffer: ADDRESS; size: SIGNED32; count: SIGNED32; stream: FIMEMORY): SIGNED32;
+	WriteMemory-: PROCEDURE {PlatformCC} (buffer: ADDRESS; size: SIGNED32; count: SIGNED32; stream: FIMEMORY): SIGNED32;
+	LoadMultiBitmapFromMemory-: PROCEDURE {PlatformCC}  (fif: IMAGE_FORMAT; stream: FIMEMORY; flags: SIGNED32): FIMULTIBITMAP;
+	SaveMultiBitmapToMemory-: PROCEDURE {PlatformCC} (fif: IMAGE_FORMAT; bitmap: FIMULTIBITMAP; stream: FIMEMORY; flags: SIGNED32): BOOLEAN;
 	
 	(* Plugin Interface -------------------------------- *)
-	GetFIFCount-: PROCEDURE {PlatformCC} (): LONGINT;
-	SetPluginEnabled-: PROCEDURE {PlatformCC} (fif: IMAGE_FORMAT; enable: BOOLEAN): LONGINT;
-	IsPluginEnabled-: PROCEDURE {PlatformCC} (fif: IMAGE_FORMAT): LONGINT;
+	GetFIFCount-: PROCEDURE {PlatformCC} (): SIGNED32;
+	SetPluginEnabled-: PROCEDURE {PlatformCC} (fif: IMAGE_FORMAT; enable: BOOLEAN): SIGNED32;
+	IsPluginEnabled-: PROCEDURE {PlatformCC} (fif: IMAGE_FORMAT): SIGNED32;
 	GetFIFFromFormat-: PROCEDURE {PlatformCC} (CONST format: ARRAY OF CHAR): IMAGE_FORMAT;
 	GetFIFFromMime-: PROCEDURE {PlatformCC} (CONST format: ARRAY OF CHAR): IMAGE_FORMAT;
 
@@ -598,34 +598,34 @@ VAR
 	getFIFRegExpr-: PROCEDURE {PlatformCC}  (fif: IMAGE_FORMAT): ADDRESS;
 
 	GetFIFFromFilename- : PROCEDURE {PlatformCC} (CONST fname: ARRAY OF CHAR): IMAGE_FORMAT;
-	GetFIFFromFilenameU-: PROCEDURE {PlatformCC} (CONST fname: ARRAY OF CHAR16): IMAGE_FORMAT;
+	GetFIFFromFilenameU-: PROCEDURE {PlatformCC} (CONST fname: ARRAY OF CHAR): IMAGE_FORMAT;
 	FIFSupportsReading-: PROCEDURE {PlatformCC} (fif: IMAGE_FORMAT): BOOLEAN;
 	FIFSupportsWriting-: PROCEDURE {PlatformCC} (fif: IMAGE_FORMAT): BOOLEAN;
-	FIFSupportsExportBPP-: PROCEDURE {PlatformCC} (fif: IMAGE_FORMAT; bpp: LONGINT): BOOLEAN;
+	FIFSupportsExportBPP-: PROCEDURE {PlatformCC} (fif: IMAGE_FORMAT; bpp: SIGNED32): BOOLEAN;
 	FIFSupportsExportType-: PROCEDURE {PlatformCC} (fif: IMAGE_FORMAT; image_type: IMAGE_TYPE): BOOLEAN;
 	FIFSupportsICCProfiles-: PROCEDURE {PlatformCC} (fif: IMAGE_FORMAT): BOOLEAN;
 	FIFSupportsNoPixels-: PROCEDURE {PlatformCC} (fif: IMAGE_FORMAT): BOOLEAN;
 
 	(* Multipaging interface -------------------------------- *)
 	OpenMultiBitmap-: PROCEDURE {PlatformCC} (fif: IMAGE_FORMAT; CONST filename: ARRAY OF CHAR; create_new, read_only, keep_cache_in_memory: BOOLEAN): FIMULTIBITMAP;
-	OpenMultiBitmapFromHandle-: PROCEDURE {PlatformCC}  (fif: IMAGE_FORMAT ; io: FreeImageIO; handle: LONGINT;  flags: LONGINT): FIMULTIBITMAP; 
-	SaveMultiBitmapToHandle-: PROCEDURE {PlatformCC} (fif: IMAGE_FORMAT; bitmap: FIMULTIBITMAP; io: FreeImageIO;  handle: FHandle;  flags: LONGINT): BOOLEAN;
-	CloseMultiBitmap-: PROCEDURE {PlatformCC} (bitmap: FIMULTIBITMAP; flags: LONGINT): BOOLEAN;
-	GetPageCount-: PROCEDURE {PlatformCC}  (bitmap: FIMULTIBITMAP): LONGINT;
+	OpenMultiBitmapFromHandle-: PROCEDURE {PlatformCC}  (fif: IMAGE_FORMAT ; io: FreeImageIO; handle: SIGNED32;  flags: SIGNED32): FIMULTIBITMAP; 
+	SaveMultiBitmapToHandle-: PROCEDURE {PlatformCC} (fif: IMAGE_FORMAT; bitmap: FIMULTIBITMAP; io: FreeImageIO;  handle: FHandle;  flags: SIGNED32): BOOLEAN;
+	CloseMultiBitmap-: PROCEDURE {PlatformCC} (bitmap: FIMULTIBITMAP; flags: SIGNED32): BOOLEAN;
+	GetPageCount-: PROCEDURE {PlatformCC}  (bitmap: FIMULTIBITMAP): SIGNED32;
 	AppendPage-: PROCEDURE {PlatformCC}  (bitmap: FIMULTIBITMAP; data: FIBITMAP);
-	InsertPage-: PROCEDURE {PlatformCC} (bitmap: FIMULTIBITMAP; page: LONGINT; data: FIBITMAP);
-	DeletePage-: PROCEDURE {PlatformCC}  (bitmap: FIMULTIBITMAP; page: LONGINT);
-	LockPage-: PROCEDURE {PlatformCC} (bitmap: FIMULTIBITMAP; page: LONGINT): FIBITMAP;
+	InsertPage-: PROCEDURE {PlatformCC} (bitmap: FIMULTIBITMAP; page: SIGNED32; data: FIBITMAP);
+	DeletePage-: PROCEDURE {PlatformCC}  (bitmap: FIMULTIBITMAP; page: SIGNED32);
+	LockPage-: PROCEDURE {PlatformCC} (bitmap: FIMULTIBITMAP; page: SIGNED32): FIBITMAP;
 	UnlockPage-: PROCEDURE {PlatformCC}  (bitmap: FIMULTIBITMAP; page: FIBITMAP; changed: BOOLEAN);
-	MovePage-: PROCEDURE {PlatformCC} (bitmap: FIMULTIBITMAP; target, source: LONGINT): BOOLEAN;
-	GetLockedPageNumbers-: PROCEDURE {PlatformCC}  (bitmap: FIMULTIBITMAP; VAR pages: LONGINT; VAR count: LONGINT): BOOLEAN;
+	MovePage-: PROCEDURE {PlatformCC} (bitmap: FIMULTIBITMAP; target, source: SIGNED32): BOOLEAN;
+	GetLockedPageNumbers-: PROCEDURE {PlatformCC}  (bitmap: FIMULTIBITMAP; VAR pages: SIGNED32; VAR count: SIGNED32): BOOLEAN;
 
 
 	(* Filetype request routines -------------------------------- *)
-	GetFileType-: PROCEDURE {PlatformCC} (CONST filename: ARRAY OF CHAR; size: LONGINT): IMAGE_FORMAT;
-	GetFileTypeU-: PROCEDURE {PlatformCC} (CONST filename: ARRAY OF CHAR16; size: LONGINT): IMAGE_FORMAT;
-	GetFileTypeFromHandle-: PROCEDURE {PlatformCC} (io: FreeImageIO; handle: LONGINT; size: LONGINT): IMAGE_FORMAT;
-	GetFileTypeFromMemory-: PROCEDURE {PlatformCC} (stream: FIMEMORY; size: LONGINT ): IMAGE_FORMAT;
+	GetFileType-: PROCEDURE {PlatformCC} (CONST filename: ARRAY OF CHAR; size: SIGNED32): IMAGE_FORMAT;
+	GetFileTypeU-: PROCEDURE {PlatformCC} (CONST filename: ARRAY OF CHAR; size: SIGNED32): IMAGE_FORMAT;
+	GetFileTypeFromHandle-: PROCEDURE {PlatformCC} (io: FreeImageIO; handle: SIGNED32; size: SIGNED32): IMAGE_FORMAT;
+	GetFileTypeFromMemory-: PROCEDURE {PlatformCC} (stream: FIMEMORY; size: SIGNED32 ): IMAGE_FORMAT;
 	
 
 	(* ImageType request routine -------------------------------- *)
@@ -639,54 +639,54 @@ VAR
 
 	(* Pixels access routines -------------------------------- *)
 	GetBits-:  PROCEDURE {PlatformCC} (dib: FIBITMAP): ADDRESS;
-	GetScanLine-: PROCEDURE {PlatformCC} (dib: FIBITMAP; scanline: LONGINT): ADDRESS;
-	GetPixelColor-: PROCEDURE {PlatformCC} (dib: FIBITMAP; x, y: LONGINT; VAR value: RGBQUAD);
-	SetPixelColor-: PROCEDURE {PlatformCC} (dib: FIBITMAP; x, y: LONGINT; CONST value: RGBQUAD);
-	GetPixelIndex-: PROCEDURE {PlatformCC} (dib: FIBITMAP; x, y: LONGINT; VAR value: CHAR): BOOLEAN;
-	SetPixelIndex-: PROCEDURE {PlatformCC} (dib: FIBITMAP; x, y: LONGINT; CONST value: CHAR): BOOLEAN;
+	GetScanLine-: PROCEDURE {PlatformCC} (dib: FIBITMAP; scanline: SIGNED32): ADDRESS;
+	GetPixelColor-: PROCEDURE {PlatformCC} (dib: FIBITMAP; x, y: SIGNED32; VAR value: RGBQUAD);
+	SetPixelColor-: PROCEDURE {PlatformCC} (dib: FIBITMAP; x, y: SIGNED32; CONST value: RGBQUAD);
+	GetPixelIndex-: PROCEDURE {PlatformCC} (dib: FIBITMAP; x, y: SIGNED32; VAR value: CHAR): BOOLEAN;
+	SetPixelIndex-: PROCEDURE {PlatformCC} (dib: FIBITMAP; x, y: SIGNED32; CONST value: CHAR): BOOLEAN;
 
 	(* ****************************** *)
 	(* utilitiy procedures for different type of image line pixels, necati *)
 
-	GetScanLineRGB-: PROCEDURE {PlatformCC}  (dib: FIBITMAP; scanline: LONGINT): PtrLineRGB;
-	GetScanLineRGBA-: PROCEDURE {PlatformCC} (dib: FIBITMAP; scanline: LONGINT): PtrLineRGBA;
-	GetScanLine16-: PROCEDURE {PlatformCC}  (dib: FIBITMAP; scanline: LONGINT):PtrFISINT16;
-	GetScanLine32-: PROCEDURE {PlatformCC} (dib: FIBITMAP; scanline: LONGINT): PtrFIINT32;
-	GetScanLineFloat-: PROCEDURE {PlatformCC} (dib: FIBITMAP; scanline: LONGINT): PtrFIFLOAT;
-	GetScanLineDouble-: PROCEDURE {PlatformCC}  (dib: FIBITMAP; scanline: LONGINT): PtrFIDOUBLE;
-	GetScanLineComplex-: PROCEDURE {PlatformCC}  (dib: FIBITMAP; scanline: LONGINT):PtrFICOMPLEX;
-	GetScanLineFRGB16-: PROCEDURE  {PlatformCC}  (dib: FIBITMAP; scanline: LONGINT): PtrFIRGB16;
-	GetScanLineFRGBA16-: PROCEDURE {PlatformCC} (dib: FIBITMAP; scanline: LONGINT): PtrFIRGBA16;
-	GetScanLineFRGBF-: PROCEDURE {PlatformCC}  (dib: FIBITMAP; scanline: LONGINT): PtrFIRGBF;
-	GetScanLineFRGBAF-: PROCEDURE {PlatformCC} (dib: FIBITMAP; scanline: LONGINT): PtrFIRGBAF;
+	GetScanLineRGB-: PROCEDURE {PlatformCC}  (dib: FIBITMAP; scanline: SIGNED32): PtrLineRGB;
+	GetScanLineRGBA-: PROCEDURE {PlatformCC} (dib: FIBITMAP; scanline: SIGNED32): PtrLineRGBA;
+	GetScanLine16-: PROCEDURE {PlatformCC}  (dib: FIBITMAP; scanline: SIGNED32):PtrFISINT16;
+	GetScanLine32-: PROCEDURE {PlatformCC} (dib: FIBITMAP; scanline: SIGNED32): PtrFIINT32;
+	GetScanLineFloat-: PROCEDURE {PlatformCC} (dib: FIBITMAP; scanline: SIGNED32): PtrFIFLOAT;
+	GetScanLineDouble-: PROCEDURE {PlatformCC}  (dib: FIBITMAP; scanline: SIGNED32): PtrFIDOUBLE;
+	GetScanLineComplex-: PROCEDURE {PlatformCC}  (dib: FIBITMAP; scanline: SIGNED32):PtrFICOMPLEX;
+	GetScanLineFRGB16-: PROCEDURE  {PlatformCC}  (dib: FIBITMAP; scanline: SIGNED32): PtrFIRGB16;
+	GetScanLineFRGBA16-: PROCEDURE {PlatformCC} (dib: FIBITMAP; scanline: SIGNED32): PtrFIRGBA16;
+	GetScanLineFRGBF-: PROCEDURE {PlatformCC}  (dib: FIBITMAP; scanline: SIGNED32): PtrFIRGBF;
+	GetScanLineFRGBAF-: PROCEDURE {PlatformCC} (dib: FIBITMAP; scanline: SIGNED32): PtrFIRGBAF;
 
 	(* DIB info routines -------------------------------- *)
-	GetColorsUsed-: PROCEDURE {PlatformCC}  (dib: FIBITMAP): LONGINT;
-	GetBPP-: PROCEDURE {PlatformCC}  (dib: FIBITMAP): LONGINT;
-	GetWidth-: PROCEDURE {PlatformCC}  (dib: FIBITMAP): LONGINT;
-	GetHeight-: PROCEDURE {PlatformCC}  (dib: FIBITMAP): LONGINT;
-	GetLine-: PROCEDURE {PlatformCC}  (dib: FIBITMAP): LONGINT;
-	GetPitch-: PROCEDURE {PlatformCC}  (dib: FIBITMAP): LONGINT;
-	GetDIBSize-: PROCEDURE {PlatformCC}  (dib: FIBITMAP): LONGINT;
-	GetMemorySize-: PROCEDURE {PlatformCC} (dib: FIBITMAP): LONGINT;
+	GetColorsUsed-: PROCEDURE {PlatformCC}  (dib: FIBITMAP): SIGNED32;
+	GetBPP-: PROCEDURE {PlatformCC}  (dib: FIBITMAP): SIGNED32;
+	GetWidth-: PROCEDURE {PlatformCC}  (dib: FIBITMAP): SIGNED32;
+	GetHeight-: PROCEDURE {PlatformCC}  (dib: FIBITMAP): SIGNED32;
+	GetLine-: PROCEDURE {PlatformCC}  (dib: FIBITMAP): SIGNED32;
+	GetPitch-: PROCEDURE {PlatformCC}  (dib: FIBITMAP): SIGNED32;
+	GetDIBSize-: PROCEDURE {PlatformCC}  (dib: FIBITMAP): SIGNED32;
+	GetMemorySize-: PROCEDURE {PlatformCC} (dib: FIBITMAP): SIGNED32;
 	GetPalette-: PROCEDURE {PlatformCC}  (dib: FIBITMAP): PtrPALETTE;	
-	GetDotsPerMeterX-: PROCEDURE {PlatformCC} (dib: FIBITMAP): LONGINT;
-	GetDotsPerMeterY-: PROCEDURE {PlatformCC} (dib: FIBITMAP): LONGINT;
-	SetDotsPerMeterX-: PROCEDURE {PlatformCC} (dib: FIBITMAP; res: LONGINT);
-	SetDotsPerMeterY-: PROCEDURE {PlatformCC} (dib: FIBITMAP; res: LONGINT);
+	GetDotsPerMeterX-: PROCEDURE {PlatformCC} (dib: FIBITMAP): SIGNED32;
+	GetDotsPerMeterY-: PROCEDURE {PlatformCC} (dib: FIBITMAP): SIGNED32;
+	SetDotsPerMeterX-: PROCEDURE {PlatformCC} (dib: FIBITMAP; res: SIGNED32);
+	SetDotsPerMeterY-: PROCEDURE {PlatformCC} (dib: FIBITMAP; res: SIGNED32);
 	GetInfoHeader-: PROCEDURE {PlatformCC} (dib: FIBITMAP): PtrBITMAPINFOHEADER;
 	GetInfo-: PROCEDURE {PlatformCC} (dib: FIBITMAP): PtrBITMAPINFO;
-	GetColorType-: PROCEDURE {PlatformCC} (dib: FIBITMAP): LONGINT;
-	GetRedMask-: PROCEDURE {PlatformCC} (dib: FIBITMAP): LONGINT;
-	GetGreenMask-: PROCEDURE {PlatformCC} (dib: FIBITMAP): LONGINT;
-	GetBlueMask-: PROCEDURE {PlatformCC} (dib: FIBITMAP): LONGINT;
-	GetTransparencyCount-: PROCEDURE {PlatformCC} (dib: FIBITMAP): LONGINT;
-	GetTransparencyTable-: PROCEDURE {PlatformCC} (dib: FIBITMAP): LONGINT;
+	GetColorType-: PROCEDURE {PlatformCC} (dib: FIBITMAP): SIGNED32;
+	GetRedMask-: PROCEDURE {PlatformCC} (dib: FIBITMAP): SIGNED32;
+	GetGreenMask-: PROCEDURE {PlatformCC} (dib: FIBITMAP): SIGNED32;
+	GetBlueMask-: PROCEDURE {PlatformCC} (dib: FIBITMAP): SIGNED32;
+	GetTransparencyCount-: PROCEDURE {PlatformCC} (dib: FIBITMAP): SIGNED32;
+	GetTransparencyTable-: PROCEDURE {PlatformCC} (dib: FIBITMAP): SIGNED32;
 	SetTransparent-: PROCEDURE {PlatformCC} (dib: FIBITMAP; enabled: BOOLEAN);
-	SetTransparencyTable-: PROCEDURE {PlatformCC} (dib: FIBITMAP; table: ADDRESS; count: LONGINT);
+	SetTransparencyTable-: PROCEDURE {PlatformCC} (dib: FIBITMAP; table: ADDRESS; count: SIGNED32);
 	IsTransparent-: PROCEDURE {PlatformCC} (dib: FIBITMAP): BOOLEAN;
-	SetTransparentIndex-: PROCEDURE {PlatformCC} (dib:FIBITMAP; index: LONGINT);
-	GetTransparentIndex-: PROCEDURE {PlatformCC} (dib:FIBITMAP): LONGINT;
+	SetTransparentIndex-: PROCEDURE {PlatformCC} (dib:FIBITMAP; index: SIGNED32);
+	GetTransparentIndex-: PROCEDURE {PlatformCC} (dib:FIBITMAP): SIGNED32;
 	HasBackgroundColor-: PROCEDURE {PlatformCC} (dib: FIBITMAP): BOOLEAN;
 	GetBackgroundColor-: PROCEDURE {PlatformCC} (dib: FIBITMAP; VAR bkcolor: RGBQUAD): BOOLEAN;
 	SetBackgroundColor-: PROCEDURE {PlatformCC} (dib: FIBITMAP;  CONST bkcolor: RGBQUAD): BOOLEAN;
@@ -696,7 +696,7 @@ VAR
 	(* ICC profile routines -------------------------------- *)
 
 	GetICCProfile-: PROCEDURE {PlatformCC} (dib: FIBITMAP): FIICCPROFILE;
-	CreateICCProfile-: PROCEDURE {PlatformCC} (dib: FIBITMAP; data: ADDRESS; size: LONGINT): FIICCPROFILE;
+	CreateICCProfile-: PROCEDURE {PlatformCC} (dib: FIBITMAP; data: ADDRESS; size: SIGNED32): FIICCPROFILE;
 	DestroyICCProfile-: PROCEDURE {PlatformCC} (dib: FIBITMAP);
 
 	(* Line Conversion Routines : not translated yet -------------------------------- *)
@@ -710,12 +710,12 @@ VAR
 	ConvertTo24Bits-: PROCEDURE {PlatformCC} (dib: FIBITMAP): FIBITMAP;
 	ConvertTo32Bits-: PROCEDURE {PlatformCC}  (dib: FIBITMAP): FIBITMAP;
 	ColorQuantize-: PROCEDURE {PlatformCC}  (dib: FIBITMAP; quantize: IMAGE_QUANTIZE): FIBITMAP;
-	ColorQuantizeEx-: PROCEDURE {PlatformCC} (dib: FIBITMAP; quantize: IMAGE_QUANTIZE; PaletteSize: LONGINT; ReserveSize: LONGINT; ReservePalette: RGBQUAD): FIBITMAP;
-	Threshold-: PROCEDURE {PlatformCC}  (dib: FIBITMAP; T: SHORTINT): FIBITMAP;
+	ColorQuantizeEx-: PROCEDURE {PlatformCC} (dib: FIBITMAP; quantize: IMAGE_QUANTIZE; PaletteSize: SIGNED32; ReserveSize: SIGNED32; ReservePalette: RGBQUAD): FIBITMAP;
+	Threshold-: PROCEDURE {PlatformCC}  (dib: FIBITMAP; T: SIGNED8): FIBITMAP;
 	Dither-: PROCEDURE {PlatformCC}  (dib: FIBITMAP; algorithm: IMAGE_DITHER): FIBITMAP;
-	ConvertFromRawBits-: PROCEDURE {PlatformCC} (bits: ADDRESS; width, height, pitch: LONGINT; bpp, red_mask, green_mask, blue_mask: LONGINT; topdown: BOOLEAN): FIBITMAP;
-	ConvertFromRawBitsEx-: PROCEDURE {PlatformCC} (copySource: BOOLEAN; bits: ADDRESS; type: IMAGE_TYPE; width, height, pitch: LONGINT; bpp, red_mask, green_mask, blue_mask: LONGINT;  topdown: BOOLEAN): FIBITMAP;
-	ConvertToRawBits-: PROCEDURE {PlatformCC} (bits: ADDRESS; dib: FIBITMAP; pitch: LONGINT; bpp, red_mask, green_mask, blue_mask: LONGINT; topdown: BOOLEAN);
+	ConvertFromRawBits-: PROCEDURE {PlatformCC} (bits: ADDRESS; width, height, pitch: SIGNED32; bpp, red_mask, green_mask, blue_mask: SIGNED32; topdown: BOOLEAN): FIBITMAP;
+	ConvertFromRawBitsEx-: PROCEDURE {PlatformCC} (copySource: BOOLEAN; bits: ADDRESS; type: IMAGE_TYPE; width, height, pitch: SIGNED32; bpp, red_mask, green_mask, blue_mask: SIGNED32;  topdown: BOOLEAN): FIBITMAP;
+	ConvertToRawBits-: PROCEDURE {PlatformCC} (bits: ADDRESS; dib: FIBITMAP; pitch: SIGNED32; bpp, red_mask, green_mask, blue_mask: SIGNED32; topdown: BOOLEAN);
 	ConvertToFloat-: PROCEDURE {PlatformCC} (dib: FIBITMAP): FIBITMAP;
 	ConvertToRGBF-: PROCEDURE {PlatformCC}  (dib: FIBITMAP): FIBITMAP;
 	ConvertToRGBAF- : PROCEDURE {PlatformCC} (dib: FIBITMAP): FIBITMAP;
@@ -726,20 +726,20 @@ VAR
 	ConvertToType-: PROCEDURE {PlatformCC}  (src: FIBITMAP; dst_type: IMAGE_TYPE; scale_linear: BOOLEAN): FIBITMAP;
 
 	(* Tone mapping operators *)
-	ToneMapping-: PROCEDURE {PlatformCC}  (dib: FIBITMAP; tmo: IMAGE_TMO; first_param, second_param: LONGREAL): FIBITMAP;
-	TmoDrago03-: PROCEDURE {PlatformCC}  (src: FIBITMAP; gamma, exposure: LONGREAL): FIBITMAP;
+	ToneMapping-: PROCEDURE {PlatformCC}  (dib: FIBITMAP; tmo: IMAGE_TMO; first_param, second_param: FLOAT64): FIBITMAP;
+	TmoDrago03-: PROCEDURE {PlatformCC}  (src: FIBITMAP; gamma, exposure: FLOAT64): FIBITMAP;
 
-	TmoReinhard05-: PROCEDURE {PlatformCC}  (src: FIBITMAP; intensity, contrast: LONGREAL): FIBITMAP;
-	TmoReinhard05Ex-: PROCEDURE {PlatformCC} (src: FIBITMAP; intensity, contrast, adaptation, color_correction: LONGREAL): FIBITMAP;
-	TmoFattal02-: PROCEDURE {PlatformCC} (src: FIBITMAP; color_saturation,  attenuation: LONGREAL): FIBITMAP;
+	TmoReinhard05-: PROCEDURE {PlatformCC}  (src: FIBITMAP; intensity, contrast: FLOAT64): FIBITMAP;
+	TmoReinhard05Ex-: PROCEDURE {PlatformCC} (src: FIBITMAP; intensity, contrast, adaptation, color_correction: FLOAT64): FIBITMAP;
+	TmoFattal02-: PROCEDURE {PlatformCC} (src: FIBITMAP; color_saturation,  attenuation: FLOAT64): FIBITMAP;
 	
 	(* ZLib interface -------------------------------- *)
 
-	ZLibCompress-: PROCEDURE {PlatformCC} (target: ADDRESS; target_size: LONGINT; source: ADDRESS; source_size: LONGINT): LONGINT;
-	ZLibUncompress-: PROCEDURE {PlatformCC} (target: ADDRESS; target_size: LONGINT; source: ADDRESS; source_size: LONGINT): LONGINT;
-	ZLibGZip-: PROCEDURE {PlatformCC} (target: ADDRESS; target_size: LONGINT; source: ADDRESS; source_size: LONGINT): LONGINT;
-	ZLibGUnzip-: PROCEDURE {PlatformCC} (target: ADDRESS; target_size: LONGINT; source: ADDRESS; source_size: LONGINT): LONGINT;
-	ZLibCRC32-: PROCEDURE {PlatformCC} (crc: LONGINT; source: ADDRESS; source_size: LONGINT): LONGINT;
+	ZLibCompress-: PROCEDURE {PlatformCC} (target: ADDRESS; target_size: SIGNED32; source: ADDRESS; source_size: SIGNED32): SIGNED32;
+	ZLibUncompress-: PROCEDURE {PlatformCC} (target: ADDRESS; target_size: SIGNED32; source: ADDRESS; source_size: SIGNED32): SIGNED32;
+	ZLibGZip-: PROCEDURE {PlatformCC} (target: ADDRESS; target_size: SIGNED32; source: ADDRESS; source_size: SIGNED32): SIGNED32;
+	ZLibGUnzip-: PROCEDURE {PlatformCC} (target: ADDRESS; target_size: SIGNED32; source: ADDRESS; source_size: SIGNED32): SIGNED32;
+	ZLibCRC32-: PROCEDURE {PlatformCC} (crc: SIGNED32; source: ADDRESS; source_size: SIGNED32): SIGNED32;
 
 	(*   Metadata routines -------------------------------- *)
 	(* tag creation / destruction*)
@@ -750,17 +750,17 @@ VAR
 	 (* tag getters and setters *)
 	getTagKey-: PROCEDURE {PlatformCC} (tag: FITAG): ADDRESS;
 	getTagDescription-: PROCEDURE {PlatformCC} (tag: FITAG): ADDRESS;
-	GetTagID-: PROCEDURE {PlatformCC} (tag: FITAG): LONGINT;
+	GetTagID-: PROCEDURE {PlatformCC} (tag: FITAG): SIGNED32;
 	GetTagType-: PROCEDURE {PlatformCC} (tag: FITAG): IMAGE_MDTYPE;
-	GetTagCount-: PROCEDURE {PlatformCC} (tag: FITAG): LONGINT;
-	GetTagLength-: PROCEDURE {PlatformCC} (tag: FITAG): LONGINT;
+	GetTagCount-: PROCEDURE {PlatformCC} (tag: FITAG): SIGNED32;
+	GetTagLength-: PROCEDURE {PlatformCC} (tag: FITAG): SIGNED32;
 	GetTagValue-: PROCEDURE {PlatformCC} (tag: FITAG): ADDRESS;
 	SetTagKey-: PROCEDURE {PlatformCC} (tag: FITAG; CONST key: ARRAY OF CHAR): BOOLEAN;
 	SetTagDescription-: PROCEDURE {PlatformCC} (tag: FITAG; CONST description: ARRAY OF CHAR): BOOLEAN;
-	SetTagID-: PROCEDURE {PlatformCC} (tag: FITAG; id: LONGINT): BOOLEAN;
+	SetTagID-: PROCEDURE {PlatformCC} (tag: FITAG; id: SIGNED32): BOOLEAN;
 	SetTagType-: PROCEDURE {PlatformCC} (tag: FITAG; atype: IMAGE_MDTYPE): BOOLEAN;
-	SetTagCount-: PROCEDURE {PlatformCC} (tag: FITAG; count: LONGINT): BOOLEAN;
-	SetTagLength-: PROCEDURE {PlatformCC} (tag: FITAG; length: LONGINT): BOOLEAN;
+	SetTagCount-: PROCEDURE {PlatformCC} (tag: FITAG; count: SIGNED32): BOOLEAN;
+	SetTagLength-: PROCEDURE {PlatformCC} (tag: FITAG; length: SIGNED32): BOOLEAN;
 	SetTagValue-: PROCEDURE {PlatformCC} (tag: FITAG; value: ADDRESS): BOOLEAN;
 
 	(* iterator*)
@@ -774,7 +774,7 @@ VAR
 	SetMetadataKeyValue-: PROCEDURE {PlatformCC} (model: IMAGE_MDMODEL; dib: FIBITMAP; CONST key, value: ARRAY OF CHAR): BOOLEAN;
 
 	(* helpers *)
-	GetMetadataCount-: PROCEDURE {PlatformCC} (model: IMAGE_MDMODEL; dib: FIBITMAP): LONGINT;
+	GetMetadataCount-: PROCEDURE {PlatformCC} (model: IMAGE_MDMODEL; dib: FIBITMAP): SIGNED32;
 	CloneMetadata-: PROCEDURE {PlatformCC} ( dst, src: FIBITMAP): BOOLEAN;
 	 (* tag to C string conversion *)
 	tagToString-: PROCEDURE {PlatformCC} (model: IMAGE_MDMODEL; tag: FITAG; make: ADDRESS): ADDRESS;
@@ -784,45 +784,45 @@ VAR
 	JPEG lossless transformation routines
 	-------------------------------------------------------------------------- *)
 	JPEGTransform-: PROCEDURE {PlatformCC} (CONST srcfile, dstfile: ARRAY OF CHAR; operation: IMAGE_JPEG_OPERATION; perfect: BOOLEAN): BOOLEAN;
-	JPEGTransformU-: PROCEDURE {PlatformCC} (CONST srcfile, dstfile: ARRAY OF CHAR16; operation: IMAGE_JPEG_OPERATION; perfect: BOOLEAN):  BOOLEAN;
-	JPEGCrop-: PROCEDURE {PlatformCC} (CONST srcfile, dstfile: ARRAY OF CHAR; left, top, right, bottom: LONGINT): BOOLEAN;
-	JPEGCropU-: PROCEDURE {PlatformCC} (CONST srcfile, dstfile: ARRAY OF CHAR16;  left,  top, right, bottom: LONGINT): BOOLEAN;
+	JPEGTransformU-: PROCEDURE {PlatformCC} (CONST srcfile, dstfile: ARRAY OF CHAR; operation: IMAGE_JPEG_OPERATION; perfect: BOOLEAN):  BOOLEAN;
+	JPEGCrop-: PROCEDURE {PlatformCC} (CONST srcfile, dstfile: ARRAY OF CHAR; left, top, right, bottom: SIGNED32): BOOLEAN;
+	JPEGCropU-: PROCEDURE {PlatformCC} (CONST srcfile, dstfile: ARRAY OF CHAR;  left,  top, right, bottom: SIGNED32): BOOLEAN;
 
 (*
-	JPEGTransformFromHandle-: PROCEDURE {PlatformCC}(FreeImageIO* src_io, fi_handle src_handle, FreeImageIO* dst_io, fi_handle dst_handle; operation: IMAGE_JPEG_OPERATION; VAR left, top, right, bottom: LONGINT; perfect: BOOLEAN): BOOLEAN;
+	JPEGTransformFromHandle-: PROCEDURE {PlatformCC}(FreeImageIO* src_io, fi_handle src_handle, FreeImageIO* dst_io, fi_handle dst_handle; operation: IMAGE_JPEG_OPERATION; VAR left, top, right, bottom: SIGNED32; perfect: BOOLEAN): BOOLEAN;
 *)
-	JPEGTransformCombined-: PROCEDURE {PlatformCC} (CONST srcfile, destfile: ARRAY OF CHAR; operation: IMAGE_JPEG_OPERATION; VAR left, top, right, bottom: LONGINT; perfect: BOOLEAN): BOOLEAN;
-	JPEGTransformCombinedU-: PROCEDURE {PlatformCC} (CONST srcfile, dstfile: ARRAY OF CHAR16; operation: IMAGE_JPEG_OPERATION; VAR left, top, right, bottom: LONGINT; perfect: BOOLEAN): BOOLEAN;
-	JPEGTransformCombinedFromMemory-: PROCEDURE {PlatformCC} (srcstream,  dststream: FIMEMORY; operation: IMAGE_JPEG_OPERATION; VAR left, top, right, bottom:LONGINT; perfect: BOOLEAN): BOOLEAN;
+	JPEGTransformCombined-: PROCEDURE {PlatformCC} (CONST srcfile, destfile: ARRAY OF CHAR; operation: IMAGE_JPEG_OPERATION; VAR left, top, right, bottom: SIGNED32; perfect: BOOLEAN): BOOLEAN;
+	JPEGTransformCombinedU-: PROCEDURE {PlatformCC} (CONST srcfile, dstfile: ARRAY OF CHAR; operation: IMAGE_JPEG_OPERATION; VAR left, top, right, bottom: SIGNED32; perfect: BOOLEAN): BOOLEAN;
+	JPEGTransformCombinedFromMemory-: PROCEDURE {PlatformCC} (srcstream,  dststream: FIMEMORY; operation: IMAGE_JPEG_OPERATION; VAR left, top, right, bottom:SIGNED32; perfect: BOOLEAN): BOOLEAN;
 
 	(* Image manipulation toolkit -------------------------------- *)
 		(* rotation and flipping *)
 	(*  @deprecated see FreeImage_Rotate *)
-	RotateClassic-: PROCEDURE {PlatformCC} (dib: FIBITMAP; angle: LONGREAL): FIBITMAP;
-	Rotate-:  PROCEDURE {PlatformCC}(dib: FIBITMAP; angle: LONGREAL; bkcolor: ADDRESS): FIBITMAP;
+	RotateClassic-: PROCEDURE {PlatformCC} (dib: FIBITMAP; angle: FLOAT64): FIBITMAP;
+	Rotate-:  PROCEDURE {PlatformCC}(dib: FIBITMAP; angle: FLOAT64; bkcolor: ADDRESS): FIBITMAP;
 
-	RotateEx-: PROCEDURE {PlatformCC} (dib: FIBITMAP; angle: LONGREAL; x_shift, y_shift, x_origin, y_origin: LONGREAL; use_mask: BOOLEAN): FIBITMAP;
+	RotateEx-: PROCEDURE {PlatformCC} (dib: FIBITMAP; angle: FLOAT64; x_shift, y_shift, x_origin, y_origin: FLOAT64; use_mask: BOOLEAN): FIBITMAP;
 	FlipHorizontal-: PROCEDURE {PlatformCC} (dib: FIBITMAP): BOOLEAN;
 	FlipVertical-: PROCEDURE {PlatformCC}(dib: FIBITMAP): BOOLEAN;
 
 		(* upsampling / downsampling *)
-	Rescale-: PROCEDURE {PlatformCC} (dib: FIBITMAP; dst_width, dst_height: LONGINT; filter: IMAGE_FILTER): FIBITMAP;
-	MakeThumbnail-:  PROCEDURE {PlatformCC} (dib: FIBITMAP; max_pixel_size: LONGINT; convert: BOOLEAN): FIBITMAP;	
-	RescaleRect-: PROCEDURE {PlatformCC} (dib: FIBITMAP; dst_width, dst_height, left, top, right, bottom: LONGINT; filter: IMAGE_FILTER; flags: LONGINT): FIBITMAP;
+	Rescale-: PROCEDURE {PlatformCC} (dib: FIBITMAP; dst_width, dst_height: SIGNED32; filter: IMAGE_FILTER): FIBITMAP;
+	MakeThumbnail-:  PROCEDURE {PlatformCC} (dib: FIBITMAP; max_pixel_size: SIGNED32; convert: BOOLEAN): FIBITMAP;	
+	RescaleRect-: PROCEDURE {PlatformCC} (dib: FIBITMAP; dst_width, dst_height, left, top, right, bottom: SIGNED32; filter: IMAGE_FILTER; flags: SIGNED32): FIBITMAP;
 
 		(* color manipulation routines (point operations)*)
 	AdjustCurve-: PROCEDURE {PlatformCC} (dib: FIBITMAP;  LUT: ADDRESS; (* ARRAY OF CHAR *) channel: IMAGE_COLOR_CHANNEL): BOOLEAN;
-	AdjustGamma-: PROCEDURE {PlatformCC} (dib: FIBITMAP; gamma: LONGREAL): BOOLEAN;
-	AdjustBrightness-: PROCEDURE {PlatformCC} (dib: FIBITMAP; percentage: LONGREAL): BOOLEAN;
-	AdjustContrast-: PROCEDURE {PlatformCC}  (dib: FIBITMAP; percentage: LONGREAL): BOOLEAN;
+	AdjustGamma-: PROCEDURE {PlatformCC} (dib: FIBITMAP; gamma: FLOAT64): BOOLEAN;
+	AdjustBrightness-: PROCEDURE {PlatformCC} (dib: FIBITMAP; percentage: FLOAT64): BOOLEAN;
+	AdjustContrast-: PROCEDURE {PlatformCC}  (dib: FIBITMAP; percentage: FLOAT64): BOOLEAN;
 	Invert-: PROCEDURE {PlatformCC} (dib: FIBITMAP): BOOLEAN;
-	GetHistogram-: PROCEDURE {PlatformCC} (dib: FIBITMAP; histo: ADDRESS; (* ARRAY OF LONGINT;*)  channel: IMAGE_COLOR_CHANNEL): BOOLEAN;
-	GetAdjustColorsLookupTable-: PROCEDURE {PlatformCC} (VAR LUT: Palette; brightness,  contrast,  gamma: LONGREAL; invert: BOOLEAN): LONGINT;
-	AdjustColors-: PROCEDURE {PlatformCC} (dib: FIBITMAP; brightness, contrast, gamma: LONGREAL; invert: BOOLEAN);
-	ApplyColorMapping-: PROCEDURE {PlatformCC} (dib: FIBITMAP; VAR srccolors, dstcolors: Palette; count: LONGINT;  ignore_alpha, swap: LONGINT): LONGINT;
-	SwapColors-: PROCEDURE {PlatformCC} (dib: FIBITMAP; VAR  color_a, color_b: Palette ; ignore_alpha: BOOLEAN): LONGINT;
-	ApplyPaletteIndexMapping-: PROCEDURE {PlatformCC} (dib: FIBITMAP; VAR  srcindices,	dstindices: LUT; count: LONGINT;swap: BOOLEAN): LONGINT;
-	SwapPaletteIndices-: PROCEDURE {PlatformCC} (dib: FIBITMAP; VAR index_a, index_b: LUT): LONGINT;
+	GetHistogram-: PROCEDURE {PlatformCC} (dib: FIBITMAP; histo: ADDRESS; (* ARRAY OF SIGNED32;*)  channel: IMAGE_COLOR_CHANNEL): BOOLEAN;
+	GetAdjustColorsLookupTable-: PROCEDURE {PlatformCC} (VAR LUT: Palette; brightness,  contrast,  gamma: FLOAT64; invert: BOOLEAN): SIGNED32;
+	AdjustColors-: PROCEDURE {PlatformCC} (dib: FIBITMAP; brightness, contrast, gamma: FLOAT64; invert: BOOLEAN);
+	ApplyColorMapping-: PROCEDURE {PlatformCC} (dib: FIBITMAP; VAR srccolors, dstcolors: Palette; count: SIGNED32;  ignore_alpha, swap: SIGNED32): SIGNED32;
+	SwapColors-: PROCEDURE {PlatformCC} (dib: FIBITMAP; VAR  color_a, color_b: Palette ; ignore_alpha: BOOLEAN): SIGNED32;
+	ApplyPaletteIndexMapping-: PROCEDURE {PlatformCC} (dib: FIBITMAP; VAR  srcindices,	dstindices: LUT; count: SIGNED32;swap: BOOLEAN): SIGNED32;
+	SwapPaletteIndices-: PROCEDURE {PlatformCC} (dib: FIBITMAP; VAR index_a, index_b: LUT): SIGNED32;
 
 	(* channel processing routines -------------------------------- *)
 	GetChannel-: PROCEDURE {PlatformCC}  (dib: FIBITMAP; channel: IMAGE_COLOR_CHANNEL): FIBITMAP;
@@ -831,20 +831,20 @@ VAR
 	SetComplexChannel-: PROCEDURE {PlatformCC} (dst: FIBITMAP; src: FIBITMAP; channel: IMAGE_COLOR_CHANNEL): BOOLEAN;
 
 	(* copy / paste / composite routines -------------------------------- *)
-	Copy-: PROCEDURE {PlatformCC} (dib: FIBITMAP; left, top, right, bottom: LONGINT): FIBITMAP;
-	Paste-: PROCEDURE {PlatformCC} (dst: FIBITMAP; src: FIBITMAP; left, top, alpha: LONGINT): BOOLEAN;
-	CreateView-: PROCEDURE {PlatformCC} (dib: FIBITMAP; left, top, right, bottom: LONGINT): FIBITMAP;
+	Copy-: PROCEDURE {PlatformCC} (dib: FIBITMAP; left, top, right, bottom: SIGNED32): FIBITMAP;
+	Paste-: PROCEDURE {PlatformCC} (dst: FIBITMAP; src: FIBITMAP; left, top, alpha: SIGNED32): BOOLEAN;
+	CreateView-: PROCEDURE {PlatformCC} (dib: FIBITMAP; left, top, right, bottom: SIGNED32): FIBITMAP;
 	Composite-: PROCEDURE {PlatformCC} (fg: FIBITMAP; useFileBkg: BOOLEAN; appBkColor: RGBQUAD; bg: FIBITMAP): FIBITMAP;
 	PreMultiplyWithAlpha-: PROCEDURE {PlatformCC} (dib: FIBITMAP): BOOLEAN;
 
 	(*  background filling routines -------------------------------- *)
-	FillBackground-: PROCEDURE {PlatformCC} (dib: FIBITMAP ;  color: LONGINT; options: LONGINT): BOOLEAN;
-	EnlargeCanvas-: PROCEDURE {PlatformCC} (src: FIBITMAP;   left,  top, right,  bottom: LONGINT; color: LONGINT;  options: LONGINT): FIBITMAP;
-	AllocateEx-: PROCEDURE {PlatformCC} (width, height, bpp: LONGINT; color: ADDRESS;  options : LONGINT; palette: PtrPALETTE; red_mask, green_mask, blue_mask: LONGINT): FIBITMAP;
-	AllocateExT-: PROCEDURE {PlatformCC} (type: IMAGE_TYPE;  width,  height,  bpp: LONGINT;  color: ADDRESS; options: LONGINT; palette: PtrPALETTE; red_mask, green_mask, blue_mask: LONGINT): FIBITMAP;
+	FillBackground-: PROCEDURE {PlatformCC} (dib: FIBITMAP ;  color: SIGNED32; options: SIGNED32): BOOLEAN;
+	EnlargeCanvas-: PROCEDURE {PlatformCC} (src: FIBITMAP;   left,  top, right,  bottom: SIGNED32; color: SIGNED32;  options: SIGNED32): FIBITMAP;
+	AllocateEx-: PROCEDURE {PlatformCC} (width, height, bpp: SIGNED32; color: ADDRESS;  options : SIGNED32; palette: PtrPALETTE; red_mask, green_mask, blue_mask: SIGNED32): FIBITMAP;
+	AllocateExT-: PROCEDURE {PlatformCC} (type: IMAGE_TYPE;  width,  height,  bpp: SIGNED32;  color: ADDRESS; options: SIGNED32; palette: PtrPALETTE; red_mask, green_mask, blue_mask: SIGNED32): FIBITMAP;
 
 	(* miscellaneous algorithms -------------------------------- *)
-	MultigridPoissonSolver-: PROCEDURE {PlatformCC} (Laplacian: FIBITMAP; ncycle:LONGINT): FIBITMAP;
+	MultigridPoissonSolver-: PROCEDURE {PlatformCC} (Laplacian: FIBITMAP; ncycle:SIGNED32): FIBITMAP;
 
 
 	PROCEDURE GetProcAddress*( lib: HostLibs.LibHandle;  CONST procName: ARRAY OF CHAR;  adr: ADDRESS );
@@ -1592,7 +1592,7 @@ VAR
 	cansave, success: BOOLEAN;
 	fif: IMAGE_FORMAT;
 	type: IMAGE_TYPE;
-	bpp: LONGINT;
+	bpp: SIGNED32;
 BEGIN
 	success := FALSE;
 	fif := GetFIFFromFilename(fname);
@@ -1619,7 +1619,7 @@ END SaveImage;
 #END
 
 VAR 
-	i: LONGINT;
+	i: SIGNED32;
 BEGIN	
 	IF msg # NIL THEN
 		KernelLog.String("FreeImage ERROR: ");

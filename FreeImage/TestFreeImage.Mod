@@ -11,7 +11,7 @@ TYPE
 	PicPanel = OBJECT(WMComponents.FormWindow)
 		VAR impanel-: WMStandardComponents.ImagePanel;
 		
-		PROCEDURE &New(w, h: LONGINT);
+		PROCEDURE &New(w, h: SIGNED32);
 		BEGIN
 			Init(w, h, FALSE);
 			NEW(impanel); 
@@ -35,7 +35,7 @@ PROCEDURE GetFormats*;
 VAR
 	str, format, description, ext : Strings.String;
 	icc: CHAR;
-	count: LONGINT;
+	count: SIGNED32;
 	fif: FI.IMAGE_FORMAT;
 BEGIN
 	IF FI.IsLittleEndian() THEN
@@ -119,7 +119,7 @@ PROCEDURE Open*(context: Commands.Context);
 VAR fname: ARRAY 128 OF CHAR;
 	tdib, dib: FIBITMAP;
 	img: WMGraphics.Image;
-	w, h,  Bpp: LONGINT;
+	w, h,  Bpp: SIGNED32;
 	bits: ADDRESS;
 	res: BOOLEAN;
 	pp: PicPanel;
@@ -180,7 +180,7 @@ VAR fname: ARRAY 128 OF CHAR;
 	tdib, dib: FIBITMAP;
 	pp: PicPanel;
 	img: WMGraphics.Image;
-	w, h, Bpp: LONGINT;
+	w, h, Bpp: SIGNED32;
 	bits: ADDRESS;
 	res: BOOLEAN;
 BEGIN
@@ -235,7 +235,7 @@ PROCEDURE SaveJPG*(context: Commands.Context);
 VAR fname: ARRAY 128 OF CHAR;
 	tdib: FIBITMAP;
 	img: Raster.Image;
-	w, h, i, j: LONGINT;
+	w, h, i, j: SIGNED32;
 	pix: Raster.Pixel;
 	mode: Raster.Mode;
 BEGIN
@@ -243,7 +243,7 @@ BEGIN
 	img := WMGraphics.LoadImage(fname, FALSE );	
 	IF img = NIL THEN RETURN END;	
 	
-	w := img.width(LONGINT); h := img.height(LONGINT);
+	w := img.width(SIGNED32); h := img.height(SIGNED32);
 	
 	
 	tdib := FI.Allocate(w, h, 24, 0, 0, 0);
@@ -275,11 +275,11 @@ PROCEDURE MakeFresnel*;
 VAR 
 	im: FI.FIBITMAP;
 
-	w, h, scale: LONGINT;
+	w, h, scale: SIGNED32;
 	sinTab: ARRAY 256 OF CHAR;
 
-	i, j, x, y: LONGINT;
-	cX, cY, d: LONGINT;
+	i, j, x, y: SIGNED32;
+	cX, cY, d: SIGNED32;
 	pal: FI.PtrPALETTE;			
 	imgbits: ADDRESS;
 			

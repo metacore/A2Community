@@ -13,7 +13,7 @@ VAR fname: ARRAY 128 OF CHAR;
 	fif, memfif: FI.IMAGE_FORMAT;
 	hmem: FI.FIMEMORY;
 	res: BOOLEAN;
-	filesize: LONGINT;
+	filesize: SIGNED32;
 BEGIN
 	IF ~context.arg.GetString(fname) THEN RETURN END;
 	tdib := FI.LoadImage(fname, 0);
@@ -78,7 +78,7 @@ VAR fname: ARRAY 128 OF CHAR;
 	f: Files.File;
 	rd: Files.Rider;
 	membuf: POINTER TO ARRAY OF CHAR;
-	bufsize: LONGINT;
+	bufsize: SIGNED32;
 BEGIN
 	IF ~context.arg.GetString(fname) THEN RETURN END;
 
@@ -88,7 +88,7 @@ BEGIN
 		RETURN;
 	END;
 				
-	bufsize := f.Length()(LONGINT);
+	bufsize := f.Length()(SIGNED32);
 	Out.String("Length of "); Out.String(title); Out.Int(bufsize, 10);  
 	Out.String(" bytes"); Out.Ln;
 		
@@ -130,7 +130,7 @@ VAR fname: ARRAY 128 OF CHAR;
 	f: Files.File;
 	wr: Files.Rider;
 	membufptr: ADDRESS;
-	i, bufsize: LONGINT;
+	i, bufsize: SIGNED32;
 	ch: CHAR;
 
 BEGIN

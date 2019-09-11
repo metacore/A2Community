@@ -82,7 +82,7 @@ PROCEDURE Open*(context: Commands.Context);
 VAR 
 	tdib: FI.FIBITMAP;
 	fname: ARRAY 128 OF CHAR;
-	count, w, h: LONGINT;
+	count, w, h: SIGNED32;
 	tagmake: FITAG;
 	buffer: Strings.String;
 	bufferstr: ARRAY 256 OF CHAR;

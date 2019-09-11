@@ -152,7 +152,7 @@ FI_STRUCT (FIMULTIBITMAP) { void *data; };
 #include <inttypes.h>
 typedef int32_t BOOL;
 typedef uint8_t BYTE;
-typedef uint16_t WORD;
+typedef uint16_t SIGNED16;
 typedef uint32_t DWORD;
 typedef int32_t LONG;
 typedef int64_t INT64;
@@ -161,7 +161,7 @@ typedef uint64_t UINT64;
 // MS is not C99 ISO compliant
 typedef long BOOL;
 typedef unsigned char BYTE;
-typedef unsigned short WORD;
+typedef unsigned short SIGNED16;
 typedef unsigned long DWORD;
 typedef long LONG;
 typedef signed __int64 INT64;
@@ -209,8 +209,8 @@ typedef struct tagBITMAPINFOHEADER{
   DWORD biSize;
   LONG  biWidth; 
   LONG  biHeight; 
-  WORD  biPlanes; 
-  WORD  biBitCount;
+  SIGNED16  biPlanes; 
+  SIGNED16  biBitCount;
   DWORD biCompression; 
   DWORD biSizeImage; 
   LONG  biXPelsPerMeter; 
@@ -237,18 +237,18 @@ typedef struct tagBITMAPINFO {
 /** 48-bit RGB 
 */
 typedef struct tagFIRGB16 {
-	WORD red;
-	WORD green;
-	WORD blue;
+	SIGNED16 red;
+	SIGNED16 green;
+	SIGNED16 blue;
 } FIRGB16;
 
 /** 64-bit RGBA
 */
 typedef struct tagFIRGBA16 {
-	WORD red;
-	WORD green;
-	WORD blue;
-	WORD alpha;
+	SIGNED16 red;
+	SIGNED16 green;
+	SIGNED16 blue;
+	SIGNED16 alpha;
 } FIRGBA16;
 
 /** 96-bit RGB Float
@@ -268,7 +268,7 @@ typedef struct tagFIRGBAF {
 	float alpha;
 } FIRGBAF;
 
-/** Data structure for COMPLEX type (complex number)
+/** Data structure for COMPLEX32 type (complex number)
 */
 typedef struct tagFICOMPLEX {
     /// real part
@@ -371,7 +371,7 @@ typedef struct tagFICOMPLEX {
 #define FIICC_COLOR_IS_CMYK		0x01
 
 FI_STRUCT (FIICCPROFILE) { 
-	WORD    flags;	//! info flag
+	SIGNED16    flags;	//! info flag
 	DWORD	size;	//! profile's size measured in bytes
 	void   *data;	//! points to a block of contiguous memory containing the profile
 };
@@ -1042,7 +1042,7 @@ DLL_API FITAG *DLL_CALLCONV FreeImage_CloneTag(FITAG *tag);
 // tag getters and setters
 DLL_API const char *DLL_CALLCONV FreeImage_GetTagKey(FITAG *tag);
 DLL_API const char *DLL_CALLCONV FreeImage_GetTagDescription(FITAG *tag);
-DLL_API WORD DLL_CALLCONV FreeImage_GetTagID(FITAG *tag);
+DLL_API SIGNED16 DLL_CALLCONV FreeImage_GetTagID(FITAG *tag);
 DLL_API FREE_IMAGE_MDTYPE DLL_CALLCONV FreeImage_GetTagType(FITAG *tag);
 DLL_API DWORD DLL_CALLCONV FreeImage_GetTagCount(FITAG *tag);
 DLL_API DWORD DLL_CALLCONV FreeImage_GetTagLength(FITAG *tag);
@@ -1050,7 +1050,7 @@ DLL_API const void *DLL_CALLCONV FreeImage_GetTagValue(FITAG *tag);
 
 DLL_API BOOL DLL_CALLCONV FreeImage_SetTagKey(FITAG *tag, const char *key);
 DLL_API BOOL DLL_CALLCONV FreeImage_SetTagDescription(FITAG *tag, const char *description);
-DLL_API BOOL DLL_CALLCONV FreeImage_SetTagID(FITAG *tag, WORD id);
+DLL_API BOOL DLL_CALLCONV FreeImage_SetTagID(FITAG *tag, SIGNED16 id);
 DLL_API BOOL DLL_CALLCONV FreeImage_SetTagType(FITAG *tag, FREE_IMAGE_MDTYPE type);
 DLL_API BOOL DLL_CALLCONV FreeImage_SetTagCount(FITAG *tag, DWORD count);
 DLL_API BOOL DLL_CALLCONV FreeImage_SetTagLength(FITAG *tag, DWORD length);

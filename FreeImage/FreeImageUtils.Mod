@@ -3,7 +3,7 @@ MODULE FreeImageUtils; (** AUTHOR "fnecati"; PURPOSE "utilities for FreeImage"; 
 IMPORT FI:=FreeImageDll, Raster, KernelLog, SYSTEM;
 
 (** pixel access functions  *)
-PROCEDURE GetPixel32* (dib: FI.FIBITMAP; x, y: LONGINT; VAR pix: Raster.Pixel);
+PROCEDURE GetPixel32* (dib: FI.FIBITMAP; x, y: SIGNED32; VAR pix: Raster.Pixel);
 VAR color: FI.RGBQUAD;
 BEGIN
 	FI.GetPixelColor(dib, x, y, color);
@@ -13,7 +13,7 @@ BEGIN
 	pix[3] := color.rgbReserved
 END GetPixel32;
 
-PROCEDURE PutPixel32* (dib: FI.FIBITMAP; x, y: LONGINT; pix: Raster.Pixel);
+PROCEDURE PutPixel32* (dib: FI.FIBITMAP; x, y: SIGNED32; pix: Raster.Pixel);
 VAR color: FI.RGBQUAD;
 BEGIN
 	color.rgbRed := pix[2];
@@ -23,7 +23,7 @@ BEGIN
 	FI.SetPixelColor(dib, x, y, color)
 END PutPixel32;
 
-PROCEDURE GetPixel24* (dib: FI.FIBITMAP; x, y: LONGINT; VAR pix: Raster.Pixel);
+PROCEDURE GetPixel24* (dib: FI.FIBITMAP; x, y: SIGNED32; VAR pix: Raster.Pixel);
 VAR color: FI.RGBQUAD;
 BEGIN
 	FI.GetPixelColor(dib, x, y, color);
@@ -33,7 +33,7 @@ BEGIN
 	pix[3] := 0FFX;
 END GetPixel24;
 
-PROCEDURE PutPixel24* (dib: FI.FIBITMAP; x, y: LONGINT; pix: Raster.Pixel);
+PROCEDURE PutPixel24* (dib: FI.FIBITMAP; x, y: SIGNED32; pix: Raster.Pixel);
 VAR color: FI.RGBQUAD;
 BEGIN
 	color.rgbRed := pix[2];
@@ -43,17 +43,17 @@ BEGIN
 END PutPixel24;
 
 (** store Raster.Image using FreeImage *)	
-PROCEDURE StoreImage*(img: Raster.Image; CONST filename: ARRAY OF CHAR; VAR res: LONGINT);
+PROCEDURE StoreImage*(img: Raster.Image; CONST filename: ARRAY OF CHAR; VAR res: SIGNED32);
 VAR dib: FI.FIBITMAP;
-	bpp: LONGINT;
-	w, h, i, j: LONGINT;
+	bpp: SIGNED32;
+	w, h, i, j: SIGNED32;
 	pix: Raster.Pixel;
 	mode: Raster.Mode;	
 BEGIN
 
 	IF (img # NIL) & (img.width # 0) & (img.height # 0) THEN
 	(*	KernelLog.String("img.fmt.bpp= "); KernelLog.Int(img.fmt.bpp, 0); KernelLog.Ln; *)
-		w := img.width(LONGINT); h := img.height(LONGINT);
+		w := img.width(SIGNED32); h := img.height(SIGNED32);
 		dib := FI.Allocate(w, h, 24, 0, 0, 0);
 	
 		IF dib # NIL THEN
@@ -81,13 +81,13 @@ END StoreImage;
 PROCEDURE StoreImage2*(img: Raster.Image; CONST filename: ARRAY OF CHAR);
 VAR dib: FI.FIBITMAP;
 	bits: ADDRESS;
-	w, h: LONGINT;
+	w, h: SIGNED32;
 	res1: BOOLEAN;
 BEGIN
 
 	IF (img # NIL) & (img.width # 0) & (img.height # 0) THEN
 	(*	KernelLog.String("img.fmt.bpp= "); KernelLog.Int(img.fmt.bpp, 0); KernelLog.Ln; *)
-		w := img.width(LONGINT); h := img.height(LONGINT);
+		w := img.width(SIGNED32); h := img.height(SIGNED32);
 		dib := FI.Allocate(w, h, 32, 0, 0, 0);
 	
 		IF dib # NIL THEN
@@ -107,9 +107,9 @@ END StoreImage2;
 PROCEDURE LoadImage*(CONST filename: ARRAY OF CHAR): Raster.Image;
 VAR img: Raster.Image;
 	dib, tdib: FI.FIBITMAP;
-	bpp: LONGINT;
+	bpp: SIGNED32;
 	res: BOOLEAN;
-	w, h: LONGINT;
+	w, h: SIGNED32;
 	bits: ADDRESS;
 BEGIN
 	dib := FI.LoadImage(filename, 0);
