@@ -1,7 +1,7 @@
 MODULE FFTW; (** AUTHOR "fnecati"; PURPOSE "double precision wrapper for FFTW library"; *)
 IMPORT SYSTEM, Strings, Modules, KernelLog, HostLibs;
 
-(*! For double precision LONGREAL  type:
+(*! For double precision FLOAT64  type:
 	real: 8 bytes (64 bit), complex: 16 bytes (128 bit )*)
 	
 (*
@@ -28,7 +28,7 @@ TYPE
 	Plan* = ADDRESS; (** FFTW planner *)
  
  (** fft direction *)
-TYPE Direction* = LONGINT;
+TYPE Direction* = INTEGER;
 CONST
 	FORWARD* = -1;
 	BACKWARD* = 1;
@@ -64,7 +64,7 @@ CONST
 
 	
 (** fftw_r2r_kind_do_not_use_me *)
-TYPE Kind* = LONGINT;
+TYPE Kind* = INTEGER;
 CONST
 	R2HC* = 0;
 	HC2R* = 1;
@@ -80,7 +80,7 @@ CONST
 	
 (**  fftw_iodim_do_not_use_me *)
 TYPE Iodim* = RECORD
-         n* , inps* , outs* : LONGINT;  (* dimension size , input stride, output stride  *)
+         n* , inps* , outs* : INTEGER;  (* dimension size , input stride, output stride  *)
 	END;
 	
 VAR 
@@ -89,7 +89,7 @@ VAR
 	free- : PROCEDURE  {PlatformCC} (mem: ADDRESS);
 	destroy_plan- : PROCEDURE {PlatformCC} (plan: Plan);
 	cleanup- : PROCEDURE {PlatformCC} ;
-	set_timelimit-: PROCEDURE {PlatformCC} (seconds: LONGREAL);
+	set_timelimit-: PROCEDURE {PlatformCC} (seconds: FLOAT64);
 
 	execute-: PROCEDURE {PlatformCC}  (plan: Plan);
 	
@@ -102,71 +102,71 @@ VAR
 	execute_split_dft_c2r-: PROCEDURE {PlatformCC} (plan: Plan; realin, imagin: ADDRESS; floatout: ADDRESS );        
 	execute_r2r-: PROCEDURE {PlatformCC} (plan: Plan; inputfloat: ADDRESS; outputfloat: ADDRESS ); 
         
-	plan_dft_1d- :  PROCEDURE  {PlatformCC} (n: LONGINT; input: ADDRESS; output: ADDRESS; direction: Direction; flags: Flags): Plan;
-	plan_dft_2d-: PROCEDURE {PlatformCC}  (ny, nx: LONGINT; input, output: ADDRESS; direction: Direction; flags: Flags): Plan;
-	plan_dft_3d-: PROCEDURE {PlatformCC}  (nz, ny, nx: LONGINT; input, output: ADDRESS; direction: Direction; flags: Flags): Plan;
-	plan_dft-: PROCEDURE {PlatformCC}  (rank: LONGINT; n: ADDRESS; input, output: ADDRESS; direction: Direction; flags: Flags): Plan;
+	plan_dft_1d- :  PROCEDURE  {PlatformCC} (n: INTEGER; input: ADDRESS; output: ADDRESS; direction: Direction; flags: Flags): Plan;
+	plan_dft_2d-: PROCEDURE {PlatformCC}  (ny, nx: INTEGER; input, output: ADDRESS; direction: Direction; flags: Flags): Plan;
+	plan_dft_3d-: PROCEDURE {PlatformCC}  (nz, ny, nx: INTEGER; input, output: ADDRESS; direction: Direction; flags: Flags): Plan;
+	plan_dft-: PROCEDURE {PlatformCC}  (rank: INTEGER; n: ADDRESS; input, output: ADDRESS; direction: Direction; flags: Flags): Plan;
 
-	plan_dft_r2c_1d-: PROCEDURE {PlatformCC}  (n: LONGINT; input, output: ADDRESS; flags: Flags): Plan;
-	plan_dft_r2c_2d-: PROCEDURE {PlatformCC}  (ny, nx: LONGINT; input, output: ADDRESS; flags: Flags): Plan;
-	plan_dft_r2c_3d-: PROCEDURE {PlatformCC}  (nz, ny, nx: LONGINT; input, output: ADDRESS; flags: Flags): Plan;
-	plan_dft_r2c-: PROCEDURE {PlatformCC}  (rank: LONGINT; n: ADDRESS; input, output: ADDRESS; flags: Flags): Plan;
+	plan_dft_r2c_1d-: PROCEDURE {PlatformCC}  (n: INTEGER; input, output: ADDRESS; flags: Flags): Plan;
+	plan_dft_r2c_2d-: PROCEDURE {PlatformCC}  (ny, nx: INTEGER; input, output: ADDRESS; flags: Flags): Plan;
+	plan_dft_r2c_3d-: PROCEDURE {PlatformCC}  (nz, ny, nx: INTEGER; input, output: ADDRESS; flags: Flags): Plan;
+	plan_dft_r2c-: PROCEDURE {PlatformCC}  (rank: INTEGER; n: ADDRESS; input, output: ADDRESS; flags: Flags): Plan;
 
-	plan_dft_c2r_1d-: PROCEDURE {PlatformCC}  (n: LONGINT; input, output: ADDRESS; flags: Flags): Plan;
-	plan_dft_c2r_2d-: PROCEDURE {PlatformCC}  (ny, nx: LONGINT; input, output: ADDRESS; flags: Flags): Plan;
-	plan_dft_c2r_3d-: PROCEDURE {PlatformCC} (nz, ny, nx: LONGINT; input, output: ADDRESS; flags: Flags): Plan;
-	plan_dft_c2r-: PROCEDURE {PlatformCC}  (rank: LONGINT; n: ADDRESS; input, output: ADDRESS; flags: Flags): Plan;
+	plan_dft_c2r_1d-: PROCEDURE {PlatformCC}  (n: INTEGER; input, output: ADDRESS; flags: Flags): Plan;
+	plan_dft_c2r_2d-: PROCEDURE {PlatformCC}  (ny, nx: INTEGER; input, output: ADDRESS; flags: Flags): Plan;
+	plan_dft_c2r_3d-: PROCEDURE {PlatformCC} (nz, ny, nx: INTEGER; input, output: ADDRESS; flags: Flags): Plan;
+	plan_dft_c2r-: PROCEDURE {PlatformCC}  (rank: INTEGER; n: ADDRESS; input, output: ADDRESS; flags: Flags): Plan;
 
-	plan_r2r_1d-: PROCEDURE {PlatformCC}  (n: LONGINT; input, output: ADDRESS; kind: Kind; flags: Flags): Plan;
-	plan_r2r_2d-: PROCEDURE {PlatformCC}  (ny, nx: LONGINT; input, output: ADDRESS; kindx, kindy: Kind; flags: Flags): Plan;
-	plan_r2r_3d-: PROCEDURE {PlatformCC}  (nz, ny, nx: LONGINT; input, output: ADDRESS; kindx, kindy, kindz: Kind; flags: Flags): Plan;
-	plan_r2r-: PROCEDURE {PlatformCC} (rank: LONGINT; n: ADDRESS; input, output: ADDRESS; kind: ADDRESS; flags: Flags): Plan;
+	plan_r2r_1d-: PROCEDURE {PlatformCC}  (n: INTEGER; input, output: ADDRESS; kind: Kind; flags: Flags): Plan;
+	plan_r2r_2d-: PROCEDURE {PlatformCC}  (ny, nx: INTEGER; input, output: ADDRESS; kindx, kindy: Kind; flags: Flags): Plan;
+	plan_r2r_3d-: PROCEDURE {PlatformCC}  (nz, ny, nx: INTEGER; input, output: ADDRESS; kindx, kindy, kindz: Kind; flags: Flags): Plan;
+	plan_r2r-: PROCEDURE {PlatformCC} (rank: INTEGER; n: ADDRESS; input, output: ADDRESS; kind: ADDRESS; flags: Flags): Plan;
 
 	(* plans for many dfts *)
 	
-	plan_many_dft- : PROCEDURE {PlatformCC} (rank: LONGINT; n: ADDRESS; howmany: LONGINT; input: ADDRESS; inembed: ADDRESS; istride: LONGINT; idist: LONGINT;	
-                         output: ADDRESS; onembed: ADDRESS; ostride: LONGINT; odist: LONGINT; sign: Direction; flags: Flags): Plan;
+	plan_many_dft- : PROCEDURE {PlatformCC} (rank: INTEGER; n: ADDRESS; howmany: INTEGER; input: ADDRESS; inembed: ADDRESS; istride: INTEGER; idist: INTEGER;	
+                         output: ADDRESS; onembed: ADDRESS; ostride: INTEGER; odist: INTEGER; sign: Direction; flags: Flags): Plan;
 
 
-	plan_many_dft_r2c- : PROCEDURE {PlatformCC} (rank: LONGINT; n: ADDRESS; howmany: LONGINT; Rin: ADDRESS; inembed: ADDRESS;  istride: LONGINT; idist: LONGINT;
-                             Cout : ADDRESS; onembed: ADDRESS; ostride: LONGINT;  odist: LONGINT; flags: Flags): Plan;
+	plan_many_dft_r2c- : PROCEDURE {PlatformCC} (rank: INTEGER; n: ADDRESS; howmany: INTEGER; Rin: ADDRESS; inembed: ADDRESS;  istride: INTEGER; idist: INTEGER;
+                             Cout : ADDRESS; onembed: ADDRESS; ostride: INTEGER;  odist: INTEGER; flags: Flags): Plan;
    
-	plan_many_dft_c2r- : PROCEDURE {PlatformCC} (rank: LONGINT; n: ADDRESS; howmany: LONGINT; Cin: ADDRESS; inembed: ADDRESS;  istride: LONGINT; idist: LONGINT;
-                             Rout : ADDRESS; onembed: ADDRESS; ostride: LONGINT;  odist: LONGINT; flags: Flags): Plan;
+	plan_many_dft_c2r- : PROCEDURE {PlatformCC} (rank: INTEGER; n: ADDRESS; howmany: INTEGER; Cin: ADDRESS; inembed: ADDRESS;  istride: INTEGER; idist: INTEGER;
+                             Rout : ADDRESS; onembed: ADDRESS; ostride: INTEGER;  odist: INTEGER; flags: Flags): Plan;
  
 	(* Guru fftw*)
-	plan_guru_dft- : PROCEDURE {PlatformCC} (rank: LONGINT;  dims: ADDRESS; howmany_rank: LONGINT; howmany_dims: ADDRESS; in, out: ADDRESS;  sign: Direction; flags: Flags): Plan;
-	plan_guru_split_dft- : PROCEDURE {PlatformCC} (rank: LONGINT;  dims: ADDRESS; howmany_rank: LONGINT; howmany_dims: ADDRESS; realinput, imaginput: ADDRESS; realout, imagout: ADDRESS; flags: Flags): Plan;
+	plan_guru_dft- : PROCEDURE {PlatformCC} (rank: INTEGER;  dims: ADDRESS; howmany_rank: INTEGER; howmany_dims: ADDRESS; in, out: ADDRESS;  sign: Direction; flags: Flags): Plan;
+	plan_guru_split_dft- : PROCEDURE {PlatformCC} (rank: INTEGER;  dims: ADDRESS; howmany_rank: INTEGER; howmany_dims: ADDRESS; realinput, imaginput: ADDRESS; realout, imagout: ADDRESS; flags: Flags): Plan;
  
  
 	(*  Guru Real-data DFTs*)
-	plan_guru_dft_r2c- : PROCEDURE {PlatformCC}(rank: LONGINT; dims: ADDRESS; howmany_rank: LONGINT; howmany_dims: ADDRESS;
+	plan_guru_dft_r2c- : PROCEDURE {PlatformCC}(rank: INTEGER; dims: ADDRESS; howmany_rank: INTEGER; howmany_dims: ADDRESS;
 						          doublein: ADDRESS; complexout: ADDRESS; flags: Flags): Plan;
      
-	plan_guru_split_dft_r2c- : PROCEDURE {PlatformCC}(rank: LONGINT; dims: ADDRESS; howmany_rank: LONGINT; howmany_dims: ADDRESS;
+	plan_guru_split_dft_r2c- : PROCEDURE {PlatformCC}(rank: INTEGER; dims: ADDRESS; howmany_rank: INTEGER; howmany_dims: ADDRESS;
 						          doublein: ADDRESS; double_ro: ADDRESS; double_io: ADDRESS; flags: Flags): Plan;
      
-	plan_guru_dft_c2r- : PROCEDURE {PlatformCC}(rank: LONGINT; dims: ADDRESS; howmany_rank: LONGINT; howmany_dims: ADDRESS;
+	plan_guru_dft_c2r- : PROCEDURE {PlatformCC}(rank: INTEGER; dims: ADDRESS; howmany_rank: INTEGER; howmany_dims: ADDRESS;
 						          complexin: ADDRESS; doubleout: ADDRESS; flags: Flags): Plan;
      
-	plan_guru_split_dft_c2r- : PROCEDURE {PlatformCC}( rank: LONGINT; dims: ADDRESS; howmany_rank: LONGINT; howmany_dims: ADDRESS;
+	plan_guru_split_dft_c2r- : PROCEDURE {PlatformCC}( rank: INTEGER; dims: ADDRESS; howmany_rank: INTEGER; howmany_dims: ADDRESS;
 						          double_ri: ADDRESS; double_ii: ADDRESS; double_out: ADDRESS; flags: Flags): Plan;
 
                         
 	(* total flops ~ add+mul + 2*fma or add+mul + fma   if fma (fused multipy  add) suported *)
-	flops-: PROCEDURE {PlatformCC} (plan: Plan; VAR add, mul, fma: LONGREAL);
+	flops-: PROCEDURE {PlatformCC} (plan: Plan; VAR add, mul, fma: FLOAT64);
 
-	init_threads- : PROCEDURE {PlatformCC} (): LONGINT;	
-	plan_with_nthreads- : PROCEDURE {PlatformCC} (n: LONGINT);
+	init_threads- : PROCEDURE {PlatformCC} (): INTEGER;	
+	plan_with_nthreads- : PROCEDURE {PlatformCC} (n: INTEGER);
 	cleanup_threads- : PROCEDURE {PlatformCC};
 
 	print_plan- : PROCEDURE {PlatformCC} (plan: Plan);
 (*	sprint_plan- :  PROCEDURE {PlatformCC} (plan: Plan): ADDRESS;*)
 	
-	estimate_cost- : PROCEDURE {PlatformCC} (plan: Plan): LONGREAL;
-	cost- : PROCEDURE {PlatformCC} (plan: Plan): LONGREAL;
+	estimate_cost- : PROCEDURE {PlatformCC} (plan: Plan): FLOAT64;
+	cost- : PROCEDURE {PlatformCC} (plan: Plan): FLOAT64;
 
-	alignment_of- : PROCEDURE {PlatformCC} (realArray: ADDRESS): LONGINT;
+	alignment_of- : PROCEDURE {PlatformCC} (realArray: ADDRESS): INTEGER;
 	xversion - : ADDRESS;
 	
 (*! wrappers for above procedures*)
@@ -191,56 +191,56 @@ BEGIN
 	execute(plan);
 END Execute;
 
-PROCEDURE ExecuteDft1din*(plan: Plan; VAR inout: ARRAY [*] OF LONGREAL);
+PROCEDURE ExecuteDft1din*(plan: Plan; VAR inout: ARRAY [*] OF FLOAT64);
 VAR adrio: ADDRESS;
 BEGIN
 	adrio := ADDRESSOF(inout[0]);		
 	execute_dft(plan, adrio, adrio);
 END ExecuteDft1din;
 
-PROCEDURE ExecuteDft1dinout*(plan: Plan; VAR in, out: ARRAY [*] OF LONGREAL);
+PROCEDURE ExecuteDft1dinout*(plan: Plan; VAR in, out: ARRAY [*] OF FLOAT64);
 VAR adri, adro: ADDRESS;
 BEGIN
 	adri := ADDRESSOF(in[0]); adro := ADDRESSOF(out[0]);		
 	execute_dft(plan, adri, adro);
 END ExecuteDft1dinout;
 
-PROCEDURE ExecuteDftComplex1din*(plan: Plan; VAR inout: ARRAY [*] OF LONGCOMPLEX);
+PROCEDURE ExecuteDftComplex1din*(plan: Plan; VAR inout: ARRAY [*] OF COMPLEX64);
 VAR adrio: ADDRESS;
 BEGIN
 	adrio := ADDRESSOF(inout[0]); 
 	execute_dft(plan, adrio, adrio);
 END ExecuteDftComplex1din;
 
-PROCEDURE ExecuteDftComplex1dinout*(plan: Plan; VAR in, out: ARRAY [*] OF LONGCOMPLEX);
+PROCEDURE ExecuteDftComplex1dinout*(plan: Plan; VAR in, out: ARRAY [*] OF COMPLEX64);
 VAR adri, adro: ADDRESS;
 BEGIN
 	adri := ADDRESSOF(in[0]); adro := ADDRESSOF(out[0]);
 	execute_dft(plan, adri, adro);
 END ExecuteDftComplex1dinout;
 	
-PROCEDURE ExecuteDft2dinout*(plan: Plan; VAR in, out: ARRAY [*,*] OF LONGREAL);
+PROCEDURE ExecuteDft2dinout*(plan: Plan; VAR in, out: ARRAY [*,*] OF FLOAT64);
 VAR adri, adro: ADDRESS;
 BEGIN		
 	adri := ADDRESSOF(in[0,0]); adro := ADDRESSOF(out[0,0]);
 	execute_dft(plan, adri, adro);
 END ExecuteDft2dinout;
 
-PROCEDURE ExecuteDft2din*(plan: Plan; VAR inout: ARRAY [*,*] OF LONGREAL);
+PROCEDURE ExecuteDft2din*(plan: Plan; VAR inout: ARRAY [*,*] OF FLOAT64);
 VAR adrio: ADDRESS;
 BEGIN
 	adrio := ADDRESSOF(inout[0,0]);		
 	execute_dft(plan, adrio, adrio);
 END ExecuteDft2din;
 
-PROCEDURE ExecuteDftComplex2din*(plan: Plan; VAR inout : ARRAY [*,*] OF LONGCOMPLEX);
+PROCEDURE ExecuteDftComplex2din*(plan: Plan; VAR inout : ARRAY [*,*] OF COMPLEX64);
 VAR adrio: ADDRESS;
 BEGIN
 	adrio := ADDRESSOF(inout[0,0]);
 	execute_dft(plan, adrio, adrio);
 END ExecuteDftComplex2din;
 
-PROCEDURE ExecuteDftComplex2dinout*(plan: Plan; VAR in, out: ARRAY [*,*] OF LONGCOMPLEX);
+PROCEDURE ExecuteDftComplex2dinout*(plan: Plan; VAR in, out: ARRAY [*,*] OF COMPLEX64);
 VAR adri, adro: ADDRESS;
 BEGIN
 	adri := ADDRESSOF(in[0,0]);
@@ -258,165 +258,165 @@ BEGIN
 	cleanup;
 END Cleanup;
 
-PROCEDURE SetTimeLimit*(seconds: LONGREAL);
+PROCEDURE SetTimeLimit*(seconds: FLOAT64);
 BEGIN
 	set_timelimit(seconds);
 END SetTimeLimit;
 		
-PROCEDURE Flops* (plan: Plan; VAR add, mul, fma: LONGREAL);
+PROCEDURE Flops* (plan: Plan; VAR add, mul, fma: FLOAT64);
 BEGIN
 	flops(plan, add,mul, fma);
 END Flops;
 
 (*! ====== IN PLACE TRANSFORMS ====== *)
 (* 1d- in-place real transform *)
-PROCEDURE PlanDft1Din*(VAR a: ARRAY [*] OF LONGREAL; dir: Direction): Plan;
+PROCEDURE PlanDft1Din*(VAR a: ARRAY [*] OF FLOAT64; dir: Direction): Plan;
 VAR adr : ADDRESS;
-	nx: LONGINT;
+	nx: INTEGER;
 BEGIN
 	adr := ADDRESSOF(a[0]);
-	nx := (LEN(a, 0) DIV 2)(LONGINT);		
+	nx := (LEN(a, 0) DIV 2)(INTEGER);		
 	RETURN plan_dft_1d(nx, adr, adr, dir, ESTIMATE);
 END PlanDft1Din;
 
 (* 1d- in-place Complex transform *)
-PROCEDURE PlanDftComplex1Din*(VAR a: ARRAY [*] OF LONGCOMPLEX; dir: Direction): Plan;
+PROCEDURE PlanDftComplex1Din*(VAR a: ARRAY [*] OF COMPLEX64; dir: Direction): Plan;
 VAR adr : ADDRESS;
-	nx: LONGINT;
+	nx: INTEGER;
 BEGIN
 	adr := ADDRESSOF(a[0]);
-	nx := LEN(a, 0)(LONGINT);
+	nx := LEN(a, 0)(INTEGER);
 	RETURN plan_dft_1d(nx, adr, adr, dir, ESTIMATE);
 END PlanDftComplex1Din;
 	
 (* 2d- in-place real transform *)
-PROCEDURE PlanDft2Din*(VAR a: ARRAY [*,*] OF LONGREAL; dir: Direction): Plan;
+PROCEDURE PlanDft2Din*(VAR a: ARRAY [*,*] OF FLOAT64; dir: Direction): Plan;
 VAR adr: ADDRESS;
-	nx, ny: LONGINT;
+	nx, ny: INTEGER;
 BEGIN
 	adr := ADDRESSOF(a[0,0]);
-	nx := (LEN(a, 1) DIV 2)(LONGINT);
-	ny := LEN(a, 0)(LONGINT);
+	nx := (LEN(a, 1) DIV 2)(INTEGER);
+	ny := LEN(a, 0)(INTEGER);
 	RETURN plan_dft_2d(ny, nx, adr, adr, dir, ESTIMATE);
 END PlanDft2Din;
 
 (* 2d- in-place Complex transform *)
-PROCEDURE PlanDftComplex2Din*(VAR a: ARRAY [*,*] OF LONGCOMPLEX; dir: Direction): Plan;
+PROCEDURE PlanDftComplex2Din*(VAR a: ARRAY [*,*] OF COMPLEX64; dir: Direction): Plan;
 VAR adr: ADDRESS;
-	nx, ny: LONGINT;
+	nx, ny: INTEGER;
 BEGIN
 	adr := ADDRESSOF(a[0,0]);
-	nx := LEN(a, 1)(LONGINT);
-	ny := LEN(a, 0)(LONGINT);
+	nx := LEN(a, 1)(INTEGER);
+	ny := LEN(a, 0)(INTEGER);
 	RETURN plan_dft_2d(ny, nx, adr, adr, dir, ESTIMATE);
 END PlanDftComplex2Din;
 
 (* 3d- in-place real transform *)
-PROCEDURE PlanDft3Din*(VAR a: ARRAY [*,*,*] OF LONGREAL; dir: Direction): Plan;
+PROCEDURE PlanDft3Din*(VAR a: ARRAY [*,*,*] OF FLOAT64; dir: Direction): Plan;
 VAR adr: ADDRESS;
-	nx, ny, nz: LONGINT;
+	nx, ny, nz: INTEGER;
 BEGIN
 	adr := ADDRESSOF(a[0,0,0]);
-	nx := (LEN(a, 2) DIV 2)(LONGINT);
-	ny := LEN(a, 1)(LONGINT);
-	nz := LEN(a, 0)(LONGINT);		
+	nx := (LEN(a, 2) DIV 2)(INTEGER);
+	ny := LEN(a, 1)(INTEGER);
+	nz := LEN(a, 0)(INTEGER);		
 	RETURN plan_dft_3d(nz, ny, nx, adr, adr, dir, ESTIMATE);
 END PlanDft3Din;	
 
 (* 3d- in-place Complex transform *)
-PROCEDURE PlanDftComplex3Din*(VAR a: ARRAY [*,*,*] OF LONGCOMPLEX; dir: Direction): Plan;
+PROCEDURE PlanDftComplex3Din*(VAR a: ARRAY [*,*,*] OF COMPLEX64; dir: Direction): Plan;
 VAR adr: ADDRESS;
-	nx, ny, nz: LONGINT;
+	nx, ny, nz: INTEGER;
 BEGIN
 	adr := ADDRESSOF(a[0,0,0]);
-	nx := LEN(a, 2)(LONGINT);
-	ny := LEN(a, 1)(LONGINT);
-	nz := LEN(a, 0)(LONGINT);		
+	nx := LEN(a, 2)(INTEGER);
+	ny := LEN(a, 1)(INTEGER);
+	nz := LEN(a, 0)(INTEGER);		
 	RETURN plan_dft_3d(nz, ny, nx, adr, adr, dir, ESTIMATE);
 END PlanDftComplex3Din;	
 
 (*! ====== OUT OF PLACE TRANSFORMS ======= *)
 (* 1d- out of place real transform *)
-PROCEDURE PlanDft1Dinout*(VAR a, b: ARRAY [*] OF LONGREAL; dir: Direction): Plan;
+PROCEDURE PlanDft1Dinout*(VAR a, b: ARRAY [*] OF FLOAT64; dir: Direction): Plan;
 VAR adr, adr1: ADDRESS;
-	nx: LONGINT;
+	nx: INTEGER;
 BEGIN
 	ASSERT(LEN(a) = LEN(b));
 	adr := ADDRESSOF(a[0]);
 	adr1 := ADDRESSOF(b[0]);
-	nx := (LEN(a, 0) DIV 2)(LONGINT);		
+	nx := (LEN(a, 0) DIV 2)(INTEGER);		
 	RETURN plan_dft_1d(nx, adr, adr1, dir, ESTIMATE);
 END PlanDft1Dinout;
 
 (* 1d- out of place Complex transform *)
-PROCEDURE PlanDftComplex1Dinout*(VAR a, b: ARRAY [*] OF LONGCOMPLEX; dir: Direction): Plan;
+PROCEDURE PlanDftComplex1Dinout*(VAR a, b: ARRAY [*] OF COMPLEX64; dir: Direction): Plan;
 VAR adr, adr1: ADDRESS;
-	nx: LONGINT;
+	nx: INTEGER;
 BEGIN
 	ASSERT(LEN(a) = LEN(b));
 	adr := ADDRESSOF(a[0]);
 	adr1 := ADDRESSOF(b[0]);	
-	nx := LEN(a, 0)(LONGINT);
+	nx := LEN(a, 0)(INTEGER);
 	RETURN plan_dft_1d(nx, adr, adr1, dir, ESTIMATE);
 END PlanDftComplex1Dinout;
 	
 (* 2d- out of place real transform *)
-PROCEDURE PlanDft2Dinout*(VAR a, b: ARRAY [*,*] OF LONGREAL; dir: Direction): Plan;
+PROCEDURE PlanDft2Dinout*(VAR a, b: ARRAY [*,*] OF FLOAT64; dir: Direction): Plan;
 VAR adr, adr1: ADDRESS;
-	nx, ny: LONGINT;
+	nx, ny: INTEGER;
 BEGIN
 	ASSERT(LEN(a,0) = LEN(b,0));
 	ASSERT(LEN(a,1) = LEN(b,1));
 	adr := ADDRESSOF(a[0,0]);
 	adr1 := ADDRESSOF(b[0,0]);
-	nx := (LEN(a, 1) DIV 2)(LONGINT);
-	ny := LEN(a, 0)(LONGINT);
+	nx := (LEN(a, 1) DIV 2)(INTEGER);
+	ny := LEN(a, 0)(INTEGER);
 	RETURN plan_dft_2d(ny, nx, adr, adr1, dir, ESTIMATE);
 END PlanDft2Dinout;
 
 (* 2d- out of place Complex transform *)
-PROCEDURE PlanDftComplex2Dinout*(VAR a, b: ARRAY [*,*] OF LONGCOMPLEX; dir: Direction): Plan;
+PROCEDURE PlanDftComplex2Dinout*(VAR a, b: ARRAY [*,*] OF COMPLEX64; dir: Direction): Plan;
 VAR adr, adr1: ADDRESS;
-	  	nx, ny: LONGINT;
+	  	nx, ny: INTEGER;
 BEGIN
 	ASSERT(LEN(a,0) = LEN(b,0));
 	ASSERT(LEN(a,1) = LEN(b,1));
 	adr := ADDRESSOF(a[0,0]);
 	adr1 := ADDRESSOF(b[0,0]);
-	nx := LEN(a, 1)(LONGINT);
-	ny := LEN(a, 0)(LONGINT);
+	nx := LEN(a, 1)(INTEGER);
+	ny := LEN(a, 0)(INTEGER);
 	RETURN plan_dft_2d(ny, nx , adr, adr1, dir,ESTIMATE);
 END PlanDftComplex2Dinout;
 
 (* 3d- out of place real transform *)
-PROCEDURE PlanDft3Dinout*(VAR a, b: ARRAY [*,*,*] OF LONGREAL; dir: Direction): Plan;
+PROCEDURE PlanDft3Dinout*(VAR a, b: ARRAY [*,*,*] OF FLOAT64; dir: Direction): Plan;
 VAR adr, adr1: ADDRESS;
-	nx, ny, nz: LONGINT;
+	nx, ny, nz: INTEGER;
 BEGIN
 	ASSERT(LEN(a,0) = LEN(b,0));
 	ASSERT(LEN(a,1) = LEN(b,1));
 	ASSERT(LEN(a,2) = LEN(b,2));
 	adr := ADDRESSOF(a[0,0,0]);
 	adr1 := ADDRESSOF(b[0,0,0]);
-	nx := (LEN(a, 2) DIV 2)(LONGINT);
-	ny := LEN(a, 1)(LONGINT);
-	nz := LEN(a, 0)(LONGINT);		
+	nx := (LEN(a, 2) DIV 2)(INTEGER);
+	ny := LEN(a, 1)(INTEGER);
+	nz := LEN(a, 0)(INTEGER);		
 	RETURN plan_dft_3d(nz, ny, nx, adr, adr1, dir, ESTIMATE);
 END PlanDft3Dinout;
 
 (* 3d- out of place Complex transform *)
-PROCEDURE PlanDftComplex3Dinout*(VAR a, b: ARRAY [*,*,*] OF LONGCOMPLEX; dir: Direction): Plan;
+PROCEDURE PlanDftComplex3Dinout*(VAR a, b: ARRAY [*,*,*] OF COMPLEX64; dir: Direction): Plan;
 VAR adr, adr1: ADDRESS;
-	nx, ny, nz: LONGINT;
+	nx, ny, nz: INTEGER;
 BEGIN
 	ASSERT(LEN(a,0) = LEN(b,0));
 	ASSERT(LEN(a,1) = LEN(b,1));
 	ASSERT(LEN(a,2) = LEN(b,2));
 	adr := ADDRESSOF(a[0,0,0]);
 	adr1 := ADDRESSOF(b[0,0,0]);
-	nx := LEN(a, 2)(LONGINT);
-	ny := LEN(a, 1)(LONGINT);
-	nz := LEN(a, 0)(LONGINT);		
+	nx := LEN(a, 2)(INTEGER);
+	ny := LEN(a, 1)(INTEGER);
+	nz := LEN(a, 0)(INTEGER);		
 	RETURN plan_dft_3d(nz, ny, nx, adr, adr1, dir, ESTIMATE);
 END PlanDftComplex3Dinout;
 
@@ -529,7 +529,7 @@ END OnClose;
 (* Get string from address  *)
 PROCEDURE GetStringFromAddr* (adr: ADDRESS): Strings.String;
 VAR  sadr: ADDRESS;
-	cnt: LONGINT;
+	cnt: INTEGER;
 	ch: CHAR;
 	s: Strings.String;
 BEGIN

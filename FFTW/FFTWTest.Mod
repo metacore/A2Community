@@ -15,8 +15,7 @@ IMPORT
 	KernelLog, Math := MathL, dll:=FFTW ;
 	
 TYPE
-	Float = LONGREAL;
-	Int = LONGINT;
+	Float = FLOAT64;
 	
 VAR 
 		wr: Streams.Writer;
@@ -24,8 +23,8 @@ VAR
 	(** from OCTK :
 		implements ENTIER(log2(x)+0.5) for integers
 	*)
-PROCEDURE NextPowOf2*( x: LONGINT ): LONGINT;
-VAR i: LONGINT;  
+PROCEDURE NextPowOf2*( x: INTEGER ): INTEGER;
+VAR i: INTEGER;  
 BEGIN
 	DEC(x);
 	WHILE x >= 256 DO x := ASH( x, -8 ); INC(i,8); END;
@@ -37,15 +36,15 @@ END NextPowOf2;
 (* test 1D transform *)		
 PROCEDURE Testfftw1d*(context: Commands.Context);
 VAR
-	x: ARRAY [*] OF LONGREAL;
-	i,  nRetry, N: Int;		
+	x: ARRAY [*] OF FLOAT64;
+	i,  nRetry, N: INTEGER;		
 	mul: Float;
 
 	mflops, err, v: Float;	
-	t: LONGINT; 
+	t: INTEGER; 
 	planf, plani: dll.Plan;
-	val : LONGREAL;
-	flops, a, b, c: LONGREAL;
+	val : FLOAT64;
+	flops, a, b, c: FLOAT64;
 
 BEGIN
 		KernelLog.String("version: "); KernelLog.String(dll.version()^); KernelLog.Ln;
@@ -130,15 +129,15 @@ BEGIN
 (* test 1D inplace transform using ExecuteDft1d function *)
 PROCEDURE TestfftwExecuteDft1d*(context: Commands.Context);
 VAR
-	x: ARRAY [*] OF LONGREAL;
-	i,  nRetry, N: Int;		
+	x: ARRAY [*] OF FLOAT64;
+	i,  nRetry, N: INTEGER;		
 	mul: Float;
 	
 	mflops, err, v: Float;	
-	t: LONGINT; 
+	t: INTEGER; 
 	planf, plani: dll.Plan;
-	val : LONGREAL;
-	flops, a, b, c: LONGREAL;
+	val : FLOAT64;
+	flops, a, b, c: FLOAT64;
 
 BEGIN
 
@@ -219,19 +218,19 @@ BEGIN
 	END TestfftwExecuteDft1d;
 
 
-(* test 1D inplace transform of COMPLEX array using ExecuteDftComplex1d function *)
+(* test 1D inplace transform of COMPLEX32 array using ExecuteDftComplex1d function *)
 PROCEDURE TestfftwExecuteComplexDft1d*(context: Commands.Context);
 VAR
-	x: ARRAY [*] OF LONGCOMPLEX;
-	i, nRetry, N: Int;
+	x: ARRAY [*] OF COMPLEX64;
+	i, nRetry, N: INTEGER;
 	j: SIZE;	
 	mul: Float;
 	
 	mflops, err, v: Float;	
-	t: LONGINT; 
+	t: INTEGER; 
 	planf, plani: dll.Plan;
-	val : LONGREAL;
-	flops, a, b, c: LONGREAL;
+	val : FLOAT64;
+	flops, a, b, c: FLOAT64;
 
 BEGIN
 
@@ -317,14 +316,14 @@ BEGIN
 (* test 2D transform *)
 PROCEDURE Testfftw2d*(context: Commands.Context);
 VAR
-	x: ARRAY [*,*] OF LONGREAL;
-	i, j, nRetry, N, M: Int;		
+	x: ARRAY [*,*] OF FLOAT64;
+	i, j, nRetry, N, M: INTEGER;		
 	mul: Float;
 	err, v: Float;	
-	t: LONGINT; 
+	t: INTEGER; 
 	planf, plani: dll.Plan;
-	val: LONGREAL;
-	mflops, flops, a, b, c: LONGREAL;
+	val: FLOAT64;
+	mflops, flops, a, b, c: FLOAT64;
 
 BEGIN
 		KernelLog.Ln; KernelLog.String('FFTW library Testfftw2d:'); KernelLog.Ln; 

@@ -15,8 +15,7 @@ IMPORT
 	KernelLog, Math, dll:=FFTWf ;
 	
 TYPE
-	Float = REAL;
-	Int = LONGINT;
+	Float = FLOAT32;
 
 VAR
 		wr: Streams.Writer;
@@ -24,8 +23,8 @@ VAR
 	(** from OCTK :
 		implements ENTIER(log2(x)+0.5) for integers
 	*)
-PROCEDURE NextPowOf2*( x: LONGINT ): LONGINT;
-VAR i: LONGINT;  
+PROCEDURE NextPowOf2*( x: INTEGER ): INTEGER;
+VAR i: INTEGER;  
 BEGIN
 	DEC(x);
 	WHILE x >= 256 DO x := ASH( x, -8 ); INC(i,8); END;
@@ -37,15 +36,15 @@ END NextPowOf2;
 (* test 1D inplace transform *)		
 PROCEDURE Testfftw1d*(context: Commands.Context);
 VAR
-	x: ARRAY [*] OF REAL;
-	i,  nRetry, N: Int;		
+	x: ARRAY [*] OF FLOAT32;
+	i,  nRetry, N: INTEGER;		
 	mul: Float;
 	
 	mflops, err, v: Float;	
-	t: LONGINT; 
+	t: INTEGER; 
 	planf, plani: dll.Plan;
-	val : REAL;
-	flops, a, b, c: LONGREAL;
+	val : FLOAT32;
+	flops, a, b, c: FLOAT64;
 
 BEGIN
 
@@ -130,15 +129,15 @@ BEGIN
 (* test 1D inplace transform using ExecuteDft1d function *)
 PROCEDURE TestfftwExecuteDft1d*(context: Commands.Context);
 VAR
-	x: ARRAY [*] OF REAL;
-	i,  nRetry, N: Int;		
+	x: ARRAY [*] OF FLOAT32;
+	i,  nRetry, N: INTEGER;		
 	mul: Float;
 	
 	mflops, err, v: Float;	
-	t: LONGINT; 
+	t: INTEGER; 
 	planf, plani: dll.Plan;
-	val : REAL;
-	flops, a, b, c: LONGREAL;
+	val : FLOAT32;
+	flops, a, b, c: FLOAT64;
 
 BEGIN
 
@@ -219,19 +218,19 @@ BEGIN
 	END TestfftwExecuteDft1d;
 
 
-(* test 1D inplace transform of COMPLEX array using ExecuteDftComplex1d function *)
+(* test 1D inplace transform of COMPLEX32 array using ExecuteDftComplex1d function *)
 PROCEDURE TestfftwExecuteComplexDft1d*(context: Commands.Context);
 VAR
-	x: ARRAY [*] OF COMPLEX;
-	i,  nRetry, N: Int;	
+	x: ARRAY [*] OF COMPLEX32;
+	i,  nRetry, N: INTEGER;	
 	j: SIZE;	
 	mul: Float;
 	
 	mflops, err, v: Float;	
-	t: LONGINT; 
+	t: INTEGER; 
 	planf, plani: dll.Plan;
-	val : REAL;
-	flops, a, b, c: LONGREAL;
+	val : FLOAT32;
+	flops, a, b, c: FLOAT64;
 
 BEGIN
 
@@ -316,14 +315,14 @@ BEGIN
 (* test 1D out of place transform *)		
 PROCEDURE Testfftw1dout*(context: Commands.Context);
 VAR
-	x,y: ARRAY [*] OF REAL;
-	i,  nRetry, N: Int;		
+	x,y: ARRAY [*] OF FLOAT32;
+	i,  nRetry, N: INTEGER;		
 	mul: Float;
 	mflops, err, v: Float;	
-	t: LONGINT; 
+	t: INTEGER; 
 	planf, plani: dll.Plan;
-	val : REAL;
-	flops, a, b, c: LONGREAL;
+	val : FLOAT32;
+	flops, a, b, c: FLOAT64;
 
 BEGIN
 		KernelLog.Ln; KernelLog.String('FFTWf library Testfftw1dout:'); KernelLog.Ln; 
@@ -405,14 +404,14 @@ BEGIN
 (* test 2D inplace transform *)
 PROCEDURE Testfftw2d*(context: Commands.Context);
 VAR
-	x: ARRAY [*,*] OF REAL;
-	i, j, nRetry, N, M: Int;		
+	x: ARRAY [*,*] OF FLOAT32;
+	i, j, nRetry, N, M: INTEGER;		
 	mul: Float;
 	err, v: Float;	
-	t: LONGINT; 
+	t: INTEGER; 
 	planf, plani: dll.Plan;
-	val: REAL;
-	mflops, flops, a, b, c: LONGREAL;
+	val: FLOAT32;
+	mflops, flops, a, b, c: FLOAT64;
 
 BEGIN
 		KernelLog.Ln; KernelLog.String('FFTWf library Testfftw2d:'); KernelLog.Ln; 
@@ -511,14 +510,14 @@ BEGIN
 (* test 2D out of place transform *)
 PROCEDURE Testfftw2dout*(context: Commands.Context);
 VAR
-	x, y: ARRAY [*,*] OF REAL;
-	i, j, nRetry, N, M: Int;		
+	x, y: ARRAY [*,*] OF FLOAT32;
+	i, j, nRetry, N, M: INTEGER;		
 	mul: Float;
 	err, v: Float;	
-	t: LONGINT; 
+	t: INTEGER; 
 	planf, plani: dll.Plan;
-	val: REAL;
-	mflops, flops, a, b, c: LONGREAL;
+	val: FLOAT32;
+	mflops, flops, a, b, c: FLOAT64;
 
 BEGIN
 		KernelLog.Ln; KernelLog.String('FFTWf library Testfftw2dout:'); KernelLog.Ln; 

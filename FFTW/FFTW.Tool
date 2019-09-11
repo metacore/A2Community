@@ -18,17 +18,17 @@ Compiler.Compile
 System.Free FFTWTest FFTWTestf.Mod FFTW FFTWf ~
 
  
-Note: Depending on data type REAL, COMPLEX, LONGREAL or LONGCOMPLEX, 
+Note: Depending on data type FLOAT32, COMPLEX32, FLOAT64 or COMPLEX64, 
 import corresponding modules FFTWf or FFTW and use corresponding plan creation:
 
-ARRAY [*] OF REAL, ARRAY [*] OF COMPLEX, 
-ARRAY [*] OF LONGREAL
-ARRAY [*] OF LONGCOMPLEX,  types for the below functions.
+ARRAY [*] OF FLOAT32, ARRAY [*] OF COMPLEX32, 
+ARRAY [*] OF FLOAT64
+ARRAY [*] OF COMPLEX64,  types for the below functions.
 
 #-----------------------------------
 #-----------------------------------
 
-TYPE Direction = LONGINT;
+TYPE Direction = SIGNED32;
 CONST
 	BACKWARD = 1;
 	FORWARD = -1;
@@ -40,18 +40,18 @@ TYPE
 	PROCEDURE CleanupThreads;
 	PROCEDURE DestroyPlan (plan: Plan);
 	PROCEDURE Execute (plan: Plan);
-	PROCEDURE Flops (plan: Plan; VAR add, mul, fma: LONGREAL);
+	PROCEDURE Flops (plan: Plan; VAR add, mul, fma: FLOAT64);
 	PROCEDURE Free (mem: ADDRESS);
-	PROCEDURE InitThreads (): LONGINT;
-	PROCEDURE Malloc (length: LONGINT): ADDRESS;
-	PROCEDURE PlanDft1Din (VAR Cinput: ARRAY [*] OF REAL; direction: Direction): Plan;
-	PROCEDURE PlanDft1Dinout (VAR Cinput, Coutput: ARRAY [*] OF REAL; direction: Direction): Plan;
-	PROCEDURE PlanDft2Din (VAR Cinput: ARRAY [*,*] OF REAL; direction: Direction): Plan;
-	PROCEDURE PlanDft2Dinout (VAR Cinput, Coutput: ARRAY [*,*] OF REAL; direction: Direction): Plan;
-	PROCEDURE PlanDft3Din (VAR Cinput: ARRAY [*,*,*] OF REAL; direction: Direction): Plan;
-	PROCEDURE PlanDft3Dinout (VAR Cinput, Coutput: ARRAY [*,*,*] OF REAL; direction: Direction): Plan;
-	PROCEDURE PlanWithNthreads (n: LONGINT);
-	PROCEDURE SetTimeLimit (seconds: LONGREAL);
+	PROCEDURE InitThreads (): SIGNED32;
+	PROCEDURE Malloc (length: SIGNED32): ADDRESS;
+	PROCEDURE PlanDft1Din (VAR Cinput: ARRAY [*] OF FLOAT32; direction: Direction): Plan;
+	PROCEDURE PlanDft1Dinout (VAR Cinput, Coutput: ARRAY [*] OF FLOAT32; direction: Direction): Plan;
+	PROCEDURE PlanDft2Din (VAR Cinput: ARRAY [*,*] OF FLOAT32; direction: Direction): Plan;
+	PROCEDURE PlanDft2Dinout (VAR Cinput, Coutput: ARRAY [*,*] OF FLOAT32; direction: Direction): Plan;
+	PROCEDURE PlanDft3Din (VAR Cinput: ARRAY [*,*,*] OF FLOAT32; direction: Direction): Plan;
+	PROCEDURE PlanDft3Dinout (VAR Cinput, Coutput: ARRAY [*,*,*] OF FLOAT32; direction: Direction): Plan;
+	PROCEDURE PlanWithNthreads (n: SIGNED32);
+	PROCEDURE SetTimeLimit (seconds: FLOAT64);
 
 
 Direction:   	  Defines direction of operation
@@ -59,7 +59,7 @@ FORWARD        Computes a regular DFT
 BACKWARD      Computes the inverse DFT
 
 
-PROCEDURE Malloc(length:LONGINT) : ADDRESS;
+PROCEDURE Malloc(length:SIGNED32) : ADDRESS;
             Allocates FFTW-optimized unmanaged memory
              length: Amount to allocate, in bytes 
             returns:Pointer to allocated memory
@@ -80,7 +80,7 @@ PROCEDURE Cleanup();
             in which case FFTW starts accumulating wisdom information again. 
             Cleanup does not deallocate your plans; you should still call DestroyPlan for this purpose.
 
-PROCEDURE SetTimeLimit (seconds: LONGREAL);
+PROCEDURE SetTimeLimit (seconds: FLOAT64);
             Sets the maximum time that can be used by the planner.
              seconds: Maximum time, in seconds. 
             This function instructs FFTW to spend at most seconds seconds (approximately) in the planner. 
@@ -96,31 +96,31 @@ PROCEDURE Execute (plan: Plan);
              plan: Pointer to the plan to execute .
             execute (and equivalents) is the only function in FFTW guaranteed to be thread-safe.
 
-PROCEDURE PlanDft1Din (VAR Cinput: ARRAY [*] OF REAL; direction: Direction): Plan;
+PROCEDURE PlanDft1Din (VAR Cinput: ARRAY [*] OF FLOAT32; direction: Direction): Plan;
             Creates a plan for a 1-dimensional complex-to-complex in-place  DFT
-PROCEDURE PlanDft1Dinout (VAR Cinput, Coutput: ARRAY [*] OF REAL; direction: Direction): Plan;
+PROCEDURE PlanDft1Dinout (VAR Cinput, Coutput: ARRAY [*] OF FLOAT32; direction: Direction): Plan;
 	        Creates a plan for a 1-dimensional complex-to-complex out-of-place  DFT
 	
              Cinput, Coutput: an array of complex numbers 
              direction: Specifies the direction of the transform
 
-PROCEDURE PlanDft2Din (VAR Cinput: ARRAY [*,*] OF REAL; direction: Direction): Plan;
+PROCEDURE PlanDft2Din (VAR Cinput: ARRAY [*,*] OF FLOAT32; direction: Direction): Plan;
             Creates a plan for a 2-dimensional complex-to-complex in-place DFT
-PROCEDURE PlanDft2Dinout (VAR Cinput, Coutput: ARRAY [*,*] OF REAL; direction: Direction): Plan;
+PROCEDURE PlanDft2Dinout (VAR Cinput, Coutput: ARRAY [*,*] OF FLOAT32; direction: Direction): Plan;
 			Creates a plan for a 2-dimensional complex-to-complex out-of-place DFT
              Cinput, Coutput:  a matrix of  complex numbers 
              direction:  Specifies the direction of the transform 
 
-PROCEDURE PlanDft3Din (VAR Cinput: ARRAY [*,*,*] OF REAL; direction: Direction): Plan;
+PROCEDURE PlanDft3Din (VAR Cinput: ARRAY [*,*,*] OF FLOAT32; direction: Direction): Plan;
             Creates a plan for a 3-dimensional complex-to-complex in-place DFT
 
-PROCEDURE PlanDft3Dinout (VAR Cinput, Coutput: ARRAY [*,*,*] OF REAL; direction: Direction): Plan;
+PROCEDURE PlanDft3Dinout (VAR Cinput, Coutput: ARRAY [*,*,*] OF FLOAT32; direction: Direction): Plan;
             Creates a plan for a 3-dimensional complex-to-complex  out-of-place DFT
              Cinput, Coutput:  cube Matrix complex numbers 
              direction: Specifies the direction of the transform 
 
          
-PROCEDURE Flops (plan: Plan; VAR add, nul, fma: LONGREAL); 
+PROCEDURE Flops (plan: Plan; VAR add, nul, fma: FLOAT64); 
              
             Returns (approximately) the number of flops used by a certain plan     
              plan: The plan to measure 
@@ -131,8 +131,8 @@ PROCEDURE Flops (plan: Plan; VAR add, nul, fma: LONGREAL);
 
 Usage of Multi-threaded FFTW
 
-PROCEDURE InitThreads (): LONGINT;
-PROCEDURE PlanWithNthreads (nthreads: LONGINT);
+PROCEDURE InitThreads (): SIGNED32;
+PROCEDURE PlanWithNthreads (nthreads: SIGNED32);
 PROCEDURE CleanupThreads();
 
 First, programs using the parallel complex transforms should be linked with -lfftw3_
