@@ -5,9 +5,9 @@ IMPORT Unix;
 
 TYPE 
 	u64* = UNSIGNED64;
-	s64* = HUGEINT;
+	s64* = SIGNED64;
 	u32* = UNSIGNED32;
-	s32* = LONGINT;
+	s32* = SIGNED32;
 	u16* = UNSIGNED16;
 	u8* = CHAR;
 (* ----------------- *)
@@ -98,7 +98,7 @@ CONST
 
 	(*!	E N U M S  *)
 
-TYPE v4l2_field* = LONGINT; 
+TYPE v4l2_field* = SIGNED32; 
 	CONST
 		FIELD_ANY* = 0; (* driver can choose from none,
 						 top, bottom, interlaced
@@ -120,7 +120,7 @@ TYPE v4l2_field* = LONGINT;
 						 first and the bottom field is
 						 transmitted first *)
 
-TYPE  v4l2_buf_type* = LONGINT; 
+TYPE  v4l2_buf_type* = SIGNED32; 
 	CONST 
 		BUF_TYPE_VIDEO_CAPTURE* = 1;
 		BUF_TYPE_VIDEO_OUTPUT* = 2;
@@ -135,20 +135,20 @@ TYPE  v4l2_buf_type* = LONGINT;
 		(* #endif*)
 		BUF_TYPE_PRIVATE* = 080H;
 						 
-TYPE v4l2_tuner_type* = LONGINT;
+TYPE v4l2_tuner_type* = SIGNED32;
 	CONST 
 		TUNER_RADIO* = 1;
 		TUNER_ANALOG_TV* = 2;
 		TUNER_DIGITAL_TV* = 3;
 	
-TYPE v4l2_memory* = LONGINT;
+TYPE v4l2_memory* = SIGNED32;
 	CONST 
 		MEMORY_MMAP* = 1; 
 		MEMORY_USERPTR* = 2; 
 		MEMORY_OVERLAY* = 3; 
 	
 	(* see also http://vektor.theorem.ca/graphics/ycbcr/ *)
-TYPE v4l2_colorspace* = LONGINT ;
+TYPE v4l2_colorspace* = SIGNED32 ;
 	CONST 
 		 (* ITU-R 601 -- broadcast NTSC/PAL *)
 		COLORSPACE_SMPTE170M* = 1;
@@ -175,7 +175,7 @@ TYPE v4l2_colorspace* = LONGINT ;
 		 (* For RGB colourspaces, this is probably a good start. *)
 		COLORSPACE_SRGB* = 8;
 
-TYPE v4l2_priority* = LONGINT;;
+TYPE v4l2_priority* = SIGNED32;;
 	CONST 
 		PRIORITY_UNSET* = 0;
 		PRIORITY_BACKGROUND* = 1;
@@ -263,7 +263,7 @@ CONST
 	(* Experimental Frame Size and frame rate enumeration *)
 	
 	(*!	F R A M E   S I Z E   E N U M E R A T I O N *)
-TYPE v4l2_frmsizetypes* = LONGINT;
+TYPE v4l2_frmsizetypes* = SIGNED32;
 CONST 
 		FRMSIZE_TYPE_DISCRETE* = 1;
 		FRMSIZE_TYPE_CONTINUOUS* = 2;
@@ -300,7 +300,7 @@ TYPE v4l2_frmsizeenum* = RECORD
 	(*
 	 *	F R A M E   R A T E   E N U M E R A T I O N
 	 *)
-	TYPE v4l2_frmivaltypes* = LONGINT ;
+	TYPE v4l2_frmivaltypes* = SIGNED32 ;
 	CONST 
 		FRMIVAL_TYPE_DISCRETE* = 1;
 		FRMIVAL_TYPE_CONTINUOUS* = 2;
@@ -360,13 +360,13 @@ TYPE v4l2_frmsizeenum* = RECORD
 
 
 	TYPE v4l2_jpegcompression* = RECORD 
-		quality*: INTEGER;
+		quality*: SIGNED16;
 		
-		APPn*: INTEGER;              (* Number of APP segment to be written,  must be 0..15 *)
-		APP_len*: INTEGER;           (* Length of data in JPEG APPn segment *)
+		APPn*: SIGNED16;              (* Number of APP segment to be written,  must be 0..15 *)
+		APP_len*: SIGNED16;           (* Length of data in JPEG APPn segment *)
 		APP_data*: ARRAY 60 OF CHAR;      (* Data in the JPEG APPn segment. *)
 		
-		COM_len*: INTEGER;           (* Length of data in JPEG COM segment *)
+		COM_len*: SIGNED16;           (* Length of data in JPEG COM segment *)
 		COM_data*: ARRAY 60 OF CHAR;      (* Data in JPEG COM segment *)
 		
 		jpeg_markers* : u32;     (* Which markers should go into the JPEG
@@ -413,9 +413,9 @@ TYPE v4l2_frmsizeenum* = RECORD
 		memory* : v4l2_memory;
 	
 	(*	TYPE union526* = RECORD 
-			CASE union:INTEGER OF 
+			CASE union:SIGNED16 OF 
 			1 : (offset: u32);
-			2 : (userptr: LONGINT);
+			2 : (userptr: SIGNED32);
 		END; *) 
 		m* : ADDRESS;  (*union8 *)
 		 length* : u32; 
@@ -777,7 +777,7 @@ CONST
 		reserved2* : ARRAY 1 OF u32;
 		data*: s64;  
 	(*	TYPE union909* = RECORD 
-			CASE union:INTEGER OF 
+			CASE union:SIGNED16 OF 
 			1 : (value: s32);
 			2 : (value64: s64);
 			3 : (string: ARRAY OF CHAR);
@@ -809,7 +809,7 @@ CONST
 	CTRL_DRIVER_PRIV(id) (((id) & 0xffff) >= 0x1000)
 *)	
 
-	TYPE v4l2_ctrl_type* = LONGINT;
+	TYPE v4l2_ctrl_type* = SIGNED32;
 	CONST 
 		CTRL_TYPE_INTEGER* = 1;
 		CTRL_TYPE_BOOLEAN* = 2;
@@ -907,7 +907,7 @@ CONST
 	
 	 CID_POWER_LINE_FREQUENCY* = CID_BASE+24;
 	 
-	TYPE v4l2_power_line_frequency* = LONGINT;
+	TYPE v4l2_power_line_frequency* = SIGNED32;
 	CONST 
 		CID_POWER_LINE_FREQUENCY_DISABLED* = 0;
 		CID_POWER_LINE_FREQUENCY_50HZ* = 1;
@@ -922,7 +922,7 @@ CONST
 	 CID_COLOR_KILLER* = CID_BASE+30;
 	 CID_COLORFX* = CID_BASE+31;
 	 
-	TYPE v4l2_colorfx* = LONGINT;
+	TYPE v4l2_colorfx* = SIGNED32;
 	CONST 
 		COLORFX_NONE* = 0;
 		COLORFX_BW* = 1;
@@ -957,7 +957,7 @@ CONST
 	
 	(*  MPEG streams *)
 	 CID_MPEG_STREAM_TYPE* = CID_MPEG_BASE+0;
-	TYPE v4l2_mpeg_stream_type* = LONGINT;
+	TYPE v4l2_mpeg_stream_type* = SIGNED32;
 	CONST 
 		MPEG_STREAM_TYPE_MPEG2_PS* = 0;(* MPEG-2 program stream *)
 		MPEG_STREAM_TYPE_MPEG2_TS* = 1;(* MPEG-2 transport stream *)
@@ -974,7 +974,7 @@ CONST
 		CID_MPEG_STREAM_PES_ID_VIDEO* = CID_MPEG_BASE+6;
 		CID_MPEG_STREAM_VBI_FMT* = CID_MPEG_BASE+7;
 	
-	TYPE v4l2_mpeg_stream_vbi_fmt* = LONGINT;
+	TYPE v4l2_mpeg_stream_vbi_fmt* = SIGNED32;
 	CONST 
 		MPEG_STREAM_VBI_FMT_NONE* = 0;   (* No VBI in the MPEG stream *)
 		MPEG_STREAM_VBI_FMT_IVTV* = 1;   (* VBI in private packets, IVTV format *)
@@ -982,14 +982,14 @@ CONST
 	
 	(*  MPEG audio *)
 	CONST CID_MPEG_AUDIO_SAMPLING_FREQ* = CID_MPEG_BASE+100;
-	TYPE v4l2_mpeg_audio_sampling_freq* = LONGINT;
+	TYPE v4l2_mpeg_audio_sampling_freq* = SIGNED32;
 	CONST 
 		MPEG_AUDIO_SAMPLING_FREQ_44100* = 0;
 		MPEG_AUDIO_SAMPLING_FREQ_48000* = 1;
 		MPEG_AUDIO_SAMPLING_FREQ_32000* = 2;
 	
 	CONST CID_MPEG_AUDIO_ENCODING* = CID_MPEG_BASE+101;
-	TYPE v4l2_mpeg_audio_encoding* = LONGINT;
+	TYPE v4l2_mpeg_audio_encoding* = SIGNED32;
 	CONST 
 		MPEG_AUDIO_ENCODING_LAYER_1* = 0;
 		MPEG_AUDIO_ENCODING_LAYER_2* = 1;
@@ -998,7 +998,7 @@ CONST
 		MPEG_AUDIO_ENCODING_AC3* = 4;
 	
 	CONST CID_MPEG_AUDIO_L1_BITRATE* = CID_MPEG_BASE+102;
-	TYPE v4l2_mpeg_audio_l1_bitrate* = LONGINT;
+	TYPE v4l2_mpeg_audio_l1_bitrate* = SIGNED32;
 	CONST 
 		MPEG_AUDIO_L1_BITRATE_32K* = 0;
 		MPEG_AUDIO_L1_BITRATE_64K* = 1;
@@ -1016,7 +1016,7 @@ CONST
 		MPEG_AUDIO_L1_BITRATE_448K* = 13;
 	
 	CONST CID_MPEG_AUDIO_L2_BITRATE* = CID_MPEG_BASE+103;
-	TYPE v4l2_mpeg_audio_l2_bitrate* = LONGINT;
+	TYPE v4l2_mpeg_audio_l2_bitrate* = SIGNED32;
 	CONST 
 		MPEG_AUDIO_L2_BITRATE_32K* = 0;
 		MPEG_AUDIO_L2_BITRATE_48K* = 1;
@@ -1034,7 +1034,7 @@ CONST
 		MPEG_AUDIO_L2_BITRATE_384K* = 13;
 	
 	CONST CID_MPEG_AUDIO_L3_BITRATE* = CID_MPEG_BASE+104;
-	TYPE v4l2_mpeg_audio_l3_bitrate* = LONGINT;
+	TYPE v4l2_mpeg_audio_l3_bitrate* = SIGNED32;
 	CONST 
 		MPEG_AUDIO_L3_BITRATE_32K* = 0;
 		MPEG_AUDIO_L3_BITRATE_40K* = 1;
@@ -1052,7 +1052,7 @@ CONST
 		MPEG_AUDIO_L3_BITRATE_320K* = 13;
 	
 	CONST CID_MPEG_AUDIO_MODE* = CID_MPEG_BASE+105;
-	TYPE v4l2_mpeg_audio_mode* = LONGINT;
+	TYPE v4l2_mpeg_audio_mode* = SIGNED32;
 	CONST 
 		MPEG_AUDIO_MODE_STEREO* = 0;
 		MPEG_AUDIO_MODE_JOINT_STEREO* = 1;
@@ -1060,7 +1060,7 @@ CONST
 		MPEG_AUDIO_MODE_MONO* = 3;
 	
 	CONST CID_MPEG_AUDIO_MODE_EXTENSION* = CID_MPEG_BASE+106;
-	TYPE v4l2_mpeg_audio_mode_extension* = LONGINT;
+	TYPE v4l2_mpeg_audio_mode_extension* = SIGNED32;
 	CONST 
 		MPEG_AUDIO_MODE_EXTENSION_BOUND_4* = 0;
 		MPEG_AUDIO_MODE_EXTENSION_BOUND_8* = 1;
@@ -1068,14 +1068,14 @@ CONST
 		MPEG_AUDIO_MODE_EXTENSION_BOUND_16* = 3;
 	
 	CONST CID_MPEG_AUDIO_EMPHASIS* = CID_MPEG_BASE+107;
-	TYPE v4l2_mpeg_audio_emphasis* = LONGINT;
+	TYPE v4l2_mpeg_audio_emphasis* = SIGNED32;
 	CONST 
 		MPEG_AUDIO_EMPHASIS_NONE* = 0;
 		MPEG_AUDIO_EMPHASIS_50_DIV_15_uS* = 1;
 		MPEG_AUDIO_EMPHASIS_CCITT_J17* = 2;
 	
 	CONST CID_MPEG_AUDIO_CRC* = CID_MPEG_BASE+108;
-	TYPE v4l2_mpeg_audio_crc* = LONGINT;
+	TYPE v4l2_mpeg_audio_crc* = SIGNED32;
 	CONST 
 		MPEG_AUDIO_CRC_NONE* = 0;
 		MPEG_AUDIO_CRC_CRC16* = 1;
@@ -1083,7 +1083,7 @@ CONST
 	CONST CID_MPEG_AUDIO_MUTE* = CID_MPEG_BASE+109;
 	CONST CID_MPEG_AUDIO_AAC_BITRATE* = CID_MPEG_BASE+110;
 	CONST CID_MPEG_AUDIO_AC3_BITRATE* = CID_MPEG_BASE+111;
-	TYPE v4l2_mpeg_audio_ac3_bitrate* = LONGINT;
+	TYPE v4l2_mpeg_audio_ac3_bitrate* = SIGNED32;
 	CONST 
 		MPEG_AUDIO_AC3_BITRATE_32K* = 0;
 		MPEG_AUDIO_AC3_BITRATE_40K* = 1;
@@ -1108,14 +1108,14 @@ CONST
 	
 	(*  MPEG video *)
 	CONST CID_MPEG_VIDEO_ENCODING* = CID_MPEG_BASE+200;
-	TYPE v4l2_mpeg_video_encoding* = LONGINT;
+	TYPE v4l2_mpeg_video_encoding* = SIGNED32;
 	CONST 
 		MPEG_VIDEO_ENCODING_MPEG_1* = 0;
 		MPEG_VIDEO_ENCODING_MPEG_2* = 1;
 		MPEG_VIDEO_ENCODING_MPEG_4_AVC* = 2;	
 		CID_MPEG_VIDEO_ASPECT* = CID_MPEG_BASE+201;
 		
-	TYPE v4l2_mpeg_video_aspect* = LONGINT;
+	TYPE v4l2_mpeg_video_aspect* = SIGNED32;
 	CONST 
 		MPEG_VIDEO_ASPECT_1x1* = 0;
 		MPEG_VIDEO_ASPECT_4x3* = 1;
@@ -1128,7 +1128,7 @@ CONST
 	 	CID_MPEG_VIDEO_PULLDOWN* = CID_MPEG_BASE+205;
 	 	CID_MPEG_VIDEO_BITRATE_MODE* = CID_MPEG_BASE+206;
 	 	
-	TYPE v4l2_mpeg_video_bitrate_mode* = LONGINT;
+	TYPE v4l2_mpeg_video_bitrate_mode* = SIGNED32;
 	CONST 
 		MPEG_VIDEO_BITRATE_MODE_VBR* = 0;
 		MPEG_VIDEO_BITRATE_MODE_CBR* = 1;
@@ -1143,7 +1143,7 @@ CONST
 		CID_MPEG_CX2341X_BASE* = CTRL_CLASS_MPEG + 01000H;
 		CID_MPEG_CX2341X_VIDEO_SPATIAL_FILTER_MODE* = CID_MPEG_CX2341X_BASE+0;
 		
-	TYPE v4l2_mpeg_cx2341x_video_spatial_filter_mode* = LONGINT;
+	TYPE v4l2_mpeg_cx2341x_video_spatial_filter_mode* = SIGNED32;
 	CONST 
 		MPEG_CX2341X_VIDEO_SPATIAL_FILTER_MODE_MANUAL* = 0;
 		MPEG_CX2341X_VIDEO_SPATIAL_FILTER_MODE_AUTO* = 1;
@@ -1151,7 +1151,7 @@ CONST
 	 	CID_MPEG_CX2341X_VIDEO_SPATIAL_FILTER* = CID_MPEG_CX2341X_BASE+1;
 	 	CID_MPEG_CX2341X_VIDEO_LUMA_SPATIAL_FILTER_TYPE* = CID_MPEG_CX2341X_BASE+2;
 	 	
-	TYPE v4l2_mpeg_cx2341x_video_luma_spatial_filter_type* = LONGINT;
+	TYPE v4l2_mpeg_cx2341x_video_luma_spatial_filter_type* = SIGNED32;
 	CONST 
 		MPEG_CX2341X_VIDEO_LUMA_SPATIAL_FILTER_TYPE_OFF* = 0;
 		MPEG_CX2341X_VIDEO_LUMA_SPATIAL_FILTER_TYPE_1D_HOR* = 1;
@@ -1161,14 +1161,14 @@ CONST
 	
 		CID_MPEG_CX2341X_VIDEO_CHROMA_SPATIAL_FILTER_TYPE* = CID_MPEG_CX2341X_BASE+3;
 		
-	TYPE v4l2_mpeg_cx2341x_video_chroma_spatial_filter_type* = LONGINT;
+	TYPE v4l2_mpeg_cx2341x_video_chroma_spatial_filter_type* = SIGNED32;
 	CONST 
 		MPEG_CX2341X_VIDEO_CHROMA_SPATIAL_FILTER_TYPE_OFF* = 0;
 		MPEG_CX2341X_VIDEO_CHROMA_SPATIAL_FILTER_TYPE_1D_HOR* = 1;
 	
 		CID_MPEG_CX2341X_VIDEO_TEMPORAL_FILTER_MODE* = CID_MPEG_CX2341X_BASE+4;
 		
-	TYPE v4l2_mpeg_cx2341x_video_temporal_filter_mode* = LONGINT;
+	TYPE v4l2_mpeg_cx2341x_video_temporal_filter_mode* = SIGNED32;
 	CONST 
 		MPEG_CX2341X_VIDEO_TEMPORAL_FILTER_MODE_MANUAL* = 0;
 		MPEG_CX2341X_VIDEO_TEMPORAL_FILTER_MODE_AUTO* = 1;
@@ -1176,7 +1176,7 @@ CONST
 	 	CID_MPEG_CX2341X_VIDEO_TEMPORAL_FILTER* = CID_MPEG_CX2341X_BASE+5;
 	 	CID_MPEG_CX2341X_VIDEO_MEDIAN_FILTER_TYPE* = CID_MPEG_CX2341X_BASE+6;
 	 	
-	TYPE v4l2_mpeg_cx2341x_video_median_filter_type* = LONGINT;
+	TYPE v4l2_mpeg_cx2341x_video_median_filter_type* = SIGNED32;
 	CONST 
 		MPEG_CX2341X_VIDEO_MEDIAN_FILTER_TYPE_OFF* = 0;
 		MPEG_CX2341X_VIDEO_MEDIAN_FILTER_TYPE_HOR* = 1;
@@ -1196,7 +1196,7 @@ CONST
 	
 		CID_EXPOSURE_AUTO* = CID_CAMERA_CLASS_BASE+1;
 		
-	TYPE v4l2_exposure_auto_type* = LONGINT ;
+	TYPE v4l2_exposure_auto_type* = SIGNED32 ;
 	CONST 
 		EXPOSURE_AUTO* = 0;
 		EXPOSURE_MANUAL* = 1;
@@ -1254,7 +1254,7 @@ CONST
 	
 		CID_TUNE_PREEMPHASIS* = CID_FM_TX_CLASS_BASE + 112;
 		
-	TYPE v4l2_preemphasis* = LONGINT;
+	TYPE v4l2_preemphasis* = SIGNED32;
 	CONST 
 		PREEMPHASIS_DISABLED* = 0;
 		PREEMPHASIS_50_uS* = 1;
@@ -1550,7 +1550,7 @@ CONST
 	TYPE v4l2_mpeg_vbi_fmt_ivtv* = RECORD 
 		magic: ARRAY 4 OF u8;
 		TYPE * = RECORD 
-			CASE union:INTEGER OF 
+			CASE union:SIGNED16 OF 
 			itv0: v4l2_mpeg_vbi_itv0;
 			ITV0: v4l2_mpeg_vbi_ITV0;
 		END;
@@ -1614,7 +1614,7 @@ TYPE v4l2_pix_format_mplane* = RECORD
 	        208 bytes on 64 bit os
 	        *)
 	TYPE v4l2_format* = RECORD 
-		type*: LONGWORD;
+		type*: LONGINTEGER;
 		
 	(*	
 			union: type cast fmt according to type; ex:  pix := SYSTEM.VAL(v4l2_pix_format, fmt)
@@ -1627,7 +1627,7 @@ TYPE v4l2_pix_format_mplane* = RECORD
 			raw_data* : ARRAY 200 OF u8;                   (* user-defined *)
 
 	*)	
-		(*x {FICTIVE=4}: LONGINT;*)
+		(*x {FICTIVE=4}: SIGNED32;*)
 		 fmt* : D200;
 
 	END;
@@ -1657,7 +1657,7 @@ TYPE v4l2_pix_format_mplane* = RECORD
 	(* Payload for EVENT_VSYNC *)
 	TYPE v4l2_event_vsync* = RECORD 
 		(* Can be FIELD_ANY, _NONE, _TOP or _BOTTOM *)
-		field* : LONGINT; (* address *)
+		field* : SIGNED32; (* address *)
 	END;
 
 	TYPE Data64* = ARRAY 64 OF CHAR;
@@ -1809,7 +1809,7 @@ VAR
 	VIDIOC_G_DV_TIMINGS -,   
 	VIDIOC_DQEVENT -,   
 	VIDIOC_SUBSCRIBE_EVENT -,   
-	VIDIOC_UNSUBSCRIBE_EVENT - : LONGINT;   
+	VIDIOC_UNSUBSCRIBE_EVENT - : SIGNED32;   
 
 
 (*!  Pixel format FOURCC  depth  Description  *)
@@ -1908,15 +1908,15 @@ VAR
 	PIX_FMT_STV0680 - , 
 	PIX_FMT_TM6000 - , 
 	PIX_FMT_CIT_YYVYUY - , 
-	PIX_FMT_KONICA420 - : LONGINT; 
+	PIX_FMT_KONICA420 - : SIGNED32; 
 
 (* Four-character-code (FOURCC) *)
-PROCEDURE fourcc* (a, b, c, d: CHAR): LONGINT;
+PROCEDURE fourcc* (a, b, c, d: CHAR): SIGNED32;
 BEGIN
 	 RETURN ORD(d) * 1000000H + ORD(c) * 10000H + ORD(b) * 100H + ORD(a);
 END fourcc;
 
-PROCEDURE IOC (dir, type, nr, size: LONGINT): LONGINT;
+PROCEDURE IOC (dir, type, nr, size: SIGNED32): SIGNED32;
 BEGIN
 	RETURN LSH(dir, IOC_DIRSHIFT) +
 	LSH(type, IOC_TYPESHIFT) +
@@ -1940,11 +1940,11 @@ END IOC;
 	VIDIOC_QUERYBUF := IOC(IOC_READ + IOC_WRITE, ORD('V'),  9, SIZEOF(v4l2_buffer));
 	VIDIOC_G_FBUF := IOC(IOC_READ, ORD('V'), 10, SIZEOF(v4l2_framebuffer));
 	VIDIOC_S_FBUF := IOC(IOC_WRITE, ORD('V'), 11, SIZEOF(v4l2_framebuffer));
-	VIDIOC_OVERLAY := IOC(IOC_WRITE, ORD('V'), 14, SIZEOF(LONGINT)); (* int *)
+	VIDIOC_OVERLAY := IOC(IOC_WRITE, ORD('V'), 14, SIZEOF(SIGNED32)); (* int *)
 	VIDIOC_QBUF := IOC(IOC_READ + IOC_WRITE, ORD('V'), 15, SIZEOF(v4l2_buffer));
 	VIDIOC_DQBUF := IOC(IOC_READ + IOC_WRITE, ORD('V'), 17, SIZEOF(v4l2_buffer));
-	VIDIOC_STREAMON := IOC(IOC_WRITE, ORD('V'), 18, SIZEOF(LONGINT));
-	VIDIOC_STREAMOFF := IOC(IOC_WRITE, ORD('V'), 19, SIZEOF(LONGINT));
+	VIDIOC_STREAMON := IOC(IOC_WRITE, ORD('V'), 18, SIZEOF(SIGNED32));
+	VIDIOC_STREAMOFF := IOC(IOC_WRITE, ORD('V'), 19, SIZEOF(SIGNED32));
 	VIDIOC_G_PARM := IOC(IOC_READ + IOC_WRITE, ORD('V'), 21, SIZEOF(v4l2_streamparm));
 	VIDIOC_S_PARM := IOC(IOC_READ + IOC_WRITE, ORD('V'), 22, SIZEOF(v4l2_streamparm));
 	VIDIOC_G_STD := IOC(IOC_READ, ORD('V'), 23, SIZEOF(v4l2_std_id));

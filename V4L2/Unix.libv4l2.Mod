@@ -13,7 +13,7 @@ VAR
 	libhandle, libhandle2: ADDRESS;
 	   
 TYPE 
-	int64_t* = HUGEINT;
+	int64_t* = SIGNED64;
 	ssize_t* = SIZE;	
 	
 	(*! libv4l2.h *)
@@ -46,16 +46,16 @@ TYPE
 	*)
 	
 VAR	
-	open-: PROCEDURE {C} (CONST file: ARRAY OF CHAR;  oflag: SET32; mode: Unix.mode_t): LONGINT;
-	close-: PROCEDURE {C} (fd: LONGINT): LONGINT;
-	dup- : PROCEDURE{C} (fd: LONGINT): LONGINT;
-	ioctl-: PROCEDURE {C} (fd: LONGINT;  request: LONGINT; adr: ADDRESS): LONGINT;
-	read-: PROCEDURE {C} (fd: LONGINT;  buffer: ADDRESS;  n: SIZE): ssize_t;
-	write-: PROCEDURE {C} (fd: LONGINT;  buffer: ADDRESS;  n: SIZE): ssize_t;
+	open-: PROCEDURE {C} (CONST file: ARRAY OF CHAR;  oflag: SET32; mode: Unix.mode_t): SIGNED32;
+	close-: PROCEDURE {C} (fd: SIGNED32): SIGNED32;
+	dup- : PROCEDURE{C} (fd: SIGNED32): SIGNED32;
+	ioctl-: PROCEDURE {C} (fd: SIGNED32;  request: SIGNED32; adr: ADDRESS): SIGNED32;
+	read-: PROCEDURE {C} (fd: SIGNED32;  buffer: ADDRESS;  n: SIZE): ssize_t;
+	write-: PROCEDURE {C} (fd: SIGNED32;  buffer: ADDRESS;  n: SIZE): ssize_t;
 	
-	mmap- :  PROCEDURE {C} (start: ADDRESS;  length: SIZE;  prot: LONGINT;  flags: LONGINT; 
-									fd: LONGINT;  offset: int64_t): ADDRESS;
-	munmap-: PROCEDURE {C} (start: ADDRESS;  length: SIZE):LONGINT;
+	mmap- :  PROCEDURE {C} (start: ADDRESS;  length: SIZE;  prot: SIGNED32;  flags: SIGNED32; 
+									fd: SIGNED32;  offset: int64_t): ADDRESS;
+	munmap-: PROCEDURE {C} (start: ADDRESS;  length: SIZE):SIGNED32;
 	
 	
 	(* Misc utility functions *)
@@ -66,12 +66,12 @@ VAR
 	
 	   Normally returns 0, even if the cid did not exist or was locked, returns
 	   non 0 when an other error occured. *)
-	set_control-: PROCEDURE {C} (fd: LONGINT;  cid: LONGINT;  value: LONGINT): LONGINT;
+	set_control-: PROCEDURE {C} (fd: SIGNED32;  cid: SIGNED32;  value: SIGNED32): SIGNED32;
 	
 	(* This function returns a value of 0 - 65535, scaled to from the actual range
 	   of the given v4l control id. When the cid does not exist, or could not be
 	   accessed -1 is returned. *)
-	get_control- : PROCEDURE {C} (fd: LONGINT;  cid: LONGINT): LONGINT;
+	get_control- : PROCEDURE {C} (fd: SIGNED32;  cid: SIGNED32): SIGNED32;
 	
 	
 	(* "low level" access functions, these functions allow somewhat lower level
@@ -97,22 +97,22 @@ CONST
 	   Returns fd on success, -1 if the fd is not suitable for use through libv4l2
 	   (note the fd is left open in this case). *)
 VAR   
-	fd_open-: PROCEDURE {C} (fd: LONGINT;  v4l2_flags: LONGINT): LONGINT;;
+	fd_open-: PROCEDURE {C} (fd: SIGNED32;  v4l2_flags: SIGNED32): SIGNED32;;
 	
 	
 (*! ---------------------------------- *)	
 
-TYPE convert_data = LONGINT;
+TYPE convert_data = SIGNED32;
 
 VAR
-	convert_create- : PROCEDURE {C} (fd: LONGINT): convert_data;
+	convert_create- : PROCEDURE {C} (fd: SIGNED32): convert_data;
 	convert_destroy-: PROCEDURE  {C} (VAR data: convert_data);
 	
 	(* When doing flipping / rotating / video-processing, only supported
 	   destination formats can be used (as flipping / rotating / video-processing
 	   is not supported on other formats). This function can be used to query
 	   if that is the case. *)
-	convert_supported_dst_fmt_only-: PROCEDURE {C} (VAR data: convert_data): LONGINT;
+	convert_supported_dst_fmt_only-: PROCEDURE {C} (VAR data: convert_data): SIGNED32;
 	
 	(* With regards to dest_fmt just like VIDIOC_TRY_FMT, except that the try
 	   format will succeed and return the requested V4L2_PIX_FMT_foo in dest_fmt if
@@ -125,23 +125,23 @@ VAR
 	   convert_supported_dst_fmt_only() returns true. *)
 	convert_try_format-: PROCEDURE {C} (VAR data: convert_data;
 									VAR dest_fmt: V.v4l2_format; (* in / out *)
-									VAR src_fmt: V.v4l2_format (* out *) ): LONGINT;
+									VAR src_fmt: V.v4l2_format (* out *) ): SIGNED32;
 	
 	(* Like VIDIOC_ENUM_FMT, but the emulated formats are added at the end of the
 	   list, except if flipping / processing is active for the device, then only
 	   supported destination formats are listed *)
-	convert_enum_fmt-: PROCEDURE {C} (VAR data: convert_data; VAR fmt: V.v4l2_fmtdesc): LONGINT;
+	convert_enum_fmt-: PROCEDURE {C} (VAR data: convert_data; VAR fmt: V.v4l2_fmtdesc): SIGNED32;
 	
 	(* Is conversion necessary or can the app use the data directly? *)
 	convert_needs_conversion- : PROCEDURE {C} (VAR data: convert_data;
 									CONST src_fmt: V.v4l2_format (* in *);
-									CONST dest_fmt: V.v4l2_format(* in *) ): LONGINT;
+									CONST dest_fmt: V.v4l2_format(* in *) ): SIGNED32;
 	
 	(* return value of -1 on error, otherwise the amount of bytes written to dest *)
 	convert_convert- : PROCEDURE {C} (data: convert_data;
 									CONST src_fmt: V.v4l2_format (* in *) ;
 									CONST dest_fmt: V.v4l2_format (* in *);
-									src: ADDRESS;  src_size: LONGINT;  dest: ADDRESS;  dest_size: LONGINT): LONGINT;
+									src: ADDRESS;  src_size: SIGNED32;  dest: ADDRESS;  dest_size: SIGNED32): SIGNED32;
 	
 	(* get a string describing the last error *)
 	convert_get_error_message- : PROCEDURE {C}(data: convert_data): ADDRESS; 
@@ -149,26 +149,26 @@ VAR
 	(* Just like VIDIOC_ENUM_FRAMESIZE, except that the framesizes of emulated
 	   formats can be enumerated as well. *)
 	   
-	convert_enum_framesizes- : PROCEDURE {C} (data: convert_data;	VAR frmsize: V.v4l2_frmsizeenum): LONGINT;
+	convert_enum_framesizes- : PROCEDURE {C} (data: convert_data;	VAR frmsize: V.v4l2_frmsizeenum): SIGNED32;
 
 
 	(* Just like VIDIOC_ENUM_FRAMEINTERVALS, except that the intervals of emulated
 	   formats can be enumerated as well. *)
 	convert_enum_frameintervals-: PROCEDURE{C} (data: convert_data;
-									frmival: V.v4l2_frmivalenum): LONGINT;
+									frmival: V.v4l2_frmivalenum): SIGNED32;
 
 	(* Pass calls to query, get and set video controls to the libv4lcontrol class *)
-	convert_vidioc_queryctrl-: PROCEDURE{C} (data: convert_data;	arg: ADDRESS):LONGINT;
-	convert_vidioc_g_ctrl-: PROCEDURE{C} (data: convert_data; arg: ADDRESS): LONGINT;
-	convert_vidioc_s_ctrl-: PROCEDURE{C} (data: convert_data;	arg: ADDRESS): LONGINT;
+	convert_vidioc_queryctrl-: PROCEDURE{C} (data: convert_data;	arg: ADDRESS):SIGNED32;
+	convert_vidioc_g_ctrl-: PROCEDURE{C} (data: convert_data; arg: ADDRESS): SIGNED32;
+	convert_vidioc_s_ctrl-: PROCEDURE{C} (data: convert_data;	arg: ADDRESS): SIGNED32;
 	
 	(* Is the passed in pixelformat supported as destination format? *)
-	convert_supported_dst_format-: PROCEDURE{C} (pixelformat: LONGINT(*word*)): LONGINT; 
+	convert_supported_dst_format-: PROCEDURE{C} (pixelformat: SIGNED32(*word*)): SIGNED32; 
 	
 	(* Get/set the no fps libv4lconvert uses to decide if a compressed format
 	   must be used as src fmt to stay within the bus bandwidth *)
-	convert_get_fps-: PROCEDURE{C} (data: convert_data): LONGINT;
-	convert_set_fps-: PROCEDURE{C} (data: convert_data; fps: LONGINT);
+	convert_get_fps-: PROCEDURE{C} (data: convert_data): SIGNED32;
+	convert_set_fps-: PROCEDURE{C} (data: convert_data; fps: SIGNED32);
 
 (*! ---------------------------------- *)
 

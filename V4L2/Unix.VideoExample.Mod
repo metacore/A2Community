@@ -20,10 +20,10 @@ TYPE
 
 TYPE ControlWindow = OBJECT(WMComponents.FormWindow)
 		VAR 
-			fd: LONGINT;
+			fd: SIGNED32;
 			pan: WMStandardComponents.Panel;
 
-		PROCEDURE &New(f: LONGINT);
+		PROCEDURE &New(f: SIGNED32);
 		BEGIN
 			fd := f;
 			
@@ -51,19 +51,19 @@ TYPE ControlWindow = OBJECT(WMComponents.FormWindow)
 		PROCEDURE CreateControls(): WMStandardComponents.Panel;
 		VAR 
 			queryctrl: V.v4l2_queryctrl;
-			id, err: LONGINT;	
+			id, err: SIGNED32;	
 			pan: WMStandardComponents.Panel;
 			en: WMEditors.TextField;
 			lb: WMStandardComponents.Label;
 			cb: WMStandardComponents.Button;
-			cnt: LONGINT;
-			i, j: LONGINT;
+			cnt: SIGNED32;
+			i, j: SIGNED32;
 			qmenu: V.v4l2_querymenu;
 			
 			PROCEDURE MakeEdit( x, y: SIZE; ctrl: V.v4l2_queryctrl): WMEditors.TextField;
 			VAR e: WMEditors.TextField;
 				str: ARRAY 128 OF CHAR;
-				val: LONGINT;
+				val: SIGNED32;
 			BEGIN
 				Strings.AppendInt(str, ctrl.id);
 				NEW(e); e.uid.SetAOC(str);
@@ -92,7 +92,7 @@ TYPE ControlWindow = OBJECT(WMComponents.FormWindow)
 			PROCEDURE MakeCheckBox( x, y: SIZE; ctrl: V.v4l2_queryctrl): WMStandardComponents.Button;
 			VAR b: WMStandardComponents.Button;
 				str: ARRAY 128 OF CHAR;
-				val: LONGINT;
+				val: SIGNED32;
 			BEGIN
 				Strings.AppendInt(str, ctrl.id);				
 				NEW(b); b.uid.SetAOC(str);
@@ -111,7 +111,7 @@ TYPE ControlWindow = OBJECT(WMComponents.FormWindow)
 			PROCEDURE MakeMenu( x, y: SIZE; ctrl: V.v4l2_querymenu): WMStandardComponents.Button;
 			VAR b: WMStandardComponents.Button;
 				str: ARRAY 128 OF CHAR;
-				val: LONGINT;
+				val: SIGNED32;
 			BEGIN
 				Strings.AppendInt(str, ctrl.id);
 				NEW(b); b.uid.SetAOC(str);
@@ -130,7 +130,7 @@ TYPE ControlWindow = OBJECT(WMComponents.FormWindow)
 			pan.bounds.Set(WMRectangles.MakeRect(0, 0, 300, 400));
 			pan.fillColor.Set(0CCCCCCCCH);
 					
-			queryctrl.id := SYSTEM.VAL(LONGINT, {V.CTRL_FLAG_NEXT_CTRL});
+			queryctrl.id := SYSTEM.VAL(SIGNED32, {V.CTRL_FLAG_NEXT_CTRL});
 			WHILE xioctl (fd, V.VIDIOC_QUERYCTRL, ADDRESSOF(queryctrl)) > - 1 DO
 
 				(*IF V.CTRL_FLAG_DISABLED IN queryctrl.flags THEN
@@ -190,7 +190,7 @@ TYPE ControlWindow = OBJECT(WMComponents.FormWindow)
 	
 					END;
 				(*END; *)
-				queryctrl.id  := SYSTEM.VAL(LONGINT, SYSTEM.VAL(SET32, queryctrl.id) + {V.CTRL_FLAG_NEXT_CTRL});
+				queryctrl.id  := SYSTEM.VAL(SIGNED32, SYSTEM.VAL(SET32, queryctrl.id) + {V.CTRL_FLAG_NEXT_CTRL});
 			END;
 			out.Update();
 			RETURN pan;
@@ -211,8 +211,8 @@ TYPE ControlWindow = OBJECT(WMComponents.FormWindow)
 		
 		PROCEDURE CheckboxHandler(sender, data: ANY);
 		VAR b: WMStandardComponents.Button;
-			id: LONGINT;
-			res: LONGINT;
+			id: SIGNED32;
+			res: SIGNED32;
 			checked: BOOLEAN;
 		BEGIN
 			b := sender(WMStandardComponents.Button);
@@ -233,8 +233,8 @@ TYPE ControlWindow = OBJECT(WMComponents.FormWindow)
 		PROCEDURE TextFieldHandler(sender, data: ANY);
 		VAR c: WMEditors.TextField;
 			str: ARRAY 32 OF CHAR;
-			id: LONGINT;
-			val, res: LONGINT;
+			id: SIGNED32;
+			val, res: SIGNED32;
 		BEGIN		
 			 Strings.IntToStr(V.CID_BRIGHTNESS, str);
 			 c := sender(WMEditors.TextField);
@@ -252,9 +252,9 @@ TYPE ControlWindow = OBJECT(WMComponents.FormWindow)
 	END ControlWindow;
 		
 	PreviewWindow = OBJECT (WM.BufferWindow);
-		VAR startX, startY, stopX, stopY: LONGREAL; (* measurement points *)
+		VAR startX, startY, stopX, stopY: FLOAT64; (* measurement points *)
 				labelw, labelh: SIZE;
-		PROCEDURE &New(width, height : LONGINT; CONST title: ARRAY OF CHAR);
+		PROCEDURE &New(width, height : SIGNED32; CONST title: ARRAY OF CHAR);
 		BEGIN
 			Init(width, height, FALSE);
 			(* WM.AddWindow(SELF, 200, 200); *)
@@ -265,13 +265,13 @@ TYPE ControlWindow = OBJECT(WMComponents.FormWindow)
 		END New;
 		
 		(* Overwrite draw procedure because we do not want any interpolation *)
-		PROCEDURE Draw(canvas : WMGraphics.Canvas; w, h: SIZE; q : WORD);
+		PROCEDURE Draw(canvas : WMGraphics.Canvas; w, h: SIZE; q : SIGNED16);
 		BEGIN
 			Draw^(canvas, w, h, 0);
 		END Draw;
 		
 		PROCEDURE Update;
-		VAR sx, sy, dxy, teta: LONGREAL;
+		VAR sx, sy, dxy, teta: FLOAT64;
 			sxs, sys: ARRAY 32 OF CHAR;
 			str: ARRAY 128 OF CHAR;	
 			rect: WMRectangles.Rectangle;	
@@ -362,7 +362,7 @@ TYPE ControlWindow = OBJECT(WMComponents.FormWindow)
 		END Handle;
 					
 		PROCEDURE SaveImage;
-		VAR res: LONGINT;
+		VAR res: SIGNED32;
 		BEGIN
 			IF WMDialogs.QueryString(" Save File name:", filename) = WMDialogs.ResOk THEN
 				WMGraphics.StoreImage(img, filename,res); 
@@ -417,24 +417,24 @@ VAR
 	preview : PreviewWindow;
 	out: Streams.Writer;
 	
-	fd: LONGINT; (* device file handle *)
+	fd: SIGNED32; (* device file handle *)
 	buffer, buffer32 : WMGraphics.Image;  (* captured image buffer *)
 	mode: Raster.Mode;
 	starter : Starter;
-	camWidth, camHeight: LONGINT;
+	camWidth, camHeight: SIGNED32;
 	showms: BOOLEAN;
 	
 	frameHandler : FrameHandler;
 	timestr: ARRAY 16 OF CHAR;	
 	filename :="captured1.bmp" : ARRAY 128 OF CHAR;
 	showRuler: BOOLEAN;
-	scaleX := 1.0: LONGREAL; (* default measurement scales *)
-	scaleY := 1.0: LONGREAL;
+	scaleX := 1.0: FLOAT64; (* default measurement scales *)
+	scaleY := 1.0: FLOAT64;
 	
 	dummyimg: WMGraphics.Image;
 
 (* http://en.wikipedia.org/wiki/Atan2 *)
-PROCEDURE atan2(y, x: LONGREAL): LONGREAL; (*arctan in range -pi .. pi *)
+PROCEDURE atan2(y, x: FLOAT64): FLOAT64; (*arctan in range -pi .. pi *)
 BEGIN
 	IF (x > 0)  THEN RETURN Math.arctan(y/x)
 	ELSIF (y >= 0) & (x < 0) THEN RETURN Math.arctan(y/x)+Math.pi
@@ -449,16 +449,16 @@ PROCEDURE ReadFrame(): BOOLEAN;
 VAR
 	fds: Unix.FdSet;
 	tv: Unix.Timeval;
-	r: LONGINT;
+	r: SIGNED32;
 	bufsize: SIZE;
 	(* --------for ioctl ------------ *)
 	PROCEDURE FDZERO(VAR fs: Unix.FdSet);
-	VAR i: LONGINT;
+	VAR i: SIGNED32;
 	BEGIN 
 		FOR i:=0 TO LEN(fs)-1 DO fs[i] := {}; END;
 	END FDZERO;
 
-	PROCEDURE FDSET(fd: LONGINT; VAR fs: Unix.FdSet);
+	PROCEDURE FDSET(fd: SIGNED32; VAR fs: Unix.FdSet);
 	BEGIN 
 		INCL( fs[fd DIV Unix.FdSetLen],  fd MOD Unix.FdSetLen );	
 	END FDSET;
@@ -495,7 +495,7 @@ BEGIN
 END GetImageBGR;
 
 PROCEDURE CloseDevice();
-VAR err: LONGINT;
+VAR err: SIGNED32;
 BEGIN
 	IF fd > 0 THEN	
  		err := lib.close(fd);
@@ -523,7 +523,7 @@ PROCEDURE EnumerateFrameSizes*;
 VAR 
 
      frmsize: V.v4l2_frmsizeenum;
-     err: LONGINT;
+     err: SIGNED32;
      discrete: V.v4l2_frmsize_discrete;
      stepwise: V.v4l2_frmsize_stepwise;
      
@@ -559,11 +559,11 @@ VAR
 	cropcap: V.v4l2_cropcap;
 	crop: V.v4l2_crop;
 	fmt: V.v4l2_format;
-	min: LONGINT;	
+	min: SIGNED32;	
  	pix: V.v4l2_pix_format;
  	fmtdesc: V.v4l2_fmtdesc;
  	
-	err, i: LONGINT;
+	err, i: SIGNED32;
 BEGIN
 	err := xioctl(fd, V.VIDIOC_QUERYCAP, ADDRESSOF(cap));
 
@@ -618,7 +618,7 @@ VAR
 	fmt: V.v4l2_format;
 	min: V.u32;	
  	pix: V.v4l2_pix_format;
-	err: LONGINT;
+	err: SIGNED32;
 	
 BEGIN
     out.String("errno-initdev-0: "); out.Int(Unix.errno(), 0); out.Ln;        
@@ -714,8 +714,8 @@ BEGIN
 	out.String("pix.width= "); out.Int(pix.width, 0); out.Ln; 
 	out.String("pix.height= "); out.Int(pix.height, 0); out.Ln; out.Update();
 	
-	camWidth := LONGINT(pix.width);
-	camHeight := LONGINT(pix.height);
+	camWidth := SIGNED32(pix.width);
+	camHeight := SIGNED32(pix.height);
 
   	fmt.fmt := SYSTEM.VAL(V.D200, pix);
 
@@ -726,7 +726,7 @@ BEGIN
 	RETURN TRUE
 END InitDevice;
 
-PROCEDURE xioctl(fh: LONGINT; request: LONGINT; arg: ADDRESS): LONGINT;
+PROCEDURE xioctl(fh: SIGNED32; request: SIGNED32; arg: ADDRESS): SIGNED32;
 BEGIN
 	RETURN  lib.ioctl(fh, request, arg);
 END xioctl;
@@ -734,7 +734,7 @@ END xioctl;
 PROCEDURE FrameReceived ();
 VAR
 	trap : BOOLEAN;
-	t0, t1: LONGINT;
+	t0, t1: SIGNED32;
 	
 BEGIN
 	trap := TRUE;
@@ -790,10 +790,10 @@ END Stop;
 PROCEDURE EnumControls*;
 VAR 
 	queryctrl: V.v4l2_queryctrl;
-	id, err: LONGINT;
+	id, err: SIGNED32;
 	
 	PROCEDURE EnumerateMenus;
-	VAR k: LONGINT;
+	VAR k: SIGNED32;
 		querymenu: V.v4l2_querymenu;
 	BEGIN
 		out.String("   Menu items: "); out.Ln; out.Update();
@@ -848,14 +848,14 @@ BEGIN
 *)	
 	(* extended controls *)
 	out.String("extended controls:"); out.Ln; 
-	queryctrl.id := SYSTEM.VAL(LONGINT, {V.CTRL_FLAG_NEXT_CTRL});
+	queryctrl.id := SYSTEM.VAL(SIGNED32, {V.CTRL_FLAG_NEXT_CTRL});
 	WHILE xioctl (fd, V.VIDIOC_QUERYCTRL, ADDRESSOF(queryctrl)) = 0 DO
 			out.String("queryctrl.name= "); out.String(queryctrl.name); out.Ln;
 			out.String("queryctrl.id:"); out.Int(queryctrl.id, 0);
 			out.String(" queryctrl.type:"); out.Int(queryctrl.type, 0);
 			out.String(" queryctrl.flags: "); out.Set(queryctrl.flags);
 			out.Ln; out.Update();
-		queryctrl.id := SYSTEM.VAL(LONGINT, SYSTEM.VAL(SET32, queryctrl.id) +{V.CTRL_FLAG_NEXT_CTRL});
+		queryctrl.id := SYSTEM.VAL(SIGNED32, SYSTEM.VAL(SET32, queryctrl.id) +{V.CTRL_FLAG_NEXT_CTRL});
 	END;
 (*
 	(* extended controls *)
@@ -884,7 +884,7 @@ PROCEDURE SetBrightness*(par: Commands.Context);
 VAR
 	queryctrl : V.v4l2_queryctrl ;
 	control: V.v4l2_control;
-	val: LONGINT;
+	val: SIGNED32;
 BEGIN
 	IF ~ par.arg.GetInteger(val, FALSE) THEN RETURN; END;
 	
@@ -919,7 +919,7 @@ VAR
 	querymenu : V.v4l2_querymenu;
 	queryctrl : V.v4l2_queryctrl ;
 	control: V.v4l2_control;
-	val: LONGINT;
+	val: SIGNED32;
 BEGIN
 	
 	queryctrl.id := V.CID_AUTOBRIGHTNESS;
@@ -959,7 +959,7 @@ PROCEDURE SetContrast*(par: Commands.Context);
 VAR
 	queryctrl : V.v4l2_queryctrl ;
 	control: V.v4l2_control;
-	val: LONGINT;
+	val: SIGNED32;
 BEGIN
 	IF ~ par.arg.GetInteger(val, FALSE) THEN RETURN; END;
 	
@@ -987,7 +987,7 @@ PROCEDURE IncContrast*;
 VAR
 	queryctrl : V.v4l2_queryctrl;
 	control: V.v4l2_control;
-	val: LONGINT;
+	val: SIGNED32;
 BEGIN
 	
 	queryctrl.id := V.CID_CONTRAST;
@@ -1016,7 +1016,7 @@ END IncContrast;
 PROCEDURE DecContrast*;
 VAR
 	control: V.v4l2_control;
-	val: LONGINT;
+	val: SIGNED32;
 BEGIN
 
 	control.id := V.CID_CONTRAST;
@@ -1040,7 +1040,7 @@ VAR
 	querymenu : V.v4l2_querymenu;
 	queryctrl : V.v4l2_queryctrl ;
 	control: V.v4l2_control;
-	val: LONGINT;
+	val: SIGNED32;
 BEGIN
 	
 	queryctrl.id := V.CID_VFLIP;
@@ -1074,7 +1074,7 @@ VAR
 	querymenu : V.v4l2_querymenu;
 	queryctrl : V.v4l2_queryctrl ;
 	control: V.v4l2_control;
-	val: LONGINT;
+	val: SIGNED32;
 BEGIN
 	
 	queryctrl.id := V.CID_HFLIP;
@@ -1105,8 +1105,8 @@ END FlipHorizontal;
 
 (* ==================== *)
 (*  return >= 0 ok otherwhise -1 *)
-PROCEDURE IsControl (fd: LONGINT; cid: V.u32;  VAR queryctrl: V.v4l2_queryctrl): LONGINT;
-VAR err: LONGINT;
+PROCEDURE IsControl (fd: SIGNED32; cid: V.u32;  VAR queryctrl: V.v4l2_queryctrl): SIGNED32;
+VAR err: SIGNED32;
 BEGIN
 	queryctrl.id := cid;
 	err := xioctl (fd, V.VIDIOC_QUERYCTRL, ADDRESSOF(queryctrl));
@@ -1124,11 +1124,11 @@ BEGIN
 	RETURN -1;
 END IsControl;
 
-PROCEDURE GetControl (fd: LONGINT; cid: V.u32): LONGINT;
+PROCEDURE GetControl (fd: SIGNED32; cid: V.u32): SIGNED32;
 VAR
 	queryctrl: V.v4l2_queryctrl;
 	scontrol: V.v4l2_control;
-	err: LONGINT;
+	err: SIGNED32;
 BEGIN
 	IF IsControl (fd, cid, queryctrl) < 0 THEN RETURN -1 END;
 	scontrol.id := cid;  
@@ -1140,12 +1140,12 @@ BEGIN
 	RETURN scontrol.value;
 END GetControl;
 
-PROCEDURE SetControl (fd: LONGINT; cid: LONGINT; value: LONGINT): LONGINT;
+PROCEDURE SetControl (fd: SIGNED32; cid: SIGNED32; value: SIGNED32): SIGNED32;
 VAR
 	scontrol: V.v4l2_control;
 	queryctrl: V.v4l2_queryctrl ;
-	min, max, step, defval: LONGINT;
-	err: LONGINT;
+	min, max, step, defval: SIGNED32;
+	err: SIGNED32;
 BEGIN
 	IF IsControl (fd, cid, queryctrl) < 0 THEN RETURN -1; END;
 	min := queryctrl.minimum;
@@ -1164,12 +1164,12 @@ BEGIN
 	RETURN 0;
 END SetControl;
 
-PROCEDURE UpControl (fd: LONGINT; cid: LONGINT): LONGINT;
+PROCEDURE UpControl (fd: SIGNED32; cid: SIGNED32): SIGNED32;
 VAR
 	scontrol: V.v4l2_control;
 	queryctrl: V.v4l2_queryctrl ;
-	min, max, current, step, defval: LONGINT;
-	err: LONGINT;
+	min, max, current, step, defval: SIGNED32;
+	err: SIGNED32;
 BEGIN
 	IF IsControl (fd, cid, queryctrl) < 0 THEN RETURN -1 END;
 	min := queryctrl.minimum;
@@ -1190,12 +1190,12 @@ BEGIN
 	RETURN scontrol.value;
 END UpControl;
 
-PROCEDURE DownControl (fd: LONGINT; cid: LONGINT): LONGINT;
+PROCEDURE DownControl (fd: SIGNED32; cid: SIGNED32): SIGNED32;
 VAR
 	scontrol: V.v4l2_control;
 	queryctrl: V.v4l2_queryctrl ;
-	min, max, current, step, defval: LONGINT;
-	err: LONGINT;
+	min, max, current, step, defval: SIGNED32;
+	err: SIGNED32;
 BEGIN
 	IF IsControl (fd, cid, queryctrl) < 0 THEN RETURN -1 END;
 	min := queryctrl.minimum;
@@ -1216,12 +1216,12 @@ BEGIN
 	RETURN scontrol.value;
 END DownControl;
 
-PROCEDURE ToggleControl (fd: LONGINT; cid: LONGINT): LONGINT;
+PROCEDURE ToggleControl (fd: SIGNED32; cid: SIGNED32): SIGNED32;
 VAR
 	scontrol: V.v4l2_control;
 	queryctrl: V.v4l2_queryctrl ;
-	current: LONGINT;
-	err: LONGINT;
+	current: SIGNED32;
+	err: SIGNED32;
 BEGIN
 	IF IsControl (fd, cid, queryctrl) # 1 THEN RETURN -1 END;
 	current := GetControl (fd, cid);
@@ -1236,12 +1236,12 @@ BEGIN
 	RETURN scontrol.value;
 END ToggleControl;
 
-PROCEDURE ResetControl (fd: LONGINT; cid: V.u32 ): LONGINT;
+PROCEDURE ResetControl (fd: SIGNED32; cid: V.u32 ): SIGNED32;
 VAR
 	scontrol: V.v4l2_control;
 	queryctrl: V.v4l2_queryctrl;
-	defval: LONGINT;
-	err: LONGINT;
+	defval: SIGNED32;
+	err: SIGNED32;
 BEGIN
 	IF IsControl (fd, cid, queryctrl) < 0 THEN RETURN -1 END; 
 	defval := queryctrl.default_value;
@@ -1255,18 +1255,18 @@ BEGIN
 	RETURN 0;
 END ResetControl;
 
-PROCEDURE GetWidth*(): LONGINT;
+PROCEDURE GetWidth*(): SIGNED32;
 BEGIN
 	RETURN camWidth;
 END GetWidth;
 
-PROCEDURE GetHeight*(): LONGINT;
+PROCEDURE GetHeight*(): SIGNED32;
 BEGIN
 	RETURN camHeight;
 END GetHeight;
 
 PROCEDURE ResetAllControls*;
-VAR res: LONGINT;
+VAR res: SIGNED32;
 	queryctrl: V.v4l2_queryctrl;
 BEGIN
 
@@ -1314,8 +1314,8 @@ BEGIN {EXCLUSIVE}
 END InstallFrameHandler;
 
 PROCEDURE ColorToGray(pix: Raster.Pixel): Raster.Pixel;
-VAR gcolor: LONGINT;
-	  gval, rx, gx ,bx: REAL;
+VAR gcolor: SIGNED32;
+	  gval, rx, gx ,bx: FLOAT32;
 	  gpix: Raster.Pixel;
 BEGIN
 (*	rx := 0.2126; gx := 0.7152; bx := 0.0272;  (* HDTV *) *)
@@ -1354,8 +1354,8 @@ END CovertToGray;
 PROCEDURE LoadDummyImage*(CONST fname: ARRAY 128 OF CHAR);
 BEGIN
 	dummyimg := WMGraphics.LoadImage(fname, FALSE);
-	camWidth := dummyimg.width(LONGINT);
-	camHeight := dummyimg.height(LONGINT);
+	camWidth := dummyimg.width(SIGNED32);
+	camHeight := dummyimg.height(SIGNED32);
 END LoadDummyImage;
 
 PROCEDURE GetDummyImage*(): WMGraphics.Image;
@@ -1372,7 +1372,7 @@ END Cleanup;
 
 (* set scale factor for distance measurement on the image *)
 PROCEDURE SetMeasurementScale*(cmd: Commands.Context);
-VAR sx, sy: LONGREAL;
+VAR sx, sy: FLOAT64;
 BEGIN
 	IF cmd.arg.GetReal(sx) & cmd.arg.GetReal(sy) THEN
 		scaleX := sx;
