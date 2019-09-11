@@ -5,14 +5,14 @@ VAR env : Commands.Context;
  	out : Streams.Writer;
  	verbose: BOOLEAN;
 	
-PROCEDURE bout(x: libusb.Uint8; n=0: LONGINT);
-VAR i: LONGINT;
+PROCEDURE bout(x: libusb.Uint8; n=0: SIGNED32);
+VAR i: SIGNED32;
 BEGIN
 	i := x; 	out.Int(i, n); 
 END bout;
 
-PROCEDURE wout(x: libusb.Uint16; n=0: LONGINT);
-VAR i: LONGINT;
+PROCEDURE wout(x: libusb.Uint16; n=0: SIGNED32);
+VAR i: SIGNED32;
 BEGIN
 	i := x; 	out.Int(i, n);
 END wout;
@@ -27,9 +27,8 @@ BEGIN
 END print_endpoint_comp;
 
 PROCEDURE print_endpoint(endpoint: libusb.endpoint_descriptor);
-VAR i, ret: LONGINT;
+VAR i, ret: SIGNED32;
 BEGIN
-
 	out.String("      Endpoint:"); out.Ln;
 	out.String("        bEndpointAddress: "); out.Hex(endpoint.bEndpointAddress, -2); out.Ln;
 	out.String("        bmAttributes:     "); out.Hex(endpoint.bmAttributes, -2); out.Ln;
@@ -39,7 +38,6 @@ BEGIN
 	out.String("        bRefresh:         "); bout(endpoint.bRefresh, 0); out.Ln;
 	out.String("        bSynchAddress:    "); bout(endpoint.bSynchAddress, 0); out.Ln;
 	out.Update;
-
 (*	
 	i := 0;
 	WHILE i < endpoint.extra_length DO
@@ -61,9 +59,8 @@ BEGIN
 END print_endpoint;
 
 PROCEDURE print_altsetting(interface: libusb.interface_descriptor );
-VAR i: LONGINT;
+VAR i: SIGNED32;
 BEGIN
-
 	out.String("    Interface:");out.Ln;
 	out.String("      bInterfaceNumber:   "); bout( interface.bInterfaceNumber, 0); out.Ln;
 	out.String("      bAlternateSetting:  "); bout( interface.bAlternateSetting, 0);out.Ln;
@@ -72,17 +69,14 @@ BEGIN
 	out.String("      bInterfaceSubClass: "); bout( interface.bInterfaceSubClass, 0);out.Ln;
 	out.String("      bInterfaceProtocol: "); bout( interface.bInterfaceProtocol, 0);out.Ln;
 	out.String("      iInterface:         "); bout( interface.iInterface, 0); out.Ln;
-	out.Update;
-	
+	out.Update;	
 	i := 0;
-	WHILE i <   interface.bNumEndpoints DO
+	WHILE i < interface.bNumEndpoints DO
 		 print_endpoint(interface.endpoint[i]);
 		 INC(i);
 	END;
-
 	out.Update;
 END print_altsetting;
-
 
 PROCEDURE print_2_0_ext_cap(usb_2_0_ext_cap: libusb.usb_2_0_extension_descriptor );
 BEGIN
@@ -109,7 +103,7 @@ VAR
 	bos: libusb.bos_descriptor;
 	usb_2_0_extension: libusb.usb_2_0_extension_descriptor;
 	dev_cap: libusb.ss_usb_device_capability_descriptor;
-	ret: LONGINT;
+	ret: SIGNED32;
 BEGIN
 	ret := libusb.get_bos_descriptor(handle, bos);
 	IF (0 > ret) THEN out.String("bos ret<0; "); out.Ln; out.Update; RETURN END;
@@ -148,16 +142,15 @@ BEGIN
 END print_bos;
 
 PROCEDURE print_interface(interface: libusb.Interface);
-VAR i: LONGINT;
+VAR i: SIGNED32;
 BEGIN
-
 	FOR i := 0 TO  interface.num_altsetting-1 DO
 		print_altsetting(interface.altsetting[i]);
 	END;
 END print_interface;
 
 PROCEDURE print_configuration(config:  libusb.config_descriptor);
-VAR i: LONGINT;
+VAR i: SIGNED32;
 BEGIN
 	out.String("  Configuration:");out.Ln;
 	out.String("    wTotalLength:         "); wout( config.wTotalLength, 0); out.Ln;
@@ -175,13 +168,13 @@ BEGIN
 END print_configuration;
 
 
-PROCEDURE print_device(dev: libusb.device;  level: LONGINT);
+PROCEDURE print_device(dev: libusb.device;  level: SIGNED32);
 VAR
 	desc : libusb.device_descriptor;
 	config{UNTRACED}: libusb.config_descriptor;
 	handle {UNTRACED}: libusb.device_handle;
 	string: ARRAY 256 OF CHAR;
-	ret, i: LONGINT;
+	ret, i: SIGNED32;
 BEGIN
 	ret := libusb.get_device_descriptor(dev, desc);
 	IF (ret < 0) THEN
@@ -189,7 +182,6 @@ BEGIN
 		RETURN;
 	END;
 
-	
 	ret := libusb.open(dev, handle);
 
 	out.String("Dev (bus "); i := (libusb.get_bus_number(dev)); out.Int(i,0); 
@@ -226,7 +218,6 @@ BEGIN
 	ELSE
 		out.Hex(desc.idVendor, -4); out.String(" - "); out.Hex(desc.idProduct, -4);
 	END;
-
 
 	out.Ln; out.Update;
 
@@ -266,14 +257,12 @@ BEGIN
 	out.Update;
 END print_device;
 
-
-
 PROCEDURE Do*;
 VAR
 	ctx : libusb.context;
 	devs {UNTRACED} : libusb.DeviceList;
 	version: libusb.version;
-	numDevs,  res, i: LONGINT;
+	numDevs,  res, i: SIGNED32;
 BEGIN 
 	out := env.out;
 	
@@ -301,8 +290,12 @@ BEGIN
 	FOR i:=0 TO numDevs-1 DO
 		print_device(devs[i], 0);
 	END;
-
-        libusb.free_device_list(devs, 1);
+	
+	out.String("error name for ERROR_NO_DEVICE (-4): ");
+	out.String(libusb.strerror(libusb.ERROR_NO_DEVICE)^);
+	out.Ln;
+	
+	libusb.free_device_list(devs, 1);
 	libusb.exit (ctx); 
 
 	out.Update;
@@ -322,18 +315,45 @@ BEGIN
 	verbose := TRUE
 END Testlibusb.
 
-SystemTools.Free Testlibusb ~
-SystemTools.Free libusb ~ 
+System.Free Testlibusb ~
+System.Free libusb ~ 
 
 Testlibusb.Test1 ~ 
 
-Execute on console as admin:
+Testlibusb.Do ~ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 # sudo aos -x Testlibusb.Do ~ 
 
 
 Compiler.Compile 
-  Unix.libusb.Mod
+  libusb.Mod
   Testlibusb.Mod
 ~~
 

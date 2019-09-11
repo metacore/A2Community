@@ -22,12 +22,12 @@ TYPE
 	USHORT* = UNSIGNED16; (* 2 bytes *)
 
 	UCHAR* = UNSIGNED8; (* unsigned *)
-(*	WORD* = UNSIGNED16; (* 2 bytes *) *)
+(*	SIGNED16* = UNSIGNED16; (* 2 bytes *) *)
 	PCHAR* = POINTER TO ARRAY OF CHAR;
 	PVOID* = (*POINTER TO ARRAY OF SYSTEM.BYTE; *) ADDRESS;
 	HANDLE* = PVOID;
 
-	INT* = LONGINT;
+	INT* = SIGNED32;
 	UINT* = UNSIGNED32; (* 4 bytes *)
 
 (*	LPSTR* = POINTER TO ARRAY OF CHAR;
@@ -75,7 +75,7 @@ CONST
 (*	TYPE _EVENT_HANDLE* = RECORD 
 		eCondVar: pthread_cond_t;
 		eMutex: pthread_mutex_t;
-		iVar: INTEGER;
+		iVar: SIGNED16;
 	END;
 	TYPE EVENT_HANDLE* = _EVENT_HANDLE;
 *)
@@ -886,7 +886,7 @@ END OnClose;
 
 (* required on linux *)
 PROCEDURE Setvidpid();
-VAR ftStatus: HANDLE;
+VAR ftStatus: STATUS;
 BEGIN
 	ftStatus := SetVIDPID(0403H, 0FAF0H); (*! required for  linux, disable for windows *) 	
 	IF  ftStatus # OK THEN
@@ -897,7 +897,7 @@ END Setvidpid;
 
 PROCEDURE InitFtdiDevices*;
 VAR
-	ftStatus: HANDLE;		
+	ftStatus: STATUS;		
 	i: ULONG;
 BEGIN 
 

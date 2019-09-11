@@ -23,12 +23,12 @@ TYPE
 	USHORT* = UNSIGNED16; (* 2 bytes *)
 
 	UCHAR* = UNSIGNED8; (* unsigned *)
-(*	WORD* = UNSIGNED16; (* 2 bytes *)*)
+(*	SIGNED16* = UNSIGNED16; (* 2 bytes *)*)
 	PCHAR* = POINTER TO ARRAY OF CHAR;
 	PVOID* = (*POINTER TO ARRAY OF SYSTEM.BYTE; *) ADDRESS;
 	HANDLE* = UNSIGNED32;
 
-	INT* = LONGINT;
+	INT* = SIGNED32;
 	UINT* = UNSIGNED32; (* 4 bytes *)
 
 (*	LPSTR* = POINTER TO ARRAY OF CHAR;
@@ -76,7 +76,7 @@ CONST
 (*	TYPE _EVENT_HANDLE* = RECORD 
 		eCondVar: pthread_cond_t;
 		eMutex: pthread_mutex_t;
-		iVar: INTEGER;
+		iVar: SIGNED16;
 	END;
 	TYPE EVENT_HANDLE* = _EVENT_HANDLE;
 *)
@@ -879,7 +879,7 @@ BEGIN
 END Init;
 
 PROCEDURE OnClose;
-VAR res: LONGINT;
+VAR res: SIGNED32;
 BEGIN
 	IF lib # Kernel32.NULL THEN
 		res := Kernel32.FreeLibrary(lib);

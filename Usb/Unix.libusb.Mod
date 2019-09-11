@@ -15,7 +15,7 @@ TYPE
  
 (* standard USB stuff *)
  (* Device and/or Interface Class codes *)
-TYPE libusb_class_code* = LONGINT;
+TYPE libusb_class_code* = SIGNED32;
  (* In the context of a \ref libusb_device_descriptor "device descriptor",
   * this bDeviceClass value indicates that each interface specifies its
   * own class information and all interfaces operate independently.
@@ -47,7 +47,7 @@ CONST
  
  
  (* Descriptor types as defined by the USB specification. *)
-TYPE libusb_descriptor_type* = LONGINT;
+TYPE libusb_descriptor_type* = SIGNED32;
 CONST
  DT_DEVICE* = 0x01; 	(* Device descriptor. See libusb_device_descriptor. *)
  DT_CONFIG* = 0x02; 	(* Configuration descriptor. See libusb_config_descriptor. *)
@@ -219,7 +219,7 @@ enum libusb_usb_2_0_extension_attributes *)
  * platform. Test if the loaded library supports a given capability by calling
  * \ref libusb_has_capability().
  *)
-TYPE libusb_capability* = LONGINT;
+TYPE libusb_capability* = SIGNED32;
 CONST
 	(* The libusb_has_capability() API is available. *)
 	CAP_HAS_CAPABILITY* = 0x0000;
@@ -247,7 +247,7 @@ CONST
  *    warnings and errors to stderr
  *)
  
-TYPE log_level*= LONGINT;
+TYPE log_level*= SIGNED32;
 CONST
 	LOG_LEVEL_NONE* = 0;
 	LOG_LEVEL_ERROR* = 1;
@@ -301,7 +301,7 @@ TYPE
   MaxPower- : Uint8;
   interface- : POINTER {UNSAFE} TO ARRAY OF Interface; (* Array of interfaces supported by this configuration. The length of this array is determined by the bNumInterfaces field. *)
   extra- : POINTER {UNSAFE} TO ARRAY OF CHAR; (* Extra descriptors. If libusb encounters unknown configuration descriptors, it will store them here, should you wish to parse them. *)
-  extra_length- : LONGINT; (* Length of the extra descriptors, in bytes. *)
+  extra_length- : SIGNED32; (* Length of the extra descriptors, in bytes. *)
  END;
  
  endpoint_descriptor* = RECORD
@@ -322,7 +322,7 @@ TYPE
   bRefresh- : Uint8; (* For audio devices only: the rate at which synchronization feedback is provided. *)
   bSynchAddress- : Uint8; (* For audio devices only: the address if the synch endpoint *)
   extra- : POINTER {UNSAFE} TO ARRAY OF CHAR; (* Extra descriptors. If libusb encounters unknown endpoint descriptors, it will store them here, should you wish to parse them. *)
-  extra_length- : LONGINT; (* Length of the extra descriptors, in bytes. *)
+  extra_length- : SIGNED32; (* Length of the extra descriptors, in bytes. *)
  END;
 
  interface_descriptor* = RECORD
@@ -337,12 +337,12 @@ TYPE
   iInterface- : Uint8; (* Index of string descriptor describing this interface *)
   endpoint- : POINTER {UNSAFE} TO ARRAY OF endpoint_descriptor; (* Array of endpoint descriptors. This length of this array is determined by the bNumEndpoints field. *)
   extra- : POINTER {UNSAFE} TO ARRAY OF CHAR; (* Extra descriptors. If libusb encounters unknown interface descriptors, it will store them here, should you wish to parse them. *)
-  extra_length- : LONGINT; (* Length of the extra descriptors, in bytes. *)
+  extra_length- : SIGNED32; (* Length of the extra descriptors, in bytes. *)
  END;
 
  Interface*  = RECORD
   altsetting- : POINTER {UNSAFE} TO ARRAY OF interface_descriptor; (* Array of interface descriptors. The length of this array is determined by the num_altsetting field. *)
-  num_altsetting- : LONGINT; (* The number of alternate settings that belong to this interface *)
+  num_altsetting- : SIGNED32; (* The number of alternate settings that belong to this interface *)
  END; 
  
  ss_endpoint_companion_descriptor* = POINTER {UNSAFE} TO RECORD
@@ -422,16 +422,16 @@ CONST CONTROL_SETUP_SIZE* = SIZEOF(control_setup);
 
 TYPE
  iso_packet_descriptor* =  RECORD
-  length* : LONGINT; (* Length of data to request in this packet *)
-  actual_data* : LONGINT; (* Amount of data that was actually transferred *)
-  status* : LONGINT; (* Status code for this packet *)
+  length* : SIGNED32; (* Length of data to request in this packet *)
+  actual_data* : SIGNED32; (* Amount of data that was actually transferred *)
+  status* : SIGNED32; (* Status code for this packet *)
  END;
  
  transfer_cb_fn* = PROCEDURE {C} (transfer : transfer); 
 
- pollfd_added_cb* = PROCEDURE {C} (fd : LONGINT; events : Uint16; user_data : ADDRESS); 
+ pollfd_added_cb* = PROCEDURE {C} (fd : SIGNED32; events : Uint16; user_data : ADDRESS); 
 
- hotplug_callback_fn* = PROCEDURE{C} (ctx : context; device : device; event : LONGINT; user_data : ADDRESS) : LONGINT; 
+ hotplug_callback_fn* = PROCEDURE{C} (ctx : context; device : device; event : SIGNED32; user_data : ADDRESS) : SIGNED32; 
  
  transfer* = POINTER {UNSAFE} TO RECORD
   dev_handle* : device_handle; (* Handle of the device that this transfer will be submitted to *)
@@ -446,18 +446,18 @@ TYPE
 	 libusb_iso_packet_descriptor::status "status" field in each packet
 	 to determine if errors occurred. 
    *)
-   status* : LONGINT; (* enum libusb_transfer_status status; *)
-   length* : LONGINT; (* Length of the data buffer *)
-   actual_length* : LONGINT; (* Actual length of data that was transferred. Read-only, and only for use within transfer callback function. Not valid for isochronous endpoint transfers. *)
+   status* : SIGNED32; (* enum libusb_transfer_status status; *)
+   length* : SIGNED32; (* Length of the data buffer *)
+   actual_length* : SIGNED32; (* Actual length of data that was transferred. Read-only, and only for use within transfer callback function. Not valid for isochronous endpoint transfers. *)
    callback* : transfer_cb_fn; (* Callback function. This will be invoked when the transfer completes, fails, or is cancelled. *)
    user_data* : ADDRESS; (* User context data to pass to the callback function. *)
    buffer* : POINTER {UNSAFE} TO ARRAY OF CHAR; (* Data buffer *)
-   num_iso_packets* : LONGINT; (* Number of isochronous packets. Only used for I/O with isochronous endpoints. *)
+   num_iso_packets* : SIGNED32; (* Number of isochronous packets. Only used for I/O with isochronous endpoints. *)
    iso_packet_desc* : iso_packet_descriptor; (* Isochronous packet descriptors, for isochronous transfers only. *) (* struct libusb_iso_packet_descriptor iso_packet_desc[] *)
  END;
 
  pollfd* = POINTER {UNSAFE} TO RECORD
-  fd* : LONGINT; (* Numeric file descriptor *)
+  fd* : SIGNED32; (* Numeric file descriptor *)
   events* : Uint16; (* Event flags to poll for from <poll.h>. POLLIN indicates that you should monitor this file descriptor for becoming ready to read from, and POLLOUT indicates that you should monitor this file descriptor for onblocking write readiness. *)
  END;
 
@@ -477,95 +477,95 @@ TYPE
 VAR
  libusb- : ADDRESS;
 
- init-  : PROCEDURE {C} (VAR ctx : context) : LONGINT;
+ init-  : PROCEDURE {C} (VAR ctx : context) : SIGNED32;
  exit-  : PROCEDURE {C} (ctx : context);
- set_debug-  : PROCEDURE {C} (ctx : context; level=0 : LONGINT);
+ set_debug-  : PROCEDURE {C} (ctx : context; level=0 : SIGNED32);
  get_version-  : PROCEDURE {C} () : version;
- has_capability-  : PROCEDURE {C} (capability : LONGINT) : LONGINT;
+ has_capability-  : PROCEDURE {C} (capability : SIGNED32) : SIGNED32;
 
- xlibusb_error_name  : PROCEDURE {C} (errorcode : LONGINT) : ADDRESS; (*! wrapped, see below *)
+ xlibusb_error_name  : PROCEDURE {C} (errorcode : SIGNED32) : ADDRESS; (*! wrapped, see below *)
 
- setlocale-  : PROCEDURE {C} (CONST locale : ARRAY OF CHAR) : LONGINT;  
+ setlocale-  : PROCEDURE {C} (CONST locale : ARRAY OF CHAR) : SIGNED32;  
 
- xlibusb_strerror  : PROCEDURE {C} (errorcode : LONGINT) : ADDRESS; (*! wrapped, see below *)
+ xlibusb_strerror  : PROCEDURE {C} (errorcode : SIGNED32) : ADDRESS; (*! wrapped, see below *)
  
- get_device_list- : PROCEDURE {C} (ctx : context; VAR list : DeviceList) : LONGINT;   
- free_device_list- : PROCEDURE {C} (list : DeviceList; unref_devices : LONGINT);
+ get_device_list- : PROCEDURE {C} (ctx : context; VAR list : DeviceList) : SIGNED32;   
+ free_device_list- : PROCEDURE {C} (list : DeviceList; unref_devices : SIGNED32);
  ref_device- : PROCEDURE {C} (dev : device) : device;
  unref_device- : PROCEDURE {C} (dev : device);
- get_configuration- : PROCEDURE {C} (dev : device_handle; VAR config : LONGINT) : LONGINT;
- get_device_descriptor- : PROCEDURE {C} (dev : device; VAR desc : device_descriptor) : LONGINT; 
- get_active_config_descriptor- : PROCEDURE {C} (dev : device; VAR desc : config_descriptor) : LONGINT; 
- get_config_descriptor-  : PROCEDURE {C} (dev : device; config_index : Uint8; VAR config : config_descriptor) : LONGINT;
- get_config_descriptor_by_value-  : PROCEDURE {C} (dev : device; bConfigurationValue : Uint8; VAR config : config_descriptor) : LONGINT;
+ get_configuration- : PROCEDURE {C} (dev : device_handle; VAR config : SIGNED32) : SIGNED32;
+ get_device_descriptor- : PROCEDURE {C} (dev : device; VAR desc : device_descriptor) : SIGNED32; 
+ get_active_config_descriptor- : PROCEDURE {C} (dev : device; VAR desc : config_descriptor) : SIGNED32; 
+ get_config_descriptor-  : PROCEDURE {C} (dev : device; config_index : Uint8; VAR config : config_descriptor) : SIGNED32;
+ get_config_descriptor_by_value-  : PROCEDURE {C} (dev : device; bConfigurationValue : Uint8; VAR config : config_descriptor) : SIGNED32;
  free_config_descriptor-  : PROCEDURE {C} (config : config_descriptor);
- get_ss_endpoint_companion_descriptor-  : PROCEDURE {C} (ctx : context; endpoint : endpoint_descriptor; VAR ep_comp : ss_endpoint_companion_descriptor) : LONGINT;
+ get_ss_endpoint_companion_descriptor-  : PROCEDURE {C} (ctx : context; endpoint : endpoint_descriptor; VAR ep_comp : ss_endpoint_companion_descriptor) : SIGNED32;
  free_ss_endpoint_companion_descriptor-: PROCEDURE {C} (ep_comp: ss_endpoint_companion_descriptor); 
- get_bos_descriptor-  : PROCEDURE {C} (dev : device_handle; VAR bos : bos_descriptor) : LONGINT;
+ get_bos_descriptor-  : PROCEDURE {C} (dev : device_handle; VAR bos : bos_descriptor) : SIGNED32;
  free_bos_descriptor-  : PROCEDURE {C} (config : bos_descriptor);
- get_usb_2_0_extension_descriptor-  : PROCEDURE {C} (ctx : context; dev_cap : bos_dev_capability_descriptor; VAR usb_2_0_extension : usb_2_0_extension_descriptor) : LONGINT;
+ get_usb_2_0_extension_descriptor-  : PROCEDURE {C} (ctx : context; dev_cap : bos_dev_capability_descriptor; VAR usb_2_0_extension : usb_2_0_extension_descriptor) : SIGNED32;
  free_usb_2_0_extension_descriptor-  : PROCEDURE {C} (usb_2_0_extension : usb_2_0_extension_descriptor);
- get_ss_usb_device_capability_descriptor-  : PROCEDURE {C} (ctx : context; dv_cap : bos_dev_capability_descriptor; VAR ss_usb_device_cap : ss_usb_device_capability_descriptor) : LONGINT;
+ get_ss_usb_device_capability_descriptor-  : PROCEDURE {C} (ctx : context; dv_cap : bos_dev_capability_descriptor; VAR ss_usb_device_cap : ss_usb_device_capability_descriptor) : SIGNED32;
  free_ss_usb_device_capability_descriptor-  : PROCEDURE {C} (ss_usb_device_cap : ss_usb_device_capability_descriptor);
- get_container_id_descriptor-  : PROCEDURE {C} (ctx : context; dev_cap : bos_dev_capability_descriptor; VAR container_id : container_id_descriptor) : LONGINT;
+ get_container_id_descriptor-  : PROCEDURE {C} (ctx : context; dev_cap : bos_dev_capability_descriptor; VAR container_id : container_id_descriptor) : SIGNED32;
  free_container_id_descriptor-  : PROCEDURE {C} (container_id : container_id_descriptor);
  get_bus_number-  : PROCEDURE {C} (dev : device) : Uint8;
  get_port_number-  : PROCEDURE {C} (dev : device) : Uint8;
- get_port_numbers-  : PROCEDURE {C} (dev : device; port_numbers : ADDRESS; port_numbers_len : LONGINT) : LONGINT;
- get_port_path-  : PROCEDURE {C} (ctx : context; dev : device; path : ADDRESS; path_length : LONGINT) : LONGINT;
+ get_port_numbers-  : PROCEDURE {C} (dev : device; port_numbers : ADDRESS; port_numbers_len : SIGNED32) : SIGNED32;
+ get_port_path-  : PROCEDURE {C} (ctx : context; dev : device; path : ADDRESS; path_length : SIGNED32) : SIGNED32;
  get_parent-  : PROCEDURE {C} (dev : device) : device;
  get_device_address-  : PROCEDURE {C} (dev : device) : Uint8;
- get_device_speed-  : PROCEDURE {C} (dev : device) : LONGINT;
- get_max_packet_size-  : PROCEDURE {C} (dev : device; endpoint : Uint8) : LONGINT;
- get_max_iso_packet_size-  : PROCEDURE {C} (dev : device; endpoint : Uint8) : LONGINT;
- open- : PROCEDURE {C} (dev : device;  VAR handle : device_handle) : LONGINT;
+ get_device_speed-  : PROCEDURE {C} (dev : device) : SIGNED32;
+ get_max_packet_size-  : PROCEDURE {C} (dev : device; endpoint : Uint8) : SIGNED32;
+ get_max_iso_packet_size-  : PROCEDURE {C} (dev : device; endpoint : Uint8) : SIGNED32;
+ open- : PROCEDURE {C} (dev : device;  VAR handle : device_handle) : SIGNED32;
  close- : PROCEDURE {C} (dev_handle : device_handle);
  get_device- : PROCEDURE {C} (dev_handle : device_handle) : device;	
- set_configuration- : PROCEDURE {C} (dev : device_handle; configuration : LONGINT) : LONGINT;
- claim_interface- : PROCEDURE {C} (dev : device_handle; interface_number : LONGINT) : LONGINT;
- release_interface- : PROCEDURE {C} (dev : device_handle; interface_number : LONGINT) : LONGINT;
- open_device_with_vid_pid- : PROCEDURE {C} (ctx : context; vendor_id, product_id : LONGINT) : device_handle;
- set_interface_alt_setting- : PROCEDURE {C} (dev : device_handle; interface_number, alternate_setting : LONGINT) : LONGINT;
- clear_halt- : PROCEDURE {C} (dev : device_handle; endpoint : Uint8) : LONGINT;
- reset_device- : PROCEDURE {C} (dev : device_handle) : LONGINT;
- alloc_streams- : PROCEDURE {C} (dev : device_handle; num_streams : LONGINT; endpoints : ADDRESS; num_endpoints : LONGINT) : LONGINT;
- free_streams- : PROCEDURE {C} (dev : device_handle; endpoints : ADDRESS; num_endpoints : LONGINT) : LONGINT;
- kernel_driver_active- : PROCEDURE {C} (dev : device_handle; interface_number : LONGINT) : LONGINT;
- detach_kernel_driver- : PROCEDURE {C} (dev : device_handle; interface_number : LONGINT) : LONGINT;
- attach_kernel_driver- : PROCEDURE {C} (dev : device_handle; interface_number : LONGINT) : LONGINT;
- set_auto_detach_kernel_driver- : PROCEDURE {C} (dev : device_handle; enable : LONGINT) : LONGINT;
- alloc_transfer- : PROCEDURE {C} (iso_packets : LONGINT) : transfer;
- submit_transfer- : PROCEDURE {C} (transfer: transfer) : LONGINT;
- cancel_transfer- : PROCEDURE {C} (transfer: transfer) : LONGINT;
+ set_configuration- : PROCEDURE {C} (dev : device_handle; configuration : SIGNED32) : SIGNED32;
+ claim_interface- : PROCEDURE {C} (dev : device_handle; interface_number : SIGNED32) : SIGNED32;
+ release_interface- : PROCEDURE {C} (dev : device_handle; interface_number : SIGNED32) : SIGNED32;
+ open_device_with_vid_pid- : PROCEDURE {C} (ctx : context; vendor_id, product_id : SIGNED32) : device_handle;
+ set_interface_alt_setting- : PROCEDURE {C} (dev : device_handle; interface_number, alternate_setting : SIGNED32) : SIGNED32;
+ clear_halt- : PROCEDURE {C} (dev : device_handle; endpoint : Uint8) : SIGNED32;
+ reset_device- : PROCEDURE {C} (dev : device_handle) : SIGNED32;
+ alloc_streams- : PROCEDURE {C} (dev : device_handle; num_streams : SIGNED32; endpoints : ADDRESS; num_endpoints : SIGNED32) : SIGNED32;
+ free_streams- : PROCEDURE {C} (dev : device_handle; endpoints : ADDRESS; num_endpoints : SIGNED32) : SIGNED32;
+ kernel_driver_active- : PROCEDURE {C} (dev : device_handle; interface_number : SIGNED32) : SIGNED32;
+ detach_kernel_driver- : PROCEDURE {C} (dev : device_handle; interface_number : SIGNED32) : SIGNED32;
+ attach_kernel_driver- : PROCEDURE {C} (dev : device_handle; interface_number : SIGNED32) : SIGNED32;
+ set_auto_detach_kernel_driver- : PROCEDURE {C} (dev : device_handle; enable : SIGNED32) : SIGNED32;
+ alloc_transfer- : PROCEDURE {C} (iso_packets : SIGNED32) : transfer;
+ submit_transfer- : PROCEDURE {C} (transfer: transfer) : SIGNED32;
+ cancel_transfer- : PROCEDURE {C} (transfer: transfer) : SIGNED32;
  free_transfer- : PROCEDURE {C} (transfer: transfer);
- transfer_set_stream_id- : PROCEDURE {C} (transfer: transfer; stream_id : LONGINT);
- transfer_get_stream_id- : PROCEDURE {C} (transfer: transfer) : LONGINT;
- control_transfer- : PROCEDURE {C} (dev_handle : device_handle; request_type, bRequest : Uint8; wValue, wIndex : Uint16; data : ADDRESS; wLength : Uint16; timeout : LONGINT) : LONGINT;
- bulk_transfer- : PROCEDURE {C} (dev_handle : device_handle; endpoint : LONGINT; data : ADDRESS; length : LONGINT; VAR actual_length : LONGINT; timeout : LONGINT) : LONGINT;
- interrupt_transfer- : PROCEDURE {C} (dev_handle : device_handle; endpoint : LONGINT; data : ADDRESS; length : LONGINT; VAR actual_length : LONGINT; timeout : LONGINT) : LONGINT;
- get_string_descriptor_ascii- : PROCEDURE {C} (dev : device_handle; desc_index : Uint8; data : ADDRESS ; length : LONGINT) : LONGINT;
- try_lock_events- : PROCEDURE {C} (ctx : context) : LONGINT;
+ transfer_set_stream_id- : PROCEDURE {C} (transfer: transfer; stream_id : SIGNED32);
+ transfer_get_stream_id- : PROCEDURE {C} (transfer: transfer) : SIGNED32;
+ control_transfer- : PROCEDURE {C} (dev_handle : device_handle; request_type, bRequest : Uint8; wValue, wIndex : Uint16; data : ADDRESS; wLength : Uint16; timeout : SIGNED32) : SIGNED32;
+ bulk_transfer- : PROCEDURE {C} (dev_handle : device_handle; endpoint : SIGNED32; data : ADDRESS; length : SIGNED32; VAR actual_length : SIGNED32; timeout : SIGNED32) : SIGNED32;
+ interrupt_transfer- : PROCEDURE {C} (dev_handle : device_handle; endpoint : SIGNED32; data : ADDRESS; length : SIGNED32; VAR actual_length : SIGNED32; timeout : SIGNED32) : SIGNED32;
+ get_string_descriptor_ascii- : PROCEDURE {C} (dev : device_handle; desc_index : Uint8; data : ADDRESS ; length : SIGNED32) : SIGNED32;
+ try_lock_events- : PROCEDURE {C} (ctx : context) : SIGNED32;
  lock_events- : PROCEDURE {C} (ctx : context);
  unlock_events- : PROCEDURE {C} (ctx : context); 
- event_handling_ok- : PROCEDURE {C} (ctx : context) : LONGINT;
- event_handler_active- : PROCEDURE {C} (ctx : context) : LONGINT; 
+ event_handling_ok- : PROCEDURE {C} (ctx : context) : SIGNED32;
+ event_handler_active- : PROCEDURE {C} (ctx : context) : SIGNED32; 
  interrupt_event_handler- : PROCEDURE {C} (ctx : context);
  unlock_event_waiters- : PROCEDURE {C} (ctx : context);
  lock_event_waiters- : PROCEDURE {C} (ctx : context);
- wait_for_event- : PROCEDURE {C} (ctx : context; VAR tv : u.Timeval) : LONGINT;
- wait_handle_events_timeout- : PROCEDURE {C} (ctx : context; VAR tv : u.Timeval) : LONGINT;
- handle_events_timeout_completed- : PROCEDURE {C} (ctx : context; VAR tv : u.Timeval; VAR completed : LONGINT) : LONGINT;
- handle_events- : PROCEDURE {C} (ctx : context) : LONGINT;
- handle_events_completed- : PROCEDURE {C} (ctx : context; VAR completed : LONGINT) : LONGINT;
- handle_events_locked- : PROCEDURE {C} (ctx : context; VAR tv : u.Timeval) : LONGINT;
- pollfds_handle_timeouts- : PROCEDURE {C} (ctx : context) : LONGINT;
- get_next_timeout- : PROCEDURE {C} (ctx : context; VAR tv : u.Timeval) : LONGINT;
- pollfd_removed_cb- : PROCEDURE {C} (fd : LONGINT; user_data : ADDRESS);
+ wait_for_event- : PROCEDURE {C} (ctx : context; VAR tv : u.Timeval) : SIGNED32;
+ wait_handle_events_timeout- : PROCEDURE {C} (ctx : context; VAR tv : u.Timeval) : SIGNED32;
+ handle_events_timeout_completed- : PROCEDURE {C} (ctx : context; VAR tv : u.Timeval; VAR completed : SIGNED32) : SIGNED32;
+ handle_events- : PROCEDURE {C} (ctx : context) : SIGNED32;
+ handle_events_completed- : PROCEDURE {C} (ctx : context; VAR completed : SIGNED32) : SIGNED32;
+ handle_events_locked- : PROCEDURE {C} (ctx : context; VAR tv : u.Timeval) : SIGNED32;
+ pollfds_handle_timeouts- : PROCEDURE {C} (ctx : context) : SIGNED32;
+ get_next_timeout- : PROCEDURE {C} (ctx : context; VAR tv : u.Timeval) : SIGNED32;
+ pollfd_removed_cb- : PROCEDURE {C} (fd : SIGNED32; user_data : ADDRESS);
  get_pollfds- : PROCEDURE {C} (ctx : context) : pollfd; (*! const struct pollfd ** LIBUSB_CALL get_pollfds(	context *ctx); *)
  free_pollfds- : PROCEDURE {C} (VAR pollfds : pollfd);
  set_pollfd_notifiers- : PROCEDURE {C} (ctx : context; added_cb, removed_cb : pollfd_added_cb; user_data : ADDRESS);
- hotplug_register_callback- : PROCEDURE {C} (ctx : context; events, flags : LONGINT; vendor_id, product_id, dev_class : LONGINT; cb_fn : hotplug_callback_fn; user_data : ADDRESS; handle : LONGINT) : LONGINT;
- hotplug_deregister_callback- : PROCEDURE {C} (ctx : context; handle : LONGINT);
+ hotplug_register_callback- : PROCEDURE {C} (ctx : context; events, flags : SIGNED32; vendor_id, product_id, dev_class : SIGNED32; cb_fn : hotplug_callback_fn; user_data : ADDRESS; handle : SIGNED32) : SIGNED32;
+ hotplug_deregister_callback- : PROCEDURE {C} (ctx : context; handle : SIGNED32);
 
 PROCEDURE Cleanup(); 
 BEGIN
@@ -575,7 +575,7 @@ END Cleanup;
 (** Get string from address  *)
 PROCEDURE GetStringFromAddr* (adr: ADDRESS): POINTER TO ARRAY OF CHAR;
 VAR  sadr: ADDRESS;
-	cnt: LONGINT;
+	cnt: SIGNED32;
 	ch: CHAR;
 	s: POINTER TO ARRAY OF CHAR;
 BEGIN
@@ -594,7 +594,7 @@ BEGIN
 END GetStringFromAddr;
 
 (* wrapper *)
-PROCEDURE strerror*(errorcode: LONGINT): POINTER TO ARRAY OF CHAR;
+PROCEDURE strerror*(errorcode: SIGNED32): POINTER TO ARRAY OF CHAR;
 VAR a: ADDRESS;
 	s: POINTER TO ARRAY OF CHAR;
 BEGIN
@@ -604,7 +604,7 @@ BEGIN
 END strerror;
 
 (* wrapper *)
-PROCEDURE error_name*(errorcode: LONGINT): POINTER TO ARRAY OF CHAR;
+PROCEDURE error_name*(errorcode: SIGNED32): POINTER TO ARRAY OF CHAR;
 VAR a: ADDRESS;
 	s: POINTER TO ARRAY OF CHAR;
 BEGIN
