@@ -808,7 +808,7 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 		ELSIF datatype=DatatypeInt THEN W.String("Int ");
 		ELSIF datatype=DatatypeLInt THEN W.String("LInt ");
 		ELSIF datatype=DatatypeUInt8 THEN W.String("UInt8 ");
-		ELSIF datatype=DatatypeHInt THEN W.String("HInt");
+		ELSIF datatype=DatatypeHInt THEN W.String("HInt ");
 		ELSE
 			HALT(202);
 		END;
@@ -991,6 +991,7 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 			ASSERT(structure="TENSOR",202);
 			IF datatypeString='LR' THEN	datatype:=DatatypeLR;
 			ELSIF datatypeString='R' THEN	datatype:=DatatypeR;
+			ELSIF datatypeString='SR' THEN	datatype:=DatatypeSR;
 			ELSIF datatypeString='LInt' THEN	datatype:=DatatypeLInt;
 			ELSIF datatypeString='Int' THEN	datatype:=DatatypeInt;
 			ELSIF (datatypeString='C') OR (datatypeString='UInt8') THEN datatype:=DatatypeUInt8

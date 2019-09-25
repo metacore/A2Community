@@ -2,7 +2,7 @@ MODULE ImageLabeler; (** AUTHOR "Patrick Hunziker 2019"; PURPOSE "Interactively 
 
 IMPORT Commands, Files, Streams, Strings, Options, Raster, Rand:=Random, MatrixRaster,
 			WMGraphics, WMRasterScale, WMRectangles, WMTensor, WMComponents, WMMenus, WMTrees, WMStandardComponents, WMWindowManager,
-			MLDataFiles (*MLDataPipes*) (*experiment*);
+			MLDataStreams (*MLDataPipes*) (*experiment*);
 
 CONST Random=MatrixRaster.Random;
 		 Tab=09X;
@@ -10,7 +10,7 @@ CONST Random=MatrixRaster.Random;
 VAR 	rand:Rand.Generator;
 		globalContextMenu*:ContextMenu;
 		(*source:MLDataPipe.Source;*)
-		source:MLDataFiles.Source;
+		source:MLDataStreams.Source;
 		log:Streams.Writer;
 
 TYPE StringObject=OBJECT
@@ -111,6 +111,7 @@ TYPE Labeler*=OBJECT
 	CONST ScaledSize=512;
 			RoiSize=128;
 			NSamples=64;
+			threshold3=100;
 	VAR
 		dataSetI, labelSetI: ARRAY [?] OF SIGNED16;
 		positions: ARRAY [*,*] OF SIZE;
@@ -161,7 +162,7 @@ TYPE Labeler*=OBJECT
 		scale:=1.0;
 
 		NEW(source); 
-		source.datatype:=MLDataFiles.Integer;
+		source.datatype:=MLDataStreams.Integer;
 		source.InitWrite(dataWriter);
 	END Init;
 
@@ -216,40 +217,96 @@ BEGIN
 		window.SetTitle(Strings.NewString(name));
 		WMWindowManager.AddWindow(window, 600, 200);
 
-		(** extract a stack consisting of multiple randomly sampled ROIs from one image *)
-		positions[*,*]:=Random;
-		(** produce a scrollable window displaying 2D,3D,4D datasets *)
-		(*dataSetI:=enum.GetRoiStackRandom(img, nSamples, 3, positions);(*BGR, 4D data *)
-		NEW(stackWindow, dataSetI, "[4D]scroll mouse/arrows", WMTensor.Frontal);*)
-		dataSetI:=enum.GetRoiStackRandom(img, nSamples, 1, positions);(*Gray, 3D data*)
-		oldStackWindow:=stackWindow;
-		NEW(stackWindow, dataSetI, "[3D]scroll mouse/arrows", WMTensor.Frontal);
-		stackWindow.AddWindow();
+		IF FALSE THEN (*random locations*)
+			(** extract a stack consisting of multiple randomly sampled ROIs from one image *)
+			positions[*,*]:=Random;
+			(** produce a scrollable window displaying 2D,3D,4D datasets *)
+			(*dataSetI:=enum.GetRoiStackRandom(img, nSamples, 3, positions);(*BGR, 4D data *)
+			NEW(stackWindow, dataSetI, "[4D]scroll mouse/arrows", WMTensor.Frontal);*)
+			dataSetI:=enum.GetRoiStackRandom(img, nSamples, 1, positions);(*Gray, 3D data*)
+			oldStackWindow:=stackWindow;
+			NEW(stackWindow, dataSetI, "[3D]scroll mouse/arrows", WMTensor.Frontal);
+			stackWindow.AddWindow();
 
-		hasNewImage:=FALSE;
-		BEGIN{EXCLUSIVE} AWAIT(dead OR hasNewImage) END;
-		IF dead THEN EXIT END;
-		IF (labelWindow#NIL)&(labelWindow.GetManager()#NIL) THEN labelWindow.GetManager().Remove(labelWindow) END;
+			hasNewImage:=FALSE;
+			BEGIN{EXCLUSIVE} AWAIT(dead OR hasNewImage) END;
+			IF dead THEN EXIT END;
+			IF (labelWindow#NIL)&(labelWindow.GetManager()#NIL) THEN labelWindow.GetManager().Remove(labelWindow) END;
 
-		(** example for producing a label data structure *)
-		NEW(labelSetI, nSamples, 1, MAX(contextMenu.nItems, 10));(*! COMPILER PROBLEM - NEW does reuse but not reset content ?? *)
-		labelSetI:=0;
-		FOR i:=0 TO LEN(labelSetI,0)-1 DO
+			(** example for producing a label data structure *)
+			NEW(labelSetI, nSamples, 1, MAX(contextMenu.nItems, 10));(*! COMPILER PROBLEM - NEW does reuse but not reset content ?? *)
+			labelSetI:=0;
+			FOR i:=0 TO LEN(labelSetI,0)-1 DO
+				l:=contextMenu.locations;
+				hit:=FALSE;
+				WHILE l#NIL DO
+					dx:=l.x-positions[i,0]-RoiSize DIV 2;
+					dy:=l.y-positions[i,1]-RoiSize DIV 2;
+					(*log.Int(i,10); log.String(": "); log.Int(dx,10); log.Int(dy,10); log.String(" "); log.Ln;*)
+					IF Distance2( dx, dy) < threshold2 THEN
+						hit:=TRUE;
+						labelSetI[i,0,l.id]:=1;
+					END;
+					l:=l.next;
+				END;
+				(*log.Update;*)
+			END;
+		ELSE (*a centered image for each label, rest is random*)
+			NEW(dataSetI, nSamples, 1, RoiSize, RoiSize);
+			dataSetI:=0; (*?*)
+			NEW(labelSetI, nSamples, 1, MAX(contextMenu.nItems, 10));(*! COMPILER PROBLEM - NEW does reuse but not reset content ?? *)
+			labelSetI:=0;
+			j:=0;
 			l:=contextMenu.locations;
-			hit:=FALSE;
-			WHILE l#NIL DO
-				dx:=l.x-positions[i,0]-RoiSize DIV 2;
-				dy:=l.y-positions[i,1]-RoiSize DIV 2;
-				(*log.Int(i,10); log.String(": "); log.Int(dx,10); log.Int(dy,10); log.String(" "); log.Ln;*)
-				IF Distance2( dx, dy) < threshold2 THEN
-					hit:=TRUE;
-					labelSetI[i,0,l.id]:=1;
+			WHILE (l#NIL) & (j<nSamples) DO
+				x:=l.x-RoiSize DIV 2;
+				y:=l.y-RoiSize DIV 2;
+				IF (x>=0) & (y>=0) & (x+RoiSize <= img.width) & (y+RoiSize <= img.height) THEN
+					positions[j,0]:=x;
+					positions[j,1]:=y;
+					dataSetI[j]:= GetRoiGray(img, positions[j,0],positions[j,1]);
+					labelSetI[j,0,l.id]:=l;
+					INC(j);
+					(*log.Int(i,10); log.String(": "); log.Int(dx,10); log.Int(dy,10); log.String(" "); log.Ln;*)
 				END;
 				l:=l.next;
 			END;
-			(*log.Update;*)
-		END;
+			WHILE j < nSamples DO
+				x:=Random.Dice(img.width-RoiSize);
+				y:=Random.Dice(img.height-RoiSize);
+				hit:=FALSE;
+				l:=contextMenu.locations;
+				WHILE l#NIL DO
+					hit:=hit OR (Distance2( l.x-x-RoiSize DIV 2, l.y-y- RoiSize DIV 2) < threshold3);
+					l:=l.next;
+				END;
+				IF ~hit THEN (* only non-hits here *)
+					positions[j,0]:=x;
+					positions[j,1]:=y;
+					dataSetI[j]:= GetRoiGray(img, positions[j,0],positions[j,1]);
+					labelSetI[j,0, LEN(labelSetI,2)-1]:=1;
+					INC(j);
+				END;
+			END;
+			
+			
+			FOR i:=0 TO LEN(labelSetI,0)-1 DO
+				l:=contextMenu.locations;
+				hit:=FALSE;
+				WHILE l#NIL DO
+					dx:=l.x-positions[i,0]-RoiSize DIV 2;
+					dy:=l.y-positions[i,1]-RoiSize DIV 2;
+					(*log.Int(i,10); log.String(": "); log.Int(dx,10); log.Int(dy,10); log.String(" "); log.Ln;*)
+					IF Distance2( dx, dy) < threshold2 THEN
+						hit:=TRUE;
+						labelSetI[i,0,l.id]:=1;
+					END;
+					l:=l.next;
+				END;
+				(*log.Update;*)
+			END;
 
+		END;
 		NEW(labelWindow, labelSetI, "labels", WMTensor.Frontal);
 		labelWindow.AddWindow();
 
@@ -340,6 +397,7 @@ ImageLabeler.NewMenu
 	chin	Chin
  ~
 ImageLabeler.NewMenu
+	nothing Nothing
 	head SpermHead
 	tail	SpermTail
 	background Background
@@ -350,6 +408,7 @@ ImageLabeler.NewMenu
 ImageLabeler.Open -m="*.jpg" -f=Labeler1.txt ~
 ImageLabeler.Open -m="C:/Program Files (x86)/A2/HighDim/Code/EyeTracker/EyeDB_Internet/*.jpg" -f=Eyes.txt -d=Eyes_3D.MtA --scaling ~
 ImageLabeler.Open -m="C:/Program Files (x86)/A2/HighDim/Data/Sperm/IMSI1_100Frames_BMP/*.bmp" -f=SpermIMSI1.txt -d=Sperm_3DIMSI1.MtA --scaling ~
+ImageLabeler.Open -m="C:/Program Files (x86)/A2/HighDim/Data/Sperm/IMSI1_100Frames_BMP/*.bmp" -f=SpermIMSI1.txt -d=Sperm_3DIMSI1.MtA  ~
 System.CollectGarbage ~
 System.Free ImageLabeler ~
 System.FreeDownTo MatrixBase~

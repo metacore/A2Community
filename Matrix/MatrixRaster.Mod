@@ -67,12 +67,14 @@ TYPE Enumerator*=OBJECT(Files.Enumerator) (*extract single or multiple images fr
 			RETURN array[0,y..y+h-1, x..x+w-1] + array[1,y..y+h-1, x..x+w-1] + array[2,y..y+h-1, x..x+w-1]; (*BGR to grayscale*) (*!! ROI IS MISSING*)
 		END GetRoiGray;
 
+
 		(* from an image, extract a stack of ROIs with random positions, that are also returned  *)
 		PROCEDURE GetRoiStackRandom*(img: Raster.Image; depth, colorPlanes: SIZE; VAR positions: ARRAY [*,*] OF SIZE): ARRAY [?] OF SIGNED16;
 		VAR i:SIZE;
 		BEGIN
 			SELF.depth:=depth;
 			IF LEN(positions)#[depth,2] THEN NEW(positions, depth, 2) END;
+			positions:=Random;
 			IF colorPlanes=1 THEN
 				IF LEN(RESULT)#[depth,h,w] THEN NEW(RESULT,[depth,h,w]) END;
 				FOR i:=0 TO depth-1 DO
