@@ -33,6 +33,7 @@ MatrixMoments.Mod
 LinearTransform.Mod 
 
 VolumeBase.Mod 
+VolumeFFT.Mod
 VolumeNabla.Mod
 VolumeTransform.Mod 
 VolumePDE.Mod
@@ -42,6 +43,8 @@ HypercubeBase.Mod
 HypercubeNabla.Mod
 HypercubeTransform.Mod 
 HypercubeMoments.Mod
+
+TensorMath.Mod
 
 MatrixStandardSolvers.Mod
 
