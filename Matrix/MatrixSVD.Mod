@@ -1,7 +1,7 @@
 MODULE MatrixSVD;   (** AUTHOR "Patrick Hunziker"; PURPOSE "Solves a linear system of equations using SVD."; *)  (*TO DO: sorting by magnitude of eigenvectors may have a problem; small matrices *)
-(*Version: 12.3.2008*)
+(*Version: 9/2019*)
 
-IMPORT Base := MatrixBase, Math := MathL,  (*Out  := AosOut, Oberon, *) MatrixUtilities;
+IMPORT Base := MatrixBase, Math := MathL, PMath, Util:=MatrixUtilities , Commands, Kernel;
 
 CONST
 	Tiny = 1.0D-10;  DefaultIterations = 30;
@@ -12,7 +12,7 @@ TYPE
 	Solver* = OBJECT (Base.Solver);
 	VAR u-, w-, vt-, tmp, tmp2: Matrix;   (**  result matrices; u is size m*n, w is size n*n; note that the algorithm returns the transpose  vT(size n*n) instead of v *)
 		uSorted-,wSorted-,vtSorted-:Matrix;
-		tv, tv2, tv3, tv4, tv5: Vector;
+		tv, tv2, tv3, tv4: Vector;
 		isSorted-:BOOLEAN;
 		threshold*: Real;   (** for level of accuracy; default = 1.0D-10*)
 		iterations*: SIGNED32;   (** for detection of non-convergence; default = 30*)
@@ -24,13 +24,17 @@ TYPE
 			handleError := Base.HandleError;  res := Base.OK;  isSorted:=FALSE; index:=null;
 			IF LEN( A ) = 0 THEN RETURN END;
 			IF (LEN( u, 0 ) # LEN( A, 0 )) OR (LEN( u, 1 ) # LEN( A, 1 )) THEN NEW( u, LEN( A, 0 ), LEN( A, 1 ) );  END;
-			u := A;  mag := MaxAbs( u );  u := u / mag;  zero := 0.0D0;  iterations := DefaultIterations;  threshold := Tiny;  decompose;  w := w * mag;
+			u := A;  mag := MaxAbs( u );  u := u / mag;  zero := 0.0D0;  
+			iterations := DefaultIterations;  threshold := Tiny;  
+			decompose;  
+			w := w * mag;
 		END Init;
 
 		PROCEDURE decompose;
 		VAR m, n: SIZE;  rv1: Vector;  anorm, scale, c, f, g, h, s, x, y, z: Real;  i, its, j, jj, k, l, nm: SIZE;  flag: BOOLEAN;
 		BEGIN
 			isSorted:=FALSE;
+			(*IF LEN(u)=[2,2] THEN decompose2x2; RETURN END;*)
 			IF LEN( u ) = 0 THEN res := Base.SIZEMISMATCH;  handleError( Base.SIZEMISMATCH, "An zero size matrix was supplied." );  RETURN END;
 			n := LEN( u, 1 );  m := LEN( u, 0 );
 			IF LEN( rv1 ) # n THEN NEW( rv1, n ) ELSE rv1 := 0 END;
@@ -41,7 +45,7 @@ TYPE
 				l := i + 1;  rv1[i] := scale * g;  g := 0;  s := 0;  scale := 0.0;
 				IF (i < m) THEN
 				(*scale := SUM(ABS(u[i..m-1,i]));*)  (* overhead: allocation of temp array behind the scenes*)
-					scale := MatrixUtilities.SumAbs( u[i..m - 1, i] );
+					scale := SUM(ABS( u[i..m - 1, i] ));
 					IF (scale # 0.0) THEN
 						u[i..m - 1, i] := u[i..m - 1, i] / scale;  s := s + u[i..m - 1, i] +* u[i..m - 1, i];  f := u[i, i];
 						IF f >= 0 THEN g := -Math.sqrt( s ) ELSE g := Math.sqrt( s ) END;
@@ -58,7 +62,7 @@ TYPE
 				w[i, i] := (scale * g);  g := 0;  s := 0;  scale := 0.0;
 				IF (i < m) & (i # (n - 1)) THEN
 				(*scale := SUM(ABS( u[i, l..n-1]) );*)  (* overhead: allocation of temp array behind the scenes*)
-					scale := MatrixUtilities.SumAbs( u[i, l..n - 1] );
+					scale := SUM(ABS( u[i, l..n - 1] ));
 					IF (scale # 0.0) THEN
 						u[i, l..n - 1] := u[i, l..n - 1] / scale;  s := s + u[i, l..n - 1] +* u[i, l..n - 1];  f := u[i, l];
 						IF f >= 0 THEN g := -Math.sqrt( s ) ELSE g := Math.sqrt( s ) END;
@@ -167,8 +171,36 @@ TYPE
 			RETURN;
 		END decompose;
 
+		(* https://scicomp.stackexchange.com/questions/8899/robust-algorithm-for-2-times-2-svd *)
+		PROCEDURE decompose2x2;
+		VAR 
+			E,F,G,H,Q,R,sx,sy,a1,a2,theta, phi, sinPhi,sinTheta,cosPhi,cosTheta: Real;
+		BEGIN
+			HALT(200); (*not yet working*)
+			E:=(u[0,0]+u[1,1])/2;
+			F:=(u[0,0]-u[1,1])/2;
+			G:=(u[1,0]+u[0,1])/2;
+			H:=(u[1,0]-u[0,1])/2;
+			Q:=pythag(E,H);
+			R:=pythag(F,G);
+			sx:=Q+R;
+			sy:=Q-R;
+			a1:=PMath.arctan2L(G,F);
+			a2:=PMath.arctan2L(H,E);
+			theta:=(a2-a1)/2;
+			phi:=(a2+a1)/2;
+			cosPhi:=Math.cos(phi);
+			sinPhi:=Math.sin(phi);
+			cosTheta:=Math.cos(theta);
+			sinTheta:=Math.sin(theta);
+			u:=[[cosPhi, -sinPhi],[sinPhi,cosPhi]];
+			w:=[[sx,0],[0,sy]];
+			vt:=[[cosTheta,-sinTheta],[sinTheta,cosTheta]];
+			
+	    END decompose2x2;
+		
 		PROCEDURE Solve*( CONST b: Vector ): Vector;
-		VAR val: FLOAT64;  i: SIZE;
+		VAR val: FLOAT64; i: SIZE;
 		BEGIN
 			IF (LEN( tmp, 0 ) # LEN( w, 0 )) OR (LEN( tmp, 1 ) # LEN( w, 1 )) THEN NEW( tmp, LEN( w, 0 ), LEN( w, 1 ) );  ELSE tmp := 0 END;
 			IF LEN( tv ) # LEN( u, 0 ) THEN NEW( tv, LEN( u, 0 ) ) ELSE tv := 0 END;
@@ -184,11 +216,11 @@ TYPE
 		VAR sorted:Vector;
 		BEGIN
 			index:=null;
-			MatrixUtilities.GetDiagonalOrder(w, sorted,index,FALSE);
-			wSorted:=MatrixUtilities.ReorderMatrix(w,index, FALSE); (* reorder diagonal matrix w in columns and rows*)
-			wSorted:=MatrixUtilities.ReorderMatrix(wSorted, index,TRUE);
-			uSorted:=MatrixUtilities.ReorderMatrix(u,index, FALSE); (* reorder u by columns*)
-			vtSorted:=MatrixUtilities.ReorderMatrix(vt, index, FALSE); (* reorder v by rows (i.e. reorder vt by columns)*)
+			Util.GetDiagonalOrder(w, sorted,index,FALSE);
+			wSorted:=Util.ReorderMatrix(w,index, FALSE); (* reorder diagonal matrix w in columns and rows*)
+			wSorted:=Util.ReorderMatrix(wSorted, index,TRUE);
+			uSorted:=Util.ReorderMatrix(u,index, FALSE); (* reorder u by columns*)
+			vtSorted:=Util.ReorderMatrix(vt, index, FALSE); (* reorder v by rows (i.e. reorder vt by columns)*)
 			isSorted:=TRUE;
 		END SortDescending;
 
@@ -206,15 +238,6 @@ TYPE
 		END PseudoInverse;
 
 	END Solver;
-
-	PROCEDURE All( VAR M: Matrix;  f: PROCEDURE ( x: FLOAT64 ): FLOAT64 ): Matrix;
-	VAR i, j: SIZE;
-	BEGIN
-		FOR i := 0 TO LEN( M, 0 ) - 1 DO
-			FOR j := 0 TO LEN( M, 1 ) - 1 DO M[i, j] := f( M[i, j] );  END;
-		END;
-		RETURN M
-	END All;
 
 	PROCEDURE reciprocal( x: Real ): Real;
 	BEGIN
@@ -308,32 +331,19 @@ END SVD_Decompose;
 			Out.Ln;
 	END LogV;
 
+*)
 
-	PROCEDURE Log( CONST m: Matrix );
-	VAR i, j: SIGNED32;
-	BEGIN
-		IF LEN(m)=0 THEN Out.String("zero size matrix"); Out.Ln; RETURN; END;
-		FOR j := 0 TO LEN(m,0) - 1 DO
-			FOR i := 0 TO LEN(m,1) - 1 DO
-				IF m[j,i]<0 THEN Out.Char("-"); END; Out.Int(ENTIER(ABS(m[j,i]+0.005)),0); Out.Char("."); Out.Int(ENTIER(ABS(m[j,i]*100+0.5)) MOD 100,0); Out.String("   ");
-			END;
-			Out.Ln;
-		END;
-		Out.Ln;
-	END Log;
 
-	PROCEDURE Test*;
-	VAR a, U, W, V, VT: Matrix;  b,x: Vector; scale, zero: Real;  s: Solver;  i,t0,t1:SIGNED32;
+	PROCEDURE Test*(context:Commands.Context);
+	VAR a, aa, aaa, U, W, V, VT: Matrix;  b,x: Vector; scale, zero: Real;  s: Solver;  i,t0,t1:SIGNED32;
 	BEGIN
-		Out.Enter;
-		Out.Ln;  Out.String( "-------Singular Value Decomposition Test-------------" );
-		Out.String( " Singular Value Decomposition of Matrix A; " );  Out.Ln;
-		Out.String( " should yield eigenvalues w (in diagonal matrix) and " );  Out.Ln;
-		Out.String( " orthonormal matrices u & vT which, " );  Out.Ln;
-		Out.String( " multiplied by itself, should give unit matrices; " );  Out.Ln;
-		Out.String( " Finally, PseudoInverse of A is calculated, " );  Out.Ln;
-		Out.String( " and Pseudoinverse of Pseudoinverse should lead back to A (least square approximation of..) " );  Out.Ln;
-		Out.Exit;
+		context.out.Ln;  context.out.String( "-------Singular Value Decomposition Test-------------" );
+		context.out.String( " Singular Value Decomposition of Matrix A; " );  context.out.Ln;
+		context.out.String( " should yield eigenvalues w (in diagonal matrix) and " );  context.out.Ln;
+		context.out.String( " orthonormal matrices u & vT which, " );  context.out.Ln;
+		context.out.String( " multiplied by itself, should give unit matrices; " );  context.out.Ln;
+		context.out.String( " Finally, PseudoInverse of A is calculated, " );  context.out.Ln;
+		context.out.String( " and Pseudoinverse of Pseudoinverse should lead back to A (least square approximation of..) " );  context.out.Ln;
 
 		NEW( a, 8, 10 );
 
@@ -345,53 +355,49 @@ END SVD_Decompose;
 
 
 		NEW( s, a );		(* at this point, solver is initialized with matrix m and SVD already performed in the background *)
-		t0:=Oberon.Time();
+		(*t0:=Kernel.GetTicks();
 		FOR i:=0 TO 10000 DO
 			s.Init(a );   (* at this point, solver is initialized with matrix m and SVD already performed in the background *)
 		END;
-		t1:=Oberon.Time();
-		Out.Enter;
+		t1:=Kernel.GetTicks();
+		context.out.Enter;
 
-		Out.String("time [ms]: "); Out.Int (t1-t0,0); Out.Ln;
-
+		context.out.String("time [ms]: "); context.out.Int (t1-t0,0); context.out.Ln;
+*)
 
 		b:=[1,5,4,8,7,3,4,7,0,4,3,2,6,7,8];
 
-		t0:=Oberon.Time();
+		t0:=Kernel.GetTicks();
 		FOR i:=0 TO 10000 * 100 DO
 			scale := SUM(ABS(b));
 		END;
-		t1:=Oberon.Time();
-		Out.String("SUM(ABS()) versus MatrixUtilities.SumAbs() "); Out.String("time [ms]: "); Out.Int (t1-t0,0);
+		t1:=Kernel.GetTicks();
+		context.out.String("SUM(ABS()) versus Util.SumAbs() "); context.out.String("time [ms]: "); context.out.Int (t1-t0,0);
 
-		t0:=Oberon.Time();
+		t0:=Kernel.GetTicks();
 		FOR i:=0 TO 10000* 100 DO
-			scale := MatrixUtilities.SumAbs(b);
+			scale := SUM(ABS(b));
 		END;
-		t1:=Oberon.Time();
-		Out.String("  time [ms]: "); Out.Int (t1-t0,0); Out.Ln;
+		t1:=Kernel.GetTicks();
+		context.out.String("  time [ms]: "); context.out.Int (t1-t0,0); context.out.Ln;
 
-		Out.String( "a:" );  Out.Ln;  Log( a );  Out.String( "w:" );  Out.Ln;  Log( s.w );
+		context.out.String( "a:" );  context.out.Ln;  Util.Print(context.out,  a , 7,4,0 );  context.out.String( "w:" );  context.out.Ln;  Util.Print(context.out,  s.w, 7,4,0 );
 
-		Out.String( "v,vt,v*vt:" );  Out.Ln;
-		Log( s.vt );  (*V := s.vt`;*)  Log( s.vt` );  (*V := s.vt*V;*)  Log( s.vt*(s.vt`) );  Out.String( "u,ut,u*ut:" );  Out.Ln;
-		Log( s.u );  (*U := s.u`;*)  Log( s.u` );  (*U := s.u*U;*)  Log( s.u * (s.u`) );  Out.String( "u*w*v:" );  Out.Ln;
-		Log( s.u * (s.w*(s.vt`)) );
-		Out.Exit;
-
+		context.out.String( "v,vt,v*vt:" );  context.out.Ln;
+		Util.Print(context.out,  s.vt, 7,4,0 );  (*V := s.vt`;*)  Util.Print(context.out,  s.vt`, 7,4,0 );  (*V := s.vt*V;*)  Util.Print(context.out,  s.vt*(s.vt`), 7,4,0 );  context.out.String( "u,ut,u*ut:" );  context.out.Ln;
+		Util.Print(context.out,  s.u, 7,4,0 );  (*U := s.u`;*)  Util.Print(context.out,  s.u`, 7,4,0 );  (*U := s.u*U;*)  Util.Print(context.out,  s.u * (s.u`), 7,4,0 );  context.out.String( "u*w*v:" );  context.out.Ln;
+		Util.Print(context.out,  s.u * (s.w*(s.vt`)), 7,4,0 );
 
 		(*
-		Out.String( "a, PseudoInverse(a):" );  Out.Ln;
-		Log( a );
-		Log ( s.vt * ALL(s.w,reciprocal) * (s.u`) );
+		context.out.String( "a, PseudoInverse(a):" );  context.out.Ln;
+		Util.Print(context.out,  a );
+		Util.Print ( s.vt * ALL(s.w,reciprocal) * (s.u`) );
 		s.Initialize ( s.vt * ALL(s.w,reciprocal) * (s.u`) );
-		Out.String( "PseudoInverse(PseudoInverse(a)):" );  Out.Ln;
-		Log ( s.vt * ALL(s.w,reciprocal) * (s.u`) );
+		context.out.String( "PseudoInverse(PseudoInverse(a)):" );  context.out.Ln;
+		Util.Print ( s.vt * ALL(s.w,reciprocal) * (s.u`) );
 		*)
-		Out.Enter;
-		Out.String( "a, PseudoInverse(a), PseudoInverse(PseudoInverse(a)):" );  Out.Ln;  Log( a );
-		Log( s.PseudoInverse() );  s.Init( s.PseudoInverse() );  Log( s.PseudoInverse() );
-		Out.Exit;
+		context.out.String( "a, PseudoInverse(a), PseudoInverse(PseudoInverse(a)):" );  context.out.Ln;  Util.Print(context.out,  a, 7,4,0 );
+		Util.Print(context.out,  s.PseudoInverse(), 7,4,0 );  s.Init( s.PseudoInverse() );  Util.Print(context.out,  s.PseudoInverse(), 7,4,0 );
 
 		(*SVD as solver*)
 		NEW( a, 5, 5 );
@@ -407,19 +413,24 @@ END SVD_Decompose;
 
 		b:=[5,4,3,1,4];
 
-		Out.Enter;
-		Out.String( "A, b, x, A*x:" );  Out.Ln;  Log( a );
-		LogV( b);    Out.Ln;
+		context.out.String( "A, b, x, A*x:" );  context.out.Ln;  Util.Print(context.out,  a, 7,4,0 );
+		Util.Print(context.out,  b, 7,4,0);    context.out.Ln;
 		s.Init(a);
 		x:=s.Solve(b);
-		LogV(x);  Out.Ln;
-		LogV(a*x);Out.Ln;
-		Out.Exit;
+		Util.Print(context.out, x, 7,4,0);  context.out.Ln;
+		Util.Print(context.out, a*x, 7,4,0);context.out.Ln;
 
+		context.out.String("SVD, pseudoInverse, pseudoInverse(pseudoInverse) of 2*2 matrix"); context.out.Ln;
 
-
+		a:=[[2,1.8],[-1,1]];
+		Util.Print(context.out,  a, 7,4,0 ); 
+		NEW(s,a);
+		aa:=s.PseudoInverse();
+		Util.Print(context.out,  aa, 7,4,0 );  
+		NEW(s, aa );  
+		aaa:=s.PseudoInverse();
+		Util.Print(context.out,  aaa, 7,4,0 );
 	END Test;
-*)
 
 BEGIN
 END MatrixSVD.
@@ -427,7 +438,7 @@ System.Time ~
 MatrixSVD.Test
 LinEqSVD.Test
 
-SystemTools.FreeDownTo MatrixSVD  ~
+System.FreeDownTo MatrixSVD  ~
 
 OFormatter.Format *
 fofPC.Compile \s *
@@ -441,3 +452,29 @@ History:
 
 - on Oct, 2006, this module (no SIMD yet) runs about twice as fast as PC compiled LinEqSVD.Mod
 - on March 2008, with SIMD in compiler, 4x faster than LinEqSVD.Mod
+
+for 2x2 matrix, see
+https://scicomp.stackexchange.com/questions/8899/robust-algorithm-for-2-times-2-svd
+from numpy import asarray, diag
+def svd2(m):
+    y1, x1 = (m[1, 0] + m[0, 1]), (m[0, 0] - m[1, 1])
+    y2, x2 = (m[1, 0] - m[0, 1]), (m[0, 0] + m[1, 1])
+    h1 = hypot(y1, x1)
+    h2 = hypot(y2, x2)
+    t1 = x1 / h1
+    t2 = x2 / h2
+    cc = sqrt((1 + t1) * (1 + t2))
+    ss = sqrt((1 - t1) * (1 - t2))
+    cs = sqrt((1 + t1) * (1 - t2))
+    sc = sqrt((1 - t1) * (1 + t2))
+    c1, s1 = (cc - ss) / 2, (sc + cs) / 2,
+    u1 = asarray([[c1, -s1], [s1, c1]])
+    d = asarray([(h1 + h2) / 2, (h1 - h2) / 2])
+    sigma = diag(d)
+    if h1 != h2:
+        u2 = diag(1 / d).dot(u1.T).dot(m)
+    else:
+        u2 = diag([1 / d[0], 0]).dot(u1.T).dot(m)
+    return u1, sigma, u2
+
+
