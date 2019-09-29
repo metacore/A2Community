@@ -32,6 +32,8 @@ PlanarWavelets.Mod
 MatrixMoments.Mod
 LinearTransform.Mod 
 
+TensorMath.Mod
+
 VolumeBase.Mod 
 VolumeFFT.Mod
 VolumeNabla.Mod
@@ -44,7 +46,6 @@ HypercubeNabla.Mod
 HypercubeTransform.Mod 
 HypercubeMoments.Mod
 
-TensorMath.Mod
 
 MatrixStandardSolvers.Mod
 
