@@ -34,7 +34,7 @@ TYPE
 		VAR m, n: SIZE;  rv1: Vector;  anorm, scale, c, f, g, h, s, x, y, z: Real;  i, its, j, jj, k, l, nm: SIZE;  flag: BOOLEAN;
 		BEGIN
 			isSorted:=FALSE;
-			(*IF LEN(u)=[2,2] THEN decompose2x2; RETURN END;*)
+			IF LEN(u)=[2,2] THEN decompose2x2; RETURN END;
 			IF LEN( u ) = 0 THEN res := Base.SIZEMISMATCH;  handleError( Base.SIZEMISMATCH, "An zero size matrix was supplied." );  RETURN END;
 			n := LEN( u, 1 );  m := LEN( u, 0 );
 			IF LEN( rv1 ) # n THEN NEW( rv1, n ) ELSE rv1 := 0 END;
@@ -158,7 +158,7 @@ TYPE
 								vt[..n-1, i] := (  vt[..n-1, i]*c - vt[..n-1, j]*s); (*not independent, not vectorizable ? rather not*)
 								*)
 						z := pythag( f, h );  w[j, j] := (z);
-						IF (z # 0.0) THEN z := 1.0 / z;  c := f * z;  s := h * z;  END;
+						IF (z # 0.0) THEN z := 1.0 / z;  c := f * z;  s := h * z;  END;(*? does c:=, s:= need to go out of loop ?*)
 						f := c * g + s * y;  x := c * y - s * g;
 						FOR jj := 0 TO m - 1 DO y := u[jj, j];  z := u[jj, i];  u[jj, j] := (y * c + z * s);  u[jj, i] := (z * c - y * s);  END;
 						(*  u[..m-1, j] := (  u[..m-1, j]*c + u[..m-1, i]*s);  (*wait for compiler compatibility of [[c,s],[c,-s]] *)
@@ -176,7 +176,6 @@ TYPE
 		VAR 
 			E,F,G,H,Q,R,sx,sy,a1,a2,theta, phi, sinPhi,sinTheta,cosPhi,cosTheta: Real;
 		BEGIN
-			HALT(200); (*not yet working*)
 			E:=(u[0,0]+u[1,1])/2;
 			F:=(u[0,0]-u[1,1])/2;
 			G:=(u[1,0]+u[0,1])/2;
@@ -193,9 +192,12 @@ TYPE
 			sinPhi:=Math.sin(phi);
 			cosTheta:=Math.cos(theta);
 			sinTheta:=Math.sin(theta);
-			u:=[[cosPhi, -sinPhi],[sinPhi,cosPhi]];
+			(*? changes below might be related to differences in result range (0..2pi versus -pi..pi) of arctan() ? *)
+			(*u:=[[cosPhi, -sinPhi],[sinPhi,cosPhi]];*)(*was according to scicomp reference, but leads to permuted sign/elements of u*)
+			u:=[[-sinPhi, cosPhi],[-cosPhi,-sinPhi]];
 			w:=[[sx,0],[0,sy]];
-			vt:=[[cosTheta,-sinTheta],[sinTheta,cosTheta]];
+			(*v:=[[cosTheta,-sinTheta],[sinTheta,cosTheta]];*)(*according to scicomp reference, but leads to permuted sign/elements *)
+			vt:=[[-cosTheta,sinTheta],[-sinTheta,-cosTheta]];
 			
 	    END decompose2x2;
 		
@@ -384,8 +386,10 @@ END SVD_Decompose;
 		context.out.String( "a:" );  context.out.Ln;  Util.Print(context.out,  a , 7,4,0 );  context.out.String( "w:" );  context.out.Ln;  Util.Print(context.out,  s.w, 7,4,0 );
 
 		context.out.String( "v,vt,v*vt:" );  context.out.Ln;
-		Util.Print(context.out,  s.vt, 7,4,0 );  (*V := s.vt`;*)  Util.Print(context.out,  s.vt`, 7,4,0 );  (*V := s.vt*V;*)  Util.Print(context.out,  s.vt*(s.vt`), 7,4,0 );  context.out.String( "u,ut,u*ut:" );  context.out.Ln;
-		Util.Print(context.out,  s.u, 7,4,0 );  (*U := s.u`;*)  Util.Print(context.out,  s.u`, 7,4,0 );  (*U := s.u*U;*)  Util.Print(context.out,  s.u * (s.u`), 7,4,0 );  context.out.String( "u*w*v:" );  context.out.Ln;
+		Util.Print(context.out,  s.vt, 7,4,0 );  (*V := s.vt`;*)  Util.Print(context.out,  s.vt`, 7,4,0 );  (*V := s.vt*V;*)  Util.Print(context.out,  s.vt*(s.vt`), 7,4,0 );  
+		context.out.String( "u,ut,u*ut:" );  context.out.Ln;
+		Util.Print(context.out,  s.u, 7,4,0 );  (*U := s.u`;*)  Util.Print(context.out,  s.u`, 7,4,0 );  (*U := s.u*U;*)  Util.Print(context.out,  s.u * (s.u`), 7,4,0 );  
+		context.out.String( "u*w*v:" );  context.out.Ln;
 		Util.Print(context.out,  s.u * (s.w*(s.vt`)), 7,4,0 );
 
 		(*
@@ -396,8 +400,10 @@ END SVD_Decompose;
 		context.out.String( "PseudoInverse(PseudoInverse(a)):" );  context.out.Ln;
 		Util.Print ( s.vt * ALL(s.w,reciprocal) * (s.u`) );
 		*)
-		context.out.String( "a, PseudoInverse(a), PseudoInverse(PseudoInverse(a)):" );  context.out.Ln;  Util.Print(context.out,  a, 7,4,0 );
-		Util.Print(context.out,  s.PseudoInverse(), 7,4,0 );  s.Init( s.PseudoInverse() );  Util.Print(context.out,  s.PseudoInverse(), 7,4,0 );
+		context.out.String( "a, PseudoInverse(a), PseudoInverse(PseudoInverse(a)):" );  context.out.Ln;  
+		Util.Print(context.out,  a, 7,4,0 );
+		Util.Print(context.out,  s.PseudoInverse(), 7,4,0 );  s.Init( s.PseudoInverse() );  
+		Util.Print(context.out,  s.PseudoInverse(), 7,4,0 );
 
 		(*SVD as solver*)
 		NEW( a, 5, 5 );
@@ -425,11 +431,18 @@ END SVD_Decompose;
 		a:=[[2,1.8],[-1,1]];
 		Util.Print(context.out,  a, 7,4,0 ); 
 		NEW(s,a);
+		Util.Print(context.out, s.u, 7,4,0);
+		Util.Print(context.out, s.u*s.u`, 7,4,0);
+		Util.Print(context.out, s.w, 7,4,0);
+		Util.Print(context.out, s.vt, 7,4,0);
+		Util.Print(context.out, s.vt`*s.vt, 7,4,0);
+		Util.Print(context.out, s.u*(s.w*(s.vt`)), 7,4,0);
 		aa:=s.PseudoInverse();
 		Util.Print(context.out,  aa, 7,4,0 );  
 		NEW(s, aa );  
 		aaa:=s.PseudoInverse();
 		Util.Print(context.out,  aaa, 7,4,0 );
+		
 	END Test;
 
 BEGIN
@@ -438,7 +451,25 @@ System.Time ~
 MatrixSVD.Test
 LinEqSVD.Test
 
-System.FreeDownTo MatrixSVD  ~
+  2.0000  1.8000
+ -1.0000  1.0000
+
+ -0.0381 -0.9993
+  0.9993 -0.0381
+
+  2.6921  0.0000
+  0.0000  1.4115
+
+  0.7565 -0.6540
+  0.6540  0.7565
+
+  0.4523  0.2984
+ -0.5448  0.2223
+
+ -1.0000  1.0000
+ -1.8000 -2.0000
+
+System.FreeDownTo  MatrixSVD  ~
 
 OFormatter.Format *
 fofPC.Compile \s *
