@@ -1009,6 +1009,22 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 	END ParseHeader;
 	
 	(* derive structure from header*)
+	
+	PROCEDURE Load*(R:Streams.Reader): ARRAY [?] OF Datatype;
+		VAR  len: ARRAY [*] OF SIZE;
+		version, datatype:SIGNED32;	
+	BEGIN
+		ParseHeader(R,version, datatype,len);
+		IF datatype=DatatypeLR THEN RETURN LoadLR(R)
+		ELSIF datatype=DatatypeR THEN RETURN LoadR(R)
+		(*ELSIF datatype=DatatypeSR THEN RETURN LoadSR(R)*)
+		ELSIF datatype=DatatypeLInt THEN RETURN LoadLInt(R)
+		ELSIF datatype=DatatypeInt THEN RETURN LoadInt(R)
+		ELSIF datatype=DatatypeSize THEN RETURN LoadSize(R)
+		ELSIF datatype=DatatypeUInt8 THEN RETURN LoadUInt8(R)
+		END;
+	END Load;
+	
 	PROCEDURE LoadLR*(R:Streams.Reader): ARRAY [?] OF Datatype;
 	VAR  len: ARRAY [*] OF SIZE;
 		version, datatype:SIGNED32;

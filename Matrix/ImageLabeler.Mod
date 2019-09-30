@@ -2,14 +2,13 @@ MODULE ImageLabeler; (** AUTHOR "Patrick Hunziker 2019"; PURPOSE "Interactively 
 
 IMPORT Commands, Files, Streams, Strings, Options, Raster, Rand:=Random, MatrixRaster,
 			WMGraphics, WMRasterScale, WMRectangles, WMTensor, WMComponents, WMMenus, WMTrees, WMStandardComponents, WMWindowManager,
-			MLDataStreams (*MLDataPipes*) (*experiment*);
+			MLDataStreams;
 
 CONST Random=MatrixRaster.Random;
 		 Tab=09X;
 
 VAR 	rand:Rand.Generator;
 		globalContextMenu*:ContextMenu;
-		(*source:MLDataPipe.Source;*)
 		source:MLDataStreams.Source;
 		log:Streams.Writer;
 

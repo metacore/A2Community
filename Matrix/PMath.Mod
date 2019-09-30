@@ -405,7 +405,7 @@ BEGIN
 	RETURN y
 END epsL;
 
-PROCEDURE arctan2*(x,y: FLOAT32): FLOAT32; (*arctan in range 0..2pi*)
+PROCEDURE arctan2*(x,y: FLOAT32): FLOAT32; (*arctan in range 0..2pi*)(* note that in C and Python, atan2 and arctan2 result in range -pi..pi *)
 BEGIN
 	IF (x>0) & (y>=0) THEN RETURN Math.arctan(y/x)
 	ELSIF (x>0) & (y<0) THEN RETURN Math.arctan(y/x)+2*Math.pi
@@ -417,7 +417,7 @@ BEGIN
 END arctan2;
 
 
-PROCEDURE arctan2L*(x,y:FLOAT64):FLOAT64; (*arctan in range 0..2pi*)
+PROCEDURE arctan2L*(x,y:FLOAT64):FLOAT64; (*arctan in range 0..2pi*) (* note that in C and Python, atan2 and arctan2 result in range -pi..pi *)
 BEGIN
 	IF (x>0) & (y>=0) THEN RETURN MathL.arctan(y/x)
 	ELSIF (x>0) & (y<0) THEN RETURN MathL.arctan(y/x)+2*MathL.pi
