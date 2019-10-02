@@ -1,6 +1,7 @@
 Linear Algebra and Planar/Volumetric Signal Processing Modules. Copyright Patrick Hunziker, Basel, 2005-2018.
 
-Compiler.Compile -S="Matrix/"
+Testing.Install ~ (*find TEST procedures and test them after compilation*)
+Compiler.Compile -S="Matrix/" --define=TEST (*include TEST procedures in compilation*)
 
 MatrixBase.Mod 
 

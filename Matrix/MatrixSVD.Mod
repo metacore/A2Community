@@ -1,7 +1,7 @@
 MODULE MatrixSVD;   (** AUTHOR "Patrick Hunziker"; PURPOSE "Solves a linear system of equations using SVD."; *)  (*TO DO: sorting by magnitude of eigenvectors may have a problem; small matrices *)
 (*Version: 9/2019*)
 
-IMPORT Base := MatrixBase, Math := MathL, PMath, Util:=MatrixUtilities , Commands, Kernel;
+IMPORT Base := MatrixBase, Math := MathL, PMath, Util:=MatrixUtilities , Commands, Kernel, Out;
 
 CONST
 	Tiny = 1.0D-10;  DefaultIterations = 30;
@@ -240,6 +240,8 @@ TYPE
 		END PseudoInverse;
 
 	END Solver;
+	
+	Success=OBJECT END Success;
 
 	PROCEDURE reciprocal( x: Real ): Real;
 	BEGIN
@@ -444,30 +446,25 @@ END SVD_Decompose;
 		Util.Print(context.out,  aaa, 7,4,0 );
 		
 	END Test;
+	
+#IF TEST THEN
+	PROCEDURE TEST*():ANY; (*interface chosen because currently, GETPROCEDURE does not accept more suitable interface, and has problems with different names than TEST *)
+	VAR a,aa:Matrix; s,ss:Solver; success:Success;
+	BEGIN
+		NEW( a, 8, 10 ); a[..3,..4]:=[[1.0,0,2,0,0],[2,0,0,0,0],[0,3,0,0,0],[3,2,0,0,4]];
+		NEW( s, a );	
+		NEW( ss, s.PseudoInverse());
+		aa:=ss.PseudoInverse();
+		IF (aa-a)+*(aa-a)<0.0001 THEN NEW(success); RETURN success ELSE RETURN NIL END; 
+	END TEST;	
+#END
 
 BEGIN
 END MatrixSVD.
 System.Time ~
+System.FreeDownTo MatrixSVD~
 MatrixSVD.Test
 LinEqSVD.Test
-
-  2.0000  1.8000
- -1.0000  1.0000
-
- -0.0381 -0.9993
-  0.9993 -0.0381
-
-  2.6921  0.0000
-  0.0000  1.4115
-
-  0.7565 -0.6540
-  0.6540  0.7565
-
-  0.4523  0.2984
- -0.5448  0.2223
-
- -1.0000  1.0000
- -1.8000 -2.0000
 
 System.FreeDownTo  MatrixSVD  ~
 
@@ -483,29 +480,5 @@ History:
 
 - on Oct, 2006, this module (no SIMD yet) runs about twice as fast as PC compiled LinEqSVD.Mod
 - on March 2008, with SIMD in compiler, 4x faster than LinEqSVD.Mod
-
-for 2x2 matrix, see
-https://scicomp.stackexchange.com/questions/8899/robust-algorithm-for-2-times-2-svd
-from numpy import asarray, diag
-def svd2(m):
-    y1, x1 = (m[1, 0] + m[0, 1]), (m[0, 0] - m[1, 1])
-    y2, x2 = (m[1, 0] - m[0, 1]), (m[0, 0] + m[1, 1])
-    h1 = hypot(y1, x1)
-    h2 = hypot(y2, x2)
-    t1 = x1 / h1
-    t2 = x2 / h2
-    cc = sqrt((1 + t1) * (1 + t2))
-    ss = sqrt((1 - t1) * (1 - t2))
-    cs = sqrt((1 + t1) * (1 - t2))
-    sc = sqrt((1 - t1) * (1 + t2))
-    c1, s1 = (cc - ss) / 2, (sc + cs) / 2,
-    u1 = asarray([[c1, -s1], [s1, c1]])
-    d = asarray([(h1 + h2) / 2, (h1 - h2) / 2])
-    sigma = diag(d)
-    if h1 != h2:
-        u2 = diag(1 / d).dot(u1.T).dot(m)
-    else:
-        u2 = diag([1 / d[0], 0]).dot(u1.T).dot(m)
-    return u1, sigma, u2
 
 
