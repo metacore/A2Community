@@ -1,0 +1,15 @@
+# Matrix library test and validation suite
+# options --mayTrap --prolog="Compiler.Compile TesterInput.txt" --command="System.Free Test;System.Load Test" --result="Matrix.Test.Diff"
+
+positive: matrix SVD test
+
+	MODULE Test;
+	IMPORT MatrixBase, MatrixSVD;
+	VAR a,aa:MatrixBase.Matrix; s,ss:MatrixSVD.Solver;
+	BEGIN
+		NEW( a, 8, 10 ); a[..3,..4]:=[[1.0,0,2,0,0],[2,0,0,0,0],[0,3,0,0,0],[3,2,0,0,4]];
+		NEW( s, a );
+		NEW( ss, s.PseudoInverse());
+		aa:=ss.PseudoInverse();
+		ASSERT ((aa-a)+*(aa-a)<0.0001);
+	END Test.

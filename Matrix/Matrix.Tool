@@ -124,6 +124,4 @@ HypercubePDE.Mod
 
 SystemTools.FreeDownTo MatrixBase ~
 
-
-
-
+FoxTest.Compile Matrix/Matrix.Test
