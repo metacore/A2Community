@@ -1,7 +1,10 @@
 MODULE MatrixSVD;   (** AUTHOR "Patrick Hunziker"; PURPOSE "Solves a linear system of equations using SVD."; *)  (*TO DO: sorting by magnitude of eigenvectors may have a problem; small matrices *)
 (*Version: 9/2019*)
 
-IMPORT Base := MatrixBase, Math := MathL, PMath, Util:=MatrixUtilities , Commands, Kernel, Out;
+(* Outlook to the future, not yet implemented: high performance version using randomized algorithm: for very large data sets up to 100x faster than best competitor:
+http://pages.cs.wisc.edu/~sifakis/papers/SVD_TR1690.pdf *)
+
+IMPORT Base := MatrixBase, Math := MathL, PMath, Util:=MatrixUtilities , Commands, Kernel;
 
 CONST
 	Tiny = 1.0D-10;  DefaultIterations = 30;
@@ -15,7 +18,7 @@ TYPE
 		tv, tv2, tv3, tv4: Vector;
 		isSorted-:BOOLEAN;
 		threshold*: Real;   (** for level of accuracy; default = 1.0D-10*)
-		iterations*: SIGNED32;   (** for detection of non-convergence; default = 30*)
+		iterations*: INTEGER;   (** for detection of non-convergence; default = 30*)
 		zero, mag: Real;
 		index-,null: IntVector; (* ordering of diagonal matrix w with descending magnitude *)
 
@@ -44,8 +47,7 @@ TYPE
 			FOR i := 0 TO n - 1 DO
 				l := i + 1;  rv1[i] := scale * g;  g := 0;  s := 0;  scale := 0.0;
 				IF (i < m) THEN
-				(*scale := SUM(ABS(u[i..m-1,i]));*)  (* overhead: allocation of temp array behind the scenes*)
-					scale := SUM(ABS( u[i..m - 1, i] ));
+					scale := Util.SumAbs( u[i..m - 1, i] );(* SUM(ABS()) overhead: allocation of temp array behind the scenes*)
 					IF (scale # 0.0) THEN
 						u[i..m - 1, i] := u[i..m - 1, i] / scale;  s := s + u[i..m - 1, i] +* u[i..m - 1, i];  f := u[i, i];
 						IF f >= 0 THEN g := -Math.sqrt( s ) ELSE g := Math.sqrt( s ) END;
@@ -61,8 +63,7 @@ TYPE
 				END;
 				w[i, i] := (scale * g);  g := 0;  s := 0;  scale := 0.0;
 				IF (i < m) & (i # (n - 1)) THEN
-				(*scale := SUM(ABS( u[i, l..n-1]) );*)  (* overhead: allocation of temp array behind the scenes*)
-					scale := SUM(ABS( u[i, l..n - 1] ));
+					scale := Util.SumAbs( u[i, l..n - 1] );(* SUM(ABS()) overhead: allocation of temp array behind the scenes*)
 					IF (scale # 0.0) THEN
 						u[i, l..n - 1] := u[i, l..n - 1] / scale;  s := s + u[i, l..n - 1] +* u[i, l..n - 1];  f := u[i, l];
 						IF f >= 0 THEN g := -Math.sqrt( s ) ELSE g := Math.sqrt( s ) END;
@@ -75,7 +76,7 @@ TYPE
 						u[i, l..n - 1] := (u[i, l..n - 1] * scale)
 					END;
 				END;
-				anorm := Max( anorm, ABS( w[i, i] ) + ABS( rv1[i] ) )
+				anorm := MAX( anorm, ABS( w[i, i] ) + ABS( rv1[i] ) )
 			END;
 			FOR i := n - 1 TO 0 BY -1 DO
 				IF (i < (n - 1)) THEN
@@ -90,10 +91,9 @@ TYPE
 				END;
 				vt[i, i] := (1.0);  g := rv1[i];  l := i;
 			END;
-			FOR i := MinI( m, n ) - 1 TO 0 BY -1 DO
+			FOR i := MIN( m, n ) - 1 TO 0 BY -1 DO
 				l := i + 1;  g := w[i, i];
 				u[i, l..n - 1] := zero;
-				(*FOR j := l TO n - 1 DO u[i, j] := zero  END;  *)
 				IF (g # 0.0) THEN
 					g := 1.0 / g;
 					FOR j := l TO n - 1 DO
@@ -198,19 +198,15 @@ TYPE
 			w:=[[sx,0],[0,sy]];
 			(*v:=[[cosTheta,-sinTheta],[sinTheta,cosTheta]];*)(*according to scicomp reference, but leads to permuted sign/elements *)
 			vt:=[[-cosTheta,sinTheta],[-sinTheta,-cosTheta]];
-			
 	    END decompose2x2;
 		
 		PROCEDURE Solve*( CONST b: Vector ): Vector;
-		VAR val: FLOAT64; i: SIZE;
+		VAR i: SIZE;
 		BEGIN
 			IF (LEN( tmp, 0 ) # LEN( w, 0 )) OR (LEN( tmp, 1 ) # LEN( w, 1 )) THEN NEW( tmp, LEN( w, 0 ), LEN( w, 1 ) );  ELSE tmp := 0 END;
 			IF LEN( tv ) # LEN( u, 0 ) THEN NEW( tv, LEN( u, 0 ) ) ELSE tv := 0 END;
 			IF LEN( tv2 ) # LEN( u, 0 ) THEN NEW( tv2, LEN( u, 0 ) ) ELSE tv2 := 0 END;
-			FOR i := 0 TO LEN( w,0 ) - 1 DO
-				val := w[i, i];
-				IF ABS( val ) < Tiny THEN tmp[i, i] := 0 ELSE tmp[i, i] := 1 / val END;
-			END;
+			FOR i := 0 TO LEN( w,0 ) - 1 DO	tmp[i,i]:=reciprocal(w[i,i]) END;
 			tv := u` * b;  tv2 := tmp * tv;  RETURN vt * tv2
 		END Solve;
 
@@ -226,31 +222,26 @@ TYPE
 			isSorted:=TRUE;
 		END SortDescending;
 
-
 		PROCEDURE PseudoInverse*( ): Matrix;
-		VAR val: FLOAT64;  i: SIZE;
+		VAR i: SIZE;
 		BEGIN
 			IF (LEN( tmp, 0 ) # LEN( w, 0 )) OR (LEN( tmp, 1 ) # LEN( w, 1 )) THEN NEW( tmp, LEN( w, 0 ), LEN( w, 1 ) );  ELSE tmp := 0 END;
 			tmp2 := 0;
-			FOR i := 0 TO LEN( w,0 ) - 1 DO
-				val := w[i, i];
-				IF ABS( val ) < Tiny THEN tmp[i, i] := 0 ELSE tmp[i, i] := 1 / val END;
-			END;
-			tmp2 := tmp * (u`);  RETURN vt * tmp2;
+			FOR i := 0 TO LEN( w,0 ) - 1 DO	tmp[i,i]:=reciprocal(w[i,i]) END;
+			tmp2 := tmp * u`;  
+			RETURN vt * tmp2;
 		END PseudoInverse;
-
 	END Solver;
 	
-	Success=OBJECT END Success;
-
-	PROCEDURE reciprocal( x: Real ): Real;
+	PROCEDURE reciprocal-( x: Real ): Real; 
 	BEGIN
-		IF ABS( x ) < Tiny THEN x := 0.0D0 ELSE x := 1.0D0 / x END;
-		IF ABS( x ) < Tiny THEN x := 0.0D0 END;
+		IF ABS( x ) < Tiny THEN x := 0.0D0 
+		ELSE 
+			x := 1.0D0/x;
+			IF ABS(x) < Tiny THEN x := 0.0D0 END;
+		END;
 		RETURN x
 	END reciprocal;
-
-(******************************************************************)
 
 	PROCEDURE pythag( a, b: Real ): Real;
 	VAR absa, absb, zero: Real;
@@ -262,84 +253,20 @@ TYPE
 		END;
 	END pythag;
 
-	PROCEDURE Max( x, y: Real ): Real;
-	BEGIN
-		IF x > y THEN RETURN x ELSE RETURN y END;
-	END Max;
-
 	PROCEDURE MaxAbs( CONST m: Matrix ): Real;
 	BEGIN
-		RETURN MAX( MAX( m ), -MIN( m ) );   (*non-copying ABS(MAX(m))*)
+		RETURN MAX( MAX( m ), -MIN( m ) );   (*non-copying MAX(ABS(m))*)
 	END MaxAbs;
 
-	PROCEDURE MinI( i, j: SIZE ): SIZE;
-	BEGIN
-		IF i < j THEN RETURN i ELSE RETURN j;  END;
-	END MinI;
-
-	PROCEDURE sign( x: Real ): SIGNED32;
+	PROCEDURE sign-( x: Real ): INTEGER;
 	BEGIN
 		IF x >= 0 THEN RETURN 1 ELSE RETURN -1 END;
 	END sign;
 
-	(* 2*2 SVD:
-	analytic solution: see http://en.wikipedia.org/wiki/Singular_value_decomposition :
-	"Analytic solution"
-	*)
-
 	(* 3*3 SVD for simd: see http://pages.cs.wisc.edu/~sifakis/papers/SVD_TR1690.pdf *)
 
-	(* 2*2 SVD
-	/// See http://metamerist.blogspot.com/2006/10/linear-algebra-for-graphics-geeks-svd.html
-
-(*! do to: speed up by inlining *)
-
-PROCEDURE SVD_AbsScaleOnly(CONST in: Matrix2x2): Vector2;
-BEGIN
-	Q:= in +* in;
-	R:= in[0,0] * in[1,1] - in[0,1] * in[1,0]; (*R:=Determinant(in);*)
-	discriminant:=Mathe.sqrt(Q*Q-4*R*R );
-	RETURN [Mathe.sqrt(Q+discriminant), Mathe.sqrt(Q-discriminant)]
-END SVD_AbsScaleOnly;
-
-PROCEDURE SVD_EigenvectorGivenEigenvalue(CONST in: Matrix2x2; CONST eigenvalue: Vector2);
-VAR M00,M01: Datatype; Numerator,Denominator,Fraction: ARRAY [2] OF Datatype;
-BEGIN
-	M00:= in[0] +* in[0];
-	M01:= in[0] +* in[1];
-	Numerator:=[M01,M01];
-	Denominator:=eigenvalue.*eigenvalue - [M00,M00];
-	Fraction:= Numerator ./ Denominator;
-	eigenMatrix:= [normalize(Fraction[0],1), normalize(Fraction[1],1)];
-	RETURN eigenMatrix`
-END SVD_EigenvectorGivenEigenvalue;
-
-PROCEDURE SVD_Decompose(in: Matrix2x2);
-VAR E, U,V: Matrix2x2; scale: Vector2;
-BEGIN
-	scale:=SVD_AbsScaleOnly(in);
-	U := SVD_EigenvectorGivenEigenvalue(in,scale);
-	E:=[[reciprocal(scale[0]), 0],[0, reciprocal(scale[1])]];
-	V := E * ( U`* in);
-END SVD_Decompose;
-*)
-
-(*
-	PROCEDURE LogV( CONST m: Vector );
-	VAR i, j: SIGNED32;
-	BEGIN
-		IF LEN(m)=0 THEN Out.String("zero size matrix"); Out.Ln; RETURN; END;
-			FOR i := 0 TO LEN(m) - 1 DO
-				IF m[i]<0 THEN Out.Char("-"); END; Out.Int(ENTIER(ABS(m[i]+0.005)),0); Out.Char("."); Out.Int(ENTIER(ABS(m[i]*100+0.5)) MOD 100,0); Out.String("   ");
-			END;
-			Out.Ln;
-	END LogV;
-
-*)
-
-
 	PROCEDURE Test*(context:Commands.Context);
-	VAR a, aa, aaa, U, W, V, VT: Matrix;  b,x: Vector; scale, zero: Real;  s: Solver;  i,t0,t1:SIGNED32;
+	VAR a, aa, aaa, U, W, V, VT: Matrix;  b,x: Vector; scale, zero: Real;  s: Solver;  i,t0,t1:INTEGER;
 	BEGIN
 		context.out.Ln;  context.out.String( "-------Singular Value Decomposition Test-------------" );
 		context.out.String( " Singular Value Decomposition of Matrix A; " );  context.out.Ln;
@@ -349,59 +276,33 @@ END SVD_Decompose;
 		context.out.String( " Finally, PseudoInverse of A is calculated, " );  context.out.Ln;
 		context.out.String( " and Pseudoinverse of Pseudoinverse should lead back to A (least square approximation of..) " );  context.out.Ln;
 
-		NEW( a, 8, 10 );
-
-		(*arbitrary matrix fill *)
-		zero := 0;   (* hack to initialize matrix easier *)
-		a[ 0, 0] := zero + 1 ;  a[ 1, 0] := zero + 2 ;   (* ' type casting', not very elegant *)
-		a[ 3, 0] := zero + 3 ;  a[ 0, 2] := zero + 2 ;  a[ 2, 1] := zero + 3 ;  a[ 3, 1] := zero + 2 ;
-		a[ 3, 4] := zero + 4 ;
-
-
+		NEW( a, 8, 10 ); a[..3,..4]:=[[1.0,0,2,0,0],[2,0,0,0,0],[0,3,0,0,0],[3,2,0,0,4]];
 		NEW( s, a );		(* at this point, solver is initialized with matrix m and SVD already performed in the background *)
-		(*t0:=Kernel.GetTicks();
+		t0:=Kernel.GetTicks();
 		FOR i:=0 TO 10000 DO
 			s.Init(a );   (* at this point, solver is initialized with matrix m and SVD already performed in the background *)
 		END;
 		t1:=Kernel.GetTicks();
-		context.out.Enter;
-
 		context.out.String("time [ms]: "); context.out.Int (t1-t0,0); context.out.Ln;
-*)
 
 		b:=[1,5,4,8,7,3,4,7,0,4,3,2,6,7,8];
-
 		t0:=Kernel.GetTicks();
-		FOR i:=0 TO 10000 * 100 DO
-			scale := SUM(ABS(b));
-		END;
+		FOR i:=0 TO 10000 * 80 DO scale := SUM(ABS(b)) 	END;
 		t1:=Kernel.GetTicks();
 		context.out.String("SUM(ABS()) versus Util.SumAbs() "); context.out.String("time [ms]: "); context.out.Int (t1-t0,0);
 
 		t0:=Kernel.GetTicks();
-		FOR i:=0 TO 10000* 100 DO
-			scale := SUM(ABS(b));
-		END;
+		FOR i:=0 TO 10000* 80 DO scale := Util.SumAbs(b)	END;
 		t1:=Kernel.GetTicks();
 		context.out.String("  time [ms]: "); context.out.Int (t1-t0,0); context.out.Ln;
 
 		context.out.String( "a:" );  context.out.Ln;  Util.Print(context.out,  a , 7,4,0 );  context.out.String( "w:" );  context.out.Ln;  Util.Print(context.out,  s.w, 7,4,0 );
-
 		context.out.String( "v,vt,v*vt:" );  context.out.Ln;
 		Util.Print(context.out,  s.vt, 7,4,0 );  (*V := s.vt`;*)  Util.Print(context.out,  s.vt`, 7,4,0 );  (*V := s.vt*V;*)  Util.Print(context.out,  s.vt*(s.vt`), 7,4,0 );  
 		context.out.String( "u,ut,u*ut:" );  context.out.Ln;
 		Util.Print(context.out,  s.u, 7,4,0 );  (*U := s.u`;*)  Util.Print(context.out,  s.u`, 7,4,0 );  (*U := s.u*U;*)  Util.Print(context.out,  s.u * (s.u`), 7,4,0 );  
 		context.out.String( "u*w*v:" );  context.out.Ln;
 		Util.Print(context.out,  s.u * (s.w*(s.vt`)), 7,4,0 );
-
-		(*
-		context.out.String( "a, PseudoInverse(a):" );  context.out.Ln;
-		Util.Print(context.out,  a );
-		Util.Print ( s.vt * ALL(s.w,reciprocal) * (s.u`) );
-		s.Initialize ( s.vt * ALL(s.w,reciprocal) * (s.u`) );
-		context.out.String( "PseudoInverse(PseudoInverse(a)):" );  context.out.Ln;
-		Util.Print ( s.vt * ALL(s.w,reciprocal) * (s.u`) );
-		*)
 		context.out.String( "a, PseudoInverse(a), PseudoInverse(PseudoInverse(a)):" );  context.out.Ln;  
 		Util.Print(context.out,  a, 7,4,0 );
 		Util.Print(context.out,  s.PseudoInverse(), 7,4,0 );  s.Init( s.PseudoInverse() );  
@@ -411,16 +312,12 @@ END SVD_Decompose;
 		NEW( a, 5, 5 );
 		NEW(x,5);
 		(*arbitrary matrix fill *)
-		zero := 0;   (* hack to initialize matrix easier *)
-		a[ 0, 0] := zero + 5.1 ; a[ 0, 1] := zero + 4.1 ; a[ 0, 3] := zero + 5.3 ;  a[ 0, 4] := zero + 2 ;
-		a[ 1, 1] := zero + 4.2 ; a[ 2, 2] := zero + 2.5 ;
-		a[ 1, 0] := zero + 2.3 ; a[ 2, 0] := zero + 5.3 ; a[ 4, 0] := zero + 2 ;  (* ' type casting', not very elegant *)
-		a[ 3, 0] := zero + 3.4 ;  a[ 0, 2] := zero + 2.2 ;  a[ 2, 1] := zero + 3 ; a[ 1, 3] := zero + 3 ; a[ 3, 1] := zero + 2 ;
-		a[ 2, 3] := zero + 3.6 ; a[ 3, 2] := zero + 2.1 ;
-		a[3,3]:= zero+1; a[4,2]:= zero+4; a[4,3]:= zero+2; a[ 3, 4] := zero + 4 ;   a[ 4, 4] := zero + 1 ;
-
+		a:=[ [5.1, 4.1, 2.2, 5.3, 2.0],
+  				[2.3, 4.2, 0.0, 3.0, 0.0],
+  				[5.3, 3.0, 2.5, 3.6, 0.0],
+  				[3.4, 2.0, 2.1, 1.0, 4.0],
+  				[2.0, 0.0, 4.0, 2.0, 1.0]];
 		b:=[5,4,3,1,4];
-
 		context.out.String( "A, b, x, A*x:" );  context.out.Ln;  Util.Print(context.out,  a, 7,4,0 );
 		Util.Print(context.out,  b, 7,4,0);    context.out.Ln;
 		s.Init(a);
@@ -429,7 +326,6 @@ END SVD_Decompose;
 		Util.Print(context.out, a*x, 7,4,0);context.out.Ln;
 
 		context.out.String("SVD, pseudoInverse, pseudoInverse(pseudoInverse) of 2*2 matrix"); context.out.Ln;
-
 		a:=[[2,1.8],[-1,1]];
 		Util.Print(context.out,  a, 7,4,0 ); 
 		NEW(s,a);
@@ -448,14 +344,34 @@ END SVD_Decompose;
 	END Test;
 	
 #IF TEST THEN
+	TYPE Success=OBJECT END Success;
 	PROCEDURE TEST*():ANY; (*interface chosen because currently, GETPROCEDURE does not accept more suitable interface, and has problems with different names than TEST *)
-	VAR a,aa:Matrix; s,ss:Solver; success:Success;
-	BEGIN
+	VAR a,aa:Matrix; x,b,bb:Vector; s,ss:Solver; success:Success; res:BOOLEAN;
+	BEGIN (* generic matrix *)
 		NEW( a, 8, 10 ); a[..3,..4]:=[[1.0,0,2,0,0],[2,0,0,0,0],[0,3,0,0,0],[3,2,0,0,4]];
 		NEW( s, a );	
 		NEW( ss, s.PseudoInverse());
 		aa:=ss.PseudoInverse();
-		IF (aa-a)+*(aa-a)<0.0001 THEN NEW(success); RETURN success ELSE RETURN NIL END; 
+		res:= (aa-a)+*(aa-a)<0.0001; 
+			(* 2x2 matrix *)
+		NEW(a,2,2); a:=[[2,1.8],[-1,1]];
+		NEW( s, a );	
+		NEW( ss, s.PseudoInverse());
+		aa:=ss.PseudoInverse();
+		res:= res & ( (aa-a)+*(aa-a)<0.0001);
+			(*solving*)
+		NEW( a, 5, 5 ); b:=[5.0,4,3,1,4]; NEW(x,5);
+		a:=[ [5.1, 4.1, 2.2, 5.3, 2.0],
+  				[2.3, 4.2, 0.0, 3.0, 0.0],
+  				[5.3, 3.0, 2.5, 3.6, 0.0],
+  				[3.4, 2.0, 2.1, 1.0, 4.0],
+  				[2.0, 0.0, 4.0, 2.0, 1.0]];
+		s.Init(a);
+		x:=s.Solve(b);
+		bb:=a*x; bb:=bb-b;
+		res:=res &  (bb+*bb < 0.0001);
+		IF res THEN NEW(success) END; 
+		RETURN success; 
 	END TEST;	
 #END
 
