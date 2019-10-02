@@ -1,10 +1,7 @@
 MODULE Testing; (** AUTHOR "Patrick Hunziker"; PURPOSE "automated module testing"; *)
+
 (*may be promoted from Matrix Libary to general use*)
 IMPORT FoxSyntaxTree, FoxBasic, Strings, Modules, Compiler, Out;
-
-TYPE Result*=OBJECT END Result;
-TYPE Success*=OBJECT(Result) END Success;
-TYPE Fail*=OBJECT(Result) END Fail;
 
 (*TYPE Test*= POINTER TO RECORD;
 			mod: FoxSyntaxTree.Module;
@@ -12,8 +9,7 @@ TYPE Fail*=OBJECT(Result) END Fail;
 			cmd: PROCEDURE(): ANY;
 			res: ANY;
 			next: Test;
-	END;
-	*)
+	END;*)
 
 TYPE Registry*=OBJECT
 		(*VAR tests:Test;*)
