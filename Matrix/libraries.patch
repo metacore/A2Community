@@ -1,6 +1,6 @@
 Index: makefile
 ===================================================================
---- makefile	(revision 9553)
+--- makefile	(revision 9556)
 +++ makefile	(working copy)
 @@ -11,8 +11,8 @@
  
@@ -27,13 +27,12 @@ Index: makefile
  builds:
 Index: source/Release.Tool
 ===================================================================
---- source/Release.Tool	(revision 9553)
+--- source/Release.Tool	(revision 9556)
 +++ source/Release.Tool	(working copy)
-@@ -2127,3 +2127,111 @@
- 	Oberon20.Pr6.Fnt Oberon20b.Pr6.Fnt Oberon20i.Pr6.Fnt
- 	Oberon24.Pr6.Fnt Oberon24b.Pr6.Fnt Oberon24i.Pr6.Fnt
+@@ -1577,6 +1577,114 @@
+ 	TeletextServer.zip	# Teletext Server for TV
  END
-+
+ 
 +PACKAGE Matrix ARCHIVE "Matrix.zip" SOURCE "MatrixSrc.zip" DESCRIPTION "Matrix Library"
 +	Matrix/MatrixBase.Mod 
 +
@@ -141,3 +140,7 @@ Index: source/Release.Tool
 +
 +	Matrix/MatrixWarp.Mod
 +END
++
+ PACKAGE Oberon ARCHIVE "Oberon.zip" SOURCE "OberonSrc.zip" DESCRIPTION "Oberon for A2"
+ 	# emulation modules
+ 	NATIVE, UNIX { Oberon.Kernel.Mod }
