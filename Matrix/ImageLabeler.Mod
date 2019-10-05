@@ -306,6 +306,11 @@ BEGIN
 
 		success:= source.AddMinibatch(dataSetI,labelSetI);
 
+		hasNewImage:=FALSE;
+		BEGIN{EXCLUSIVE} AWAIT(dead OR hasNewImage) END;
+		IF dead THEN EXIT END;
+		IF (labelWindow#NIL)&(labelWindow.GetManager()#NIL) THEN labelWindow.GetManager().Remove(labelWindow) END;
+
 		contextMenu.ResetLocations;
 		scale:=1.0;
 
