@@ -11,6 +11,7 @@ VAR 	rand:Rand.Generator;
 		globalContextMenu*:ContextMenu;
 		source:MLDataStreams.Source;
 		log:Streams.Writer;
+		player: MediaPlayer.Player;
 
 TYPE StringObject=OBJECT
 			VAR
@@ -67,6 +68,14 @@ TYPE	ContextMenu* = OBJECT
 		WMMenus.Show(menu, gx, gy, HandleItemSelected);
 	END Handle;
 
+	PROCEDURE PointerDownHandler* (x, y: SIZE; keys:SET);
+	VAR gx,gy: SIZE;
+	BEGIN
+		SELF.x:=x; SELF.y:=y;
+		WMMenus.Show(menu, x, y, HandleItemSelected);
+	END PointerDownHandler;
+
+
 	PROCEDURE HandleItemSelected*(sender, data : ANY);
 	VAR l:Location;
 	BEGIN
@@ -115,7 +124,7 @@ TYPE Labeler*=OBJECT
 		dataSetI, labelSetI: ARRAY [?] OF SIGNED16;
 		positions: ARRAY [*,*] OF SIZE;
 		nSamples: SIZE;
-		i: SIZE;
+		i,j,k, x,y: SIZE;
 		time, date: SIGNED32; 
 		size: Files.Size;
 		enum:MatrixRaster.Enumerator;
@@ -137,6 +146,7 @@ TYPE Labeler*=OBJECT
 		scale:FLOAT64;
 
 	PROCEDURE &Init*(CONST mask: ARRAY OF CHAR; w, dataWriter: Streams.Writer; scaling:BOOLEAN);
+	VAR debugNSamples:SIZE;
 	BEGIN
 		SELF.w:=w;
 		SELF.dataWriter:=dataWriter;
@@ -156,6 +166,7 @@ TYPE Labeler*=OBJECT
 		(*	FOR i:=0 TO 5 DO res:=enum.GetEntry(name, flags, time, date, size) END; *)(*can skip some images without loading*)
 		threshold2:=(RoiSize DIV 4)*(RoiSize DIV 4);
 
+		debugNSamples:=nSamples;
 		NEW(positions,nSamples,2);
 		positions[*,*]:=Random;
 		scale:=1.0;
@@ -251,8 +262,7 @@ BEGIN
 				(*log.Update;*)
 			END;
 		ELSE (*a centered image for each label, rest is random*)
-			HALT(201)
-		(*	
+		
 			NEW(dataSetI, nSamples, 1, RoiSize, RoiSize);
 			dataSetI:=0; (*?*)
 			NEW(labelSetI, nSamples, 1, MAX(contextMenu.nItems, 10));(*! COMPILER PROBLEM - NEW does reuse but not reset content ?? *)
@@ -265,16 +275,16 @@ BEGIN
 				IF (x>=0) & (y>=0) & (x+RoiSize <= img.width) & (y+RoiSize <= img.height) THEN
 					positions[j,0]:=x;
 					positions[j,1]:=y;
-					dataSetI[j]:= GetRoiGray(img, positions[j,0],positions[j,1]);
-					labelSetI[j,0,l.id]:=l;
+					dataSetI[j,0,?]:= enum.GetRoiGray(img, positions[j,0],positions[j,1]);
+					labelSetI[j,0,l.id]:=1;
 					INC(j);
-					(*log.Int(i,10); log.String(": "); log.Int(dx,10); log.Int(dy,10); log.String(" "); log.Ln;*)
 				END;
 				l:=l.next;
 			END;
-			WHILE j < nSamples DO
-				x:=Random.Dice(img.width-RoiSize);
-				y:=Random.Dice(img.height-RoiSize);
+			k:=0;
+			WHILE (j < nSamples) & (k <10*nSamples) DO (* fill up but not endlessly *)
+				x:=rand.Dice(SIGNED32(img.width)-RoiSize);
+				y:=rand.Dice(SIGNED32(img.height)-RoiSize);
 				hit:=FALSE;
 				l:=contextMenu.locations;
 				WHILE l#NIL DO
@@ -284,29 +294,12 @@ BEGIN
 				IF ~hit THEN (* only non-hits here *)
 					positions[j,0]:=x;
 					positions[j,1]:=y;
-					dataSetI[j]:= GetRoiGray(img, positions[j,0],positions[j,1]);
+					dataSetI[j,0,?]:= enum.GetRoiGray(img, positions[j,0],positions[j,1]);
 					labelSetI[j,0, LEN(labelSetI,2)-1]:=1;
 					INC(j);
 				END;
+				INC(k);
 			END;
-			
-			
-			FOR i:=0 TO LEN(labelSetI,0)-1 DO
-				l:=contextMenu.locations;
-				hit:=FALSE;
-				WHILE l#NIL DO
-					dx:=l.x-positions[i,0]-RoiSize DIV 2;
-					dy:=l.y-positions[i,1]-RoiSize DIV 2;
-					(*log.Int(i,10); log.String(": "); log.Int(dx,10); log.Int(dy,10); log.String(" "); log.Ln;*)
-					IF Distance2( dx, dy) < threshold2 THEN
-						hit:=TRUE;
-						labelSetI[i,0,l.id]:=1;
-					END;
-					l:=l.next;
-				END;
-				(*log.Update;*)
-			END;
-			*)
 		END;
 		NEW(labelWindow, labelSetI, "labels", WMTensor.Frontal);
 		labelWindow.AddWindow();
@@ -327,9 +320,24 @@ BEGIN
 	(*source.Report(log);*)
 END Labeler;
 
-TYPE MovieLabeler= OBJECT
-	VAR playerWindow:MediaPlayer.PlayerWindow;
-		
+TYPE MovieLabeler*= OBJECT
+	VAR 
+		msg : ARRAY 256 OF CHAR; 
+		res : INTEGER;
+		contextMenu:ContextMenu;
+	PROCEDURE &Init*(filename: Files.FileName);
+	BEGIN
+		NEW(player);
+		contextMenu:=globalContextMenu;
+		contextMenu.nextImage:=player.Step;
+		contextMenu.stop:=player.Stop;
+		player.Open(filename, msg, res);
+		IF res=Streams.Ok THEN 
+			player.SetState(MediaPlayer.Stepping);
+		END;
+		player.pointerDownHandler:=contextMenu.PointerDownHandler;
+	END Init;
+	
 	END MovieLabeler;
 
 
@@ -337,7 +345,9 @@ TYPE MovieLabeler= OBJECT
 Can use the default or an interactively prepared label list contained in a popup menu.
 optionally stores a list of fn,label,id,coord to result file *)
 PROCEDURE Open*(context:Commands.Context);
-VAR labeler: Labeler; options: Options.Options;
+VAR labeler: Labeler; 
+	movieLabeler: MovieLabeler;
+	options: Options.Options;
 	f:Files.File; s,mask:Files.FileName; fw, dataFileWriter:Files.Writer; w:Streams.Writer;
 BEGIN
 	log:=context.out;
@@ -348,6 +358,7 @@ BEGIN
 	options.Add("t","threshold",Options.Integer); (* distance of image center from label that is still considered a hit *)
 	options.Add("s","scaling",Options.Flag); (* scale image to manageable size *)
 	options.Add("n","nSamples", Options.Integer); 
+	options.Add("p","player", Options.Flag);
 	IF options.Parse(context.arg, context.error) THEN
 		IF options.GetString("resultFile", s) THEN
 			f:=Files.New(s); Files.Register(f); Files.OpenWriter(fw,f,0); w:=fw;
@@ -362,7 +373,11 @@ BEGIN
 			context.out.String("file mask: "); context.out.String(mask); context.out.Ln; context.out.Update;
 		ELSE mask:="*"
 		END;
-		NEW(labeler,mask, w, dataFileWriter, options.GetFlag("scaling"));
+		IF options.GetFlag("player") THEN
+			NEW(movieLabeler, mask);(*! TBD *)
+		ELSE
+			NEW(labeler,mask, w, dataFileWriter, options.GetFlag("scaling"));
+		END;
 		IF options.GetInteger("threshold",labeler.threshold2) THEN END; (*? labeler active object has already started, this may come late*)
 	ELSE HALT(201);
 	END;
@@ -414,6 +429,7 @@ ImageLabeler.NewMenu
 
 ImageLabeler.Open -m="*.jpg" -f=Labeler1.txt ~
 ImageLabeler.Open -m="C:/Program Files (x86)/A2/HighDim/Code/EyeTracker/EyeDB_Internet/*.jpg" -f=Eyes.txt -d=Eyes_3D.MtA --scaling ~
+ImageLabeler.Open -p -m="HIGHDIM:/Data/Sperm/IMSI1.wmv" -f=Eyes.txt -d=Eyes_3D.MtA ~
 ImageLabeler.Open -m="C:/Program Files (x86)/A2/HighDim/Data/Sperm/IMSI1_100Frames_BMP/*.bmp" -f=SpermIMSI1.txt -d=Sperm_3DIMSI1.MtA --scaling ~
 ImageLabeler.Open -m="C:/Program Files (x86)/A2/HighDim/Data/Sperm/IMSI1_100Frames_BMP/*.bmp" -f=SpermIMSI1.txt -d=Sperm_3DIMSI1.MtA  ~
 System.CollectGarbage ~
