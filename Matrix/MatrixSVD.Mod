@@ -278,22 +278,16 @@ TYPE
 
 		NEW( a, 8, 10 ); a[..3,..4]:=[[1.0,0,2,0,0],[2,0,0,0,0],[0,3,0,0,0],[3,2,0,0,4]];
 		NEW( s, a );		(* at this point, solver is initialized with matrix m and SVD already performed in the background *)
-		t0:=Kernel.GetTicks();
-		FOR i:=0 TO 10000 DO
-			s.Init(a );   (* at this point, solver is initialized with matrix m and SVD already performed in the background *)
-		END;
-		t1:=Kernel.GetTicks();
+		
+		t0:=Kernel.GetTicks(); FOR i:=0 TO 10000 DO s.Init(a )	END;	t1:=Kernel.GetTicks();
 		context.out.String("time [ms]: "); context.out.Int (t1-t0,0); context.out.Ln;
 
 		b:=[1,5,4,8,7,3,4,7,0,4,3,2,6,7,8];
-		t0:=Kernel.GetTicks();
-		FOR i:=0 TO 10000 * 80 DO scale := SUM(ABS(b)) 	END;
-		t1:=Kernel.GetTicks();
-		context.out.String("SUM(ABS()) versus Util.SumAbs() "); context.out.String("time [ms]: "); context.out.Int (t1-t0,0);
-
-		t0:=Kernel.GetTicks();
-		FOR i:=0 TO 10000* 80 DO scale := Util.SumAbs(b)	END;
-		t1:=Kernel.GetTicks();
+		
+		context.out.String("SUM(ABS()) versus Util.SumAbs() ");
+		t0:=Kernel.GetTicks();	FOR i:=0 TO 10000 * 80 DO scale := SUM(ABS(b)) 	END; t1:=Kernel.GetTicks();
+		context.out.String("time [ms]: "); context.out.Int (t1-t0,0);
+		t0:=Kernel.GetTicks();	FOR i:=0 TO 10000* 80 DO scale := Util.SumAbs(b)	END;t1:=Kernel.GetTicks();
 		context.out.String("  time [ms]: "); context.out.Int (t1-t0,0); context.out.Ln;
 
 		context.out.String( "a:" );  context.out.Ln;  Util.Print(context.out,  a , 7,4,0 );  context.out.String( "w:" );  context.out.Ln;  Util.Print(context.out,  s.w, 7,4,0 );
@@ -318,7 +312,8 @@ TYPE
   				[3.4, 2.0, 2.1, 1.0, 4.0],
   				[2.0, 0.0, 4.0, 2.0, 1.0]];
 		b:=[5,4,3,1,4];
-		context.out.String( "A, b, x, A*x:" );  context.out.Ln;  Util.Print(context.out,  a, 7,4,0 );
+		context.out.String( "A, b, x, A*x:" );  context.out.Ln;  
+		Util.Print(context.out,  a, 7,4,0 );
 		Util.Print(context.out,  b, 7,4,0);    context.out.Ln;
 		s.Init(a);
 		x:=s.Solve(b);
@@ -340,39 +335,48 @@ TYPE
 		NEW(s, aa );  
 		aaa:=s.PseudoInverse();
 		Util.Print(context.out,  aaa, 7,4,0 );
-		
 	END Test;
 	
 #IF TEST THEN
 	TYPE Success=OBJECT END Success;
-	PROCEDURE TEST*():ANY; (*interface chosen because currently, GETPROCEDURE does not accept more suitable interface, and has problems with different names than TEST *)
-	VAR a,aa:Matrix; x,b,bb:Vector; s,ss:Solver; success:Success; res:BOOLEAN;
+	PROCEDURE TESTPseudoInverse*():ANY; (*interface chosen because currently, GETPROCEDURE does not accept more suitable interface, and has problems with different names than TEST *)
+	VAR a,aa:Matrix; s,ss:Solver; success:Success;
 	BEGIN (* generic matrix *)
 		NEW( a, 8, 10 ); a[..3,..4]:=[[1.0,0,2,0,0],[2,0,0,0,0],[0,3,0,0,0],[3,2,0,0,4]];
 		NEW( s, a );	
 		NEW( ss, s.PseudoInverse());
 		aa:=ss.PseudoInverse();
-		res:= (aa-a)+*(aa-a)<0.0001; 
-			(* 2x2 matrix *)
+		IF (aa-a)+*(aa-a)<0.0001 THEN NEW(success) END; 
+		RETURN success; 
+	END TESTPseudoInverse;	
+	
+	PROCEDURE TEST2x2*():ANY; 
+	VAR success:Success; s,ss:Solver; a,aa:Matrix; 
+	BEGIN
+		(* 2x2 matrix *)
 		NEW(a,2,2); a:=[[2,1.8],[-1,1]];
 		NEW( s, a );	
 		NEW( ss, s.PseudoInverse());
 		aa:=ss.PseudoInverse();
-		res:= res & ( (aa-a)+*(aa-a)<0.0001);
-			(*solving*)
-		NEW( a, 5, 5 ); b:=[5.0,4,3,1,4]; NEW(x,5);
+		IF (aa-a)+*(aa-a)<0.0001 THEN NEW(success); END;
+		RETURN success
+	END TEST2x2;
+	
+	PROCEDURE TESTSolve*():ANY; 
+	VAR success:Success; a:Matrix; b,bb,x:Vector; s:Solver;
+	BEGIN (*solving*)
 		a:=[ [5.1, 4.1, 2.2, 5.3, 2.0],
   				[2.3, 4.2, 0.0, 3.0, 0.0],
   				[5.3, 3.0, 2.5, 3.6, 0.0],
   				[3.4, 2.0, 2.1, 1.0, 4.0],
   				[2.0, 0.0, 4.0, 2.0, 1.0]];
-		s.Init(a);
+		b:=[5.0,4,3,1,4]; NEW(x,5);
+		NEW(s,a);
 		x:=s.Solve(b);
 		bb:=a*x; bb:=bb-b;
-		res:=res &  (bb+*bb < 0.0001);
-		IF res THEN NEW(success) END; 
+		IF bb+*bb < 0.0001 THEN NEW(success) END; 
 		RETURN success; 
-	END TEST;	
+	END TESTSolve;
 #END
 
 BEGIN

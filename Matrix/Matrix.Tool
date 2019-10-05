@@ -1,6 +1,10 @@
 Linear Algebra and Planar/Volumetric Signal Processing Modules. Copyright Patrick Hunziker, Basel, 2005-2018.
 
+(*TBD: e.g., fast randomized matrix algorithms: https://arxiv.org/abs/0909.4061 *)
+
 Testing.Install ~ (*find TEST procedures and test them after compilation*)
+
+System.FreeDownTo MatrixBase ~
 Compiler.Compile -S="Matrix/" --define=TEST (*include TEST procedures in compilation*)
 
 MatrixBase.Mod 
@@ -47,7 +51,6 @@ HypercubeNabla.Mod
 HypercubeTransform.Mod 
 HypercubeMoments.Mod
 
-
 MatrixStandardSolvers.Mod
 
 MatrixTransforms.Mod
@@ -87,7 +90,6 @@ WMMatrixLoader.Mod
 PlanarMorphology.Mod
 VolumeMorphology.Mod
 
-
 MLBase.Mod
 ErrorBase.Mod
 ExtraSort.Mod
@@ -114,7 +116,7 @@ LinpackBenchmark.Mod
 MatrixWarp.Mod
 ~
 not ready yet:
-Compiler.Compile -p=Win32G PMathSSE.Mod
+Compiler.Compile PMathSSE.Mod
 
 MLTest.Mod
 

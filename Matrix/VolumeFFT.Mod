@@ -165,6 +165,20 @@ TYPE
 		IFFT( autocorr, nil, RESULT, I, {0, 1} );
 		RETURN RESULT
 	END AutoCorrelation;
+	
+		(*filter in the Fourier domain. power of 2 data required.
+	filter is in frequency domain, is typically in [0.0 ... 1.0] but might have other values *)
+	PROCEDURE Filter*(CONST in, filter: ThreeD): ThreeD;
+	VAR  I, nil, R: ThreeD;
+	BEGIN
+		IF LEN(RESULT) # LEN(in) THEN NEW( RESULT, LEN(in) ) END;
+		FFT( in, nil, R, I, {0,1,2});
+		R := R .* filter;
+		I := I .* filter;
+		IFFT( R, I, RESULT, nil, {0,1,2});
+		RETURN RESULT
+	END Filter;
+
 	(*
 	PROCEDURE ComplexMultiplication(CONST R1,I1,R2,I2: ThreeD; VAR outR,outI:ThreeD);
 	BEGIN

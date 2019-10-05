@@ -2,7 +2,7 @@ MODULE ImageLabeler; (** AUTHOR "Patrick Hunziker 2019"; PURPOSE "Interactively 
 
 IMPORT Commands, Files, Streams, Strings, Options, Raster, Rand:=Random, MatrixRaster,
 			WMGraphics, WMRasterScale, WMRectangles, WMTensor, WMComponents, WMMenus, WMTrees, WMStandardComponents, WMWindowManager,
-			MLDataStreams;
+			MLDataStreams, MediaPlayer;
 
 CONST Random=MatrixRaster.Random;
 		 Tab=09X;
@@ -251,6 +251,8 @@ BEGIN
 				(*log.Update;*)
 			END;
 		ELSE (*a centered image for each label, rest is random*)
+			HALT(201)
+		(*	
 			NEW(dataSetI, nSamples, 1, RoiSize, RoiSize);
 			dataSetI:=0; (*?*)
 			NEW(labelSetI, nSamples, 1, MAX(contextMenu.nItems, 10));(*! COMPILER PROBLEM - NEW does reuse but not reset content ?? *)
@@ -304,7 +306,7 @@ BEGIN
 				END;
 				(*log.Update;*)
 			END;
-
+			*)
 		END;
 		NEW(labelWindow, labelSetI, "labels", WMTensor.Frontal);
 		labelWindow.AddWindow();
@@ -324,6 +326,12 @@ BEGIN
 	*)
 	(*source.Report(log);*)
 END Labeler;
+
+TYPE MovieLabeler= OBJECT
+	VAR playerWindow:MediaPlayer.PlayerWindow;
+		
+	END MovieLabeler;
+
 
 (*open a labeler object for labeling list of images, according to file name mask.
 Can use the default or an interactively prepared label list contained in a popup menu.

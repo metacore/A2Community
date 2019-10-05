@@ -1,6 +1,6 @@
 MODULE PlanarFFT;   (**  AUTHOR "Patrick  Hunziker"; PURPOSE "FFT operations on 2D Data";  **)
 
-IMPORT LinearFFT, MatrixBase, SYSTEM, PlanarMath;
+IMPORT LinearFFT, MatrixBase, PlanarMath;
 
 CONST
 	cachesize = 40000H;   (* make dynamic *)
@@ -125,25 +125,37 @@ TYPE
 		IFFT( autocorr, nil, RESULT, I, {0, 1} );
 		RETURN RESULT
 	END AutoCorrelation;
-	(*
-	PROCEDURE ComplexMultiplication(CONST R1,I1,R2,I2: TwoD; VAR outR,outI:TwoD);
+	
+			(*filter in the Fourier domain. power of 2 data required.
+	filter is in frequency domain, is typically in [0.0 ... 1.0] but might have other values *)
+	PROCEDURE Filter*(CONST in, filter: TwoD): TwoD;
+	VAR  I, nil, R: TwoD;
 	BEGIN
-		outR := R1 .* R2;   (*(a+bi )*(c+di) = (ac-bd), i*(bc+ad) *)
-		outR := outR - I1 .* I2;
-		outI := I1 .* R2; outI := outI + R1 .* I2;
-	END ComplexMultiplication;
+		IF LEN(RESULT) # LEN(in) THEN NEW( RESULT, LEN(in) ) END;
+		FFT( in, nil, R, I, {0,1,2});
+		R := R .* filter;
+		I := I .* filter;
+		IFFT( R, I, RESULT, nil, {0,1,2});
+		RETURN RESULT
+	END Filter; 
+	
+#IF TEST THEN
+	TYPE Success=OBJECT END Success;
+	PROCEDURE TEST*():ANY;  
+	VAR image, imageI, resR, resI, res2R, res2I, diff: MatrixBase.Matrix; success:Success; b:BOOLEAN;
+	BEGIN 
+		NEW( image, 256, 256);  NEW( imageI, 256, 256);  
+		image[60..63] := 1;  image[70..73] := 1;  
+		FFT( image, imageI, resR, resI, {0,1});  
+		IFFT( resR, resI, res2R, res2I, {0,1});  
+		diff:=image-res2R;
+		IF diff+*diff < 0.0001 THEN NEW(success) END;
+		RETURN success; 
+		FINALLY RETURN NIL
+	END TEST;
+#END;
 
-	PROCEDURE ComplexDivision(CONST R1,I1,R2,I2: TwoD; VAR outR,outI:TwoD);
-	VAR rsqr:TwoD;
-	BEGIN
-		rsqr:=R2.*R2;  rsqr:= rsqr + I2 .*I2;
-		outR := R1 .* R2;   outR := outR + I1 .* I2;
-		outI := I1 .* R2;  outI := outI - R1 .* I2;
-		outR:= outR ./ rsqr;
-		outI:= outI ./ rsqr;
-	END ComplexDivision;
-	*)
 END PlanarFFT.
 
-SystemTools.FreeDownTo PlanarFFT ~
+System.FreeDownTo PlanarFFT ~
 

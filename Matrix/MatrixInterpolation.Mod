@@ -152,7 +152,7 @@ PROCEDURE InterpolateSplineN*	( CONST Bcoeff: Vector (*	float*   *) ;   (* input
 			RETURN ;
 		END;
 		IF ODD( SplineDegree ) THEN
-			i :=  - SplineDegree DIV 2;
+			i :=  - (SplineDegree DIV 2);(*?? precedence of minus operator has changed - inside or outside brackets ??*)
 			FOR k := 0 TO SplineDegree DO xIndex[k] := i;  INC( i );  END;
 		ELSE
 			i := ENTIER( dx + 0.5 ) - SplineDegree DIV 2;

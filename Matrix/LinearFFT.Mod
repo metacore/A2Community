@@ -117,8 +117,8 @@ TYPE Datatype=MatrixBase.Datatype;
 		IF LEN(realOut,0) = 0 THEN NEW( realOut, LEN(realIn,0) ) END;
 		IF LEN( imagOut ) = 0 THEN NEW( imagOut, LEN(realIn,0) ) END;
 		Transform(-2*Mathe.pi, nSamples, realIn, imagIn, realOut, imagOut);
-		realOut[0..nSamples-1] := realOut[0..nSamples-1] / nSamples;
-		imagOut[0..nSamples-1] := imagOut[0..nSamples-1] / nSamples;
+		realOut[0..nSamples-1] := 1/nSamples * realOut[0..nSamples-1];
+		imagOut[0..nSamples-1] := 1/nSamples * imagOut[0..nSamples-1];
 	END IFFT;
 
 
@@ -185,4 +185,22 @@ TYPE Datatype=MatrixBase.Datatype;
 		RETURN RESULT
 	END Filter;
 
+#IF TEST THEN
+	TYPE Success=OBJECT END Success;
+	PROCEDURE TEST*():ANY;  
+	VAR image, imageI, resR, resI, res2R, res2I, res3R, res3I, diff, fft: MatrixBase.Vector;  
+		success:Success;
+	BEGIN 
+		NEW( image, 256);  NEW( imageI, 256);  
+		image[60..63] := 1;  image[70..73] := 1;  
+		FFT( image, imageI, resR, resI);  
+		IFFT( resR, resI, res2R, res2I);  
+		diff:=image-res2R;
+		IF diff+*diff < 0.0001 THEN NEW(success) END; 
+		RETURN success;
+	END TEST;
+#END;
+
 END LinearFFT.
+
+System.FreeDownTo LinearFFT~

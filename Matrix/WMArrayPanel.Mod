@@ -1,6 +1,6 @@
 MODULE WMArrayPanel; (** AUTHOR ""; PURPOSE "Display of 3D and 4D tensors as image"; *)
 
-IMPORT Inputs, XML, MatrixRaster, MatrixUtilities, Files, Streams, WMMessages, WM:=WMWindowManager, WMComponents, WMProperties, WMStandardComponents, Strings, Models, WMGraphics, Commands;
+IMPORT Inputs, XML, MatrixRaster, MatrixUtilities, Files, Streams, Modules, WMMessages, WM:=WMWindowManager, WMComponents, WMProperties, WMStandardComponents, Strings, Models, WMGraphics, Commands;
 CONST
 	unsigned=0;
 	signed=1;
@@ -416,6 +416,7 @@ PROCEDURE AddWindow*(CONST tensor: ARRAY [?] OF FLOAT64; CONST title: ARRAY OF C
 VAR window:WMComponents.FormWindow;
 	w,h:SIZE;
 	panel:Panel;
+
 BEGIN
 	IF DIM(tensor)>1 THEN w:=LEN(tensor)[DIM(tensor)-1]; h:=LEN(tensor)[DIM(tensor)-2];
 	ELSE w:=400; h:=400;
@@ -456,15 +457,39 @@ BEGIN
 	window.form.fillColor.Set(008888FFH);(*background*)
 	WM.DefaultAddWindow(window);
 
-	LOOP
+	WHILE window.isVisible DO 
 		tensor[10..15,..,..]:= MatrixUtilities.Random([6,100,120],MatrixUtilities.Uniform);
 		panel.SetArray(tensor);
 	END;
 
 END Test;
 
+PROCEDURE RemoveWindows*(context:Commands.Context);
+VAR manager:WM.WindowManager; w,this:WM.Window; i:INTEGER;
+BEGIN {EXCLUSIVE}
+	IF (context=NIL) OR (~context.arg.GetInteger(i,FALSE)) THEN i:=MAX(INTEGER) END;
+	manager:=WM.GetDefaultManager();
+	manager.lock.AcquireWrite;
+	w:=manager.GetFirst();
+	WHILE (w#NIL) & (i>0) DO
+		this:=w;
+		w:=manager.GetNext(w);
+		IF (this#NIL)&(this IS WMComponents.FormWindow)&(this(WMComponents.FormWindow).form.GetFirstChild() IS Panel) THEN 
+			this.Close; DEC(i) 
+		END;
+	END;
+	manager.lock.ReleaseWrite;
+END RemoveWindows;
+
+PROCEDURE RemoveAllWindows;
+BEGIN
+	RemoveWindows(NIL);
+END RemoveAllWindows;
+
 VAR log:Streams.Writer;
 
+BEGIN
+	Modules.InstallTermHandler(RemoveAllWindows);
 END WMArrayPanel.
 
 WMArrayPanel.Test~

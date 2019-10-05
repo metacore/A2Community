@@ -1,7 +1,7 @@
 MODULE Testing; (** AUTHOR "Patrick Hunziker"; PURPOSE "automated module testing"; *)
 
 (*may be promoted from Matrix Libary to general use*)
-IMPORT FoxSyntaxTree, FoxBasic, Strings, Modules, Compiler, Out;
+IMPORT FoxSyntaxTree, FoxBasic, Strings, Modules, Compiler, Out, Commands;
 
 (*TYPE Test*= POINTER TO RECORD;
 			mod: FoxSyntaxTree.Module;
@@ -16,11 +16,16 @@ TYPE Registry*=OBJECT
 			(* find all procedures "TESTxxx", assume that they have the signature PROCEDURE():ANY; call them, and check if they return NIL(=fail) or something(=succeed)*)
 		PROCEDURE TestModule(module: FoxSyntaxTree.Module); 
 		VAR p: FoxSyntaxTree.Procedure; 
-			m,n: ARRAY 64 OF CHAR;
+			m,n, cmd, msg: ARRAY 64 OF CHAR;
 			testProc: PROCEDURE():ANY;
-			i:INTEGER;
+			i, res:INTEGER;
+			mod:Modules.Module;
 		BEGIN
 			FoxBasic.GetString(module.name, m);
+		(*	COPY("System.FreeDownTo ",cmd); Strings.Append(cmd, m); Commands.Call (cmd, {}, res, msg);
+			mod:=Modules.ThisModule(m, res, msg);
+			*)
+			(*Out.String("   freed downto "); Out.String(m); Out.Ln;*)
 			p:=module.moduleScope.firstProcedure;
 			i:=0;
 			WHILE p#NIL DO

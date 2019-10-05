@@ -1281,6 +1281,11 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 		IF ~ r.GetInteger(i,FALSE) THEN HALT(200) END;
 	END Test;
 
+#IF TEST THEN
+	TYPE Success=OBJECT END Success;
+	PROCEDURE TEST*():ANY; VAR success:Success; BEGIN	NEW(success); RETURN success	END TEST;
+#END
+
 
 BEGIN
 NEW(RG);
