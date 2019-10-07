@@ -1,6 +1,7 @@
 MODULE WMArrayPanel; (** AUTHOR ""; PURPOSE "Display of 3D and 4D tensors as image"; *)
 
-IMPORT Inputs, XML, MatrixRaster, MatrixUtilities, Files, Streams, Modules, WMMessages, WM:=WMWindowManager, WMComponents, WMProperties, WMStandardComponents, Strings, Models, WMGraphics, Commands;
+IMPORT Inputs, XML, MatrixRaster, MatrixUtilities, Files, Streams, WMMessages, 
+	WM:=WMWindowManager, WMComponents, WMProperties, WMStandardComponents, WMRectangles, Strings, Models, WMGraphics, Commands;
 CONST
 	unsigned=0;
 	signed=1;
@@ -74,6 +75,7 @@ TYPE TYPE Panel*= OBJECT (WMStandardComponents.ImagePanel) (*! tbd: convert some
 	PROCEDURE PointerDown*(x, y : SIZE; keys : SET);
 		BEGIN
 			mx0:=x; my0:=y;
+			PointerDown^(x,y,keys);
 		END PointerDown;
 
 	PROCEDURE PointerUp*(x, y : SIZE; keys : SET);
@@ -383,11 +385,16 @@ BEGIN NEW(d); RETURN d
 END GenData;
 
 PROCEDURE GetPanel*(CONST tensor: ARRAY [?] OF FLOAT64): Panel;
-VAR	panel:Panel;
+VAR	panel:Panel; 
 BEGIN
 	NEW(panel);
 	panel.SetArray(tensor);
 	panel.SetOrientation(0);
+	IF (DIM(tensor)>1) & (LEN(tensor)>0) THEN 
+		panel.bounds.Set(WMRectangles.MakeRect(0,0,LEN(tensor)[DIM(tensor)-1],LEN(tensor)[DIM(tensor)-2]))
+	ELSE
+		 panel.bounds.Set(WMRectangles.MakeRect(0,0,400,400));
+	END;
 	RETURN panel
 END GetPanel;
 
@@ -412,23 +419,32 @@ BEGIN
 END AddWindow;
 *)
 
+PROCEDURE CreateWindow*(panel:WMStandardComponents.Panel; CONST title: ARRAY OF CHAR): WMComponents.FormWindow;
+VAR window:WMComponents.FormWindow;bounds: WMRectangles.Rectangle;
+	w,h:SIZE;
+BEGIN
+	bounds:=panel.bounds.Get();
+	w:=bounds.r-bounds.l; h:=bounds.b-bounds.t; ASSERT(h>0);
+	NEW(window, SIGNED32(w), SIGNED32(h), FALSE);
+	window.SetTitle(Strings.NewString(title));
+	INCL(window.flags, WM.FlagStorable); (* allow storing of data interactively, through right-click on navigator icon*)
+	panel.alignment.Set(WMComponents.AlignClient);
+	IF panel IS Panel THEN COPY(title, panel(Panel).title); COPY(title, panel(Panel).baseTitle) END;
+	window.SetContent(panel);
+	window.form.fillColor.Set(008888FFH);(*background*)
+	RETURN window;
+END CreateWindow;
+
 PROCEDURE AddWindow*(CONST tensor: ARRAY [?] OF FLOAT64; CONST title: ARRAY OF CHAR);
 VAR window:WMComponents.FormWindow;
 	w,h:SIZE;
 	panel:Panel;
-
 BEGIN
 	IF DIM(tensor)>1 THEN w:=LEN(tensor)[DIM(tensor)-1]; h:=LEN(tensor)[DIM(tensor)-2];
 	ELSE w:=400; h:=400;
 	END;
-	NEW(window, SIGNED32(w), SIGNED32(h), FALSE);
-	window.SetTitle(Strings.NewString(title));
-	INCL(window.flags, WM.FlagStorable); (* allow storing of data interactively, through right-click on navigator icon*)
 	panel:=GetPanel(tensor);
-	panel.alignment.Set(WMComponents.AlignClient);
-	COPY(title, panel.title); COPY(title, panel.baseTitle);
-	window.SetContent(panel);
-	window.form.fillColor.Set(008888FFH);(*background*)
+	window:=CreateWindow(panel,title);
 	WM.DefaultAddWindow(window);
 END AddWindow;
 
@@ -456,40 +472,16 @@ BEGIN
 	window.SetContent(panel);
 	window.form.fillColor.Set(008888FFH);(*background*)
 	WM.DefaultAddWindow(window);
-
-	WHILE window.isVisible DO 
+(*
+	LOOP
 		tensor[10..15,..,..]:= MatrixUtilities.Random([6,100,120],MatrixUtilities.Uniform);
 		panel.SetArray(tensor);
 	END;
-
+*)
 END Test;
-
-PROCEDURE RemoveWindows*(context:Commands.Context);
-VAR manager:WM.WindowManager; w,this:WM.Window; i:INTEGER;
-BEGIN {EXCLUSIVE}
-	IF (context=NIL) OR (~context.arg.GetInteger(i,FALSE)) THEN i:=MAX(INTEGER) END;
-	manager:=WM.GetDefaultManager();
-	manager.lock.AcquireWrite;
-	w:=manager.GetFirst();
-	WHILE (w#NIL) & (i>0) DO
-		this:=w;
-		w:=manager.GetNext(w);
-		IF (this#NIL)&(this IS WMComponents.FormWindow)&(this(WMComponents.FormWindow).form.GetFirstChild() IS Panel) THEN 
-			this.Close; DEC(i) 
-		END;
-	END;
-	manager.lock.ReleaseWrite;
-END RemoveWindows;
-
-PROCEDURE RemoveAllWindows;
-BEGIN
-	RemoveWindows(NIL);
-END RemoveAllWindows;
 
 VAR log:Streams.Writer;
 
-BEGIN
-	Modules.InstallTermHandler(RemoveAllWindows);
 END WMArrayPanel.
 
 WMArrayPanel.Test~
