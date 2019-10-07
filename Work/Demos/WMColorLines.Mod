@@ -21,7 +21,7 @@ TYPE
 	String = Strings.String;
 	Chars = ARRAY OF CHAR;
 	
-	Desk = ARRAY M, M OF INTEGER;
+	Desk = ARRAY M, M OF SIZE;
 
 	Form = OBJECT(WMWindowManager.BufferWindow)
 	VAR
@@ -30,7 +30,7 @@ TYPE
 		Map, WaveMap, Road: Desk;
 		RoadFlag, DestroyFlag: BOOLEAN;
 		clisp: BOOLEAN;
-		xsp, ysp: INTEGER;
+		xsp, ysp: SIZE;
 		numlines, score: INTEGER;
 		imgSpheres: ARRAY 7 OF WMGraphics.Image;
 		timer: Kernel.Timer;
@@ -42,7 +42,7 @@ TYPE
 		i: INTEGER;
 		a: ARRAY 2 OF CHAR;
 		s: String;
-		x, y: LONGINT;
+		x, y: SIZE;
 	BEGIN
 		SELF.alpha :=  alpha;
 		NEW(random);
@@ -109,11 +109,11 @@ TYPE
 		frm := NIL
 	END Close;
 
-	PROCEDURE PointerUp(x, y : LONGINT; keys : SET);
+	PROCEDURE PointerUp(x, y : SIZE; keys : SET);
 	BEGIN
 		IF clisp THEN
 			clisp := FALSE;
-			Move(xsp, ysp, SHORT(x DIV 30), SHORT(y DIV 30));
+			Move(xsp, ysp, x DIV 30, y DIV 30);
 			IF RoadFlag THEN
 				timer.Sleep(100);
 				DestroyLines;
@@ -127,8 +127,8 @@ TYPE
 		ELSE
 			IF Map[x DIV 30, y DIV 30] > 0 THEN
 				clisp := TRUE;
-				xsp := SHORT(x DIV 30);
-				ysp := SHORT(y DIV 30)
+				xsp := x DIV 30;
+				ysp := y DIV 30
 			END
 		END
 	END PointerUp;
@@ -178,14 +178,14 @@ TYPE
 		RETURN e > n
 	END EmptyPos;
 
-	PROCEDURE InMap(x, y: INTEGER): BOOLEAN;
+	PROCEDURE InMap(x, y: SIZE): BOOLEAN;
 	BEGIN
 		RETURN (x >= 0) & (x < M) & (y >= 0) & (y < M)
 	END InMap;
 
-	PROCEDURE Wave(x1, y1, x2, y2: INTEGER);
+	PROCEDURE Wave(x1, y1, x2, y2: SIZE);
 	VAR
-		x, y, k: INTEGER;
+		x, y, k: SIZE;
 		flag: BOOLEAN;
 	BEGIN
 		flag := TRUE;
@@ -231,9 +231,9 @@ TYPE
 		END
 	END Wave;
 
-	PROCEDURE Way(x1, y1, x2, y2: INTEGER);
+	PROCEDURE Way(x1, y1, x2, y2: SIZE);
 	VAR
-		k: INTEGER;
+		k: SIZE;
 	BEGIN
 		k := WaveMap[x2, y2];
 		Road[x2, y2] := k - WaveMap[x1, y1] + 1;
@@ -248,9 +248,9 @@ TYPE
 		END
 	END Way;
 
-	PROCEDURE Move(x1, y1, x2, y2: INTEGER);
+	PROCEDURE Move(x1, y1, x2, y2: SIZE);
 	VAR
-		x, y, c: INTEGER;
+		x, y, c: SIZE;
 	BEGIN
 		RoadFlag := FALSE;
 		Set(FALSE, TRUE, TRUE);
@@ -328,7 +328,7 @@ TYPE
 
 	PROCEDURE NewSpheres(quantity: INTEGER);
 	VAR
-		i, x, y, res: LONGINT;
+		i, x, y, res: SIGNED32;
 	BEGIN
 		random.InitSeed(Kernel.GetTicks());
 		IF EmptyPos(3) THEN
@@ -359,7 +359,7 @@ BEGIN
 	RETURN Strings.ConcatToNew(a1, a2)
 END "+";
 
-PROCEDURE DialogPos(VAR x, y: LONGINT; win: WMWindowManager.Window; dlgWidth, dlgHeight: LONGINT);
+PROCEDURE DialogPos(VAR x, y: SIGNED32; win: WMWindowManager.Window; dlgWidth, dlgHeight: SIGNED32);
 VAR
 	manager: WMWindowManager.WindowManager;
 	s: WMWindowManager.WindowStyle;

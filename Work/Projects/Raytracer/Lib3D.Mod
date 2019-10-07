@@ -265,7 +265,7 @@ END normalize;
 (** Vector dot product
 	fDot := v1[0] * v2[0] + v1[1] * v2[1] + v1[2] * v2[2] + v1[3] * v2[3]
 *)
-PROCEDURE "+*"(CONST v1, v2: Vector): REAL;
+OPERATOR "+*"(CONST v1, v2: Vector): REAL;
 BEGIN
 	RETURN v1[0] * v2[0] + v1[1] * v2[1] + v1[2] * v2[2] + v1[3] * v2[3]
 END "+*";
@@ -283,17 +283,17 @@ BEGIN
 END cross;
 
 (** Vector multipliation with scalar *)
-PROCEDURE "*"(CONST v: Vector; f: REAL): Vector;
+OPERATOR "*"(CONST v: Vector; f: REAL): Vector;
 BEGIN
 	RETURN vector(v[0] * f, v[1] * f, v[2] * f, v[3] * f)
 END "*";
-PROCEDURE "*"(f: REAL; CONST v: Vector): Vector;
+OPERATOR "*"(f: REAL; CONST v: Vector): Vector;
 BEGIN
 	RETURN vector(v[0] * f, v[1] * f, v[2] * f, v[3] * f)
 END "*";
 
 (** Vector division by scalar *)
-PROCEDURE "/"(CONST v: Vector; f: REAL): Vector;
+OPERATOR "/"(CONST v: Vector; f: REAL): Vector;
 BEGIN
 	RETURN vector(v[X] / f, v[Y] / f, v[Z] / f, v[3] / f)
 END "/";
@@ -301,7 +301,7 @@ END "/";
 (** Vector multiplication
 	v3 := vector(v1[0] * v2[0], v1[1] * v2[1], v1[2] * v2[2], v1[3] * v2[3])
 *)
-PROCEDURE "*"(CONST v1, v2: Vector): Vector;
+OPERATOR "*"(CONST v1, v2: Vector): Vector;
 BEGIN
 	RETURN vector(v1[0] * v2[0], v1[1] * v2[1], v1[2] * v2[2], v1[3] * v2[3])
 END "*";
@@ -309,7 +309,7 @@ END "*";
 (** Vector substraction
 	v3 := vector(v1[0] - v2[0], v1[1] - v2[1], v1[2] - v2[2], v1[3] - v2[3])
 *)
-PROCEDURE "-"(CONST v1, v2: Vector): Vector;
+OPERATOR "-"(CONST v1, v2: Vector): Vector;
 BEGIN
 	RETURN vector(v1[0] - v2[0], v1[1] - v2[1], v1[2] - v2[2], v1[3] - v2[3])
 END "-";
@@ -317,13 +317,13 @@ END "-";
 (** Vector addition
 	v3 := vector(v1[0] + v2[0], v1[1] + v2[1], v1[2] + v2[2], v1[3] + v2[3])
 *)
-PROCEDURE "+"(CONST v1, v2: Vector): Vector;
+OPERATOR "+"(CONST v1, v2: Vector): Vector;
 BEGIN
 	RETURN vector(v1[0] + v2[0], v1[1] + v2[1], v1[2] + v2[2], v1[3] + v2[3])
 END "+";
 
 (** Vector negation *)
-PROCEDURE "-"(VAR v: Vector): Vector;
+OPERATOR "-"(VAR v: Vector): Vector;
 BEGIN
 	RETURN vector(-v[0], -v[1], -v[2], -v[3])
 END "-";

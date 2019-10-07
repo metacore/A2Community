@@ -18,8 +18,8 @@ MODULE Lesson6;
 IMPORT
 	Math, Events, Strings, Files, Commands, PreciseTimer,
 	
-	(*lib := Lib3D*)
-	lib := Lib3D_SSE
+	lib := Lib3D
+	(*lib := Lib3D_SSE*)
 	;
 
 CONST
@@ -433,7 +433,7 @@ END Lesson6.
 Lesson6.Lesson6a ~
 Lesson6.Lesson6b ~
 
-SystemTools.Free Lesson6 Lib3D Lib3D_SSE ~
+System.Free Lesson6 Lib3D Lib3D_SSE ~
 
 AMD A10-7850K Radeon R7, 12 Compute Cores 4C+8G @ 3.70 GHz (4 cores, 4 threads):
 

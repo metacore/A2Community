@@ -402,7 +402,7 @@ BEGIN
 		RETURN FALSE
 	END;
 	(* compute d (we assume the plane normal is a unit vector) *)
-	d := vecDot(nor, pos);
+	d := vecDot(nor, ctr);
 	(* compute t *)
 	t := (d - vecDot(ptRay, nor)) / denom;
 	RETURN t > 0.0

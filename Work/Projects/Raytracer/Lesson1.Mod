@@ -18,8 +18,8 @@ MODULE Lesson1;
 IMPORT
 	Math, Events, Strings, Files, Commands, PreciseTimer,
 	
-	(*lib := Lib3D*)
-	lib := Lib3D_SSE
+	lib := Lib3D
+	(*lib := Lib3D_SSE*)
 	;
 
 CONST
