@@ -1,6 +1,6 @@
 MODULE PlanarFFT;   (**  AUTHOR "Patrick  Hunziker"; PURPOSE "FFT operations on 2D Data";  **)
 
-IMPORT LinearFFT, MatrixBase, PlanarMath;
+IMPORT LinearFFT, MatrixBase, PlanarMath, Commands;
 
 CONST
 	cachesize = 40000H;   (* make dynamic *)
@@ -132,10 +132,10 @@ TYPE
 	VAR  I, nil, R: TwoD;
 	BEGIN
 		IF LEN(RESULT) # LEN(in) THEN NEW( RESULT, LEN(in) ) END;
-		FFT( in, nil, R, I, {0,1,2});
+		FFT( in, nil, R, I, {0,1});
 		R := R .* filter;
 		I := I .* filter;
-		IFFT( R, I, RESULT, nil, {0,1,2});
+		IFFT( R, I, RESULT, nil, {0,1});
 		RETURN RESULT
 	END Filter; 
 	
@@ -153,9 +153,24 @@ TYPE
 		RETURN success; 
 		FINALLY RETURN NIL
 	END TEST;
+
+	PROCEDURE Test*(context:Commands.Context);  
+	VAR image, imageI, resR, resI, res2R, res2I, diff: MatrixBase.Matrix;
+	BEGIN 
+		NEW( image, 256, 256);  NEW( imageI, 256, 256);  
+		image[60..63] := 1;  image[70..73] := 1;  
+		FFT( image, imageI, resR, resI, {0,1});  
+		IFFT( resR, resI, res2R, res2I, {0,1});  
+		diff:=image-res2R;
+		IF diff+*diff < 0.0001 THEN context.result:=0 ELSE context.result:=1; END;
+		FINALLY context.result:=1
+	END Test;
+
 #END;
 
 END PlanarFFT.
 
 System.FreeDownTo PlanarFFT ~
+
+PlanarFFT.Test~
 
