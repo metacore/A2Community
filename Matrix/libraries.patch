@@ -1,6 +1,6 @@
 Index: makefile
 ===================================================================
---- makefile	(revision 9556)
+--- makefile	(revision 9587)
 +++ makefile	(working copy)
 @@ -11,8 +11,8 @@
  
@@ -27,9 +27,9 @@ Index: makefile
  builds:
 Index: source/Release.Tool
 ===================================================================
---- source/Release.Tool	(revision 9556)
+--- source/Release.Tool	(revision 9587)
 +++ source/Release.Tool	(working copy)
-@@ -1577,6 +1577,114 @@
+@@ -1579,6 +1579,114 @@
  	TeletextServer.zip	# Teletext Server for TV
  END
  
