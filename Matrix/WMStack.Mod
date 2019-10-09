@@ -350,7 +350,6 @@ BEGIN
 	Modules.InstallTermHandler(RemoveAllWindows);
 	InsertPosX:=30; InsertPosY:=30;
 END WMStack.
-
 ~
 (*
 example code in application:
@@ -362,7 +361,7 @@ IMPORT WMStack;
 
 PROCEDURE Test*;
 VAR window:WMStack.Window;
-	stack: ARRAY [*,*,*] OF SIGNED32; (* or FLOAT64 or other..*)
+	stack: ARRAY [*,*,*] OF FLOAT64; (* or FLOAT64 or other..*)
 BEGIN
 	(*have some data in a 3D array ready*)
 	NEW(stack, 40,100,100);
@@ -380,4 +379,5 @@ WMStack.RemoveWindows ~ (*close and remove all stack windows*)
 WMStack.RemoveWindows 5 ~ (* close and remove a number of stack windows*)
 
 SystemTools.FreeDownTo WMStack~
+SystemTools.FreeDownTo Test 
 Test.Test

@@ -32,7 +32,7 @@ TYPE Window*= OBJECT (WM.BufferWindow) (* or could use WM.DoubleBufferWindow or 
 	PROCEDURE &Initialize*(CONST m: Tensor; CONST title: ARRAY OF CHAR; orientation:SIGNED32);
 	BEGIN
 		ASSERT(DIM(m) IN {2, 3,4}, 200);
-		ASSERT(LEN(m)>0, 201);
+		(*ASSERT(LEN(m)>0, 201);*)
 		SELF.orientation:=orientation;
 		IF LEN(m)>0 THEN
 			IF ~exists THEN
@@ -425,40 +425,38 @@ BEGIN
 	Modules.InstallTermHandler(RemoveAllWindows);
 	InsertPosX:=30; InsertPosY:=30;
 END WMTensor.
-
 ~
+
 (*
 example code in application:
 *)
-(*
+
 MODULE Test;
 
 IMPORT WMStack;
 
 PROCEDURE Test*;
-VAR window:Window;
-	tensor: ARRAY [*,*,*,*] OF SIGNED32; (* or FLOAT64 or other..*)
+VAR window:WMStack.Window;
+	tensor: ARRAY [?] OF FLOAT64; (* or FLOAT64 or other..*)
 BEGIN
-	(*have some data in a 3D array ready*)
-	NEW(stack, 440,100,100);
-	stack[..,..,10..40,..]:=1;
-	stack[..,10..15,..,..]:=2;
-	stack[..,..,..,10..30]:=3;
-	stack[0]:=stack[0,*,0..10,*]+1;
-	stack[1]:=stack[1,*,10..20,*]+1;
-	stack[2]:=stack[2,*,20..30,*]+1;
-	stack[3]:=stack[3,*,30..40,*]+1;
+	(*have some data in a 4D array ready*)
+	NEW(tensor, 5, 40,100,100);
+	tensor[..,..,10..40,..]:=1;
+	tensor[..,10..15,..,..]:=2;
+	tensor[..,..,..,10..30]:=3;
 	(*show data as mouse or arrow key scrollable window*)
-	NEW(window, stack, "MyTensor",0);
+	NEW(window, tensor, "MyTensor",0);
 	window.AddWindow;
 END Test;
 
 END Test.
-*)
+
 
 WMTensor.RemoveWindows ~ (*close and remove all stack windows*)
 WMTensor.RemoveWindows 5 ~ (* close and remove a number of stack windows*)
 WMTensor.Test
+
+Test.Test 
 
 System.FreeDownTo WMTensor~
 

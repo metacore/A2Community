@@ -392,7 +392,7 @@ BEGIN
 END BoolToImage;
 
 PROCEDURE ImageToArray*(img:Raster.Image; VAR data: ARRAY [?] OF SIGNED16);
-VAR row,col,p: SIZE;
+VAR row,col,p: SIZE; int: SIGNED32; fmt: INTEGER; msg: ARRAY 20 OF CHAR;
 BEGIN
 	p:=0;
 	IF img.fmt.code=Raster.bgr888 THEN
@@ -430,6 +430,20 @@ BEGIN
 				INC(p,4);
 			END;
 		END;
+	ELSIF img.fmt.code=Raster.bgr565 THEN
+		NEW(data, 3, img.height, img.width) ;
+		FOR row:=0 TO img.height-1 DO
+			FOR col:=0 TO img.width-1 DO
+				int:=ASH(ORD(img.mem[p+1]), 8) + ORD(img.mem[p]);
+				data[0,row,col]:= SIGNED16(ASH(ASH(int, -11) MOD 20H, 3) + 4);
+				data[1,row,col]:= SIGNED16(ASH(ASH(int, -5) MOD 40H, 2) + 2);
+				data[2,row,col]:= SIGNED16(ASH(int MOD 20H, 3) + 4);
+				INC(p,2);
+			END;
+		END;
+	ELSE 
+		COPY("failed on format ",msg);; fmt:=img.fmt.code;
+		HALT(200);(* not yet implemented*)
 	END;
 END ImageToArray;
 

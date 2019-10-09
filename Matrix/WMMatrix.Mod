@@ -299,7 +299,7 @@ BEGIN
 	Modules.InstallTermHandler(RemoveAllWindows);
 	InsertPosX:=30; InsertPosY:=30;
 END WMMatrix.
-
+~
 WMMatrix.RemoveWindows ~ (*close and remove all matrix windows*)
 WMMatrix.RemoveWindows 5 ~ (* close and remove a number of matrix windows*)
 
