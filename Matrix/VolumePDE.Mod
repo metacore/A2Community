@@ -412,6 +412,7 @@ TYPE
 	 	END;
  	END AllocateSame;
 
+	(* TBD: use VolumeTransform.Mod or VolumeResize.Mod *)
 	PROCEDURE Reduce( CONST g: Grid ): Grid;  (* there was a problem until at least 30.9.15 in the compiler with the LEN(RESULT,i), possibly leading to much allocation overhead here *)
 	VAR L00,L01,L10,L11,L20,L21:SIZE;
 	BEGIN
