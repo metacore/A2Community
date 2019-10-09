@@ -10,12 +10,15 @@ VAR data,result: PlanarWavelets.Matrix;
 BEGIN
 	NEW(data,256,256);
 	data[100..110,150..160]:=1;
+	data:=data+1;(*check behaviour on boundaries*)
 	NEW(result,256,256);
+	
 	NEW(analyzer, Wavelets.Haar, Wavelets.default, data);
 	analyzer.Analyze;
 	result:=analyzer.data;
 	NEW(window, data, "data"); window.AddWindow;
 	NEW(window, result, "result"); window.AddWindow;
+	
 END Do;
 
 PROCEDURE Do1*(context:Commands.Context);
@@ -144,4 +147,4 @@ TestPlanarWavelets.Do4 E:/Manuscripts/Polymers/Kegang_13Sept2016/Kegang_CM200KV_
 TestPlanarWavelets.Do5 E:/Manuscripts/Polymers/Kegang_13Sept2016/Kegang_CM200KV_14102016/Kegang_CM200KV_14102016/PIP17_HSA_200KV_015.8bit.raw 4096 4096~
 
 
-SystemTools.FreeDownTo MatrixBase Wavelets~
+System.FreeDownTo MatrixBase Wavelets~

@@ -335,7 +335,7 @@ TYPE
 	END Wave;
 
 
-	PROCEDURE Reduce( CONST g: Grid ): Grid;
+	PROCEDURE Reduce( CONST g: Grid ): Grid; (*tbd: use PlanarTransform or PlanarResize*)
 	BEGIN
 		IF (LEN( RESULT, 0 ) # ((LEN( g, 0 ) + 1) DIV 2)) OR (LEN( RESULT, 1 ) # ((LEN( g, 1 ) + 1) DIV 2)) THEN NEW( RESULT, (LEN( g, 0 ) + 1) DIV 2, (LEN( g, 1 ) + 1) DIV 2 ) END;
 		RESULT[.. (LEN( g, 0 ) + 1) DIV 2 - 1, .. (LEN( g, 1 ) + 1) DIV 2 - 1] := g[.. BY 2, .. BY 2];

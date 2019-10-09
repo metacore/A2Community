@@ -40,7 +40,7 @@ BEGIN
 END arctan2;
 
 PROCEDURE DifferentialEdgeAngle*(CONST p:ScalarField; sampling:SIGNED32):ScalarField; (*! needs speedup - parallelize how ?*)
-VAR vec:VectorField; x,y:SIGNED32;
+VAR vec:VectorField; x,y:SIZE;
 BEGIN
 	vec:=DifferentialEdgeDirection(p, sampling);
 	IF LEN(RESULT,0)=0 THEN NEW(RESULT, LEN(p,0), LEN(p,1)) END;
@@ -56,7 +56,8 @@ END DifferentialEdgeAngle;
 PROCEDURE Canny* (CONST in: ScalarField; NonMaxSuppression:BOOLEAN): ScalarField;
 VAR line: Line;
 	lines:ARRAY [*] OF Line;
-	i,j,j2,i1,i2,iM1,iM2,h,hM2,hM1,h1,h2,dir, width, height: SIGNED32;
+	dir: SIGNED32;
+	i,j,width,height, j2,i1,i2,iM1,iM2,h,hM2,hM1,h1,h2: SIZE;
 	d1,deriv, pix, InvSqrt2: Datatype;
 	nil: ScalarField;
 BEGIN
@@ -115,7 +116,7 @@ BEGIN
 END Canny;
 
 PROCEDURE NonMaximaSuppression*(CONST in:ScalarField):ScalarField; (* only partly working at the moment*)
-VAR l, l0,l1,l2,l00: Line; out:ScalarField; i,j,len:SIGNED32;
+VAR l, l0,l1,l2,l00: Line; out:ScalarField; i,j,len:SIZE;
 BEGIN
 	NEW(out,LEN(in,0),LEN(in,1));
 	len:=LEN(in,0);
@@ -180,7 +181,7 @@ END TestFile;
 
 END PlanarEdgeDetectors.
 
-
+System.FreeDownTo PlanarEdgeDetectors ~
 PlanarEdgeDetectors.Test ~
 PlanarEdgeDetectors.TestFile
 "C:/C/Documents and Settings/Pat/My Documents/Malaria/Discognosis FP7/Size Standards QLC/PS Beads/B_237_AA_1_Time 4.tif" ~
