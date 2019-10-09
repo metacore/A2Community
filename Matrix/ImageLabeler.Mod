@@ -440,4 +440,5 @@ ImageLabeler.Open -m="C:/Program Files (x86)/A2/HighDim/Data/Sperm/IMSI1_100Fram
 System.CollectGarbage ~
 System.Free ImageLabeler ~
 System.FreeDownTo MatrixBase~
+System.FreeDownTo WMTensor~
 
