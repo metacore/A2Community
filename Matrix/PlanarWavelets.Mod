@@ -9,7 +9,7 @@ TYPE Datatype*=Wavelets.Datatype;
 
 TYPE Analyzer*= OBJECT
 	VAR data*: Matrix;
-		 waveletType, boundary: SIGNED32;
+		waveletType, boundary: SIGNED32;
 		conv: Wavelets.WaveletConvolver;
 		wavelet*:Wavelets.WaveletFamily;
 		lineX,resX, lineY,resY: Line;
@@ -172,7 +172,6 @@ PROCEDURE Test*;
 VAR a,b,c: Matrix;
 	an:Analyzer;
 	rec:Reconstructor;
-	
 BEGIN
 	NEW(a,200,200); a[50..100,50..100]:=1.0;
 	WMArrayPanel.AddWindow(a,"data");
@@ -182,11 +181,25 @@ BEGIN
 	NEW(rec, Wavelets.Haar, Wavelets.finite, an.data);
 	rec.ReconstructPacket(3);
 	WMArrayPanel.AddWindow(rec.data,"reconstruction");
+	WMArrayPanel.AddWindow(rec.data-a,"error");
 END Test;
 
+PROCEDURE {TEST} Test1*; (* wavelet-decomposition and reconstruction leads to perfect reconstruction of original *)
+VAR a: Matrix;
+	an:Analyzer;
+	rec:Reconstructor;
+BEGIN
+	NEW(a,200,200); a[50..100,50..100]:=1.0;
+	NEW(an, Wavelets.Haar, Wavelets.finite, a);
+	an.AnalyzePacket(3);
+	NEW(rec, Wavelets.Haar, Wavelets.finite, an.data);
+	rec.ReconstructPacket(3);
+	ASSERT(SUM(ABS(rec.data-a)) < 0.0001,200);
+END Test1;
 
 END PlanarWavelets.
 
 PlanarWavelets.Test~
-
+PlanarWavelets.Test1~
+WMArrayPanel.AddWindow(rec.data,"reconstruction");
 System.FreeDownTo PlanarWavelets ~

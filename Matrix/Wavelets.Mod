@@ -1,4 +1,4 @@
-MODULE Wavelets;
+MODULE Wavelets; (*Patrick Hunziker, 2009. *)(* Wavelet transform - basic compute framework *)
 
 IMPORT LinearFilters, LinearConvolve, FIR:=LinearFIRConvolveLongReal;
 
