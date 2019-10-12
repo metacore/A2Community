@@ -184,18 +184,25 @@ BEGIN
 	WMArrayPanel.AddWindow(rec.data-a,"error");
 END Test;
 
-PROCEDURE {TEST} Test1*; (* wavelet-decomposition and reconstruction leads to perfect reconstruction of original *)
+PROCEDURE {TEST}  Test1*; (* wavelet-decomposition and reconstruction leads to perfect reconstruction of original *)
 VAR a: Matrix;
-	an:Analyzer;
+	ana:Analyzer;
 	rec:Reconstructor;
 BEGIN
 	NEW(a,200,200); a[50..100,50..100]:=1.0;
-	NEW(an, Wavelets.Haar, Wavelets.finite, a);
-	an.AnalyzePacket(3);
-	NEW(rec, Wavelets.Haar, Wavelets.finite, an.data);
+	NEW(ana, Wavelets.Haar, Wavelets.finite, a);
+	ana.AnalyzePacket(3);
+	NEW(rec, Wavelets.Haar, Wavelets.finite, ana.data);
 	rec.ReconstructPacket(3);
 	ASSERT(SUM(ABS(rec.data-a)) < 0.0001,200);
 END Test1;
+
+
+PROCEDURE {TEST}  Test2*;
+VAR a:INTEGER;
+BEGIN
+	ASSERT(a=1);
+END Test2; 
 
 END PlanarWavelets.
 
