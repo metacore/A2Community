@@ -7,6 +7,7 @@ CONST
 	LabeledProcTest* =2;
 
 TYPE FileTestProcedure=PROCEDURE (context:Commands.Context;tester: TestSuite.Tester; CONST modName,procName:ARRAY OF CHAR);
+TYPE AddItemProcedure=	PROCEDURE {DELEGATE}(itemType, testType: INTEGER;  CONST name: ARRAY OF CHAR; success: BOOLEAN);
 
 VAR tester: TestSuite.Tester;
 
@@ -22,7 +23,10 @@ BEGIN
 		(* ... *)
 	END;
 	IF context.arg.GetString(path) & context.arg.GetString(extension) THEN
-		EnumerateSymbolFileList(context, tester, path, extension, FileTestProc);
+		IF tester#NIL THEN	EnumerateSymbolFileList(context, tester.AddItem, path, extension, FileTestProc);
+		ELSE EnumerateSymbolFileList(context, NIL, path, extension, FileTestProc);
+		END;
+		
 	ELSE
 		HALT(200)
 	END;
@@ -40,7 +44,7 @@ BEGIN
 END FileTestProc;
 
 
-PROCEDURE EnumerateSymbolFileList(context:Commands.Context; tester: TestSuite.Tester; CONST path,extension:ARRAY OF CHAR; testProcEnum: FileTestProcedure);
+PROCEDURE EnumerateSymbolFileList(context:Commands.Context; addItem: AddItemProcedure; CONST path,extension:ARRAY OF CHAR; testProcEnum: FileTestProcedure);
 VAR e:Files.Enumerator; size:Files.Size; flags:SET; time, date: SIGNED32; pos:SIZE;
 	mask, fileName:Files.FileName; 
 	f:Files.File; r:Files.Reader;
@@ -51,12 +55,12 @@ BEGIN
 		pos:=Strings.Pos(extension,fileName); 
 		f:=Files.Old(fileName);
 		Files.OpenReader(r,f,0);
-		EnumerateSymbolFileTestProcs(context, tester, r, testProcEnum);
+		EnumerateSymbolFileTestProcs(context, addItem, r, testProcEnum);
 	END;
 END EnumerateSymbolFileList;
 
 
-PROCEDURE EnumerateSymbolFileTestProcs(context:Commands.Context; tester: TestSuite.Tester; r:Streams.Reader; testProcEnum: FileTestProcedure);
+PROCEDURE EnumerateSymbolFileTestProcs(context:Commands.Context; addItem:AddItemProcedure; r:Streams.Reader; testProcEnum: FileTestProcedure);
 VAR line, keyword, modName, procName, arrow: ARRAY 256 OF CHAR;
 	leftbracket, rightbracket, modifier, pos: SIZE;
 BEGIN
