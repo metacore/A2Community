@@ -265,7 +265,7 @@ TYPE ControlWindow = OBJECT(WMComponents.FormWindow)
 		END New;
 		
 		(* Overwrite draw procedure because we do not want any interpolation *)
-		PROCEDURE Draw(canvas : WMGraphics.Canvas; w, h: SIZE; q : SIGNED16);
+		PROCEDURE Draw(canvas : WMGraphics.Canvas; w, h: SIZE; q : INTEGER);
 		BEGIN
 			Draw^(canvas, w, h, 0);
 		END Draw;
