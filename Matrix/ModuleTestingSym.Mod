@@ -1,50 +1,52 @@
 MODULE ModuleTestingSym; (** AUTHOR "Patrick Hunziker"; PURPOSE "automated module testing of modules and procedures with {TEST} flag"; *)
 (*can also do without TestSuite if standalone is necessary*)
 
-IMPORT Strings, Modules, Compiler, Files, Streams, Commands, Options, Diagnostics, TestSuite;
+IMPORT Strings, Modules, Files, Streams, Commands, Options, Diagnostics, TestSuite;
 
 CONST 
 	LabeledProcTest* =2;
 
-TYPE FileTestProcedure=PROCEDURE (context:Commands.Context;tester: TestSuite.Tester; CONST modName,procName:ARRAY OF CHAR);
 TYPE AddItemProcedure=	PROCEDURE {DELEGATE}(itemType, testType: INTEGER;  CONST name: ARRAY OF CHAR; success: BOOLEAN);
+TYPE FileTestProcedure=PROCEDURE (CONST modName,procName:ARRAY OF CHAR; log:Streams.Writer; addItem:AddItemProcedure);
 
 VAR tester: TestSuite.Tester;
 
-PROCEDURE ModuleTest*(context:Commands.Context);
+(** Check a path for Symbol Files, identify procedures labeled with {FLAG}, test them, and optionally write the results to a TestSuite.Tester object *)
+PROCEDURE ModuleTest*(context:Commands.Context); 
 VAR path, extension, testerName: Files.FileName;
 	options:Options.Options;
 	diag:Diagnostics.Diagnostics;
+	log:Streams.Writer;
 BEGIN
-	NEW(options); options.Add("t","Tester",Options.String);
-	IF options.Parse(context.arg, context.error) & options.GetString("Tester",testerName) THEN 
+	NEW(options); 
+		options.Add("t","Tester",Options.String);
+		options.Add("l","Log",Options.Flag);
+	IF options.Parse(context.arg, context.error) & options.GetString("Tester",testerName) THEN  (*! TBD: connect to Tester object from other testing strategies*)
 		NEW(diag);
 		NEW(tester,diag);
-		(* ... *)
 	END;
+	IF options.GetFlag("Log") THEN log:=context.out END;
 	IF context.arg.GetString(path) & context.arg.GetString(extension) THEN
-		IF tester#NIL THEN	EnumerateSymbolFileList(context, tester.AddItem, path, extension, FileTestProc);
-		ELSE EnumerateSymbolFileList(context, NIL, path, extension, FileTestProc);
+		IF tester#NIL THEN	EnumerateSymbolFileList(context, path, extension, log, tester.AddItem, FileTestProc);
+		ELSE EnumerateSymbolFileList(context, path, extension, log, NIL, FileTestProc);
 		END;
-		
 	ELSE
 		HALT(200)
 	END;
 END ModuleTest;
 
-PROCEDURE FileTestProc(context:Commands.Context; tester:TestSuite.Tester; CONST modName,procName:ARRAY OF CHAR);
+PROCEDURE FileTestProc(CONST modName,procName:ARRAY OF CHAR; log:Streams.Writer; addItem: AddItemProcedure);
 VAR fullName, msg: ARRAY 256 OF CHAR; res:INTEGER;
 BEGIN
 	COPY(modName, fullName); Strings.Append(fullName, "."); Strings.Append(fullName, procName);
-	context.out.String("testing "); context.out.String(fullName); context.out.String(": "); context.out.Update;
+	IF log#NIL THEN log.String("testing "); log.String(fullName); log.String(": "); log.Update; END;
 	Commands.Activate(fullName,NIL,{Commands.Wait},res,msg);
-	context.out.String(msg); context.out.Int(res,6); context.out.Ln; context.out.Update;
+	IF log#NIL THEN log.String(msg); log.Int(res,6); log.Ln; log.Update; END;
 	
-	IF tester#NIL THEN tester.AddItem(TestSuite.Test, LabeledProcTest, fullName, res=0) END;
+	IF addItem#NIL THEN addItem(TestSuite.Test, LabeledProcTest, fullName, res=0) END; (*optional integration with TestSuite.Mod *)
 END FileTestProc;
 
-
-PROCEDURE EnumerateSymbolFileList(context:Commands.Context; addItem: AddItemProcedure; CONST path,extension:ARRAY OF CHAR; testProcEnum: FileTestProcedure);
+PROCEDURE EnumerateSymbolFileList(context:Commands.Context; CONST path,extension:ARRAY OF CHAR; log:Streams.Writer; addItem: AddItemProcedure; testProcEnum: FileTestProcedure);
 VAR e:Files.Enumerator; size:Files.Size; flags:SET; time, date: SIGNED32; pos:SIZE;
 	mask, fileName:Files.FileName; 
 	f:Files.File; r:Files.Reader;
@@ -55,12 +57,11 @@ BEGIN
 		pos:=Strings.Pos(extension,fileName); 
 		f:=Files.Old(fileName);
 		Files.OpenReader(r,f,0);
-		EnumerateSymbolFileTestProcs(context, addItem, r, testProcEnum);
+		EnumerateSymbolFileTestProcs(log, addItem, r, testProcEnum);
 	END;
 END EnumerateSymbolFileList;
 
-
-PROCEDURE EnumerateSymbolFileTestProcs(context:Commands.Context; addItem:AddItemProcedure; r:Streams.Reader; testProcEnum: FileTestProcedure);
+PROCEDURE EnumerateSymbolFileTestProcs(log:Streams.Writer; addItem:AddItemProcedure; r:Streams.Reader; testProcEnum: FileTestProcedure);
 VAR line, keyword, modName, procName, arrow: ARRAY 256 OF CHAR;
 	leftbracket, rightbracket, modifier, pos: SIZE;
 BEGIN
@@ -82,7 +83,7 @@ BEGIN
 						Strings.Delete(line,0,rightbracket+2);
 						pos:=Strings.Pos("*", line); line[pos]:=0X;
 						COPY(line,procName);
-						testProcEnum(context, tester, modName,procName);
+						testProcEnum(modName,procName, log, addItem);
 					END;
 				END;
 			END;
@@ -100,31 +101,31 @@ BEGIN
 	Compiler.TestModule:=registry.Register
 END Install;
 *)
-
-PROCEDURE log(type:INTEGER; CONST name:ARRAY OF CHAR; success:BOOLEAN);
-VAR c:Commands.Context;
-BEGIN
-	c:=Commands.GetContext();
-	c.out.Int(type,0); c.out.String(" "); c.out.String(name);
-	IF success THEN c.out.String(" success "); ELSE c.out.String(" failure "); END;
-	c.out.Ln; c.out.Update;
-END log;
+TYPE Logger= OBJECT
+	VAR w:Streams.Writer;
+	PROCEDURE &Open(w:Streams.Writer); BEGIN SELF.w:=w END Open;
+	PROCEDURE Write(type:INTEGER; CONST name:ARRAY OF CHAR; success:BOOLEAN);
+	BEGIN
+		w.Int(type,0); w.String(" "); w.String(name);
+		IF success THEN w.String(" success "); ELSE w.String(" failure "); END;
+		w.Ln; w.Update;
+	END Write;
+END Logger;
 
 PROCEDURE ReportResults*(context:Commands.Context);
-VAR item: TestSuite.TestResult;
+VAR logger:Logger;
 BEGIN
 	IF tester#NIL THEN
+		NEW(logger, context.out);
 		context.out.String("tests: "); context.out.Ln;
-		tester.Enumerate(0, log);
+		tester.Enumerate(0, logger.Write);
 		context.out.String("results: "); context.out.Ln;
-		tester.Enumerate(1, log);
+		tester.Enumerate(1, logger.Write);
 	END;
 END ReportResults;
 
-
 PROCEDURE Uninstall*;
 BEGIN
-	(*Compiler.TestModule:=NIL*)
 END Uninstall;
 
 BEGIN
@@ -135,9 +136,12 @@ System.FreeDownTo  ModuleTestingSym~
 ModuleTestingSym.Install ~
 ModuleTestingSym.Uninstall ~
 
-(*test all TEST modules/procedures in symbol files in a path*)
-(*ModuleTestingSym.TestDatabase [dbname] ~ *)
+(*test all TEST modules/procedures in symbol files in a path, logging to context and registering in TestSuite.Tester *)
+ModuleTestingSym.ModuleTest -l -t=TesterFile "work/*" ".Sym" ~
+
+(*same, but not logging to context*)
 ModuleTestingSym.ModuleTest -t=TesterFile "work/*" ".Sym" ~
+
 ModuleTestingSym.ReportResults~ 
 
 
