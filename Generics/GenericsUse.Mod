@@ -1,7 +1,7 @@
 MODULE GenericsUse; (** AUTHOR ""; PURPOSE ""; *)
 
 IMPORT
-	Commands, SizeContainers := GenericsContainers(SIZE(*, C*));
+	Commands, SizeContainers := GenericsContainers(SIZE, NIL);
 	
 PROCEDURE TestQueue(context: Commands.Context);
 VAR
@@ -31,16 +31,32 @@ BEGIN
 	context.out.Ln
 END TestDEQue;
 
+PROCEDURE TestVector(context: Commands.Context);
+VAR
+	vector: SizeContainers.Vector;
+	i, value: SIZE;
+BEGIN
+	NEW(vector);
+	FOR i := 0 TO 63 DO IGNORE vector.Add(i) END;
+	context.out.String("List sequentally added natural numbers from Vector:"); context.out.Ln;
+	FOR i := 0 TO vector.Count() - 1 DO
+		vector.Get(i, value);
+		context.out.Int(value, 0); context.out.Char(20X)
+	END;
+	context.out.Ln
+END TestVector;
+
 PROCEDURE Do*(context: Commands.Context);
 BEGIN
 	TestQueue(context);
 	TestDEQue(context);
+	TestVector(context)
 END Do;
 
-(*PROCEDURE C(l, r: SIZE): BOOLEAN;
+(*PROCEDURE SizeLess(l, r: SIZE): BOOLEAN;
 BEGIN
 	RETURN l < r
-END C;*)
+END SizeLess;*)
 
 BEGIN
 

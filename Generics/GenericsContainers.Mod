@@ -1,4 +1,12 @@
-MODULE GenericsContainers(TYPE T(*, CONST C*));
+
+(**
+	AUTHOR "Yaroslav Romanchenko";
+	PURPOSE "Generics Containers.
+		Parameters are:
+			T - type,
+			Less - less comparator procedure with signature (l, r: T): BOOLEAN"; *)
+
+MODULE GenericsContainers(TYPE T, CONST C (*Less*) );
 
 CONST
 	(* Initial size of containers *)
@@ -11,16 +19,19 @@ TYPE
 	(** Abstract container *)
 	Container* = OBJECT
 	VAR
-	
-		(* Size of base container (array)  *)
-		iSize: SIZE;
-	
-		array: PArrayT;
+		(* Size of base container (array) *)
+		m_iSize: SIZE;
+		m_pArray: PArrayT;
+		
+		PROCEDURE NewArray;
+		BEGIN
+			NEW(m_pArray, m_iSize)
+		END NewArray;
 		
 		PROCEDURE &NewContainer*();
 		BEGIN
-			iSize := INITIAL_SIZE;
-			NEW(array, iSize);
+			m_iSize := INITIAL_SIZE;
+			NewArray;
 			Clear
 		END NewContainer;
 		
@@ -32,17 +43,21 @@ TYPE
 		BEGIN HALT(301)
 		END Count;
 		
-		PROCEDURE Grow*();
+		PROCEDURE Empty*(): BOOLEAN;
+		BEGIN HALT(301)
+		END Empty;
+		
+		PROCEDURE Grow();
 		VAR
-			oldArray: PArrayT;
+			pOldArray: PArrayT;
 			iOldSize, i: SIZE;
 		BEGIN
-			oldArray := array;
-			iOldSize := iSize;
-			iSize := iSize * 2;
-			NEW(array, iSize);
+			pOldArray := m_pArray;
+			iOldSize := m_iSize;
+			m_iSize := m_iSize * 2;
+			NewArray;
 			FOR i := 0 TO iOldSize - 1 DO
-				array[i] := oldArray[i]
+				m_pArray[i] := pOldArray[i]
 			END
 		END Grow;
 		
@@ -51,19 +66,15 @@ TYPE
 	(** Abstract stack *)
 	Stack* = OBJECT(Container)
 
-		PROCEDURE Empty*(): BOOLEAN;
-		BEGIN HALT(301)
-		END Empty;
-
-		PROCEDURE Pop*(VAR item: T): BOOLEAN;
+		PROCEDURE Pop*(VAR t: T): BOOLEAN;
 		BEGIN HALT(301)
 		END Pop;
 
-		PROCEDURE Push*(CONST item: T);
+		PROCEDURE Push*(CONST t: T);
 		BEGIN HALT(301)
 		END Push;
 
-		PROCEDURE Top*(VAR item: T): BOOLEAN;
+		PROCEDURE Top*(VAR t: T): BOOLEAN;
 		BEGIN HALT(301)
 		END Top;
 		
@@ -72,45 +83,47 @@ TYPE
 	(** Simple Queue or LIFO stack *)
 	Queue* = OBJECT(Stack)
 	VAR
-		iPos: SIZE;
+		m_iPos: SIZE;
 
 		PROCEDURE Clear*;
 		BEGIN
-			iPos := 0
+			m_iPos := 0
 		END Clear;
 
 		PROCEDURE Count*(): SIZE;
 		BEGIN
-			RETURN iPos
+			RETURN m_iPos
 		END Count;
 		
 		PROCEDURE Empty*(): BOOLEAN;
 		BEGIN
-			RETURN iPos = 0
+			RETURN m_iPos = 0
 		END Empty;
 		
-		PROCEDURE Pop*(VAR item: T): BOOLEAN;
+		PROCEDURE Pop*(VAR t: T): BOOLEAN;
 		VAR
 			bOk: BOOLEAN;
 		BEGIN
-			bOk := iPos # 0;
-			IF bOk THEN DEC(iPos); item := array[iPos] END;
+			bOk := m_iPos # 0;
+			IF bOk THEN
+				DEC(m_iPos); t := m_pArray[m_iPos]
+			END;
 			RETURN bOk
 		END Pop;
 
-		PROCEDURE Push*(CONST item: T);
+		PROCEDURE Push*(CONST t: T);
 		BEGIN
-			IF iPos = iSize THEN Grow END;
-			array[iPos] := item;
-			INC(iPos)
+			IF m_iPos = m_iSize THEN Grow END;
+			m_pArray[m_iPos] := t;
+			INC(m_iPos)
 		END Push;
 
-		PROCEDURE Top*(VAR item: T): BOOLEAN;
+		PROCEDURE Top*(VAR t: T): BOOLEAN;
 		VAR
 			bOk: BOOLEAN;
 		BEGIN
-			bOk := iPos # 0;
-			IF bOk THEN item := array[iPos - 1] END;
+			bOk := m_iPos # 0;
+			IF bOk THEN t := m_pArray[m_iPos - 1] END;
 			RETURN bOk
 		END Top;
 
@@ -119,158 +132,218 @@ TYPE
 	(** Double Ended Queue or FIFO stack *)
 	DEQue* = OBJECT(Stack)
 	VAR
-		iHead, iTail: SIZE;
+		m_iHead, m_iTail: SIZE;
 
 		PROCEDURE Clear*();
 		BEGIN
-			iHead := 0;
-			iTail := 0
+			m_iHead := 0;
+			m_iTail := 0
 		END Clear;
 
 		PROCEDURE Count*(): SIZE;
 		BEGIN
-			RETURN iTail - iHead
+			RETURN m_iTail - m_iHead
 		END Count;
 		
 		PROCEDURE Empty*(): BOOLEAN;
 		BEGIN
-			RETURN iTail - iHead = 0
+			RETURN m_iTail - m_iHead = 0
 		END Empty;
 
-		PROCEDURE Grow*();
+		PROCEDURE Grow();
 		VAR
 			iCount, i: SIZE;
 		BEGIN
-			iCount := iTail - iHead;
+			iCount := m_iTail - m_iHead;
 			IF iCount = 0 THEN
 				(* DEQue is empty, simply reset... *)
-				iHead := 0; iTail := 0
-			ELSIF iCount * 2 > iSize THEN
+				m_iHead := 0; m_iTail := 0
+			ELSIF iCount * 2 > m_iSize THEN
 				(* Must grow, call default implementation *)
 				Grow^
 			ELSE
-				(* may for now simply shift, to move free space to the end *)
+				(* may for now simply shift,
+					to move free space to the end *)
 				FOR i := 0 TO iCount - 1 DO
-					array[i] := array[iHead + i]
+					m_pArray[i] := m_pArray[m_iHead + i]
 				END;
-				iHead := 0; iTail := iCount
+				m_iHead := 0; m_iTail := iCount
 			END
 		END Grow;
 
-		PROCEDURE Pop*(VAR item: T): BOOLEAN;
+		PROCEDURE Pop*(VAR t: T): BOOLEAN;
 		VAR
 			bOk: BOOLEAN;
 		BEGIN
-			bOk := iHead # iTail;
-			IF iHead # iTail THEN item := array[iHead];INC(iHead) END;
+			bOk := m_iHead # m_iTail;
+			IF m_iHead # m_iTail THEN
+				t := m_pArray[m_iHead]; INC(m_iHead)
+			END;
 			RETURN bOk
 		END Pop;
 		
-		PROCEDURE Push*(CONST item: T);
+		PROCEDURE Push*(CONST t: T);
 		BEGIN
-			IF iTail = iSize THEN Grow END;
-			array[iTail] := item;
-			INC(iTail)
+			IF m_iTail = m_iSize THEN Grow END;
+			m_pArray[m_iTail] := t;
+			INC(m_iTail)
 		END Push;
 
-		PROCEDURE Top*(VAR item: T): BOOLEAN;
+		PROCEDURE Top*(VAR t: T): BOOLEAN;
 		VAR
 			bOk: BOOLEAN;
 		BEGIN
-			bOk := iHead # iTail;
-			IF bOk THEN item := array[iHead] END;
+			bOk := m_iHead # m_iTail;
+			IF bOk THEN t := m_pArray[m_iHead] END;
 			RETURN bOk
 		END Top;
 
 	END DEQue;
 
-	(*
 	Vector* = OBJECT(Container)
-	CONST	
-		(* Sorted by default (comp shouldn't be NIL!) *)
-		SORTED* = 0;
-		(* Prevents from inserting of duplicate value *)
-		NO_DUPLICATES* = 1;
 	VAR
-		iPos: LONGINT;
-
-		pCompA, pCompB: PItem;
-		comp: LessComparer;
-
-		bSorted: BOOLEAN;
-
-		(* Options *)
-		bNoDuplicates: BOOLEAN;
-
-		(* temporary Item storage for Swap operation during sorting *)
-		bufTempItem: POINTER TO ARRAY OF CHAR;
-
-		PROCEDURE &NewVector*(iItemSize: LONGINT; pCompA, pCompB: PItem; comp: LessComparer; options: SET);
+		m_iPos: SIZE;
+		f_bSorted: BOOLEAN;
+		
+		PROCEDURE Add*(CONST t: T): SIZE;
+		VAR
+			pos: SIZE;
 		BEGIN
-			NewContainer(iItemSize);
-			SELF.pCompA := pCompA;
-			SELF.pCompB := pCompB;
-			SELF.comp := comp;
-			bNoDuplicates := {NO_DUPLICATES} * options # {};
-			bSorted := {SORTED} * options # {};
-			ASSERT(~bSorted OR (bSorted & (comp # NIL) & (pCompA # NIL) & (pCompB # NIL)));
-			NEW(bufTempItem, iItemSize)
-		END NewVector;
+			(* Append as to unsorted array *)
+			f_bSorted := FALSE;
+			IF m_iPos = m_iSize THEN Grow END;
+			pos := m_iPos;
+			m_pArray[pos] := t;
+			INC(m_iPos);
+			RETURN pos
+		END Add;
 
-		PROCEDURE Clear*;
+		PROCEDURE Clear*();
 		BEGIN
-			iPos := 0
+			f_bSorted := FALSE;
+			m_iPos := 0
 		END Clear;
 
-		PROCEDURE Count*(): LONGINT;
+		PROCEDURE Count*(): SIZE;
 		BEGIN
-			RETURN iPos
+			RETURN m_iPos
 		END Count;
+		
+		PROCEDURE Empty*(): BOOLEAN;
+		BEGIN
+			RETURN m_iPos = 0
+		END Empty;
+		
+		PROCEDURE FindBinary(CONST t: T; VAR bFound: BOOLEAN): SIZE;
+		VAR
+			lower, middle, upper: SIZE;
+		BEGIN
+			bFound := FALSE;
+			IF m_iPos = 0 THEN RETURN 0 END;
+			lower := 0;
+			upper := m_iPos - 1;
+			WHILE lower <= upper DO
+				middle := lower + (upper - lower) DIV 2;
+				IF Less(m_pArray[middle], t) THEN
+					lower := middle + 1
+				ELSIF Less(t, m_pArray[middle]) THEN
+					upper := middle - 1
+				ELSE
+					bFound := TRUE;
+					RETURN middle
+				END;
+			END;
+			IF lower <= upper THEN
+				RETURN upper
+			ELSE
+				RETURN lower
+			END;
+		END FindBinary;
+
+		PROCEDURE FindSequentially(CONST t: T): SIZE;
+		VAR
+			i: SIZE;
+		BEGIN
+			i := 0;
+			WHILE i < m_iPos DO
+				IF ~Less(m_pArray[i], t) & ~Less(t, m_pArray[i]) THEN
+					RETURN i
+				END;
+				INC(i)
+			END;
+			RETURN -1
+		END FindSequentially;
+		
+		PROCEDURE Get*(pos: SIZE; VAR t: T);
+		BEGIN
+			ASSERT((pos >= 0) & (pos < m_iPos), 101);
+			t := m_pArray[pos]
+		END Get;
 
 		PROCEDURE GetSorted*(): BOOLEAN;
 		BEGIN
-			RETURN bSorted
+			RETURN f_bSorted
 		END GetSorted;
-
-		PROCEDURE SetSorted*(b: BOOLEAN);
-		BEGIN
-			ASSERT((comp # NIL) & (pCompA # NIL) & (pCompB # NIL));
-			IF bSorted = b THEN
-				RETURN
-			END;
-			bSorted := b;
-			IF ~bSorted OR (iPos = 0) THEN
-				RETURN
-			END;
-			QuickSort(0, iPos - 1)
-		END SetSorted;
-
-		PROCEDURE QuickSort(l, r: LONGINT);
+		
+		PROCEDURE IndexOf*(CONST t: T): SIZE;
 		VAR
-			i, j, x: LONGINT;
-			addrI, addrJ, addrX: ADDRESS;
+			pos: SIZE;
+			bFound: BOOLEAN;
+		BEGIN
+			IF f_bSorted THEN
+				pos := FindBinary(t, bFound);
+				IF bFound THEN
+					RETURN pos
+				ELSE
+					RETURN -1
+				END
+			ELSE
+				RETURN FindSequentially(t)
+			END
+		END IndexOf;
+
+		PROCEDURE Insert*(pos: SIZE; CONST t: T);
+		VAR
+			iSrc: SIZE;
+		BEGIN
+			ASSERT((pos >= 0) & (pos < m_iPos), 101);
+			(* Insert as to unsorted array *)
+			f_bSorted := FALSE;
+			IF m_iPos = m_iSize THEN
+				Grow
+			END;
+			(* Shift content of array *)
+			iSrc := m_iPos - 1;
+			WHILE iSrc >= pos DO
+				m_pArray[iSrc + 1] := m_pArray[iSrc];
+				DEC(iSrc)
+			END;
+			(* Put t at pos position *)
+			m_pArray[pos] := t;
+			INC(m_iPos)
+		END Insert;
+		
+		PROCEDURE QuickSort(l, r: SIZE);
+		VAR
+			i, j, x: SIZE;
+			t: T;
 		BEGIN
 			REPEAT
 				i := l;
 				j := r;
 				x := l + (r - l) DIV 2;
 				REPEAT
-					addrI := addrArray + i * iItemSize;
-					addrJ := addrArray + j * iItemSize;
-					addrX := addrArray + x * iItemSize;
-					WHILE less(addrI, addrX) DO
-						INC(i);
-						INC(addrI, iItemSize)
+					WHILE Less(m_pArray[i], m_pArray[x]) DO
+						INC(i)
 					END;
-					WHILE less(addrX, addrJ) DO
-						DEC(j);
-						DEC(addrJ, iItemSize)
+					WHILE Less(m_pArray[x], m_pArray[j]) DO
+						DEC(j)
 					END;
 					IF i <= j THEN
 						(* Swap i'th and j'th element *)
-						SYSTEM.MOVE(addrI, ADDRESSOF(bufTempItem^[0]), iItemSize);
-						SYSTEM.MOVE(addrJ, addrI, iItemSize);
-						SYSTEM.MOVE(ADDRESSOF(bufTempItem^[0]), addrJ, iItemSize);
+						t := m_pArray[i];
+						m_pArray[i] := m_pArray[j];
+						m_pArray[j] := t;
 						IF x = i THEN
 							x := j
 						ELSIF x = j THEN
@@ -287,200 +360,43 @@ TYPE
 			UNTIL i >= r
 		END QuickSort;
 
-		PROCEDURE less(addrCompA, addrCompB: ADDRESS): BOOLEAN;
-		BEGIN
-			SYSTEM.MOVE(addrCompA, ADDRESSOF(pCompA^), iItemSize);
-			SYSTEM.MOVE(addrCompB, ADDRESSOF(pCompB^), iItemSize);
-			RETURN comp(pCompA, pCompB)
-		END less;
-
-		PROCEDURE IndexOfInternal*(VAR x: Item): LONGINT;
+		PROCEDURE Remove*(index: SIZE);
 		VAR
-			pos: LONGINT;
-			bFound: BOOLEAN;
+			iDst: SIZE;
 		BEGIN
-			ASSERT((comp # NIL) & (pCompA # NIL) & (pCompB # NIL));
-			IF bSorted THEN
-				pos := FindPosition(x, bFound);
-				IF bFound THEN
-					RETURN pos
-				ELSE
-					RETURN -1
-				END
-			ELSE
-				RETURN FindSequentially(x)
-			END
-		END IndexOfInternal;
-
-		(** Add an object to the list. Add may block if number of
-			calls to Lock is bigger than the number of calls to Unlock *)
-		PROCEDURE AddInternal*(VAR x: Item): LONGINT;
-		VAR
-			pos: LONGINT;
-		BEGIN
-			IF bSorted THEN
-				(* Only Addition is possible. Just Add into sorted array *)
-				pos := AddUnlocked(x)
-			ELSE
-				(* Append to unsorted array *)
-				IF bNoDuplicates THEN
-					ASSERT(FindSequentially(x) = -1)
-				END;
-				IF iPos = iSize THEN
-					Grow
-				END;
-				(* Put x at Count position *)
-				SYSTEM.MOVE(ADDRESSOF(x), addrArray + iPos * iItemSize, iItemSize);
-				pos := iPos;
-				INC(iPos)
+			ASSERT((index >= 0) & (index < m_iPos), 101);
+			(* Shift content of array *)
+			iDst := index;
+			WHILE iDst < m_iPos - 1 DO
+				m_pArray[iDst] := m_pArray[iDst + 1];
+				INC(iDst)
 			END;
-			RETURN pos
-		END AddInternal;
-
-		PROCEDURE GetInternal*(pos: LONGINT; VAR x: Item);
-		BEGIN
-			ASSERT((pos >= 0) & (pos < iPos), 101);
-			SYSTEM.MOVE(addrArray + pos * iItemSize, ADDRESSOF(x), iItemSize)
-		END GetInternal;
-
-		PROCEDURE SetInternal*(pos: LONGINT; VAR x: Item);
-		BEGIN
-			ASSERT((pos >= 0) & (pos < iPos), 101);
-			SYSTEM.MOVE(ADDRESSOF(x), addrArray + pos * iItemSize, iItemSize)
-		END SetInternal;
-
-		PROCEDURE InsertInternal*(pos: LONGINT; VAR x: Item);
-		VAR
-			i, posDummy: LONGINT;
-			adrSrc: ADDRESS;
-		BEGIN
-			ASSERT((pos >= 0) & (pos < iPos), 101);
-			IF bSorted THEN
-				(* Only Addition is possible. Just Add into sorted array *)
-				posDummy := AddUnlocked(x)
-			ELSE
-				(* Insert to unsorted array *)
-				IF bNoDuplicates THEN
-					ASSERT(FindSequentially(x) = -1)
-				END;
-				IF iPos = iSize THEN
-					Grow
-				END;
-				i := iPos - 1;
-				adrSrc := addrArray + i * iItemSize;
-				WHILE i >= pos DO
-					(*array[i + 1] := array[i];*)
-					SYSTEM.MOVE(adrSrc, adrSrc + iItemSize, iItemSize);
-					DEC(adrSrc, iItemSize);
-					DEC(i)
-				END;
-				(* Put x at pos position *)
-				SYSTEM.MOVE(ADDRESSOF(x), addrArray + pos * iItemSize, iItemSize);
-				INC(iPos)
-			END
-		END InsertInternal;
-
-		(** Remove an object from the list. Remove may block if number of calls to Lock is bigger than the number of calls to Unlock *)
-		PROCEDURE Remove*(pos: LONGINT);
-		VAR
-			i: LONGINT;
-			adrSrc: ADDRESS;
-		BEGIN
-			ASSERT((pos >= 0) & (pos < iPos), 101);
-			i := pos;
-			adrSrc := addrArray + (i + 1) * iItemSize;
-			WHILE i < iPos - 1 DO
-				(*array[i] := array[i + 1];*)
-				SYSTEM.MOVE(adrSrc, adrSrc - iItemSize, iItemSize);
-				INC(adrSrc, iItemSize);
-				INC(i)
-			END;
-			DEC(iPos)
+			DEC(m_iPos)
 		END Remove;
 
-		PROCEDURE FindSequentially(VAR x: Item): LONGINT;
-		VAR
-			i: LONGINT;
-			addrI, addrX: ADDRESS;
+		PROCEDURE Set*(index: SIZE; CONST t: T);
 		BEGIN
-			i := 0;
-			addrI := addrArray;
-			addrX := ADDRESSOF(x);
-			WHILE i < iPos DO
-				IF ~less(addrI, addrX) & ~less(addrX, addrI) THEN
-					RETURN i
-				END;
-				INC(i);
-				INC(addrI, iItemSize)
-			END;
-			RETURN -1
-		END FindSequentially;
+			ASSERT((index >= 0) & (index < m_iPos), 101);
+			m_pArray[index] := t
+		END Set;
 
-		(* Binary search *)
-		PROCEDURE FindPosition(VAR x: Item; VAR bFound: BOOLEAN): LONGINT;
-		VAR
-			lower, middle, upper: LONGINT;
-			addrMiddle: ADDRESS;
+		PROCEDURE SetSorted*(bValue: BOOLEAN);
 		BEGIN
-			bFound := FALSE;
-			IF iPos = 0 THEN RETURN 0 END;
-			lower := 0;
-			upper := iPos - 1;
-			WHILE lower <= upper DO
-				middle := lower + (upper - lower) DIV 2;
-				addrMiddle := addrArray + middle * iItemSize;
-				IF less(addrMiddle, ADDRESSOF(x)) THEN
-					(* array[middle] < x *)
-					lower := middle + 1
-				ELSIF less(ADDRESSOF(x), addrMiddle) THEN
-					(* x < array[middle] *)
-					upper := middle - 1
-				ELSE
-					(* array[middle] = x *)
-					bFound := TRUE;
-					RETURN middle
-				END;
+			IF f_bSorted = bValue THEN
+				RETURN
 			END;
-			IF lower <= upper THEN
-				RETURN upper
-			ELSE
-				RETURN lower
+			f_bSorted := bValue;
+			IF ~f_bSorted OR (m_iPos = 0) THEN
+				RETURN
 			END;
-		END FindPosition;
-
-		PROCEDURE AddUnlocked(VAR x: Item): LONGINT;
-		VAR
-			pos, i: LONGINT;
-			bFound: BOOLEAN;
-			adrSrc: ADDRESS;
-		BEGIN
-			pos := FindPosition(x, bFound);
-			IF bNoDuplicates THEN
-				ASSERT(~bFound)
-			END;
-			IF iPos = iSize THEN
-				Grow
-			END;
-			i := iPos - 1;
-			adrSrc := addrArray + i * iItemSize;
-			WHILE i >= pos DO
-				(*array[i + 1] := array[i];*)
-				SYSTEM.MOVE(adrSrc, adrSrc + iItemSize, iItemSize);
-				DEC(adrSrc, iItemSize);
-				DEC(i)
-			END;
-			(* Put x at pos position *)
-			SYSTEM.MOVE(ADDRESSOF(x), addrArray + pos * iItemSize, iItemSize);
-			INC(iPos);
-			RETURN pos
-		END AddUnlocked;
-
-		PROCEDURE IsEmpty*(): BOOLEAN;
-		BEGIN
-			RETURN iPos = 0
-		END IsEmpty;
+			QuickSort(0, m_iPos - 1)
+		END SetSorted;
 
 	END Vector;
-	*)
+	
+PROCEDURE Less(l, r: T): BOOLEAN;
+BEGIN
+	RETURN TRUE
+END Less;
 	
 END GenericsContainers.
