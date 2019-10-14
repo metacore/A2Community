@@ -68,6 +68,8 @@ TYPE
 	WaveletConvolver* = OBJECT
 	VAR temp, tmpLo, tmpHi, tmpResLo, tmpResHi: Dataarray;
 		wavelet-: WaveletFamily;
+		preAn*,postLoAn*,postHiAn*,
+		preLoRec*,preHiRec*,postRec* : PROCEDURE (CONST d:Dataarray):Dataarray;(*optional pre/postprocessing of data/result*)
 		boundary*,shift*:SIGNED32;
 		upHiCoeffs,upLoCoeffs,downHiCoeffs,downLoCoeffs:Dataarray;
 
@@ -106,7 +108,11 @@ TYPE
 				IF (LEN( tmpLo ) # rawdatalen) THEN NEW( tmpLo, rawdatalen ) END;
 				IF (LEN( tmpHi ) # rawdatalen) THEN NEW( tmpHi, rawdatalen ) END;   (*to improve: CAN USE SHORTER RESULT ARRAYS *)
 
-				temp[filterlen..filterlen + datalen-1]:=data[..datalen-1]; (*PH090207*)
+				IF preAn#NIL THEN temp[filterlen..filterlen + datalen-1]:=preAn(data[..datalen-1]) (* optional preprocessing of data *)
+				ELSE temp[filterlen..filterlen + datalen-1]:=data[..datalen-1]
+				END;
+					
+				
 
 				CASE boundary OF (*!to do: even/odd, symmetric/asymmetric filters*)
 				mirrorH:
@@ -150,9 +156,16 @@ TYPE
 
 				offsetLo := (filterlen - wavelet.loAnalysis.origin) DIV 2;
 				offsetHi := (filterlen - wavelet.hiAnalysis.origin) DIV 2;
-
-				resdata[..(datalen + 1) DIV 2-1]:=tmpLo[offsetLo..offsetLo + ((datalen + 1) DIV 2)-1]; (*to do: symmetries*)
-				resdata[(datalen + 1) DIV 2..(datalen + 1) DIV 2 + (datalen) DIV 2-1] := tmpHi[offsetHi..offsetHi +(datalen) DIV 2-1 ];(*PH090207*)
+				IF postLoAn#NIL THEN (*optional postprocessing*)
+					resdata[..(datalen + 1) DIV 2-1]:=postLoAn(tmpLo[offsetLo..offsetLo + ((datalen + 1) DIV 2)-1]); (*to do: symmetries*)
+				ELSE
+					resdata[..(datalen + 1) DIV 2-1]:=tmpLo[offsetLo..offsetLo + ((datalen + 1) DIV 2)-1]; (*to do: symmetries*)				
+				END;
+				IF postHiAn#NIL THEN
+					resdata[(datalen + 1) DIV 2..(datalen + 1) DIV 2 + (datalen) DIV 2-1] := postHiAn(tmpHi[offsetHi..offsetHi +(datalen) DIV 2-1 ]);
+				ELSE
+					resdata[(datalen + 1) DIV 2..(datalen + 1) DIV 2 + (datalen) DIV 2-1] := tmpHi[offsetHi..offsetHi +(datalen) DIV 2-1 ];(*PH090207*)
+				END;
 
 			ELSE HALT(100); (*not yet implemented*)(*! to do: need to port other boundary conditions*)
 			END;
@@ -177,9 +190,12 @@ TYPE
 				IF (LEN( tmpResLo ) # datalen + 2 * filterlen) THEN NEW( tmpResLo, datalen + 2 * filterlen )	END;
 				IF (LEN( tmpResHi ) # (datalen + 2 * filterlen)) THEN NEW( tmpResHi, datalen + 2 * filterlen ) END;
 
-				 tmpLo[halffilterlen..halffilterlen +halfLenPlus -1]:= data[..halfLenPlus-1];
-				 tmpHi[halffilterlen..halffilterlen+halfLen-1]:= data[halfLenPlus..halfLenPlus+halfLen-1];
-
+				IF preLoRec#NIL THEN tmpLo[halffilterlen..halffilterlen +halfLenPlus -1]:= preLoRec(data[..halfLenPlus-1])
+				ELSE tmpLo[halffilterlen..halffilterlen +halfLenPlus -1]:= data[..halfLenPlus-1];
+				END;
+				IF preHiRec#NIL THEN tmpHi[halffilterlen..halffilterlen+halfLen-1]:= preHiRec(data[halfLenPlus..halfLenPlus+halfLen-1]);
+				ELSE tmpHi[halffilterlen..halffilterlen+halfLen-1]:= data[halfLenPlus..halfLenPlus+halfLen-1];
+				END;
 				CASE boundary OF
 				mirrorH, mirrorW:
 					IF ODD( datalen ) THEN
@@ -222,6 +238,7 @@ TYPE
 						tmpResLo[2 * halffilterlen + offsetLo + i] +
 						tmpResHi[2 * halffilterlen + offsetHi + i]
 				END;
+				IF postRec#NIL THEN resdata[0..datalen]:=postRec(resdata[0..datalen]) END;
 			ELSE HALT(100); (*not yet implemented*)
 			END;
 		END Reconstruct;

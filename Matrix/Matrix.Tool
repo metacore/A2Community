@@ -5,7 +5,7 @@ Linear Algebra and Planar/Volumetric Signal Processing Modules. Copyright Patric
 Testing.Install ~ (*find TEST procedures and test them after compilation*)
 
 System.FreeDownTo MatrixBase ~
-Compiler.Compile -S="Matrix/" --define=TEST (*include TEST procedures in compilation*)
+Compiler.Compile -S="Matrix/" --test=MatrixTestBackend --testMode=Immediate
 
 MatrixBase.Mod 
 

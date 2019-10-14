@@ -1,11 +1,16 @@
 MODULE PlanarWavelets; (** AUTHOR "Patrick Hunziker"; PURPOSE "2D wavelet decomposition"; *)
 
-IMPORT Wavelets, Statistics:=StatisticsBase, WMArrayPanel;
+IMPORT Wavelets, WMArrayPanel, PMath;
+
+CONST 
+	Plain*=0; (*can be 1..n levels *)
+	Packet*=1;
 
 TYPE Datatype*=Wavelets.Datatype;
 	Tensor*=ARRAY [?] OF Datatype;
 	Matrix*=ARRAY [*,*] OF Datatype;
 	Line*=ARRAY [*] OF Datatype;
+	ProcessProc*= PROCEDURE{DELEGATE} (CONST d: Matrix):Matrix;
 
 TYPE Analyzer*= OBJECT
 	VAR data*: Matrix;
@@ -39,7 +44,7 @@ TYPE Analyzer*= OBJECT
 
 
 	PROCEDURE Analyze*;
-	VAR i:SIZE; offset:Datatype; LL: Matrix;
+	VAR i:SIZE; 
 	BEGIN
 		FOR i:=0 TO LEN(data,0)-1 DO
 			conv.Analyze(data[i], resX);
@@ -52,7 +57,6 @@ TYPE Analyzer*= OBJECT
 	END Analyze;
 
 	PROCEDURE AnalyzeMultiscale*(levels:SIGNED32);
-	VAR i:SIGNED32;
 	BEGIN
 		Analyze;
 		IF levels>1 THEN
@@ -63,7 +67,6 @@ TYPE Analyzer*= OBJECT
 	END AnalyzeMultiscale;
 
 	PROCEDURE AnalyzePacket*(levels:SIGNED32);
-	VAR i:SIGNED32;
 	BEGIN
 		Analyze;
 		IF levels>1 THEN
@@ -120,7 +123,7 @@ TYPE Reconstructor*= OBJECT
 
 
 	PROCEDURE Reconstruct*;
-	VAR i:SIZE; offset:Datatype; LL: Matrix;
+	VAR i:SIZE; 
 	BEGIN
 		FOR i:=0 TO LEN(data,0)-1 DO
 			conv.Reconstruct(data[i], resX);
@@ -133,7 +136,6 @@ TYPE Reconstructor*= OBJECT
 	END Reconstruct;
 
 	PROCEDURE ReconstructMultiscale*(levels:SIGNED32);
-	VAR i:SIGNED32;
 	BEGIN
 		IF levels>1 THEN
 			NEW(child, waveletType, boundary, data[..(LEN(data,0)+1)DIV 2-1, ..(LEN(data,1)+1) DIV 2-1]);
@@ -144,7 +146,6 @@ TYPE Reconstructor*= OBJECT
 	END ReconstructMultiscale;
 
 	PROCEDURE ReconstructPacket*(levels:SIGNED32);
-	VAR i:SIGNED32;
 	BEGIN
 		IF levels>1 THEN
 			NEW(child, waveletType, boundary, data[..(LEN(data,0)+1)DIV 2-1, ..(LEN(data,1)+1) DIV 2-1]); (*! should use child.SetData for efficiency*)
@@ -167,20 +168,120 @@ TYPE Reconstructor*= OBJECT
 	END ReconstructPacket;
 
 	END Reconstructor;
-
+	
+	TYPE Filter*= OBJECT 
+			VAR structure*: INTEGER;
+(*				coeffs*: ARRAY [? ] OF Datatype; (* [2,2] for each level of a multiscale analysis; [2^n,2^n] for wavelet packets at level n *)
+				process*: ARRAY [?] OF PROCEDURE (CONST d: Matrix):Matrix; (*arbitrary processing of data*)
+*)				nextLevel*: Filter;	
+				PROCEDURE &New*(structure, level, levels:INTEGER);
+				BEGIN
+					SELF.structure:=structure;
+					IF level<levels-1 THEN NEW(nextLevel, structure, level+1, levels) END;
+				END New;
+				
+				(* for n levels, structure of coeffs/proc is:
+						in Plain wavelets, coeff/proc = ARRAY [n,2,2]
+						in wavelet packets, coeff/proc = ARRAY [2^n,2^n]
+				*) 
+				PROCEDURE Apply*(VAR data: Matrix; CONST coeffs: ARRAY[?] OF Datatype; CONST proc: ARRAY [?] OF ProcessProc; level, levels:INTEGER); 
+				VAR w,h, cw,ch: SIZE; p00,p01,p10,p11: ARRAY [*,*] OF ProcessProc; c00,c01,c10,c11: Matrix;
+				BEGIN
+					ASSERT(
+						(structure=Plain) & ((LEN(coeffs)=[levels,2,2]) OR (LEN(coeffs)=0))		OR
+						(structure=Packet) & ((LEN(coeffs)=[PMath.powerof2(levels-level),PMath.powerof2(levels-level)]) OR (LEN(coeffs)=0))		
+						, 201);
+					ASSERT(
+						(structure=Plain) & ((LEN(proc)=[levels,2,2]) OR (LEN(proc)=0))		OR
+						(structure=Packet) & ((LEN(proc)=[PMath.powerof2(levels-level),PMath.powerof2(levels-level)]) OR (LEN(proc)=0))		
+						, 202);
+					w:=(LEN(data,1)+1) DIV 2; (* can be non-power-of-2 *)
+					h:=(LEN(data,0)+1) DIV 2;
+					cw:=LEN(coeffs,1) DIV 2;(* always power-of-2 *)
+					ch:=LEN(coeffs,0) DIV 2;
+					IF (structure=Plain) THEN
+						IF DIM(coeffs)>0 THEN
+							IF level=levels-1 THEN data[..h-1,..w-1]:=coeffs[level, 0,0]*data[..h-1,..w-1] END;
+							data[..h-1,w..]:=coeffs[level, 0,1]*data[..h-1,w..];
+							data[h..,..w-1]:=coeffs[level, 1,0]*data[h..,..w-1];
+							data[h..,w..]:=coeffs[level, 1,1]*data[h..,w..];
+						END;
+						IF (DIM(proc)>0) & (LEN(proc)>0) THEN
+							IF level=levels-1 THEN data[..h-1,..w-1]:=proc[level,0,0](data[..h-1,..w-1]) END;
+							data[..h-1,w..]:=proc[level,0,1](data[..h-1,w..]);
+							data[h..,..w-1]:=proc[level,1,0](data[h..,..w-1]);
+							data[h..,w..]:=proc[level,1,1](data[h..,w..]);
+						END;
+						IF level<levels-1 THEN
+							nextLevel.Apply(data[..h-1,..w-1], coeffs, proc, level+1, levels) 
+						END;
+					ELSE (*packets*)
+						IF level=levels-1 THEN
+							IF DIM(coeffs)>0 THEN
+								data[..h-1,..w-1]:=coeffs[0,0]*data[..h-1,..w-1];
+								data[..h-1,w..]:=coeffs[0,1]*data[..h-1,w..];
+								data[h..,..w-1]:=coeffs[1,0]*data[h..,..w-1];
+								data[h..,w..]:=coeffs[1,1]*data[h..,w..];
+							END;
+							IF (DIM(proc)>0) & (LEN(proc)>0) THEN
+								data[..h-1,..w-1]:=proc[0,0](data[..h-1,..w-1]);
+								data[..h-1,w..]:=proc[0,1](data[..h-1,w..]);
+								data[h..,..w-1]:=proc[1,0](data[h..,..w-1]);
+								data[h..,w..]:=proc[1,1](data[h..,w..]);
+							END;
+						ELSE
+							IF (DIM(proc)>0) & (LEN(proc)>0) THEN
+								p00:=ALIAS OF proc[..ch-1,..cw-1];
+								p01:=ALIAS OF proc[..ch-1,cw..];
+								p10:=ALIAS OF proc[ch..,..cw-1];
+								p11:=ALIAS OF proc[cw..,ch..];
+							END;
+							IF LEN(coeffs)>1 THEN 
+								c00:=ALIAS OF coeffs[..ch-1,..cw-1];
+								c01:=ALIAS OF coeffs[..ch-1,cw..];
+								c10:=ALIAS OF coeffs[ch..,..cw-1];
+								c11:=ALIAS OF coeffs[cw..,ch..];
+							END;
+							nextLevel.Apply(data[..h-1,..w-1], c00, p00, level+1, levels);
+							nextLevel.Apply(data[..h-1,w..], 	c01,	p01, level+1, levels);
+							nextLevel.Apply(data[h..,..w-1], 	c10,	p10, level+1, levels);
+							nextLevel.Apply(data[h..,w..], 		c11,	p11, level+1, levels);
+						END;
+					END;
+				END Apply;
+		END Filter;
+	
 PROCEDURE Test*;
-VAR a,b,c: Matrix;
+CONST levels=3;
+(*	wavelet=Wavelets.Haar;*)
+	wavelet=Wavelets.Spline610;
+(*	wavelet=Wavelets.Spline97;*)
+	(*wavelet=Wavelets.Cubicspline;*)
+VAR a: Matrix;
 	an:Analyzer;
 	rec:Reconstructor;
+	filter:Filter;
+	coeff: ARRAY [?] OF Datatype;
+	procs: ARRAY [?] OF ProcessProc;
 BEGIN
 	NEW(a,200,200); a[50..100,50..100]:=1.0;
 	WMArrayPanel.AddWindow(a,"data");
-	NEW(an, Wavelets.Haar, Wavelets.finite, a);
-	an.AnalyzePacket(3);
+	NEW(an, wavelet, Wavelets.default, a);
+	an.AnalyzePacket(levels);
 	WMArrayPanel.AddWindow(an.data,"analysis");
-	NEW(rec, Wavelets.Haar, Wavelets.finite, an.data);
-	rec.ReconstructPacket(3);
+	NEW(rec, wavelet, Wavelets.default, an.data);
+	rec.ReconstructPacket(levels);
 	WMArrayPanel.AddWindow(rec.data,"reconstruction");
+
+	NEW(filter, Packet, 0, levels);
+	(*filter.Apply(an.data, [[0,1,1,1],[1,1,1,1],[1,1,1,1],[1,1,1,1]], procs, 0, levels);*)(* 2 levels*)
+	NEW(coeff, PMath.powerof2(levels), PMath.powerof2(levels));
+	coeff:=1.0; coeff[0,0]:=0;
+	filter.Apply(an.data, coeff, procs, 0, levels); 
+	NEW(rec, wavelet, Wavelets.finite, an.data);
+	rec.ReconstructPacket(levels);
+	WMArrayPanel.AddWindow(rec.data,"filtered reconstruction");
+
 	WMArrayPanel.AddWindow(rec.data-a,"error");
 END Test;
 
@@ -197,12 +298,13 @@ BEGIN
 	ASSERT(SUM(ABS(rec.data-a)) < 0.0001,200);
 END Test1;
 
-
-PROCEDURE {TEST}  Test2*;
+(*
+PROCEDURE {TEST}  Test2*;(* designed to trap *)
 VAR a:INTEGER;
-BEGIN
-	ASSERT(a=1);
+BEGIN 
+	ASSERT(a=1) 
 END Test2; 
+*)
 
 END PlanarWavelets.
 
@@ -210,3 +312,17 @@ PlanarWavelets.Test~
 PlanarWavelets.Test1~
 WMArrayPanel.AddWindow(rec.data,"reconstruction");
 System.FreeDownTo PlanarWavelets ~
+System.FreeDownTo WMArrayPanel ~
+
+System.DoCommands
+Compiler.Compile --test=Test Matrix/PlanarWavelets.Mod ~
+Compiler.Compile --test=Test TestTest.Mod ~
+FoxTest.Compile -l=ExecutionTest.Log  Execution.Test Execution.TestDiff ~
+
+~ 
+
+System.DoCommands
+Compiler.Compile --test=Test TestTest.Mod ~
+FoxTest.Compile -l=ExecutionTest.Log  Execution.Test Execution.TestDiff ~
+
+~ 

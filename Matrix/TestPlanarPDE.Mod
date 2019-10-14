@@ -6,7 +6,9 @@ MODULE TestPlanarPDE;
 	DATE 2009-2-12
 **)
 
-IMPORT PlanarPDE, WMMatrix;
+IMPORT PlanarPDE, WMMatrix, Files, MatrixUtilities;
+
+CONST TestFileName*="Matrix/PlanarPDE_ConstrainedLaplace.MtA";
 
 TYPE
 	Datatype = PlanarPDE.Datatype;
@@ -52,6 +54,43 @@ TYPE
 		WMMatrix.AddWindow(d,"d");
 	END TestConstrainedLaplace;
 
+	PROCEDURE StoreConstrainedLaplace*;
+	CONST size = 64;  threshold = 1;
+	VAR d,c: Grid;  b: PlanarPDE.BooleanMap;
+		con:PlanarPDE.Constraint;
+		laplace: PlanarPDE.Laplace;
+		f:Files.File; w:Files.Writer;
+	BEGIN
+		NEW( d, size, size );
+		NEW( c, size, size); c[20..30] := 1;  c[.. , 20..25] := -1;   c[32.. , 50..55] := 1;
+		NEW( b, size, size); b[20..30] := TRUE;  b[.. , 20..25] := TRUE;   b[32.. , 50..55] := TRUE;
+		NEW(con); con.Set(c,b);
+		NEW( laplace );  laplace.SolveMultigrid( d, threshold, 32, 20, 200, con.Constrain );
+		WMMatrix.AddWindow(d,"d");
+		f:=Files.New(TestFileName); Files.OpenWriter(w,f,0); Files.Register(f);
+		MatrixUtilities.StoreLR(w,d);
+	END StoreConstrainedLaplace;
+	
+	PROCEDURE {TEST} Test*;
+	CONST size = 64;  threshold = 1;
+	VAR 
+		e, d,c: Grid;  b: PlanarPDE.BooleanMap;
+		con:PlanarPDE.Constraint;
+		laplace: PlanarPDE.Laplace;
+		f:Files.File; r:Files.Reader;
+	BEGIN
+		NEW( d, size, size );
+		NEW( c, size, size); c[20..30] := 1;  c[.. , 20..25] := -1;   c[32.. , 50..55] := 1;
+		NEW( b, size, size); b[20..30] := TRUE;  b[.. , 20..25] := TRUE;   b[32.. , 50..55] := TRUE;
+		NEW(con); con.Set(c,b);
+		NEW( laplace );  laplace.SolveMultigrid( d, threshold, 32, 20, 200, con.Constrain );
+		f:=Files.Old(TestFileName);
+		Files.OpenReader(r,f,0);
+		e:=MatrixUtilities.LoadLR(r);
+		ASSERT(d=e);
+	END Test;
+	
+
 	PROCEDURE TestPoisson*;
 	CONST size = 200;  threshold = 1;
 	VAR d, p: Grid;  poisson: PlanarPDE.Poisson;
@@ -88,8 +127,11 @@ END TestPlanarPDE.
 System.Free TestPlanarPDE  PlanarPDE PlanarNabla PlanarBase ~
 
 TestPlanarPDE.TestLaplace
-TestPlanarPDE.TestConstrainedLaplace
+TestPlanarPDE.ConstrainedLaplace
 TestPlanarPDE.TestPoisson
 TestPlanarPDE.TestDiffusion
 TestPlanarPDE.TestWave
+
+TestPlanarPDE.StoreConstrainedLaplace
+TestPlanarPDE.Test
 

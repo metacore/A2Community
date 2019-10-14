@@ -3,7 +3,7 @@ MODULE TestMatrixStandardSolvers; (** AUTHOR ""; PURPOSE ""; *)
 IMPORT Base:=MatrixBase, Solvers:=MatrixStandardSolvers, MatrixTransforms, Util:= MatrixUtilities, Out:=KernelLog;
 
 PROCEDURE DoQR*;
-VAR QR: Solvers.QR; A,B,R, Ainv:Base.Matrix; b,x:Base.Vector; res:SIGNED32;
+VAR QR: Solvers.QR; A:Base.Matrix; b,x:Base.Vector;
 BEGIN
 	A:=[[1,2,3,4],[4,3,3,1],[1,2,4,3],[2,2,2,3]]; b:=[2,3,4,5];
 
@@ -36,7 +36,7 @@ BEGIN
 END DoQR;
 
 PROCEDURE DoGaussJordan*;
-VAR GJ: Solvers.GaussJordan; A,B,R, Ainv:Base.Matrix; b,x:Base.Vector; res:SIGNED32;
+VAR GJ: Solvers.GaussJordan; A:Base.Matrix; b,x:Base.Vector;
 BEGIN
 	A:=[[1,2,3,4],[4,3,3,1],[1,2,4,3],[2,2,2,3]]; b:=[2,3,4,5];
 
@@ -60,7 +60,7 @@ BEGIN
 END DoGaussJordan;
 
 PROCEDURE DoLU*;
-VAR LU: Solvers.LU; A,B,R, Ainv:Base.Matrix; b,x:Base.Vector; res:SIGNED32;
+VAR LU: Solvers.LU; A:Base.Matrix; b,x:Base.Vector;
 BEGIN
 	A:=[[1,2,3,4],[4,3,3,1],[1,2,4,3],[2,2,2,3]]; b:=[2,3,4,5];
 
@@ -85,7 +85,7 @@ END DoLU;
 
 
 PROCEDURE DoGauss*;
-VAR G: Solvers.Gauss; A,B,R, Ainv:Base.Matrix; b,x:Base.Vector; res:SIGNED32;
+VAR G: Solvers.Gauss; A:Base.Matrix; b,x:Base.Vector;
 BEGIN
 	A:=[[1,2,3,4],[4,3,3,1],[1,2,4,3],[2,2,2,3]]; b:=[2,3,4,5];
 
@@ -106,7 +106,7 @@ BEGIN
 END DoGauss;
 
 PROCEDURE DoCholesky*;
-VAR C: Solvers.Cholesky; A,B,R, Ainv:Base.Matrix; b,x:Base.Vector; res:SIGNED32;
+VAR C: Solvers.Cholesky; A:Base.Matrix; b:Base.Vector;
 BEGIN
 	A:=[[1,2,3,4],[4,3,3,1],[1,2,4,3],[2,2,2,3]]; b:=[2,3,4,5]; (*NOT POSITIVE DEFINITE*)
 	(* TRY NOW WITH POSITIVE DEFINITE MATRIX !! *)
@@ -131,7 +131,7 @@ END DoGaussAugmented;*)
 
 
 PROCEDURE DoGaussElim*;
-VAR A,B: Base.Matrix; v:Base.Vector; res,i,j:SIGNED32;
+VAR A: Base.Matrix;
 BEGIN
 	A:=[[1,2,3,4],[4,3,3,1],[1,2,4,3],[2,2,2,3]];
 	Util.OutMatrix(A);
@@ -156,6 +156,26 @@ BEGIN
 	out(B*x); Out.Ln;
 END DoQR2;
 *)
+PROCEDURE {TEST}Test*;
+VAR LU: Solvers.LU; QR:Solvers.QR; A:Base.Matrix; b,x,e:Base.Vector; error:REAL;
+BEGIN
+	A:=[[1,2,3,4],[4,3,3,1],[1,2,4,3],[2,2,2,3]]; b:=[2,3,4,5];
+
+	NEW(LU,A);
+	x:=LU.Solve(b);
+	e:=A*x-b;
+	error:=e+*e;
+	ASSERT(error<0.0001, 201);
+
+	A:=[[1,2,3,4],[4,3,3,1],[1,2,4,3],[2,2,2,3]]; b:=[2,3,4,5];
+	NEW(QR,A);
+	x:=QR.Solve(b);
+	e:=A*x-b;
+	error:=e+*e;
+	ASSERT(error<0.0001, 202); (*note: was correct with older releases, is now defunct with current release, without library change*)
+END Test;
+
+
 END TestMatrixStandardSolvers.
 
 SystemTools.Free
@@ -169,4 +189,5 @@ TestMatrixStandardSolvers.DoGauss
 TestMatrixStandardSolvers.DoGaussAugmented~
 TestMatrixStandardSolvers.DoGaussElim~
 TestMatrixStandardSolvers.DoCholesky
+TestMatrixStandardSolvers.Test
 MatrixStandardSolvers MatrixUtilities~

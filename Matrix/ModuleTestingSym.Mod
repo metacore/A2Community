@@ -7,7 +7,7 @@ CONST
 	LabeledProcTest* =2;
 
 TYPE AddItemProcedure=	PROCEDURE {DELEGATE}(itemType, testType: INTEGER;  CONST name: ARRAY OF CHAR; success: BOOLEAN);
-TYPE FileTestProcedure=PROCEDURE (CONST modName,procName:ARRAY OF CHAR; log:Streams.Writer; addItem:AddItemProcedure);
+TYPE AssessCommandProc=PROCEDURE (CONST modName,procName:ARRAY OF CHAR; log:Streams.Writer; addItem:AddItemProcedure);
 
 VAR tester: TestSuite.Tester;
 
@@ -27,15 +27,15 @@ BEGIN
 	END;
 	IF options.GetFlag("Log") THEN log:=context.out END;
 	IF context.arg.GetString(path) & context.arg.GetString(extension) THEN
-		IF tester#NIL THEN	EnumerateSymbolFileList(context, path, extension, log, tester.AddItem, FileTestProc);
-		ELSE EnumerateSymbolFileList(context, path, extension, log, NIL, FileTestProc);
+		IF tester#NIL THEN	EnumerateSymbolFiles(context, path, extension, log, tester.AddItem, AssessCommand);
+		ELSE EnumerateSymbolFiles(context, path, extension, log, NIL, AssessCommand);
 		END;
 	ELSE
 		HALT(200)
 	END;
 END ModuleTest;
 
-PROCEDURE FileTestProc(CONST modName,procName:ARRAY OF CHAR; log:Streams.Writer; addItem: AddItemProcedure);
+PROCEDURE AssessCommand(CONST modName,procName:ARRAY OF CHAR; log:Streams.Writer; addItem: AddItemProcedure);
 VAR fullName, msg: ARRAY 256 OF CHAR; res:INTEGER;
 BEGIN
 	COPY(modName, fullName); Strings.Append(fullName, "."); Strings.Append(fullName, procName);
@@ -44,9 +44,9 @@ BEGIN
 	IF log#NIL THEN log.String(msg); log.Int(res,6); log.Ln; log.Update; END;
 	
 	IF addItem#NIL THEN addItem(TestSuite.Test, LabeledProcTest, fullName, res=0) END; (*optional integration with TestSuite.Mod *)
-END FileTestProc;
+END AssessCommand;
 
-PROCEDURE EnumerateSymbolFileList(context:Commands.Context; CONST path,extension:ARRAY OF CHAR; log:Streams.Writer; addItem: AddItemProcedure; testProcEnum: FileTestProcedure);
+PROCEDURE EnumerateSymbolFiles(context:Commands.Context; CONST path,extension:ARRAY OF CHAR; log:Streams.Writer; addItem: AddItemProcedure; testProcEnum: AssessCommandProc);
 VAR e:Files.Enumerator; size:Files.Size; flags:SET; time, date: SIGNED32; pos:SIZE;
 	mask, fileName:Files.FileName; 
 	f:Files.File; r:Files.Reader;
@@ -57,11 +57,11 @@ BEGIN
 		pos:=Strings.Pos(extension,fileName); 
 		f:=Files.Old(fileName);
 		Files.OpenReader(r,f,0);
-		EnumerateSymbolFileTestProcs(log, addItem, r, testProcEnum);
+		EnumerateTestCommands(log, addItem, r, testProcEnum);
 	END;
-END EnumerateSymbolFileList;
+END EnumerateSymbolFiles;
 
-PROCEDURE EnumerateSymbolFileTestProcs(log:Streams.Writer; addItem:AddItemProcedure; r:Streams.Reader; testProcEnum: FileTestProcedure);
+PROCEDURE EnumerateTestCommands(log:Streams.Writer; addItem:AddItemProcedure; r:Streams.Reader; testProcEnum: AssessCommandProc);
 VAR line, keyword, modName, procName, arrow: ARRAY 256 OF CHAR;
 	leftbracket, rightbracket, modifier, pos: SIZE;
 BEGIN
@@ -89,7 +89,7 @@ BEGIN
 			END;
 		END;	
 	END;
-END EnumerateSymbolFileTestProcs;
+END EnumerateTestCommands;
 
 (*
 PROCEDURE Install*;

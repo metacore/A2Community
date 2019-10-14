@@ -16,7 +16,7 @@ TYPE
 		
 		PROCEDURE ProcessSyntaxTreeModule*(module: SyntaxTree.Module): Formats.GeneratedModule;
 		VAR procedure: SyntaxTree.Procedure; procedureName, moduleName, fullName: Basic.SectionName; file: Files.File; writer: Files.Writer;
-				msg: ARRAY 256 OF CHAR; res:INTEGER;
+				cmd, msg: ARRAY 256 OF CHAR; res:INTEGER;
 		BEGIN	
 			IF fileName#"" THEN 
 				file := Files.Old(fileName);
@@ -39,6 +39,7 @@ TYPE
 						writer.Update; 
 					END;
 					IF (testMode="Immediate") THEN
+						COPY("System.FreeDownTo ", cmd); Strings.Append(cmd, moduleName); Commands.Call(cmd, {Commands.Wait},res,msg); 
 						COPY(moduleName, fullName); Strings.Append(fullName, "."); Strings.Append(fullName, procedureName);
 						IF log#NIL THEN log.String("testing "); log.String(fullName); log.String(": "); log.Update; END;
 						Commands.Activate(fullName,NIL,{Commands.Wait},res,msg);

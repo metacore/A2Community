@@ -337,33 +337,28 @@ TYPE
 		Util.Print(context.out,  aaa, 7,4,0 );
 	END Test;
 	
-#IF TEST THEN
-	TYPE Success=OBJECT END Success;
-	PROCEDURE TESTPseudoInverse*():ANY; (*interface chosen because currently, GETPROCEDURE does not accept more suitable interface, and has problems with different names than TEST *)
-	VAR a,aa:Matrix; s,ss:Solver; success:Success;
+	PROCEDURE {TEST} TestPseudoInverse*; (*interface chosen because currently, GETPROCEDURE does not accept more suitable interface, and has problems with different names than TEST *)
+	VAR a,aa:Matrix; s,ss:Solver;
 	BEGIN (* generic matrix *)
 		NEW( a, 8, 10 ); a[..3,..4]:=[[1.0,0,2,0,0],[2,0,0,0,0],[0,3,0,0,0],[3,2,0,0,4]];
 		NEW( s, a );	
 		NEW( ss, s.PseudoInverse());
 		aa:=ss.PseudoInverse();
-		IF (aa-a)+*(aa-a)<0.0001 THEN NEW(success) END; 
-		RETURN success; 
-	END TESTPseudoInverse;	
+		ASSERT((aa-a)+*(aa-a)<0.0001); 
+	END TestPseudoInverse;	
 	
-	PROCEDURE TEST2x2*():ANY; 
-	VAR success:Success; s,ss:Solver; a,aa:Matrix; 
+	PROCEDURE {TEST} Test2x2*; 
+	VAR s,ss:Solver; a,aa:Matrix; 
 	BEGIN
-		(* 2x2 matrix *)
 		NEW(a,2,2); a:=[[2,1.8],[-1,1]];
 		NEW( s, a );	
 		NEW( ss, s.PseudoInverse());
 		aa:=ss.PseudoInverse();
-		IF (aa-a)+*(aa-a)<0.0001 THEN NEW(success); END;
-		RETURN success
-	END TEST2x2;
+		ASSERT ((aa-a)+*(aa-a)<0.0001);
+	END Test2x2;
 	
-	PROCEDURE TESTSolve*():ANY; 
-	VAR success:Success; a:Matrix; b,bb,x:Vector; s:Solver;
+	PROCEDURE {TEST} TestSolve*; 
+	VAR a:Matrix; b,bb,x:Vector; s:Solver;
 	BEGIN (*solving*)
 		a:=[ [5.1, 4.1, 2.2, 5.3, 2.0],
   				[2.3, 4.2, 0.0, 3.0, 0.0],
@@ -374,10 +369,8 @@ TYPE
 		NEW(s,a);
 		x:=s.Solve(b);
 		bb:=a*x; bb:=bb-b;
-		IF bb+*bb < 0.0001 THEN NEW(success) END; 
-		RETURN success; 
-	END TESTSolve;
-#END
+		ASSERT( bb+*bb < 0.0001 ); 
+	END TestSolve;
 
 BEGIN
 END MatrixSVD.
