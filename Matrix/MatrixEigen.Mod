@@ -144,24 +144,35 @@ CONST
 		MatrixUtilities.OutMatrix(svd.vt`  * svd.vt);
 	END QREigen;
 *)
+	PROCEDURE {TEST} Test*;
+	CONST TestThreshold=0.0001;
+	VAR svd: MatrixSVD.Solver;  A: Matrix; eigen:Vector; error: Datatype;
+	BEGIN
+		A := [[4, 1, 3, -2], [1, -2, 4, 1], [3, 4, 1, 2], [-2, 1, 2, 3]];  
+		NEW( svd, A );
+		eigen:=QREigen(A);
+		error:=SUM(ABS(svd.w))-SUM(ABS(eigen));
+		ASSERT( error < TestThreshold, 201); (*eigenvalues may differ in sign and ordering ..*) (*! was correct in 12/2017*)
+	END Test;
 
-
-	PROCEDURE Test*;
+	PROCEDURE Test1*;
 	VAR svd: MatrixSVD.Solver;  A: Matrix;
 	BEGIN
-		A := [[4, 1, 3, -2], [1, -2, 4, 1], [3, 4, 1, 2], [-2, 1, 2, 3]];  Out.String( "Eigenvalues by QR method : " );  Out.Ln;  MatrixUtilities.OutVector( QREigen( A ) );  Out.Ln;
+		A := [[4, 1, 3, -2], [1, -2, 4, 1], [3, 4, 1, 2], [-2, 1, 2, 3]];  Out.String( "Eigenvalues by QR method : " );  Out.Ln;  
+		MatrixUtilities.OutVector( QREigen( A ) );  Out.Ln;
 
 		Out.String( "Singular Values by SVD (differ in sign from eigenvalues for symmetric pos definite matrices): " );  Out.Ln;
 
 		NEW( svd, A );
 
-		MatrixUtilities.OutMatrix( svd.w );  Out.String( "Orthogonality check of u * ut in SVD: " );  Out.Ln;  MatrixUtilities.OutMatrix( svd.u * svd.u` );
+		MatrixUtilities.OutMatrix( svd.w );  Out.String( "Orthogonality check of u * ut in SVD: " );  Out.Ln;  
+		MatrixUtilities.OutMatrix( svd.u * svd.u` );
 
-	END Test;
+	END Test1;
 
 END MatrixEigen.
 
-System.Free MatrixEigen.Test ~
+System.Free MatrixEigen.Test1 ~
 fofPC.Compile \s * ~
 fofPC.Compile \f * ~
 OFormatter.Format *
