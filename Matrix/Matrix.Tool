@@ -4,6 +4,12 @@ Linear Algebra and Planar/Volumetric Signal Processing Modules. Copyright Patric
 
 Testing.Install ~ (*find TEST procedures and test them after compilation*)
 
+(* Compile MatrixTestBackend *)
+Compiler.Compile -S="Matrix/" 
+
+MatrixTestBackend.Mod
+~
+
 System.FreeDownTo MatrixBase ~
 Compiler.Compile -S="Matrix/" --test=MatrixTestBackend --testMode=Immediate
 
@@ -13,6 +19,9 @@ ComplexMathL.Mod
 MatrixUtilities.Mod 
 MatrixStreams.Mod
 PMath.Mod 
+
+MatrixRaster.Mod
+WMArrayPanel.Mod
 
 LinearMath.Mod 
 LinearFilters.Mod 
@@ -77,12 +86,10 @@ MatrixBlockSolvers.Mod
 
 MatrixFigures.Mod
 MatrixAVI.Mod
-MatrixRaster.Mod
 WMMatrix.Mod
 WMMatrixGraph.Mod
 WMStack.Mod
 WMTensor.Mod
-WMArrayPanel.Mod
 WMMatrixLoader.Mod
 
 (*WMSimpleGraphs.Mod*)
