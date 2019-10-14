@@ -9,7 +9,7 @@
 **)
 MODULE KrylovCGS;
 
-IMPORT MatrixBase, Math := MathL, Streams;
+IMPORT MatrixBase, Math := MathL, Streams, KernelLog;
 
 TYPE
 	TData = MatrixBase.Datatype;
@@ -31,9 +31,15 @@ TYPE
 		BEGIN
 			handleError := MatrixBase.HandleError;  res := MatrixBase.OK;
 
+			(* parameters by default *)
+			Tolerance := 1.0 / 1000000.0;   (* tolerance of solution residual *)
+			nMaxIterations := 30;   (* maximum number of iterations *)
+
+			Tiny := 10.0 * MatrixBase.EPS;
+
 			IF LEN( A ) = 0 THEN RETURN;
 			END;
-			IF LEN( A ) # LEN( A, 1 ) THEN
+			IF LEN( A, 0 ) # LEN( A, 1 ) THEN
 				res := MatrixBase.NOTSQUARE;  handleError( res, 'KrylovCGS: matrix is not square!' );  RETURN;
 			END;
 
@@ -45,17 +51,11 @@ TYPE
 
 			(* initial guess/solution *)
 			NEW( x, LEN( A,0 ) );
-
-			(* parameters by default *)
-			Tolerance := 1.0 / 1000000.0;   (* tolerance of solution residual *)
-			nMaxIterations := 30;   (* maximum number of iterations *)
-
-			Tiny := 10.0 * MatrixBase.EPS;
 		END Init;
 
 		PROCEDURE Solve*( CONST b: Vector ): Vector;
 		BEGIN
-			IF LEN( b ) # LEN( SysMatrix ) THEN
+			IF LEN( b, 0 ) # LEN( SysMatrix, 0 ) THEN
 				res := MatrixBase.SIZEMISMATCH;  handleError( res, 'KrylovCGS: matrix-vector size missmatch!' );  RETURN x;
 			END;
 
@@ -66,21 +66,20 @@ TYPE
 		PROCEDURE SolveNoCopy*( VAR A: Matrix;CONST b: Vector ): Vector;
 		BEGIN
 			IF LEN( A ) = 0 THEN RETURN x;  END;
-			IF LEN( A ) # LEN( A, 1 ) THEN
+			IF LEN( A, 0 ) # LEN( A, 1 ) THEN
 				res := MatrixBase.NOTSQUARE;  handleError( res, 'KrylovCGS: matrix is not square!' );  RETURN x;
 			END;
-			IF LEN( b ) # LEN( A ) THEN
+			IF LEN( b, 0 ) # LEN( A, 0 ) THEN
 				res := MatrixBase.SIZEMISMATCH;  handleError( res, 'KrylovCGS: matrix-vector size missmatch!' );  RETURN x;
 			END;
 
 			(* if necessary reallocate all arrays *)
-			IF LEN( b ) > LEN( x ) THEN
-				NEW( x, LEN( b,0 ) );
-				x := 0;   (* did NEW do it before or not?! *)
+			IF LEN( b, 0 ) > LEN( x, 0 ) THEN
+				NEW( x, LEN( b, 0 ) );
 			END;
-			IF LEN( b ) > LEN( resid0 ) THEN
-				NEW( resid0, LEN( b,0 ) );  NEW( resid, LEN( b,0 ) );  NEW( u, LEN( b,0 ) );  NEW( v, LEN( b,0 ) );
-				NEW( p, LEN( b,0 ) );  NEW( q, LEN( b,0 ) );
+			IF LEN( b, 0 ) > LEN( resid0, 0 ) THEN
+				NEW( resid0, LEN( b, 0 ) );  NEW( resid, LEN( b, 0 ) );  NEW( u, LEN( b, 0 ) );  NEW( v, LEN( b, 0 ) );
+				NEW( p, LEN( b, 0 ) );  NEW( q, LEN( b, 0 ) );
 			END;
 
 			(* solve system *)
@@ -93,11 +92,11 @@ TYPE
 				res := MatrixBase.NILPROC;  handleError( res, 'KrylovCGS: invalid Matrix to Vector procedure pointer!' );  RETURN x;
 			END;
 			(* if necessary - reallocate all arrays *)
-			IF LEN( b ) > LEN( x ) THEN
-				NEW( x, LEN( b,0 ) );
+			IF LEN( b, 0 ) > LEN( x, 0 ) THEN
+				NEW( x, LEN( b, 0 ) );
 				x := 0;   (* implicit in NEW  *)
 			END;
-			IF LEN( b ) > LEN( resid0 ) THEN
+			IF LEN( b, 0 ) > LEN( resid0, 0 ) THEN
 				NEW( resid0, LEN( b,0 ) );  NEW( resid, LEN( b,0 ) );
 				NEW( u, LEN( b,0 ) );  NEW( v, LEN( b,0 ) );
 				NEW( p, LEN( b,0 ) );  NEW( q, LEN( b,0 ) );
@@ -201,14 +200,53 @@ TYPE
 	END Solve;
 	
 	PROCEDURE {TEST} Test*;
-	CONST TestThreshold=0.0001;
-	VAR A: Matrix;  b, x, e: Vector;  error:TData;
+	CONST TestThreshold = 1.0 / 1000000.0;
+	VAR 
+		s: Solver; A, dummy: Matrix;  b, x1, x2, x3, e: Vector;  error:TData; log: Streams.Writer;
+		procObj: ProcObj;
+	TYPE
+		ProcObj = OBJECT
+		VAR A: Matrix;
+
+			PROCEDURE &Init(CONST mtx: Matrix);
+			BEGIN
+				A := mtx;
+			END Init;
+
+			PROCEDURE Proc(CONST x: Vector; VAR y: Vector);
+			BEGIN
+				y := A * x;
+			END Proc;
+		END ProcObj;
+		
 	BEGIN
 		A := [[5, -1, -2, -3], [-1, 5, 4, 2], [-2, 4, 5, 1], [-3, 2, 1, 5]];   (* symmetric, positive definite matrix *)
 		b := [1, 2, 3, 4];
-		x := Solve( A, b );
-		e := A*x-b; error:= e+*e;
+
+		Streams.OpenWriter(log, KernelLog.Send);
+
+		NEW(s, A); s.Tracer := log;
+
+		x1 := s.Solve(b);
+		e := A*x1-b; error:= (e+*e) / (b+*b);
 		ASSERT(error < TestThreshold, 201);
+
+		s.x := 0;
+		x2 := s.SolveNoCopy( A, b );
+		e := A*x2-b; error:= (e+*e) / (b+*b);
+		ASSERT(x2 = x1, 201);
+		
+		s.x := 0;
+		NEW(procObj, A);
+		x2 := s.SolveProcBased( procObj.Proc, b );
+		e := A*x2-b; error:= (e+*e) / (b+*b);
+		ASSERT(x2 = x1, 201);
+
+		x2 := Solve( A, b );
+		e := A*x2-b; error:= (e+*e) / (b+*b);
+		ASSERT(x2 = x1, 201);
 	END Test;
 	
 END KrylovCGS.
+
+System.FreeDownTo KrylovCGS ~
