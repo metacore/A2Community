@@ -199,4 +199,16 @@ TYPE
 	BEGIN
 		NEW(cgs,dummy); RETURN cgs.SolveNoCopy(A,b);
 	END Solve;
+	
+	PROCEDURE {TEST} Test*;
+	CONST TestThreshold=0.0001;
+	VAR A: Matrix;  b, x, e: Vector;  error:TData;
+	BEGIN
+		A := [[5, -1, -2, -3], [-1, 5, 4, 2], [-2, 4, 5, 1], [-3, 2, 1, 5]];   (* symmetric, positive definite matrix *)
+		b := [1, 2, 3, 4];
+		x := Solve( A, b );
+		e := A*x-b; error:= e+*e;
+		ASSERT(error < TestThreshold, 201);
+	END Test;
+	
 END KrylovCGS.
