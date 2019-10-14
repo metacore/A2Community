@@ -47,14 +47,18 @@ BEGIN
 	RETURN A +* A
 END sumofsquares;
 
-PROCEDURE Test*;
-VAR A,R,Rinv: Matrix;
+PROCEDURE {TEST} Test*;
+CONST TestThreshold=0.0001;
+VAR A,R,Rinv, E: Matrix; error:Datatype;
 BEGIN
 	A:=[[6,2,3,1],[1,5,2,2],[1,2,7,4],[2,2,3,8]];
 	SquareRoot(A,R,Rinv);
-	MatrixUtilities.OutMatrix(A);
+	(*MatrixUtilities.OutMatrix(A);
 	MatrixUtilities.OutMatrix(R);
-	MatrixUtilities.OutMatrix(R*R);
+	MatrixUtilities.OutMatrix(R*R);*)
+	E:=R*R-A;
+	error:=E+*E;
+	ASSERT( error < TestThreshold, 201);
 END Test;
 
 

@@ -33,7 +33,7 @@
 
 MODULE MatrixInterpolation;
 
-IMPORT  MatrixBase;   (*Imports only needed for Test Procedure*)
+IMPORT  MatrixBase, Commands, Out;   (*Imports only needed for Test Procedure*)
 
 TYPE
 	Datatype = MatrixBase.Datatype;
@@ -846,46 +846,75 @@ PROCEDURE InterpolateSplineN*	( CONST Bcoeff: Vector (*	float*   *) ;   (* input
 		RETURN (interpolated);
 
 	 END InterpolateSpline4D;
+
+	PROCEDURE {TEST} Test*;
+	VAR data: Vector; i: INTEGER; 
+	CONST degree = 3;
+		PROCEDURE Rnd(x:REAL):INTEGER;
+		BEGIN RETURN ENTIER(1000*x+0.5) 
+		END Rnd;
+	BEGIN
+		NEW( data, 10 );
+		FOR i := 0 TO 9 DO
+			IF ODD( i ) THEN data[i] := -1.0 ELSE data[i] := 1.0 END;
+		END;
+		ASSERT( (Rnd(InterpolateSpline(data,0.0,degree ))=333) &  (Rnd(InterpolateSpline( data,0.1,degree ))=315) &  (Rnd(InterpolateSpline( data, 0.5, degree ))=0.0) & (Rnd(InterpolateSpline( data, 0.8, degree ))=-264), 200); 
+	END Test;
 (*
-	PROCEDURE Test2*;
-	VAR data: Vector;  x, y, z: FLOAT32;  i, n: SIGNED32;  v: Datatype;
+	PROCEDURE Test2*(context:Commands.Context);
+	VAR data: Vector;  x, y, z: REAL;  i, n: INTEGER;  v: Datatype;
 	CONST degree = 3;
 	BEGIN
-		In.Open;  In.Real( x );  In.LongInt( n );  NEW( data, n );
-		FOR i := 0 TO n - 1 DO
-			data[i] := 1 (*i*) ;
-			IF ODD( i ) THEN data[i] := -data[i] END;
+		IF context.arg.GetReal( x ) &  context.arg.GetInteger( n, FALSE ) THEN
+			NEW( data, n );
+			FOR i := 0 TO n - 1 DO
+				data[i] := 1 (*i*) ;
+				IF ODD( i ) THEN data[i] := -data[i] END;
+			END;
 		END;
-		Out.String( ' interpolation at ' );  Out.RealFix( x, 12, 3 );  Out.String( ' =' );
-		Out.LongRealFix( InterpolateSpline( data, x, degree ), 12, 3 );  Out.Ln;
+		context.out.String( ' interpolation at ' );  context.out.FloatFix( x, 12, 3, 0 );  context.out.String( ' =' );
+		context.out.FloatFix( InterpolateSpline( data, x, degree ), 12, 3, 0 );  context.out.Ln; context.out.Update;
 	END Test2;
 
 
-	PROCEDURE Test3*;
-	VAR data, res: Vector;  x, y, z: FLOAT32;  i, n,m, degree: SIGNED32;  v: Datatype;
+	PROCEDURE Test3*(context:Commands.Context);
+	VAR data, res: Vector;  x, y, z: REAL;  i, n,m, degree: SIGNED32;  v: Datatype;
 	BEGIN
-		In.Open; In.LongInt(degree); In.LongInt( n ); In.LongInt( m ); In.Real(x);
-		NEW( data, n ); NEW(res,m);
-		FOR i := 0 TO n DIV 3 - 1 DO
-			data[i] := i MOD 4;
-			Out.LongRealFix(data[i],12,3);
+		IF context.arg.GetInteger(degree, FALSE) & context.arg.GetInteger( n, FALSE ) & context.arg.GetInteger( m, FALSE ) & context.arg.GetReal(x) THEN
+			NEW( data, n ); NEW(res,m);
+			FOR i := 0 TO n DIV 3 - 1 DO
+				data[i] := i MOD 4;
+				context.out.FloatFix(data[i],12,3,0);
+			END;
+			Out.Ln;
+			InterpolateSplineN(data, res, x, degree);
+			Out.String( ' interpolation ' );  Out.Ln;
+			FOR i:=0 TO m-1 DO
+				context.out.FloatFix( res[i], 12, 3, 0 );
+			END;
+			Out.Ln;
 		END;
-		Out.Ln;
-		InterpolateSplineN(data, res, x, degree);
-		Out.String( ' interpolation ' );  Out.Ln;
-		FOR i:=0 TO m-1 DO
-			Out.LongRealFix( res[i], 12, 3 );
-		END;
-		Out.Ln;
 	END Test3;
 *)
 END MatrixInterpolation.
 
 
-MatrixInterpolation.Test 1.5 1.2 1	1	100000
+MatrixInterpolation.Test~ 1.5 1.2 1	1	100000
 MatrixInterpolation.Test4D 1.5 1.2 1.0 0.0	1	100000
 
-MatrixInterpolation.Test2 2.2 10000000
+MatrixInterpolation.Test2 -0.2 100
+MatrixInterpolation.Test2 -0.1 100
+MatrixInterpolation.Test2 0.0 100
+MatrixInterpolation.Test2 0.1 100
+MatrixInterpolation.Test2 0.2 100
+MatrixInterpolation.Test2 0.5 100
+MatrixInterpolation.Test2 0.8 100
+MatrixInterpolation.Test2 0.9 100
+MatrixInterpolation.Test2 1.0 100
+MatrixInterpolation.Test2 1.5 100
+MatrixInterpolation.Test2 2.0 100
+
+
 MatrixInterpolation.Test3 2 256 256 3.6~
 
 System.Free DSPWarp MatrixInterpolation ~

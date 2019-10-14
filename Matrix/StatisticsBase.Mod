@@ -280,6 +280,7 @@ VAR v,v1:Vector;
 BEGIN
 	v:=[0, 1, 2, 3, 4,3,2,3,4,5];
 	v1:=Normalize(v);
+	MatrixUtilities.OutVector(v1);
 	MatrixUtilities.OutVector([StandardDeviation(v1)]);
 	MatrixUtilities.OutVector([Mean(v1)]);
 	v1:=SoftMaxNormalize(v);
@@ -288,6 +289,21 @@ BEGIN
 	MatrixUtilities.OutVector([Mean(v1)]);
 	MatrixUtilities.OutVector([StandardDeviation(v1)])
 END TestSoftMax;
+
+PROCEDURE {TEST} Test*;(*! implement more tests ! *)
+CONST TestTolerance=0.0001; 
+VAR v:Vector;
+BEGIN
+	ASSERT(Count([[[1,2,3],[4,5,6]],[[1,2,3],[4,5,6]]])=12, 200);
+	ASSERT(Mean([1,2,3,4,5,6])=3.5, 201);
+	ASSERT(Median([4,3,2,1,5,6,7])=4, 202);
+	ASSERT(Prod([1,2,3,4,5])=120 ,203);
+	ASSERT(Variance([1,2,3,4,5])= ([1,2,3,4,5]-3)+*([1,2,3,4,5]-3)/5, 204);
+	ASSERT(EstimatedVariance([1,2,3,4,5])= ([1,2,3,4,5]-3)+*([1,2,3,4,5]-3)/4, 205);
+	ASSERT(ABS(StandardDeviation(Normalize([1,2,3,4,5]))-1)<TestTolerance, 206);
+	v:=[5,2,1,4,3]; QSort(v); ASSERT(v=[1,2,3,4,5], 207);
+END Test;
+
 
 END StatisticsBase.
 

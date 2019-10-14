@@ -1,7 +1,7 @@
 MODULE MatrixTransforms;   (**  AUTHOR "Patrick Hunziker"; PURPOSE "MatrixTransformations and decompositions";  **)
 (*or should this be named "Matrix Factorization, http://fsmat.at/~bkabelka/math/numerik/num1/22.htm (Pseudocode) and contain Gauss, LU, LR, Householder, QR, Choletzky*)
 
-IMPORT MathL, MatrixBase;
+IMPORT MathL, MatrixBase (*, KernelLog, Util:=MatrixUtilities*) ;
 
 TYPE
 	Datatype* = MatrixBase.Datatype;
@@ -251,18 +251,17 @@ A full Givens Rotation Matrix with rotation theta, where c=cos(theta) and s=sin(
 		(*A[i-1..i]:= G * A[i-1..i];*)  (*here is a logical/compiler implementation problem: overwriting of second line; upon debugginf of compiler, variable B should be redundant*)
 		B := G * A[i - 1..i];  A[i - 1..i] := B;
 	END GivensRotation;
-(*
-PROCEDURE DoGaussElim*;
-VAR A,B: MatrixBase.Matrix; v:MatrixBase.Vector; res,i,j:SIGNED32;
+
+PROCEDURE {TEST} DoGaussElim*;
+VAR A: MatrixBase.Matrix; 
 BEGIN
 	A:=[[1,2,3,4],[4,3,3,1],[1,2,4,3],[2,2,2,3]];
-	KernelLog.String("before "); KernelLog.Ln;
-	Util.OutMatrix(A);
+	(*KernelLog.String("before "); KernelLog.Ln; Util.OutMatrix(A);*)
 	Gauss(A);
-	KernelLog.String("after "); KernelLog.Ln;
-	Util.OutMatrix(A);
+	(*KernelLog.String("after "); KernelLog.Ln;	Util.OutMatrix(A);*)
+	ASSERT(TRUE,200); (*! correctness not yet tested here, only runtime behaviour *)
 END DoGaussElim;
-*)
+
 END MatrixTransforms.
 
 MatrixTransforms.DoGaussElim

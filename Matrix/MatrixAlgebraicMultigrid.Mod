@@ -1,5 +1,5 @@
 MODULE MatrixAlgebraicMultigrid;    (**  AUTHOR "Patrick Hunziker"; PURPOSE "Algebraci Multigrid Solver for linear equations";  **)
-IMPORT Base:=MatrixBase, MatrixStandardSolvers,  Util:=MatrixUtilities;
+IMPORT Base:=MatrixBase, MatrixStandardSolvers,  Util:=MatrixUtilities, Out;
 (*Version 12.3.08*)
 (*todo: add error codes*)
 
@@ -135,8 +135,18 @@ TYPE
 		NEW(amg,dummy); RETURN amg.SolveNoCopy(A,b);
 	END Solve;
 
-(*
-PROCEDURE Test*;
+
+	(*PROCEDURE {TEST} Test*; (*!to be worked out*)
+	CONST TestThreshold = 0.001;
+	VAR A: Matrix;  b, x, e: Vector;  error:Datatype;
+	BEGIN
+		A := [[3, 1, 1, 0], [1, 5, 2, 1], [2, 1, 6, 2], [1, 2, 3, 7]];  b := [1, 2, 3, 2];  (* Gauss Seidel and Jacobi require diagonally dominant matrices for guaranteed convergence *)
+		x := Solve( A, b );
+		e := A*x-b; error:= e+*e;
+		ASSERT(error < TestThreshold, 201);
+	END Test;*)
+
+PROCEDURE Test1*;
 VAR b,c: Vector;
 BEGIN
 	b:=[1,2,4,6,8,9,10,11];
@@ -144,12 +154,26 @@ BEGIN
 	Out.String("b:"); Util.OutVector(c);
 	b:=prolongV(c);
 	Out.String("b:"); Util.OutVector(b);
+END Test1;
+
+(*
+PROCEDURE {TEST} Test*;(*! to be worked out in more detail*)
+CONST TestThreshold=0.0001;
+VAR b,c,d, e: Vector; error:Datatype;
+BEGIN
+	b:=[1,2,4,6,8,9,10,11];
+	c:=restrictV(b);
+	d:=prolongV(c);
+	e:=d-b;
+	error:=e+*e;
+	ASSERT(error<TestThreshold,200);
 END Test;
 *)
 
+
 END MatrixAlgebraicMultigrid.
 (*---------------------------------------------------*)
-
+MatrixAlgebraicMultigrid.Test1
 (*
 MODULE MatrixDummyClient;
 IMPORT Base:=MatrixBase;
