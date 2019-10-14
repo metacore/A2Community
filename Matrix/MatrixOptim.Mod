@@ -288,7 +288,7 @@ VAR
   Possible results  : OK
                       NONCONV
   ---------------------------------------------------------------------- *)
-	PROCEDURE LinMin*( Func: TFuncNVar;  VAR X, DeltaX: Vector;  MaxIter: SIGNED32;  Tol: Real;  VAR Fmin: Real ): SIGNED32;
+	PROCEDURE LinMin*( Func: TFuncNVar;  VAR X, DeltaX: Vector;  MaxIter: SIGNED32;  Tol: Real;  VAR Fmin: Real ): SIGNED32;  (*! quite inaccurate*)
 	VAR I, ErrCode: SIGNED32;  R: Real;  ofunc:OFunc;
 	BEGIN
 		(* Initialize function object *)

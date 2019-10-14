@@ -97,7 +97,7 @@ TYPE
 
 	(** deconvolution is division in Fourier domain:  (a+bi )/(c+di) = (ac+bd)/(c*c+d*d), i*(bc-ad)/(c*c+d*d) *)
 	PROCEDURE DeConvolution*( CONST in1, in2: TwoD;  VAR outR, outI: TwoD );
-	VAR R1, I1, R2, I2, nil, tmpR, tmpI: TwoD; i:SIGNED32;
+	VAR R1, I1, R2, I2, nil, tmpR, tmpI: TwoD;
 	BEGIN
 		FFT( in1, nil, R1, I1, {0, 1} );
 		FFT(in2, nil, R2, I2, {0, 1} );
@@ -139,22 +139,8 @@ TYPE
 		RETURN RESULT
 	END Filter; 
 	
-#IF TEST THEN
-	TYPE Success=OBJECT END Success;
-	PROCEDURE TEST*():ANY;  
-	VAR image, imageI, resR, resI, res2R, res2I, diff: MatrixBase.Matrix; success:Success; b:BOOLEAN;
-	BEGIN 
-		NEW( image, 256, 256);  NEW( imageI, 256, 256);  
-		image[60..63] := 1;  image[70..73] := 1;  
-		FFT( image, imageI, resR, resI, {0,1});  
-		IFFT( resR, resI, res2R, res2I, {0,1});  
-		diff:=image-res2R;
-		IF diff+*diff < 0.0001 THEN NEW(success) END;
-		RETURN success; 
-		FINALLY RETURN NIL
-	END TEST;
-
-	PROCEDURE Test*(context:Commands.Context);  
+	PROCEDURE {TEST} Test*();  
+	CONST TestTolerance=0.0001;
 	VAR image, imageI, resR, resI, res2R, res2I, diff: MatrixBase.Matrix;
 	BEGIN 
 		NEW( image, 256, 256);  NEW( imageI, 256, 256);  
@@ -162,11 +148,8 @@ TYPE
 		FFT( image, imageI, resR, resI, {0,1});  
 		IFFT( resR, resI, res2R, res2I, {0,1});  
 		diff:=image-res2R;
-		IF diff+*diff < 0.0001 THEN context.result:=0 ELSE context.result:=1; END;
-		FINALLY context.result:=1
+		ASSERT(diff+*diff < TestTolerance );
 	END Test;
-
-#END;
 
 END PlanarFFT.
 
