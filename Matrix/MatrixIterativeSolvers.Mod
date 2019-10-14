@@ -262,7 +262,52 @@ TYPE
 	BEGIN
 	END DummyHandler;
 
-	PROCEDURE Test*;
+
+	PROCEDURE {TEST} Test*;
+	CONST TestThreshold = 0.001;
+	VAR A: Matrix;  b, x, e: Vector;  i: SIGNED32; error:Datatype; timer: Kernel.MilliTimer;  gs: GaussSeidel; gss: GaussSeidelSOR; j: Jacobi; cg: ConjugateGradient;
+	BEGIN
+		A := [[3, 1, 1, 0], [1, 5, 2, 1], [2, 1, 6, 2], [1, 2, 3, 7]];  b := [1, 2, 3, 2];  (* Gauss Seidel and Jacobi require diagonally dominant matrices for guaranteed convergence *)
+		x := SolveGaussSeidel( A, b, DefaultThreshold );
+		e := A*x-b; error:= e+*e;
+		ASSERT(error < TestThreshold, 201);
+
+		NEW(gs,A); 
+		x := gs.Solve( b ); 
+		e := A*x-b; error:= e+*e;
+		ASSERT(error < TestThreshold, 202);
+
+		x := SolveGaussSeidelSOR( A, b, DefaultThreshold, 1.3 );
+		e := A*x-b; error:= e+*e;
+		ASSERT(error < TestThreshold, 203);
+
+		NEW(gss,A); 
+		x := gss.Solve( b ); 
+		e := A*x-b; error:= e+*e;
+		ASSERT(error < TestThreshold, 204);
+
+		x := SolveJacobi( A, b, DefaultThreshold );
+		e := A*x-b; error:= e+*e;
+		ASSERT(error < TestThreshold, 205);
+
+		NEW(j,A);
+		x := j.Solve( b ); 
+		e := A*x-b; error:= e+*e;
+		ASSERT(error < TestThreshold, 206);
+
+		A := [[5, -1, -2, -3], [-1, 5, 4, 2], [-2, 4, 5, 1], [-3, 2, 1, 5]];   (* CG requires symmetric, positive definite matrix *)
+		b := [1, 2, 3, 4];
+		x := SolveConjugateGradient( A, b, DefaultThreshold );
+		e := A*x-b; error:= e+*e;
+		ASSERT(error < TestThreshold, 207);
+
+		NEW(cg,A); 
+		x := cg.Solve( b );
+		e := A*x-b; error:= e+*e;
+		ASSERT(error < TestThreshold, 208);
+	END Test;
+
+	PROCEDURE Test1*;
 	VAR A: Matrix;  b, x: Vector;  i: SIGNED32;  timer: Kernel.MilliTimer;  gs: GaussSeidel; gss: GaussSeidelSOR; j: Jacobi; cg: ConjugateGradient;
 	BEGIN
 		A := [[3, 1, 1, 0], [1, 5, 2, 1], [2, 1, 6, 2], [1, 2, 3, 7]];  b := [1, 2, 3, 2];  (* Gauss Seidel and Jacobi require diagonally dominant matrices for guaranteed convergence *)
@@ -325,9 +370,7 @@ TYPE
 		Out.String( "ms" );  Out.Ln;  Out.String( "A" );  Log( A );  Out.String( "b" );  Out.Ln;  LogV( b );  Out.Ln;  Out.String( "x" );  Out.Ln;  LogV( x );  Out.Ln;
 		Out.String( "Ax-b" );  Out.Ln;  LogV( A * x - b );  Out.Ln;  Out.String( "error: " );  OutFloat( L2( A * x - b ) );  Out.Ln;
 		Out.String("iterations: "); Out.Int(cg.iteration,6);Out.Ln;
-
-
-	END Test;
+	END Test1;
 
 END MatrixIterativeSolvers.
 
