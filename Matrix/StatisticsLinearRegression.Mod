@@ -239,9 +239,68 @@ BEGIN
 	(*optional: estimation of 95% confidence interval, based on observation of 600 pairs is sufficient according to literature*)
 END TheilSenEstimator;
 
+PROCEDURE SumSquares(CONST a:ARRAY[?] OF MatrixBase.Datatype):MatrixBase.Datatype;
+BEGIN
+	RETURN a+*a
+END SumSquares;
 
+PROCEDURE {TEST} Test*;
+CONST TestThreshold=0.0001;
+VAR X: Matrix; x, y, B,e: Vector; b, intercept: Scalar;
+BEGIN
+	y:=[1.0,2.1,2.9, 4.1, 5.0, 5.9]+2; (*note the intercept*)
 
-PROCEDURE Test*;
+	w.String("Simple Regression: regression coefficient, error vector, sum of square errors"); w.Ln; w.Update;
+	x:=[1.0,2,3,4,5,6];
+	SimpleRegressionNoIntercept(x,y,b,e);
+	ASSERT(ABS((b-1.4582417614)*(b-1.4582417614))<TestThreshold, 201);
+	(*w.FloatFix(b, 4, 10, 0); w.Ln; w.Update;
+	Util.OutVector(e);
+	w.FloatFix(e+*e, 4, 10, 0); w.Ln; w.Ln; w.Update;*)
+
+	w.String("Simple Regression with intercept: regression coefficient, intercept, error vector, sum of square errors"); w.Ln; w.Update;
+	x:=[1.0,2,3,4,5,6];
+	SimpleRegression(x,y,b,intercept, e);
+	ASSERT(ABS((b-0.9828571592)*(b-0.9828571592))<TestThreshold, 201);
+	ASSERT(ABS((intercept-2.0599999428)*(intercept-2.0599999428))<TestThreshold, 201);
+	(*	w.FloatFix(b, 4, 10, 0); w.FloatFix(intercept, 4, 10, 0); w.Ln; w.Update;
+	Util.OutVector(e);
+	w.FloatFix(e+*e, 4, 10, 0); w.Ln; w.Ln; w.Update;*)
+
+	w.String("Linear Regression"); w.Ln; w.Update;
+	X:=[[1.0,1.1],[2,1.9],[3,2.8],[4,4.1],[5,5.3],[6,5.8]];
+	LinearRegression(X,y,B,e);
+	ASSERT(SumSquares(B-[1.2582, 0.2000])<TestThreshold, 202);
+	(*Util.OutVector(B);
+	Util.OutVector(e);
+	w.FloatFix(e+*e, 4, 10, 0); w.Ln; w.Ln; w.Update;*)
+
+	w.String("Linear Regression with intercept"); w.Ln; w.Update;
+	(* X:=[[1.0,1.1,1.0],[1.0,1.9,2.1],[1,2.8, 2.9],[1,4.1,3.9],[1,5.3, 5.1],[1,5.8, 6]]; *)
+	X:=[[1.0,1.1],
+		[1.0,1.9],
+		[1,2.8],
+		[1,4.1],
+		[1,5.3],
+		[1,5.8]];
+	LinearRegression(X,y,B,e);
+	ASSERT(SumSquares(B-[2.0910, 0.9740]) < TestThreshold, 203); 
+	(*Util.OutVector(B);
+	Util.OutVector(e);
+	w.FloatFix(e+*e, 4, 10, 0); w.Ln; w.Ln; w.Update;*)
+
+	w.String("Theil Sen Estimator: robust slope"); w.Ln; w.Update;
+	x:=[1.0,2,3,4,5,6];
+	TheilSenEstimator(x,y,b,intercept, e);
+	ASSERT((b-0.9800000191)*(b-0.9800000191)< TestThreshold, 204); 
+	ASSERT((intercept-2.0699999332)*(intercept-2.0699999332)<TestThreshold, 205);
+	(*w.FloatFix(b, 4, 10, 0); w.FloatFix(intercept, 4, 10, 0); w.Ln;w.Update;
+	Util.OutVector(e);
+	w.FloatFix(e+*e, 4, 10, 0); w.Ln;
+	w.Update;*)
+END Test;
+
+PROCEDURE Test1*;
 VAR X: Matrix; x, y, B,e: Vector; b, intercept: Scalar;
 BEGIN
 	y:=[1.0,2.1,2.9, 4.1, 5.0, 5.9]+2; (*note the intercept*)
@@ -287,7 +346,8 @@ BEGIN
 	Util.OutVector(e);
 	w.FloatFix(e+*e, 4, 10, 0); w.Ln;
 	w.Update;
-END Test;
+END Test1;
+
 
 PROCEDURE TestGLM*;
 VAR X,Y, B,U: Matrix;
