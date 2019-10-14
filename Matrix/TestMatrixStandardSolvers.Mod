@@ -157,24 +157,36 @@ BEGIN
 END DoQR2;
 *)
 PROCEDURE {TEST}Test*;
-VAR LU: Solvers.LU; QR:Solvers.QR; A:Base.Matrix; b,x,e:Base.Vector; error:REAL;
+VAR LU: Solvers.LU; QR:Solvers.QR; G: Solvers.Gauss; GJ: Solvers.GaussJordan; A:Base.Matrix; b,x,e:Base.Vector; error:REAL;
 BEGIN
 	A:=[[1,2,3,4],[4,3,3,1],[1,2,4,3],[2,2,2,3]]; b:=[2,3,4,5];
-
 	NEW(LU,A);
 	x:=LU.Solve(b);
 	e:=A*x-b;
 	error:=e+*e;
 	ASSERT(error<0.0001, 201);
-
+	
 	A:=[[1,2,3,4],[4,3,3,1],[1,2,4,3],[2,2,2,3]]; b:=[2,3,4,5];
-	NEW(QR,A);
+	NEW(QR,A); (*! needs repair. Same code had correct results with Compiler 2017*)
 	x:=QR.Solve(b);
 	e:=A*x-b;
 	error:=e+*e;
 	ASSERT(error<0.0001, 202); (*note: was correct with older releases, is now defunct with current release, without library change*)
-END Test;
 
+	A:=[[1,2,3,4],[4,3,3,1],[1,2,4,3],[2,2,2,3]]; b:=[2,3,4,5];
+	NEW(G,A);
+	x:=G.Solve(b);
+	e:=A*x-b;
+	error:=e+*e;
+	ASSERT(error<0.0001, 203); (*note: was correct with older releases, is now defunct with current release, without library change*)
+
+	A:=[[1,2,3,4],[4,3,3,1],[1,2,4,3],[2,2,2,3]]; b:=[2,3,4,5];
+	NEW(GJ,A);
+	x:=GJ.Solve(b);
+	e:=A*x-b;
+	error:=e+*e;
+	ASSERT(error<0.0001, 204); (*note: was correct with older releases, is now defunct with current release, without library change*)
+END Test;
 
 END TestMatrixStandardSolvers.
 
