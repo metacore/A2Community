@@ -647,19 +647,24 @@ VAR ident: SIGNED32;
 
 
 
-PROCEDURE Test*;
-VAR A, A0, B, Inv: Matrix; b,x: Vector; lu:MatrixStandardSolvers.LU;
+PROCEDURE {TEST} Test*;
+CONST TestTolerance=0.0001;
+VAR A, A0, B, Inv: Matrix; b,x,e: Vector; error:Base.Datatype; lu:MatrixStandardSolvers.LU;
 BEGIN
-	A:=Util.RandomMatrix(10,10, Util.DiagDominant);
-	B:=Util.RandomMatrix(1,10, Util.Uniform); b:=B[0];
+	A:=Util.RandomMatrix(100,100, Util.DiagDominant);
+	B:=Util.RandomMatrix(1,100, Util.Uniform); b:=B[0];
 	A0:=A;
 	NEW(lu,A);
 	x:=lu.Solve(b);
-	Out.String("A: "); Util.OutMatrix(A); Out.Ln;
-	Out.String("b: "); Util.OutVector(b); Out.Ln;
-	Out.String("A*x -b: "); Util.OutFloat((A*x-b)+*(A*x-b),12,5,0); Out.Ln;
+	e:=A*x-b;
+	ASSERT(e+*e < TestTolerance, 201);
+	
 	Inv:=lu.Inverse();
-	Out.String("A*Ainv: "); Util.OutMatrix( A*Inv);
+	B:=A*Inv;
+	error:=SUM(ABS(B))-LEN(B,0);
+	ASSERT(ABS(error)<TestTolerance, 202);
+	
+	(*! TBD: test LU Agen*)
 END Test;
 
 (*
@@ -783,6 +788,24 @@ BEGIN
 	blu.SetLR(A[64..,64..]);
 END TestLUAgent;
 
+PROCEDURE {TEST} TestLUAgent0*;
+CONST size=1024;
+	TestThreshold=0.0001;
+VAR A, A0,B: Matrix; b,x,e: Vector; blu: LUAgent; error:Base.Datatype;
+BEGIN
+	ComputeObjects.cumulobjects:=0;
+	A:=Util.RandomMatrix(size,size, Util.DiagDominant);
+	B:=Util.RandomMatrix(1,size, Util.Uniform); b:=B[0];
+	A0:=A;
+	NEW(blu,size, 256, NIL, Objects.High);
+	A0:=A;
+	blu.Set(A0); (*A0 will be modified as side effect*)
+	x:=blu.Solve(b);
+	e:=A*x-b;
+	error:=e+*e;
+	ASSERT(error < TestThreshold,201);
+END TestLUAgent0;
+
 PROCEDURE TestLUAgent1*;
 CONST size=1024;
 VAR A, A0,B: Matrix; b,x: Vector; blu: LUAgent; t:SIGNED32; timer: Kernel.MilliTimer;
@@ -803,7 +826,6 @@ BEGIN
 	Out.String("computeobjects: "); Out.Int(ComputeObjects.cumulobjects,6); Out.Ln;
 END TestLUAgent1;
 
-
 END MatrixBlockSolvers.
 
 LinpackBenchmark.Test ~
@@ -815,6 +837,7 @@ MatrixBlockSolvers.Test1 ~
 MatrixBlockSolvers.Test2 ~
 MatrixBlockSolvers.Test3 ~
 MatrixBlockSolvers.TestLUAgent ~
+MatrixBlockSolvers.TestLUAgent0 ~
 MatrixBlockSolvers.TestLUAgent1 ~
 
 Compiler.Compile
