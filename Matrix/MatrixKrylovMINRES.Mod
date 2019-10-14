@@ -23,7 +23,7 @@
 **)
 MODULE KrylovMINRES;
 
-IMPORT MatrixBase, Math := MathL, Streams;
+IMPORT MatrixBase, Math := MathL, Streams, KernelLog;
 
 TYPE
 	Datatype = MatrixBase.Datatype;
@@ -44,9 +44,15 @@ TYPE
 		BEGIN
 			handleError := MatrixBase.HandleError;  res := MatrixBase.OK;
 
+			(* parameters by default *)
+			Tolerance := 1.0 / 1000000.0;   (* tolerance of solution residual *)
+			nMaxIterations := 30;   (* maximum number of iterations *)
+
+			Tiny := 10.0 * MatrixBase.EPS;
+
 			IF LEN( A ) = 0 THEN RETURN;
 			END;
-			IF LEN( A ) # LEN( A, 1 ) THEN
+			IF LEN( A, 0 ) # LEN( A, 1 ) THEN
 				res := MatrixBase.NOTSQUARE;  handleError( res, 'MINRES: matrix is not square!' );  RETURN;
 			END;
 
@@ -58,17 +64,11 @@ TYPE
 
 			(* initial guess/solution *)
 			NEW( x, LEN( A,0 ) );
-
-			(* parameters by default *)
-			Tolerance := 1.0 / 1000000.0;   (* tolerance of solution residual *)
-			nMaxIterations := 30;   (* maximum number of iterations *)
-
-			Tiny := 10.0 * MatrixBase.EPS;
 		END Init;
 
 		PROCEDURE Solve*( CONST b: Vector ): Vector;
 		BEGIN
-			IF LEN( b ) # LEN( SysMatrix ) THEN
+			IF LEN( b, 0 ) # LEN( SysMatrix, 0 ) THEN
 				res := MatrixBase.SIZEMISMATCH;  handleError( res, 'MINRES: matrix-vector size missmatch!' );  RETURN x;
 			END;
 
@@ -80,19 +80,19 @@ TYPE
 								CONST b: Vector ): Vector;
 		BEGIN
 			IF LEN( A ) = 0 THEN RETURN x;  END;
-			IF LEN( A ) # LEN( A, 1 ) THEN
+			IF LEN( A, 0 ) # LEN( A, 1 ) THEN
 				res := MatrixBase.NOTSQUARE;  handleError( res, 'MINRES: matrix is not square!' );  RETURN x;
 			END;
-			IF LEN( b ) # LEN( A ) THEN
+			IF LEN( b, 0 ) # LEN( A, 0 ) THEN
 				res := MatrixBase.SIZEMISMATCH;  handleError( res, 'MINRES: matrix-vector size missmatch!' );  RETURN x;
 			END;
 
 			(* if necessary reallocate all arrays *)
-			IF LEN( b ) > LEN( x ) THEN
+			IF LEN( b, 0 ) > LEN( x, 0 ) THEN
 				NEW( x, LEN( b,0 ) );
 				x := 0;   (* did NEW do it before or not?! *)
 			END;
-			IF LEN( b ) > LEN( q ) THEN
+			IF LEN( b, 0 ) > LEN( q, 0 ) THEN
 				NEW( q, LEN( b,0 ) );  NEW( q_1, LEN( b,0 ) );  NEW( tmp, LEN( b,0 ) );
 				NEW( w_1, LEN( b,0 ) );  NEW( w_2, LEN( b,0 ) );
 			END;
@@ -109,10 +109,10 @@ TYPE
 			END;
 
 			(* if necessary - reallocate all arrays *)
-			IF LEN( b ) > LEN( x ) THEN
+			IF LEN( b, 0 ) > LEN( x, 0 ) THEN
 				NEW( x, LEN( b,0 ) );  x := 0;   (* did NEW do it before or not?! *)
 			END;
-			IF LEN( b ) > LEN( q ) THEN
+			IF LEN( b, 0 ) > LEN( q, 0 ) THEN
 				NEW( q, LEN( b,0 ) );  NEW( q_1, LEN( b,0 ) );  NEW( tmp, LEN( b,0 ) );
 				NEW( w_1, LEN( b,0 ) );  NEW( w_2, LEN( b,0 ) );
 			END;
@@ -289,17 +289,55 @@ TYPE
 	END Solve;
 
 	PROCEDURE {TEST} Test*;
-	CONST TestThreshold=0.0001;
-	VAR A: Matrix;  b, x, e: Vector;  error:Datatype;
+	CONST TestThreshold = 1.0 / 1000000.0;
+	VAR 
+		s: Solver; A: Matrix;  b, x1, x2, e: Vector;  error:Datatype; log: Streams.Writer;
+		procObj: ProcObj;
+	TYPE
+		ProcObj = OBJECT
+		VAR A: Matrix;
+
+			PROCEDURE &Init(CONST mtx: Matrix);
+			BEGIN
+				A := mtx;
+			END Init;
+
+			PROCEDURE Proc(CONST x: Vector; VAR y: Vector);
+			BEGIN
+				y := A * x;
+			END Proc;
+		END ProcObj;
+
 	BEGIN
 		A := [[5, -1, -2, -3], [-1, 5, 4, 2], [-2, 4, 5, 1], [-3, 2, 1, 5]];   (* symmetric, positive definite matrix *)
 		b := [1, 2, 3, 4];
-		x := Solve( A, b );
-		e := A*x-b; error:= e+*e;
-		ASSERT(error < TestThreshold, 201);
-	END Test;
 
+		Streams.OpenWriter(log, KernelLog.Send);
+
+		NEW(s, A); s.Tracer := log;
+
+		x1 := s.Solve(b);
+		e := A*x1-b; error:= (e+*e) / (b+*b);
+		ASSERT(error < TestThreshold, 201);
+
+		s.x := 0;
+		x2 := s.SolveNoCopy( A, b );
+		e := A*x2-b; error:= (e+*e) / (b+*b);
+		ASSERT(x2 = x1, 201);
+		
+		s.x := 0;
+		NEW(procObj, A);
+		x2 := s.SolveProcBased( procObj.Proc, b );
+		e := A*x2-b; error:= (e+*e) / (b+*b);
+		ASSERT(x2 = x1, 201);
+
+		x2 := Solve( A, b );
+		e := A*x2-b; error:= (e+*e) / (b+*b);
+		ASSERT(x2 = x1, 201);
+	END Test;
 
 BEGIN
 END KrylovMINRES.
+
+System.FreeDownTo KrylovMINRES ~
 

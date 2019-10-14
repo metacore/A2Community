@@ -12,18 +12,18 @@ MODULE KrylovCGS;
 IMPORT MatrixBase, Math := MathL, Streams, KernelLog;
 
 TYPE
-	TData = MatrixBase.Datatype;
+	Datatype = MatrixBase.Datatype;
 	Vector = MatrixBase.Vector;
 	Matrix = MatrixBase.Matrix;
 
 	MatrixToVectorProc* = PROCEDURE {DELEGATE} ( CONST X: Vector; VAR Y: Vector );
 
 	Solver* = OBJECT (MatrixBase.Solver)
-	VAR Tolerance*: TData;   (* tolerance of solution accuracy *)
+	VAR Tolerance*: Datatype;   (* tolerance of solution accuracy *)
 		nMaxIterations*, nIterations-: SIGNED32;   (* maximum number of iterations and number of done iterations *)
 		SysMatrix: Matrix;   (* copy of system matrix *)
 		Tracer*: Streams.Writer;
-		Tiny: TData;
+		Tiny: Datatype;
 
 		resid0, resid, p, q, u, v: Vector;
 
@@ -106,9 +106,9 @@ TYPE
 		END SolveProcBased;
 
 		PROCEDURE CGS( CONST A: Matrix;  CONST b: Vector;
-					   VAR x: Vector;  Tolerance: TData;
+					   VAR x: Vector;  Tolerance: Datatype;
 					   nMaxIterations: SIGNED32 ): Vector;
-		VAR alpha, beta, rho, rho_1, residnrm: TData;
+		VAR alpha, beta, rho, rho_1, residnrm: Datatype;
 		BEGIN
 			resid0 := A * x;  resid0 := b - resid0;  resid := resid0;  beta := 0;
 			residnrm := 1.0;
@@ -143,10 +143,10 @@ TYPE
 
 		PROCEDURE CGSProcBased( MatrixToVector: MatrixToVectorProc;
 								CONST b: Vector;
-								VAR x: Vector;  Tolerance: TData;
+								VAR x: Vector;  Tolerance: Datatype;
 								nMaxIterations: SIGNED32 ): Vector;
 		VAR
-		VAR alpha, beta, rho, rho_1, residnrm: TData;
+		VAR alpha, beta, rho, rho_1, residnrm: Datatype;
 		BEGIN
 			MatrixToVector( x, resid0 );  resid0 := b - resid0;  resid := resid0;
 			beta := 0;  residnrm := 1.0;
@@ -202,7 +202,7 @@ TYPE
 	PROCEDURE {TEST} Test*;
 	CONST TestThreshold = 1.0 / 1000000.0;
 	VAR 
-		s: Solver; A, dummy: Matrix;  b, x1, x2, x3, e: Vector;  error:TData; log: Streams.Writer;
+		s: Solver; A: Matrix;  b, x1, x2, e: Vector;  error:Datatype; log: Streams.Writer;
 		procObj: ProcObj;
 	TYPE
 		ProcObj = OBJECT
@@ -218,7 +218,7 @@ TYPE
 				y := A * x;
 			END Proc;
 		END ProcObj;
-		
+
 	BEGIN
 		A := [[5, -1, -2, -3], [-1, 5, 4, 2], [-2, 4, 5, 1], [-3, 2, 1, 5]];   (* symmetric, positive definite matrix *)
 		b := [1, 2, 3, 4];
