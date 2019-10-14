@@ -70,6 +70,33 @@ TYPE
 
 	END Do;
 
+
+	PROCEDURE {TEST} Test*;
+	CONST TestTolerance=0.001; LargeTolerance=0.1;
+	VAR A, B, Tol, Xmin, Ymin: Float;  MaxIter, Res, time, i: SIGNED32;  X0, Dir, G: Vector;  Hinv: Matrix;
+	BEGIN
+		A := -10;  B := 10;  MaxIter := 50;  Tol := 0.0001;
+		Res := Optim.GoldSearch( f, A, B, MaxIter, Tol, Xmin, Ymin );  
+		ASSERT((ABS(Xmin-0.5)<TestTolerance) & (ABS(Ymin-0.4)<TestTolerance), 201);
+
+		NEW( X0, 2 );  NEW( Dir, 2 );  X0[0] := 10;  X0[1] := 10;  Dir[0] := -1;  Dir[1] := -1;  
+		Res := Optim.LinMin( fn, X0, Dir, MaxIter, Tol, Ymin );
+		ASSERT((ABS(Ymin-0.5)<LargeTolerance) & (ABS(X0[0]-0.3)<LargeTolerance) & (ABS(X0[1]-0.4)<LargeTolerance), 202); (*! Quite inaccurate result ! *)
+
+		NEW( X0, 2 ); X0[0] := 10;  X0[1] := 10;  
+		Res := Optim.Simplex( fn, X0, MaxIter, Tol, Ymin );
+		ASSERT((ABS(Ymin-0.5)<TestTolerance) & (ABS(X0[0]-0.3)<TestTolerance) & (ABS(X0[1]-0.4)<TestTolerance), 203);
+		
+		NEW( X0, 2 );  NEW( Hinv, 2, 2 ); X0[0] := 10;  X0[1] := 10;  
+		Res := Optim.Marquardt( fn, Optim.NumHessGrad, X0, MaxIter, Tol, Ymin, Hinv );
+		ASSERT((ABS(Ymin-0.5)<TestTolerance) & (ABS(X0[0]-0.3)<TestTolerance) & (ABS(X0[1]-0.4)<TestTolerance), 204);
+
+
+		NEW( X0, 2 );  NEW( Hinv, 2, 2 ); X0[0] := 10;  X0[1] := 10;  
+		Res := Optim.BFGS( fn, Optim.NumGradient, X0, MaxIter, Tol, Ymin, Hinv );
+		ASSERT((ABS(Ymin-0.5)<TestTolerance) & (ABS(X0[0]-0.3)<TestTolerance) & (ABS(X0[1]-0.4)<TestTolerance), 205);
+	END Test;
+
 END TestMatrixOptim.
 
 System.Free  TestMatrixOptim MatrixOptim~
