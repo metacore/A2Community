@@ -93,16 +93,21 @@ TYPE PCA*= OBJECT (MatrixBase.Solver)
 		U:=pca.Axes();
 		Util.OutMatrix(U);
 		(*Util.OutMatrix(U*U`);*) (*why not orthonormal ?*)
-
+		(*
+     Util.OutVector( (C.*C)[*,*] *[1,1,1,1,1,1]);  (*check rowwise variance*)
+     Util.OutVector( [1,1,1,1,1,1]*(C.*C)[*,*]); (*check columnwise variance*)
+     Util.OutVector( [1,1,1,1,1,1]*(U.*U)[*,*]); (*check columnwise unit vector length*) 
+		*)
 		Util.OutVector( (C.*C)*[1,1,1,1,1,1]);  (*check rowwise variance*)
 		Util.OutVector( [1,1,1,1,1,1]*(C.*C)); (*check columnwise variance*)
 		Util.OutVector( [1,1,1,1,1,1]*(U.*U)); (*check columnwise unit vector length*)
+		
 	END Test;
 
 END MatrixPrincipalComponents.
 
-SystemTools.Free MatrixPrincipalComponents ~
-SystemTools.FreeDownTo MatrixUtilities ~
+System.Free MatrixPrincipalComponents ~
+System.FreeDownTo MatrixUtilities ~
 MatrixPrincipalComponents.Test ~
 fofPC.Compile \s * ~
 fofPC.Compile \f * ~

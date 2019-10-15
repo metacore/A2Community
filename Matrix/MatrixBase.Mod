@@ -139,8 +139,6 @@ VAR
 		END;
 	END ReadLMatrix;
 
-
-
 	BEGIN
 	IF SIZEOF( Datatype ) = 4 THEN EPS := ComputeEps() ELSE EPS := ComputeEpsL();  END;
 END MatrixBase.
