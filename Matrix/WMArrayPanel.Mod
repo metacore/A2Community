@@ -28,7 +28,7 @@ TYPE Data*= OBJECT (Models.Model)
 		END Init;
 	END Data;
 
-TYPE TYPE Panel*= OBJECT (WMStandardComponents.ImagePanel) (*! tbd: convert some local variables to properties. move some local variables to model .  tbd: serialization*)
+TYPE Panel*= OBJECT (WMStandardComponents.ImagePanel) (*! tbd: convert some local variables to properties. move some local variables to model .  tbd: serialization*)
 		VAR data*:Data; (*is also in model property*)
 		orientation-: WMProperties.Int32Property;
 		displayMode-:WMProperties.Int32Property;
@@ -38,6 +38,8 @@ TYPE TYPE Panel*= OBJECT (WMStandardComponents.ImagePanel) (*! tbd: convert some
 		max,min, gain*:FLOAT64;
 		baseTitle, title: ARRAY 256 OF CHAR;
 		img0 : WMGraphics.Image;
+		showIndex*:BOOLEAN;
+		win*:WM.Window;
 
 	PROCEDURE &Init*();
 	BEGIN
@@ -108,7 +110,7 @@ TYPE TYPE Panel*= OBJECT (WMStandardComponents.ImagePanel) (*! tbd: convert some
 			Strings.IntToStr(current,s);
 			Strings.Append(title,s);
 			id.Set(Strings.NewString(title));
-
+			IF win#NIL THEN win.SetTitle(Strings.NewString(title)) END;
 			model.Set(data);
 			model.Changed;
 		END WheelMove;
@@ -419,13 +421,15 @@ BEGIN
 END AddWindow;
 *)
 
-PROCEDURE CreateWindow*(panel:WMStandardComponents.Panel; CONST title: ARRAY OF CHAR): WMComponents.FormWindow;
+PROCEDURE CreateWindow*(panel:Panel; CONST title: ARRAY OF CHAR): WMComponents.FormWindow;
+(*PROCEDURE CreateWindow*(panel:WMStandardComponents.Panel; CONST title: ARRAY OF CHAR): WMComponents.FormWindow;*)
 VAR window:WMComponents.FormWindow;bounds: WMRectangles.Rectangle;
 	w,h:SIZE;
 BEGIN
 	bounds:=panel.bounds.Get();
 	w:=bounds.r-bounds.l; h:=bounds.b-bounds.t; ASSERT(h>0);
 	NEW(window, SIGNED32(w), SIGNED32(h), FALSE);
+	IF panel IS Panel THEN panel(Panel).win:=window END;
 	window.SetTitle(Strings.NewString(title));
 	INCL(window.flags, WM.FlagStorable); (* allow storing of data interactively, through right-click on navigator icon*)
 	panel.alignment.Set(WMComponents.AlignClient);
@@ -447,6 +451,11 @@ BEGIN
 	window:=CreateWindow(panel,title);
 	WM.DefaultAddWindow(window);
 END AddWindow;
+
+PROCEDURE Cleanup;
+BEGIN
+	
+END Cleanup;
 
 
 PROCEDURE  Test*(context:Commands.Context); (*deprecated -  will be eliminated from source*)
