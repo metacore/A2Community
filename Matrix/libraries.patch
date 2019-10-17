@@ -1,6 +1,6 @@
 Index: makefile
 ===================================================================
---- makefile	(revision 9587)
+--- makefile	(revision 9612)
 +++ makefile	(working copy)
 @@ -11,8 +11,8 @@
  
@@ -13,134 +13,19 @@ Index: makefile
  
  # module dependencies
  
-@@ -47,6 +47,11 @@
+@@ -47,6 +47,15 @@
  Oberon.Execution.Test.Diff: oberon source/Oberon.Execution.Test
  	@./oberon FoxTest.Compile --prolog=\"Compiler.Compile --symbolFileExtension=$(symbol) TesterInput.txt\" source/Oberon.Execution.Test
  
 +Matrix\ Library: Matrix.Test.Diff
 +
-+Matrix.Test.Diff: oberon source/Matrix/Matrix.Test $(addsuffix $(object), MatrixBase MatrixSVD)
-+	@./oberon FoxTest.Compile --prolog=\"Compiler.Compile --symbolFileExtension=$(symbol) TesterInput.txt\" source/Matrix/Matrix.Test
++Matrix.Test.Diff: oberon Matrix.Test $(addsuffix $(object), DisplayNull WindowManager)
++	@./oberon execute test.txt
++
++Matrix.Test: oberon $(addsuffix $(object), Random BIT NbrCplx MathCplx Out WMWindowManager RasterPixelFormats Inputs WMComponents WMStandardComponents) \
++	$(addprefix Matrix/, MatrixBase.Mod ComplexMathL.Mod MatrixUtilities.Mod MatrixStreams.Mod PMath.Mod MatrixRaster.Mod WMArrayPanel.Mod LinearMath.Mod LinearFilters.Mod LinearFIRConvolveLongReal.Mod LinearIIRConvolveLongReal.Mod LinearConvolve.Mod Wavelets.Mod LinearFFT.Mod MatrixInterpolation.Mod MatrixBSplineInterpolation.Mod PlanarBase.Mod PlanarMath.Mod PlanarFFT.Mod PlanarNabla.Mod PlanarNorms.Mod PlanarTransform.Mod PlanarPDE.Mod PlanarWavelets.Mod MatrixMoments.Mod LinearTransform.Mod TensorMath.Mod VolumeBase.Mod VolumeFFT.Mod VolumeNabla.Mod VolumeTransform.Mod VolumePDE.Mod VolumeMoments.Mod HypercubeBase.Mod HypercubeNabla.Mod HypercubeTransform.Mod HypercubeMoments.Mod MatrixStandardSolvers.Mod MatrixTransforms.Mod MatrixIterativeSolvers.Mod MatrixAlgebraicMultigrid.Mod MatrixNorms.Mod MatrixPolynomEq.Mod MatrixSVD.Mod MatrixEigen.Mod MatrixFastMatrixMultiply.Mod MatrixLeastSquares.Mod MatrixPrincipalComponents.Mod MatrixRoots.Mod MatrixKrylovCGS.Mod MatrixKrylovGMRES.Mod MatrixKrylovMINRES.Mod MatrixOptim.Mod TestMatrixOptim.Mod MatrixActive.Mod MatrixComputeObjects.Mod MatrixBlockSolvers.Mod MatrixFigures.Mod MatrixAVI.Mod WMMatrix.Mod WMMatrixGraph.Mod WMStack.Mod WMTensor.Mod WMMatrixLoader.Mod PlanarMorphology.Mod VolumeMorphology.Mod MLBase.Mod ErrorBase.Mod ExtraSort.Mod MLClassifier.Mod MLKernels.Mod MLKernelMeans.Mod MLRegression.Mod MLRidgeRegression.Mod StatisticsBase.Mod StatisticsHistograms.Mod StatisticsFunctions.Mod StatisticsLinearRegression.Mod StatisticsCombinatorics.Mod TestComplexMathL.Mod TestMatrixStandardSolvers.Mod TestPlanarPDE.Mod TestVolumePDE.Mod TestPlanarWavelets.Mod LinpackBenchmark.Mod MatrixWarp.Mod)
++	@./oberon Compiler.Compile -p=$(pltfrm) --objectFileExtension=$(object) --symbolFileExtension=$(symbol) --test=Test --testFile=Matrix.Test $(filter %.Mod, $^)
 +
  # A2 Builds
  
  builds:
-Index: source/Release.Tool
-===================================================================
---- source/Release.Tool	(revision 9587)
-+++ source/Release.Tool	(working copy)
-@@ -1579,6 +1579,114 @@
- 	TeletextServer.zip	# Teletext Server for TV
- END
- 
-+PACKAGE Matrix ARCHIVE "Matrix.zip" SOURCE "MatrixSrc.zip" DESCRIPTION "Matrix Library"
-+	Matrix/MatrixBase.Mod 
-+
-+	Matrix/ComplexMathL.Mod 
-+	Matrix/MatrixUtilities.Mod 
-+	Matrix/MatrixStreams.Mod
-+	Matrix/PMath.Mod 
-+
-+	Matrix/LinearMath.Mod 
-+	Matrix/LinearFilters.Mod 
-+	Matrix/LinearFIRConvolveLongReal.Mod 
-+	Matrix/LinearIIRConvolveLongReal.Mod 
-+	Matrix/LinearConvolve.Mod 
-+	Matrix/Wavelets.Mod
-+
-+	Matrix/LinearFFT.Mod 
-+	Matrix/MatrixInterpolation.Mod
-+	Matrix/MatrixBSplineInterpolation.Mod
-+
-+	Matrix/PlanarBase.Mod 
-+	Matrix/PlanarMath.Mod 
-+	Matrix/PlanarFFT.Mod
-+	Matrix/PlanarNabla.Mod
-+	Matrix/PlanarNorms.Mod
-+	Matrix/PlanarTransform.Mod
-+	Matrix/PlanarPDE.Mod
-+	Matrix/PlanarWavelets.Mod
-+
-+	Matrix/MatrixMoments.Mod
-+	Matrix/LinearTransform.Mod 
-+
-+	Matrix/TensorMath.Mod
-+
-+	Matrix/VolumeBase.Mod 
-+	Matrix/VolumeFFT.Mod
-+	Matrix/VolumeNabla.Mod
-+	Matrix/VolumeTransform.Mod 
-+	Matrix/VolumePDE.Mod
-+	Matrix/VolumeMoments.Mod
-+
-+	Matrix/HypercubeBase.Mod  
-+	Matrix/HypercubeNabla.Mod
-+	Matrix/HypercubeTransform.Mod 
-+	Matrix/HypercubeMoments.Mod
-+
-+
-+	Matrix/MatrixStandardSolvers.Mod
-+
-+	Matrix/MatrixTransforms.Mod
-+	Matrix/MatrixIterativeSolvers.Mod
-+	Matrix/MatrixAlgebraicMultigrid.Mod
-+	Matrix/MatrixNorms.Mod
-+	Matrix/MatrixPolynomEq.Mod
-+	Matrix/MatrixSVD.Mod
-+	Matrix/MatrixEigen.Mod
-+	Matrix/MatrixFastMatrixMultiply.Mod
-+	Matrix/MatrixLeastSquares.Mod
-+	Matrix/MatrixPrincipalComponents.Mod
-+
-+	Matrix/MatrixRoots.Mod
-+	Matrix/MatrixKrylovCGS.Mod
-+	Matrix/MatrixKrylovGMRES.Mod
-+	Matrix/MatrixKrylovMINRES.Mod
-+	Matrix/MatrixOptim.Mod
-+	Matrix/TestMatrixOptim.Mod
-+
-+	Matrix/MatrixActive.Mod
-+	Matrix/MatrixComputeObjects.Mod
-+	Matrix/MatrixBlockSolvers.Mod
-+
-+	Matrix/MatrixFigures.Mod
-+	Matrix/MatrixAVI.Mod
-+	Matrix/MatrixRaster.Mod
-+	Matrix/WMMatrix.Mod
-+	Matrix/WMMatrixGraph.Mod
-+	Matrix/WMStack.Mod
-+	Matrix/WMTensor.Mod
-+	Matrix/WMArrayPanel.Mod
-+	Matrix/WMMatrixLoader.Mod
-+
-+	Matrix/PlanarMorphology.Mod
-+	Matrix/VolumeMorphology.Mod
-+
-+
-+	Matrix/MLBase.Mod
-+	Matrix/ErrorBase.Mod
-+	Matrix/ExtraSort.Mod
-+	Matrix/MLClassifier.Mod
-+	Matrix/MLKernels.Mod
-+	Matrix/MLKernelMeans.Mod
-+	Matrix/MLRegression.Mod
-+	Matrix/MLRidgeRegression.Mod
-+	Matrix/StatisticsBase.Mod
-+	Matrix/StatisticsHistograms.Mod
-+	Matrix/StatisticsFunctions.Mod
-+	Matrix/StatisticsLinearRegression.Mod
-+	Matrix/StatisticsCombinatorics.Mod
-+
-+	Matrix/TestComplexMathL.Mod
-+	Matrix/TestMatrixStandardSolvers.Mod
-+	Matrix/TestPlanarPDE.Mod
-+	Matrix/TestVolumePDE.Mod
-+	Matrix/TestPlanarWavelets.Mod
-+	Matrix/LinpackBenchmark.Mod
-+
-+	Matrix/MatrixWarp.Mod
-+END
-+
- PACKAGE Oberon ARCHIVE "Oberon.zip" SOURCE "OberonSrc.zip" DESCRIPTION "Oberon for A2"
- 	# emulation modules
- 	NATIVE, UNIX { Oberon.Kernel.Mod }
