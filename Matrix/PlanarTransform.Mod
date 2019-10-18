@@ -245,7 +245,7 @@ CONST
 		RETURN RESULT
 	END Mirror;
 
-	PROCEDURE Rotate90*(CONST m:Rect):Rect;(*! to do: ASSURE THAT m and RESULT do not conflict*)
+	PROCEDURE Rotate90*(CONST m:Rect):Rect;(*clockwise*)(*! to do: ASSURE THAT m and RESULT do not conflict*)
 	VAR i:SIZE;
 	BEGIN
 		IF (LEN(RESULT,0) # LEN(m,1)) OR (LEN(RESULT,1) # LEN(m,0)) THEN (*LEN(RESULT) # [LEN(m,1),LEN(m,0)]*)

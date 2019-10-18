@@ -33,14 +33,15 @@ IMPORT VolumeBase, Transform:=VolumeTransform, Util:=MatrixUtilities, Nabla:=Vol
 TYPE
 	Datatype* = VolumeBase.Datatype;
 	Grid* = ARRAY [*,*,*] OF Datatype;
-	BooleanMap* = ARRAY [*,*] OF BOOLEAN;
+	PlanarBooleanMap* = ARRAY [*,*] OF BOOLEAN;
+	VolumeBooleanMap* = ARRAY [*,*,*] OF BOOLEAN;
 	Boundary* = PROCEDURE{DELEGATE} ( VAR boundary: Grid );
 
 TYPE
-	Constraint* = OBJECT  (*untested in 3D*)
+	Constraint* = OBJECT  (*untested in 3D*)(*! extend/apply also with VolumeBooleanMap*)
 	VAR constraint*, smallconstraint*, c,c0: Grid;
 		Constrain*: Boundary;
-		map*,smallmap*, m,m0: BooleanMap;
+		map*,smallmap*, m,m0: PlanarBooleanMap;
 		resized:BOOLEAN;
 		len,newLen: ARRAY [*] OF SIZE;
 	PROCEDURE Resize(w,h:SIZE); (*implementation limitation: binary size steps*) (*!TO DO: adapt Resize similar to MatrixPDE.Mod*)
@@ -105,7 +106,7 @@ TYPE
 			END;
 		END;
 	END Constrain0;
-	PROCEDURE Set*(CONST constraint:Grid; CONST map: BooleanMap);
+	PROCEDURE Set*(CONST constraint:Grid; CONST map: PlanarBooleanMap);
 	BEGIN
 		SELF.constraint:=constraint;
 		SELF.map:=map;

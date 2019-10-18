@@ -1,6 +1,8 @@
 MODULE TestVolumePDE;   (**  AUTHOR "Patrick Hunziker"; PURPOSE "Tests PDE computations for 3D";  **)
 
-IMPORT VolumePDE, Out:=KernelLog, Utilities:=Strings, WMMatrix;
+IMPORT VolumePDE, Out:=KernelLog, Utilities:=Strings, Files, WMMatrix, WMArrayPanel, MatrixUtilities;
+
+CONST TestFileName*="Matrix/VolumePDE_ConstrainedLaplace.MtA";
 
 TYPE
 	Datatype = VolumePDE.Datatype;
@@ -67,7 +69,7 @@ PROCEDURE TestWave*;
 	END TestPoisson;
 
 PROCEDURE TestAdvection*;
-CONST size=64;
+CONST size=32;
 VAR d,u,v,w,p, p1: Grid; 	D,P:WMMatrix.Window;  i:SIGNED32;
 BEGIN
 	NEW(d,size,size,size); (*original data*)
@@ -85,6 +87,42 @@ BEGIN
 	END;
 END TestAdvection;
 
+	PROCEDURE StoreConstrainedLaplace*;
+	CONST size = 32;  threshold = 1;
+	VAR d,c: Grid;  b: VolumePDE.PlanarBooleanMap;
+		con:VolumePDE.Constraint;
+		laplace: VolumePDE.Laplace;
+		f:Files.File; w:Files.Writer;
+	BEGIN
+		NEW( d, size, size, size );
+		NEW( c, size, size, size); c[20..30] := 1;  c[.. , 20..25] := -1;   c[24.. , 5..10] := 1;
+		NEW( b, size, size); b[20..30] := TRUE;  b[.. , 20..25] := TRUE;   b[24.. , 5..10] := TRUE;
+		NEW(con); con.Set(c,b);
+		NEW( laplace );  laplace.SolveMultigrid( d, threshold, 32, 20, 200, con.Constrain );
+		WMArrayPanel.AddWindow(d,"d");
+		f:=Files.New(TestFileName); Files.OpenWriter(w,f,0); Files.Register(f);
+		MatrixUtilities.StoreLR(w,d);
+	END StoreConstrainedLaplace;
+	
+	PROCEDURE {TEST} Test*;
+	CONST size = 32;  threshold = 1;
+	VAR 
+		e, d,c: Grid;  b: VolumePDE.PlanarBooleanMap;
+		con:VolumePDE.Constraint;
+		laplace: VolumePDE.Laplace;
+		f:Files.File; r:Files.Reader;
+	BEGIN
+		NEW( d, size, size, size );
+		NEW( c, size, size, size ); c[20..30] := 1;  c[.. , 20..25] := -1;   c[24.. , 5..10] := 1;
+		NEW( b, size, size); b[20..30] := TRUE;  b[.. , 20..25] := TRUE;   b[24.. , 5..10] := TRUE;
+		NEW(con); con.Set(c,b);
+		NEW( laplace );  laplace.SolveMultigrid( d, threshold, 32, 20, 200, con.Constrain );
+		f:=Files.Old(TestFileName);
+		Files.OpenReader(r,f,0);
+		e:=MatrixUtilities.LoadLR(r);
+		ASSERT(d=e);
+	END Test;
+
 END TestVolumePDE.
 
 
@@ -93,6 +131,7 @@ OFormatter.Format *
 fofPC.Compile \f *
 
 TestVolumePDE.Test
+TestVolumePDE.StoreConstrainedLaplace
 TestVolumePDE.TestwSource
 TestVolumePDE.TestAVI
 TestVolumePDE.TestPoisson
