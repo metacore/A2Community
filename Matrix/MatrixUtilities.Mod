@@ -17,7 +17,7 @@ TYPE
 TYPE RandomGenerator*= OBJECT(Rand.Generator);
 		PROCEDURE Random*(CONST size: ARRAY [*] OF SIZE;  content: SIGNED32 ): Tensor;  
 		VAR i: SIZE;
-		BEGIN (*{EXCLUSIVE}*)
+		BEGIN {EXCLUSIVE}
 			IF DIM(RESULT)=0 THEN NEW(RESULT, size) END;
 			IF DIM(RESULT)=1 THEN
 				FOR i:=0 TO LEN(RESULT,0)-1 DO
@@ -34,7 +34,7 @@ TYPE RandomGenerator*= OBJECT(Rand.Generator);
 		END Random;  	
 		PROCEDURE Dices*(CONST size: ARRAY [*] OF SIZE;  sides: SIGNED32 ): IntTensor;  
 		VAR i: SIZE;
-		BEGIN (*{EXCLUSIVE}*)
+		BEGIN {EXCLUSIVE}
 			IF DIM(RESULT)=0 THEN NEW(RESULT, size) END;
 			IF DIM(RESULT)=1 THEN
 				FOR i:=0 TO LEN(RESULT,0)-1 DO RESULT[i] :=Dice(sides) END;  
@@ -45,7 +45,7 @@ TYPE RandomGenerator*= OBJECT(Rand.Generator);
 		END Dices;  	
 		PROCEDURE Binary*(CONST size: ARRAY [*] OF SIZE;  p: Datatype ): IntTensor;  
 		VAR i: SIZE;
-		BEGIN (* {EXCLUSIVE}*)
+		BEGIN  {EXCLUSIVE}
 			(*IF DIM(RESULT)=0 THEN NEW(RESULT, size) END;*)
 			IF LEN(RESULT)#size THEN NEW(RESULT, size) END;
 			IF DIM(RESULT)=1 THEN
@@ -984,11 +984,11 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 		structure, datatypeString, versionString, comment: ARRAY 8 OF CHAR;
 	BEGIN
 		IF r.GetString(structure) & r.GetString(versionString) &	r.GetString(datatypeString) THEN
+			ASSERT(structure="TENSOR",202);
 			IF versionString="1.0" THEN version:=1;
 			ELSIF versionString="2.0" THEN version:=2;
 			ELSE HALT(200)
 			END;
-			ASSERT(structure="TENSOR",202);
 			IF datatypeString='LR' THEN	datatype:=DatatypeLR;
 			ELSIF datatypeString='R' THEN	datatype:=DatatypeR;
 			ELSIF datatypeString='SR' THEN	datatype:=DatatypeSR;
@@ -1013,8 +1013,11 @@ PROCEDURE JoinMasked*(CONST data,data1: Tensor; CONST mask: BoolTensor): Tensor;
 	PROCEDURE Load*(R:Streams.Reader): ARRAY [?] OF Datatype;
 		VAR  len: ARRAY [*] OF SIZE;
 		version, datatype:SIGNED32;	
+		pos:Streams.Position;
 	BEGIN
+		pos:=R.Pos();
 		ParseHeader(R,version, datatype,len);
+		IF R.CanSetPos() THEN R.SetPos(pos) ELSE HALT(200) END;
 		IF datatype=DatatypeLR THEN RETURN LoadLR(R)
 		ELSIF datatype=DatatypeR THEN RETURN LoadR(R)
 		(*ELSIF datatype=DatatypeSR THEN RETURN LoadSR(R)*)

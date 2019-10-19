@@ -1,6 +1,6 @@
 MODULE TestPlanarWavelets; (** AUTHOR ""; PURPOSE ""; *)
 
-IMPORT Wavelets, PlanarWavelets, Commands, WMMatrix, Files, MatrixUtilities;
+IMPORT Wavelets, PlanarWavelets, Commands, WMMatrix, Strings, Files, MatrixUtilities;
 
 
 PROCEDURE Do*(context:Commands.Context);
@@ -137,6 +137,39 @@ BEGIN
 	END;
 END Do5;
 
+PROCEDURE Do6*(context:Commands.Context);
+VAR
+	raw: ARRAY [?] OF SIGNED16;
+	data,result,result1,result2,result3: PlanarWavelets.Matrix;
+	analyzer: PlanarWavelets.Analyzer;
+	filter:PlanarWavelets.Filter;
+	rec:PlanarWavelets.Reconstructor;
+	fil: ARRAY [*,*] OF PlanarWavelets.Datatype;
+	proc: ARRAY [*,*] OF PlanarWavelets.ProcessProc;
+	window: WMMatrix.Window;
+	filename: Files.FileName;
+	w,h: SIGNED32;
+	f:Files.File; r:Files.Reader;
+BEGIN
+	IF context.arg.GetString(filename) & (Strings.Pos(".MtA",filename)>0) THEN
+		f:=Files.Old(filename); 
+		Files.OpenReader(r,f,0);
+		data:=MatrixUtilities.Load(r);
+		NEW(window, data, "data"); window.AddWindow;
+		NEW(raw,w,h);
+		NEW(analyzer, Wavelets.Haar, Wavelets.undefined, data);
+		analyzer.AnalyzePacket(3);
+		NEW(window, analyzer.data, "result"); window.AddWindow;
+		NEW(filter, PlanarWavelets.Packet,0,3); 
+		NEW(fil, 8,8); fil:=1.0; fil[0,0]:=0.0;
+		filter.Apply(analyzer.data, fil, proc,0,3);
+		NEW(window, analyzer.data, "filtered"); window.AddWindow;
+		NEW(rec, Wavelets.Haar, Wavelets.finite, analyzer.data);
+		rec.ReconstructPacket(3);
+		NEW(window, rec.data,"filtered reconstruction"); window.AddWindow;
+	END;
+END Do6;
+
 END TestPlanarWavelets.
 
 TestPlanarWavelets.Do ~
@@ -145,6 +178,7 @@ TestPlanarWavelets.Do2~
 TestPlanarWavelets.Do3 E:/Manuscripts/Polymers/Kegang_13Sept2016/Kegang_CM200KV_14102016/Kegang_CM200KV_14102016/PIP17_HSA_200KV_015.8bit.raw 4096 4096~
 TestPlanarWavelets.Do4 E:/Manuscripts/Polymers/Kegang_13Sept2016/Kegang_CM200KV_14102016/Kegang_CM200KV_14102016/PIP17_HSA_200KV_015.8bit.raw 4096 4096~
 TestPlanarWavelets.Do5 E:/Manuscripts/Polymers/Kegang_13Sept2016/Kegang_CM200KV_14102016/Kegang_CM200KV_14102016/PIP17_HSA_200KV_015.8bit.raw 4096 4096~
+TestPlanarWavelets.Do6 "Matrix/PlanarPDE_ConstrainedLaplace.MtA" ~ 
 
 
 System.FreeDownTo MatrixBase Wavelets~
