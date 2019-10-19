@@ -1,6 +1,4 @@
 MODULE MatrixUtilities;   (**  AUTHOR "Patrick Hunziker"; PURPOSE "";    **)
-(*! to do: make random generator for matrices/tensors thread safe*)
-(*!tbd: portability issue of data transferred between SIZE=LInt and SIZE=HInt *)
 
 IMPORT Rand:=Random, MatrixBase, ComplexMathL, KernelLog, Strings, Reals, Streams, Files(*, Shortreal*);  
 
