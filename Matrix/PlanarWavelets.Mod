@@ -41,7 +41,31 @@ TYPE Analyzer*= OBJECT
 			SELF.data:=data; (*!copy. could do in-place ?*)
 		END;
 	END SetData;
-
+	
+	(*location: array of indices(LL,LH,HL,HH), per layer. E.g., for plain: [0,0,3]; e.g. for packet: [2,0,3]*)
+	PROCEDURE GetSubband*(CONST d:Matrix; CONST location: ARRAY [*] OF INTEGER):Matrix;
+	VAR w,h: SIZE;
+	BEGIN
+		ASSERT(LEN(location,0)>0, 200);
+		ASSERT((location>=0) & (location<4), 201); 
+		w:=(LEN(d,1)+1) DIV 2; h:=(LEN(d,0)+1) DIV 2;
+		IF LEN(location,0)=1 THEN
+			IF location[0]=0 	THEN RESULT:=d[..h-1,..w-1]
+			ELSIF location[0]=1 THEN RESULT:=d[..h-1,w..]
+			ELSIF location[0]=2 THEN RESULT:=d[h..,..w-1]
+			ELSIF location[0]=3 THEN RESULT:=d[h..,w..]
+			ELSE HALT(202)
+			END;
+		ELSE
+			IF location[0]=0 	THEN RESULT:=GetSubband(d[..h-1,..w-1], location[1..])
+			ELSIF location[0]=1 THEN RESULT:=GetSubband(d[..h-1,w..], location[1..])
+			ELSIF location[0]=2 THEN RESULT:=GetSubband(d[h..,..w-1], location[1..])
+			ELSIF location[0]=3 THEN RESULT:=GetSubband(d[h..,w..], location[1..])
+			ELSE HALT(203)
+			END;
+		END;
+		RETURN RESULT
+	END GetSubband;
 
 	PROCEDURE Analyze*;
 	VAR i:SIZE; 
@@ -257,7 +281,7 @@ CONST levels=3;
 	wavelet=Wavelets.Spline610;
 (*	wavelet=Wavelets.Spline97;*)
 	(*wavelet=Wavelets.Cubicspline;*)
-VAR a: Matrix;
+VAR a, subHHH, subLLL: Matrix;
 	an:Analyzer;
 	rec:Reconstructor;
 	filter:Filter;
@@ -269,6 +293,12 @@ BEGIN
 	NEW(an, wavelet, Wavelets.default, a);
 	an.AnalyzePacket(levels);
 	WMArrayPanel.AddWindow(an.data,"analysis");
+	
+	subHHH:=an.GetSubband(an.data,[3,3,3]);
+	WMArrayPanel.AddWindow(subHHH,"HHH");
+	subLLL:=an.GetSubband(an.data,[0,0,0]);
+	WMArrayPanel.AddWindow(subLLL,"LLL");
+	
 	NEW(rec, wavelet, Wavelets.default, an.data);
 	rec.ReconstructPacket(levels);
 	WMArrayPanel.AddWindow(rec.data,"reconstruction");
@@ -297,14 +327,6 @@ BEGIN
 	rec.ReconstructPacket(3);
 	ASSERT(SUM(ABS(rec.data-a)) < 0.0001,200);
 END Test1;
-
-(*
-PROCEDURE {TEST}  Test2*;(* designed to trap *)
-VAR a:INTEGER;
-BEGIN 
-	ASSERT(a=1) 
-END Test2; 
-*)
 
 END PlanarWavelets.
 
