@@ -19,6 +19,7 @@ ComplexMathL.Mod
 MatrixUtilities.Mod 
 MatrixStreams.Mod
 PMath.Mod 
+GeoTools.Mod
 
 MatrixRaster.Mod
 WMArrayPanel.Mod
@@ -96,6 +97,8 @@ WMMatrixLoader.Mod
 
 PlanarMorphology.Mod
 VolumeMorphology.Mod
+PlanarEdgeDetectors.Mod
+PlanarBlobDetectors.Mod
 
 MLBase.Mod
 ErrorBase.Mod

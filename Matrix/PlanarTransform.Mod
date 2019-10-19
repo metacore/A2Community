@@ -223,13 +223,13 @@ CONST
 		RETURN RESULT
 	END Expand;
 
-	PROCEDURE Mirror*(CONST m:Rect; horizontal:BOOLEAN):Rect;(*! to do: ASSURE THAT m and RESULT do not conflict*)
+	PROCEDURE Mirror*(CONST m:Rect; vertical:BOOLEAN):Rect;(*! to do: ASSURE THAT m and RESULT do not conflict*)
 	VAR i:SIZE; h,v:ARRAY[*] OF Datatype;
 	BEGIN
 		IF (LEN(RESULT,0) # LEN(m,0)) OR (LEN(RESULT,1) # LEN(m,1)) THEN (*LEN(RESULT) # LEN(m)*)
 			NEW(RESULT, LEN(m,0), LEN(m,1))
 		END;
-		IF horizontal THEN
+		IF vertical THEN
 			FOR i:=0 TO LEN(m,0)-1 DO
 				h:=m[i,..];
 				RESULT[i,..]:=m[LEN(m,0)-i-1,..];
