@@ -249,6 +249,4 @@ TYPE
 	
 END KrylovCGS.
 
-
-
 System.FreeDownTo KrylovCGS ~
