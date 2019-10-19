@@ -67,6 +67,30 @@ TYPE Analyzer*= OBJECT
 		RETURN RESULT
 	END GetSubband;
 
+	(*location: array of indices(LL,LH,HL,HH), per layer. E.g., for plain: [0,0,3]; e.g. for packet: [2,0,3]*)
+	PROCEDURE SetSubband*(VAR dest:Matrix; CONST src:Matrix; CONST location: ARRAY [*] OF INTEGER);
+	VAR w,h: SIZE;
+	BEGIN
+		ASSERT(LEN(location,0)>0, 200);
+		ASSERT((location>=0) & (location<4), 201); 
+		w:=(LEN(dest,1)+1) DIV 2; h:=(LEN(dest,0)+1) DIV 2;
+		IF LEN(location,0)=1 THEN
+			IF location[0]=0 	THEN dest[..h-1,..w-1]:=src;
+			ELSIF location[0]=1 THEN dest[..h-1,w..]:=src;
+			ELSIF location[0]=2 THEN dest[h..,..w-1]:=src;
+			ELSIF location[0]=3 THEN dest[h..,w..]:=src;
+			ELSE HALT(202)
+			END;
+		ELSE
+			IF location[0]=0 	THEN SetSubband(dest[..h-1,..w-1],src, location[1..])
+			ELSIF location[0]=1 THEN SetSubband(dest[..h-1,w..],src, location[1..])
+			ELSIF location[0]=2 THEN SetSubband(dest[h..,..w-1],src, location[1..])
+			ELSIF location[0]=3 THEN SetSubband(dest[h..,w..],src, location[1..])
+			ELSE HALT(203)
+			END;
+		END;
+	END SetSubband;
+
 	PROCEDURE Analyze*;
 	VAR i:SIZE; 
 	BEGIN
@@ -287,28 +311,37 @@ VAR a, subHHH, subLLL: Matrix;
 	filter:Filter;
 	coeff: ARRAY [?] OF Datatype;
 	procs: ARRAY [?] OF ProcessProc;
+	d:Matrix;
 BEGIN
 	NEW(a,200,200); a[50..100,50..100]:=1.0;
 	WMArrayPanel.AddWindow(a,"data");
 	NEW(an, wavelet, Wavelets.default, a);
 	an.AnalyzePacket(levels);
 	WMArrayPanel.AddWindow(an.data,"analysis");
+	d:=an.data;
 	
+	(*get subband*)
 	subHHH:=an.GetSubband(an.data,[3,3,3]);
 	WMArrayPanel.AddWindow(subHHH,"HHH");
 	subLLL:=an.GetSubband(an.data,[0,0,0]);
 	WMArrayPanel.AddWindow(subLLL,"LLL");
 	
-	NEW(rec, wavelet, Wavelets.default, an.data);
+	NEW(rec, wavelet, Wavelets.default, d);
 	rec.ReconstructPacket(levels);
 	WMArrayPanel.AddWindow(rec.data,"reconstruction");
+	
+	subLLL:=0; (*filtering via subband setting*)
+	an.SetSubband(an.data, subLLL, [0,0,0]);
+	NEW(rec, wavelet, Wavelets.default, an.data);
+	rec.ReconstructPacket(levels);
+	WMArrayPanel.AddWindow(rec.data,"reconstruction after subband mod");
 
 	NEW(filter, Packet, 0, levels);
-	(*filter.Apply(an.data, [[0,1,1,1],[1,1,1,1],[1,1,1,1],[1,1,1,1]], procs, 0, levels);*)(* 2 levels*)
 	NEW(coeff, PMath.powerof2(levels), PMath.powerof2(levels));
 	coeff:=1.0; coeff[0,0]:=0;
-	filter.Apply(an.data, coeff, procs, 0, levels); 
-	NEW(rec, wavelet, Wavelets.finite, an.data);
+	filter.Apply(d, coeff, procs, 0, levels); 
+	
+	NEW(rec, wavelet, Wavelets.finite, d);
 	rec.ReconstructPacket(levels);
 	WMArrayPanel.AddWindow(rec.data,"filtered reconstruction");
 
