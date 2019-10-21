@@ -4,9 +4,9 @@
 	PURPOSE "Generics Containers.
 		Parameters are:
 			T - type,
-			Less - less comparator procedure with signature (l, r: T): BOOLEAN"; *)
+			L - less comparator procedure with signature (l, r: T): BOOLEAN"; *)
 
-MODULE GenericsContainers(TYPE T, CONST C (*Less*) );
+MODULE G(TYPE T, CONST L);
 
 CONST
 	(* Initial size of containers *)
@@ -244,9 +244,9 @@ TYPE
 			upper := m_iPos - 1;
 			WHILE lower <= upper DO
 				middle := lower + (upper - lower) DIV 2;
-				IF Less(m_pArray[middle], t) THEN
+				IF L(m_pArray[middle], t) THEN
 					lower := middle + 1
-				ELSIF Less(t, m_pArray[middle]) THEN
+				ELSIF L(t, m_pArray[middle]) THEN
 					upper := middle - 1
 				ELSE
 					bFound := TRUE;
@@ -266,7 +266,7 @@ TYPE
 		BEGIN
 			i := 0;
 			WHILE i < m_iPos DO
-				IF ~Less(m_pArray[i], t) & ~Less(t, m_pArray[i]) THEN
+				IF ~L(m_pArray[i], t) & ~L(t, m_pArray[i]) THEN
 					RETURN i
 				END;
 				INC(i)
@@ -333,10 +333,10 @@ TYPE
 				j := r;
 				x := l + (r - l) DIV 2;
 				REPEAT
-					WHILE Less(m_pArray[i], m_pArray[x]) DO
+					WHILE L(m_pArray[i], m_pArray[x]) DO
 						INC(i)
 					END;
-					WHILE Less(m_pArray[x], m_pArray[j]) DO
+					WHILE L(m_pArray[x], m_pArray[j]) DO
 						DEC(j)
 					END;
 					IF i <= j THEN
@@ -394,9 +394,6 @@ TYPE
 
 	END Vector;
 	
-PROCEDURE Less(l, r: T): BOOLEAN;
 BEGIN
-	RETURN TRUE
-END Less;
 	
-END GenericsContainers.
+END G.

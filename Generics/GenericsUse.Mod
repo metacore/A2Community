@@ -1,11 +1,11 @@
 MODULE GenericsUse; (** AUTHOR ""; PURPOSE ""; *)
 
 IMPORT
-	Commands, SizeContainers := GenericsContainers(SIZE, NIL);
+	Commands, SIZE_Containers := G(SIZE, L);
 	
 PROCEDURE TestQueue(context: Commands.Context);
 VAR
-	queue: SizeContainers.Queue;
+	queue: SIZE_Containers.Queue;
 	i: SIZE;
 BEGIN
 	NEW(queue);
@@ -19,7 +19,7 @@ END TestQueue;
 
 PROCEDURE TestDEQue(context: Commands.Context);
 VAR
-	deque: SizeContainers.DEQue;
+	deque: SIZE_Containers.DEQue;
 	i: SIZE;
 BEGIN
 	NEW(deque);
@@ -33,7 +33,7 @@ END TestDEQue;
 
 PROCEDURE TestVector(context: Commands.Context);
 VAR
-	vector: SizeContainers.Vector;
+	vector: SIZE_Containers.Vector;
 	i, value: SIZE;
 BEGIN
 	NEW(vector);
@@ -43,7 +43,9 @@ BEGIN
 		vector.Get(i, value);
 		context.out.Int(value, 0); context.out.Char(20X)
 	END;
-	context.out.Ln
+	context.out.Ln;
+	context.out.String("Index of 15 in Vector: "); context.out.Int(vector.IndexOf(15), 0); context.out.Ln;
+	context.out.String("Index of 32 in Vector: "); context.out.Int(vector.IndexOf(32), 0); context.out.Ln;
 END TestVector;
 
 PROCEDURE Do*(context: Commands.Context);
@@ -53,10 +55,10 @@ BEGIN
 	TestVector(context)
 END Do;
 
-(*PROCEDURE SizeLess(l, r: SIZE): BOOLEAN;
+PROCEDURE L(l, r: SIZE): BOOLEAN;
 BEGIN
 	RETURN l < r
-END SizeLess;*)
+END L;
 
 BEGIN
 
