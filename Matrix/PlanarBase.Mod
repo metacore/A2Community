@@ -19,39 +19,39 @@ VAR
 	Comments: BOOLEAN;
 	(*debug*) t1, t2, t0: SIGNED32;  testscale: SIGNED16;
 
-	(** applies a procedure 'linehandler' to all lines of a 3D dataset in the indicated directions. Avoids cache misses by copying the data into a work array that fits into the cache.*)
-	PROCEDURE HandleLines2D*( CONST cube: TwoD;  VAR rescube: TwoD;
+	(** applies a procedure 'linehandler' to all lines of a 2D dataset in the indicated directions. Avoids cache misses by copying the data into a work array that fits into the cache.*)
+	PROCEDURE HandleLines2D*( CONST data: TwoD;  VAR resdata: TwoD;
 													    directions: SET;  linehandler: LineHandler );
 	VAR templine, templine1: OneD;  rect, resrect: TwoD;
 		x, y, z, w0, w, h, i, j, lenX, lenY: SIZE;
 	BEGIN
-		lenX := LEN( cube, 1 );  lenY := LEN( cube, 0 );
+		lenX := LEN( data, 1 );  lenY := LEN( data, 0 );
 		IF 1 IN directions THEN  (*along x*)
-			FOR y := 0 TO lenY - 1 DO linehandler( cube[y], rescube[y] ) END;
+			FOR y := 0 TO lenY - 1 DO linehandler( data[y], resdata[y] ) END;
 		END;
 
-		(* here, a slice in the XZ plane is cut from the cube, with a size small enough to fit in cache. This should limit cache misses in the inner loop.
+		(* here, a slice in the XZ plane is cut from the data, with a size small enough to fit in cache. This should limit cache misses in the inner loop.
 					Note that the XZ plane is better than the YZ plane for line handling in the z dimension, because entire lines
 					can be extracted from the internal data structures   *)
-		IF 0 IN directions THEN  (*additional optimization option: only cut 'rect' out of cube if XY plane does not fit into cache by itself (somewhat similar for z dimension) *)
-			lenX := LEN( rescube, 1 );
+		IF 0 IN directions THEN  (*additional optimization option: only cut 'rect' out of data if XY plane does not fit into cache by itself (somewhat similar for z dimension) *)
+			lenX := LEN( resdata, 1 );
 			h := lenY;
 			w0 := MIN( lenX, ENTIER( cachesize * cachefraction / SIZEOF( Datatype ) / h ) );
-			NEW( rect, h, w0 );  NEW( resrect, LEN( rescube, (*1*)0 ), w0 );
+			NEW( rect, h, w0 );  NEW( resrect, LEN( resdata, (*1*)0 ), w0 );
 				j := 0;
 				WHILE j < lenX DO  (*work in slices of full lenY size, but limited with w to avoid cache misses *)
 					w := MIN( w0, lenX - j );
-					IF 1 IN directions THEN rect[.. , .. w - 1] := rescube[.. , j..j + w - 1];
-					ELSE rect[.. , .. w - 1] := cube[.. , j..j + w - 1];
+					IF 1 IN directions THEN rect[.. , .. w - 1] := resdata[.. , j..j + w - 1];
+					ELSE rect[.. , .. w - 1] := data[.. , j..j + w - 1];
 					END;
 					FOR x := 0 TO w - 1 DO
 						templine := rect[.. , x];  templine1 := resrect[.. , x];   (*HACK double data copy ! - there is a problem with the linehandler(rect[..,x], resrect[..,x]); data passing*)
 						linehandler( templine, templine1 );  resrect[.. , x] := templine1;
 						(*linehandler(rect[..,x], resrect[..,x]);*)
 					END;
-					rescube[.. , j..j + w - 1] := resrect[.. , .. w - 1];  INC( j, w );
+					resdata[.. , j..j + w - 1] := resrect[.. , .. w - 1];  INC( j, w );
 				END;
-			lenY := LEN( rescube, (*1*) 0 );
+			lenY := LEN( resdata, (*1*) 0 );
 		END;
 	END HandleLines2D;
 
@@ -70,22 +70,22 @@ VAR
 
 (*
 	PROCEDURE Test*;
-	VAR x, y, z, s, rep, time, i, j: SIGNED32;  cube, rescube: TwoD;
+	VAR x, y, z, s, rep, time, i, j: SIGNED32;  data, resdata: TwoD;
 	BEGIN
 		In.Open;  In.LongInt( s );  In.LongInt( rep );
 		IF In.Done THEN
 			Out.String( "demonstrates fast linewise handling in arbitrary dimensional dataset, using temporary rectangles with size<cache to avoid cache misses" );  Out.Ln;  Out.String( "data size [kB]: " );
 			Out.Int( s * s *  SIZE( Datatype ) DIV 1024, 16 );  Out.Ln;  t0 := 0;
-			t1 := 0;  t2 := 0;  NEW( cube, s, s );  NEW( rescube, s, s );
+			t1 := 0;  t2 := 0;  NEW( data, s, s );  NEW( resdata, s, s );
 			FOR y := 0 TO s - 1 DO
-				FOR x := 0 TO s - 1 DO cube[y, x] := y * s + x;  END;
+				FOR x := 0 TO s - 1 DO data[y, x] := y * s + x;  END;
 			END;
 			t0 := 0;  t1 := 0;  t2 := 0;  time := Oberon.Time();
 			FOR i := 0 TO rep - 1 DO
-				Comments := FALSE;  HandleLines2D( cube, rescube, {1}, copy );
+				Comments := FALSE;  HandleLines2D( data, resdata, {1}, copy );
 				Comments := TRUE;
 			END;
-			time := Oberon.Time() - time;  out( rescube[3, .. ], rescube[3, .. ] );
+			time := Oberon.Time() - time;  out( resdata[3, .. ], resdata[3, .. ] );
 			Out.String( "overall time:" );  Out.Int( time, 5 );  Out.String( " z:" );  Out.Int( t0, 5 );
 			Out.String( " y:" );  Out.Int( t1, 5 );  Out.String( " x:" );  Out.Int( t2, 5 );  Out.Ln;
 		END;

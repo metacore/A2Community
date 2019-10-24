@@ -49,9 +49,6 @@ TYPE PCA*= OBJECT (MatrixBase.Solver)
 		PROCEDURE LargestComponents*(M:SIGNED32): Matrix; (*returns Y with reduced size (not YT ! )*)
 		BEGIN
 			ASSERT(initialized & (M#0));
-			(*HALT(200); (* would work if sorting was plugged in *)
-			SL:=svd.w[..M-1];  (*? or IDENTITYlm*svd.w*)
-			Y:=SL*svd.vt;*)
 			SL:=svd.wSorted[..M-1];
 			Y:=SL*svd.vtSorted;
 			RETURN Y
@@ -93,11 +90,6 @@ TYPE PCA*= OBJECT (MatrixBase.Solver)
 		U:=pca.Axes();
 		Util.OutMatrix(U);
 		(*Util.OutMatrix(U*U`);*) (*why not orthonormal ?*)
-		(*
-     Util.OutVector( (C.*C)[*,*] *[1,1,1,1,1,1]);  (*check rowwise variance*)
-     Util.OutVector( [1,1,1,1,1,1]*(C.*C)[*,*]); (*check columnwise variance*)
-     Util.OutVector( [1,1,1,1,1,1]*(U.*U)[*,*]); (*check columnwise unit vector length*) 
-		*)
 		Util.OutVector( (C.*C)*[1,1,1,1,1,1]);  (*check rowwise variance*)
 		Util.OutVector( [1,1,1,1,1,1]*(C.*C)); (*check columnwise variance*)
 		Util.OutVector( [1,1,1,1,1,1]*(U.*U)); (*check columnwise unit vector length*)
