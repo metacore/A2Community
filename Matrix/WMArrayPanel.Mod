@@ -1,6 +1,6 @@
 MODULE WMArrayPanel; (** AUTHOR ""; PURPOSE "Display of 3D and 4D tensors as image"; *)
 
-IMPORT Inputs, XML, MatrixRaster, MatrixUtilities, Files, Streams, WMMessages, Modules,
+IMPORT Inputs, XML, MatrixRaster, MatrixUtilities, Files, Streams, WMMessages, Modules,Kernel,
 	WM:=WMWindowManager, WMComponents, WMProperties, WMStandardComponents, WMRectangles, Strings, Models, WMGraphics, Commands;
 CONST
 	unsigned=0;
@@ -27,6 +27,34 @@ TYPE Data*= OBJECT (Models.Model)
 			SetNameAsString(Strings.NewString("TensorData"));
 		END Init;
 	END Data;
+	
+TYPE Animator=OBJECT
+		VAR p:Panel;
+			dead:BOOLEAN;
+			timer:Kernel.Timer;
+			interval: SIGNED32;
+		PROCEDURE &Init(p:Panel; interval: SIGNED32);
+		BEGIN
+			SELF.p:=p;
+			SELF.interval:=interval;
+			NEW(timer);
+		END Init;
+		
+		PROCEDURE Die;
+		BEGIN
+			BEGIN{EXCLUSIVE} dead:=TRUE END;
+			timer.Wakeup;
+		END Die;
+		
+		BEGIN{ACTIVE}
+			WHILE ~dead DO 
+				p.current:=(p.current+1) MOD LEN(p.data.m, p.orientation.Get());
+				p.Render;
+				p.Invalidate;
+				timer.Sleep(interval);
+			END;
+		END Animator;
+		
 
 TYPE Panel*= OBJECT (WMStandardComponents.ImagePanel) (*! tbd: convert some local variables to properties. move some local variables to model .  tbd: serialization*)
 		VAR data*:Data; (*is also in model property*)
@@ -41,6 +69,7 @@ TYPE Panel*= OBJECT (WMStandardComponents.ImagePanel) (*! tbd: convert some loca
 		img0 : WMGraphics.Image;
 		showIndex*:BOOLEAN;
 		win*:WM.Window;
+		animator: Animator;
 
 	PROCEDURE &Init*();
 	BEGIN
@@ -345,6 +374,16 @@ TYPE Panel*= OBJECT (WMStandardComponents.ImagePanel) (*! tbd: convert some loca
 			SetImage(SELF, img0) (*Implicit invalidate*)
 		END RecacheProperties;
 
+		PROCEDURE Animate*(interval:SIGNED32);
+		BEGIN
+			NEW(animator,SELF,1000);
+		END Animate;
+		
+		PROCEDURE StopAnimation*;
+		BEGIN
+			IF animator#NIL THEN animator.Die; animator:=NIL END;
+		END StopAnimation;
+
 	END Panel;
 
 PROCEDURE GenerateName(prefix: ARRAY OF CHAR; VAR str: ARRAY OF CHAR);
@@ -497,6 +536,9 @@ BEGIN {EXCLUSIVE}
 		remove:=w;
 		w:=manager.GetNext(w);
 		IF (remove#NIL)&(remove IS WMComponents.FormWindow)&(remove(WMComponents.FormWindow).form.GetFirst() IS Panel) THEN
+			IF remove(WMComponents.FormWindow).form.GetFirst()(Panel).animator#NIL THEN 
+				remove(WMComponents.FormWindow).form.GetFirst()(Panel).animator.Die;
+			END;
 			manager.Remove(remove); 
 		END;
 	END;
@@ -512,9 +554,10 @@ BEGIN
 	log:=context.out;
 	(*have some data in a 3D array ready*)
 	NEW(tensor,50,100,120);
-	tensor[..,10..40,..]:=1;
-	tensor[10..15,..,..]:=2;
-	tensor[..,..,10..30]:=3;
+	tensor[..,10..40 BY 2,..]:=1;
+	tensor[10..15 BY 2,..,..]:=2;
+	tensor[..,..,10..30 BY 2]:=3;
+	tensor[..,..,60..100 BY 4]:=4;
 
 	(*show data as mouse or arrow key scrollable window*)
 	NEW(panel);
@@ -528,7 +571,7 @@ BEGIN
 	window.form.fillColor.Set(0);(*background*)
 	(*window.form.fillColor.Set(008888FFH);*)(*background*)
 	WM.DefaultAddWindow(window);
-
+	panel.Animate(1000);
 	(*LOOP
 		panel.SetSubArray(MatrixUtilities.Random([6,100,120],MatrixUtilities.Uniform), [10..15,..,..]);
 	END;*)
