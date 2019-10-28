@@ -284,6 +284,25 @@ CONST
 		ELSE PlanarBase.HandleLines2D( data, resdata, directions, waveconvolver.Reconstruct );
 		END;
 	END Wavelet2D;
+	
+	PROCEDURE {TEST} Test*;
+	VAR a,b,c,d,e,f,g: ARRAY [*,*] OF REAL;
+	BEGIN
+		NEW(a,100,100);
+		NEW(b, 50,100);
+		NEW(c, 50,50);
+		
+		d:=Reduce(a);(*unallocated*)
+		c:=Reduce(a);(*preallocated*)
+		b[*,50..]:=Reduce(a);(*subrange*)
+		
+		a:=Expand(c); (*preallocated*)
+		e:=Expand(c); (*unallocated*)
+		
+		NEW(f,101,101); f:=1;
+		g:=Reduce(f); ASSERT(LEN(g)=[51,51], 200);
+		f:=0; f:=Expand(g); ASSERT(SUM(f)=101*101, 201);
+	END Test;
 
 (*
 	PROCEDURE Test*;
@@ -301,6 +320,10 @@ CONST
 	END Test;
 *)
 END PlanarTransform.
+
+
+
+
 System.Free
 PlanarTransform.Test
 
