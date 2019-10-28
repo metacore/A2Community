@@ -3,15 +3,10 @@ Linear Algebra and Planar/Volumetric Signal Processing Modules. Copyright Patric
 (*TBD: e.g., fast randomized matrix algorithms: https://arxiv.org/abs/0909.4061 *)
 (*TBD: robust statistics *)
 
-(* Compile MatrixTestBackend *)
-Compiler.Compile -S="Matrix/" 
-
-MatrixTestBackend.Mod
 ~
 
 System.FreeDownTo MatrixBase ~
-Compiler.Compile -S="Matrix/" --test=MatrixTestBackend --testMode=Immediate
-
+Compiler.Compile -S="Matrix/" --test=Test
 MatrixBase.Mod 
 
 ComplexMathL.Mod 
