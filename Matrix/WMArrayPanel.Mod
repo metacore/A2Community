@@ -1,6 +1,6 @@
 MODULE WMArrayPanel; (** AUTHOR ""; PURPOSE "Display of 3D and 4D tensors as image"; *)
 
-IMPORT Inputs, XML, MatrixRaster, MatrixUtilities, Files, Streams, WMMessages, 
+IMPORT Inputs, XML, MatrixRaster, MatrixUtilities, Files, Streams, WMMessages, Modules,
 	WM:=WMWindowManager, WMComponents, WMProperties, WMStandardComponents, WMRectangles, Strings, Models, WMGraphics, Commands;
 CONST
 	unsigned=0;
@@ -32,6 +32,7 @@ TYPE Panel*= OBJECT (WMStandardComponents.ImagePanel) (*! tbd: convert some loca
 		VAR data*:Data; (*is also in model property*)
 		orientation-: WMProperties.Int32Property;
 		displayMode-:WMProperties.Int32Property;
+		transparency-:WMProperties.BooleanProperty;
 		type, cur3:SIGNED32;
 		mx0,my0,mx1,my1:SIZE;
 		current*,offset*:SIZE;
@@ -48,6 +49,8 @@ TYPE Panel*= OBJECT (WMStandardComponents.ImagePanel) (*! tbd: convert some loca
 		NEW(SELF.orientation, NIL, Strings.NewString("orientation"), Strings.NewString("")); properties.Add(SELF.orientation);
 		NEW(displayMode, NIL, Strings.NewString("displayMode"), Strings.NewString("default, sum, max")); properties.Add(displayMode);
 		SELF.orientation.Set(0);
+		NEW(transparency, NIL, Strings.NewString("transparency"), Strings.NewString("transparency")); properties.Add(transparency);
+		transparency.Set(FALSE);
 		NEW(img0);
 		NEW(data);
 	 	model.Set(data); model.Changed;
@@ -173,6 +176,29 @@ TYPE Panel*= OBJECT (WMStandardComponents.ImagePanel) (*! tbd: convert some loca
 		END;
 	END SetArray;
 
+	PROCEDURE SetSubArray*(CONST a: Tensor; CONST ranges:ARRAY [*] OF RANGE);
+	BEGIN
+		ASSERT(DIM(a) IN {2,3,4}, 200);
+		IF LEN(a)>0 THEN
+			CASE LEN(ranges,0) OF
+				 1: data.m[ranges[0]]:=a;
+				|2: data.m[ranges[0],ranges[1]]:=a;
+				|3: data.m[ranges[0],ranges[1],ranges[2]]:=a;
+				|4: data.m[ranges[0],ranges[1],ranges[2],ranges[3]]:=a;
+			ELSE HALT(201);
+			END;
+			max:=MAX(data.m); min:=MIN(data.m); IF min<0 THEN type:=signed ELSE type:=unsigned END;
+			offset:=0;
+			IF max#min THEN gain:= 255/MAX( ABS(max),ABS(min));
+			ELSE gain:=1;
+			END;
+			model.Set(data); (*? why are both calls needed to assure correct display ? maybe because the former only sends message if object has changed*)
+			model.Changed;
+		ELSE type:=unsigned;
+		END;
+	END SetSubArray;
+
+
 	PROCEDURE SetArrayCustom*(CONST m: Tensor; offset:SIGNED32;gain: FLOAT64);
 	BEGIN
 		IF LEN(m)>0 THEN
@@ -237,10 +263,18 @@ TYPE Panel*= OBJECT (WMStandardComponents.ImagePanel) (*! tbd: convert some loca
 			IF DIM(data.m)=4 THEN m:=ALIAS OF data.m[cur3 MOD LEN(data.m,0),?]
 			ELSE m:=ALIAS OF data.m (*only effective in DIM=3*)
 			END;
-			IF DIM(data.m)=2 THEN MatrixRaster.LRealToImageBR(data.m[*,*], offset, gain, img0);
-			ELSIF orient=0 THEN MatrixRaster.LRealToImageBR(m[current MOD len[0],*,*], offset, gain, img0);
-			ELSIF orient=1 THEN MatrixRaster.LRealToImageBR(m[.., current MOD len[1], ..], offset, gain, img0);
-			ELSE MatrixRaster.LRealToImageBR(m[..,..,current MOD len[2]], offset, gain, img0);
+			IF transparency.Get() THEN
+				IF DIM(data.m)=2 THEN MatrixRaster.LRealToImageBRA(data.m[*,*], offset, gain, img0);
+				ELSIF orient=0 THEN MatrixRaster.LRealToImageBRA(m[current MOD len[0],*,*], offset, gain, img0);
+				ELSIF orient=1 THEN MatrixRaster.LRealToImageBRA(m[.., current MOD len[1], ..], offset, gain, img0);
+				ELSE MatrixRaster.LRealToImageBRA(m[..,..,current MOD len[2]], offset, gain, img0);
+				END;
+			ELSE
+				IF DIM(data.m)=2 THEN MatrixRaster.LRealToImageBR(data.m[*,*], offset, gain, img0);
+				ELSIF orient=0 THEN MatrixRaster.LRealToImageBR(m[current MOD len[0],*,*], offset, gain, img0);
+				ELSIF orient=1 THEN MatrixRaster.LRealToImageBR(m[.., current MOD len[1], ..], offset, gain, img0);
+				ELSE MatrixRaster.LRealToImageBR(m[..,..,current MOD len[2]], offset, gain, img0);
+				END;
 			END;
 		ELSIF type=heat THEN
 			IF DIM(data.m)=4 THEN m:=ALIAS OF data.m[cur3 MOD LEN(data.m,0),?] ELSE m:=ALIAS OF data.m END;
@@ -435,7 +469,8 @@ BEGIN
 	panel.alignment.Set(WMComponents.AlignClient);
 	IF panel IS Panel THEN COPY(title, panel(Panel).title); COPY(title, panel(Panel).baseTitle) END;
 	window.SetContent(panel);
-	window.form.fillColor.Set(008888FFH);(*background*)
+	(*window.form.fillColor.Set(008888FFH);*)(*background*)
+	window.form.fillColor.Set(0);(*background*)
 	RETURN window;
 END CreateWindow;
 
@@ -453,8 +488,19 @@ BEGIN
 END AddWindow;
 
 PROCEDURE Cleanup;
-BEGIN
-	
+VAR manager:WM.WindowManager; w,remove:WM.Window;
+BEGIN {EXCLUSIVE}
+	manager:=WM.GetDefaultManager();
+	manager.lock.AcquireWrite;
+	w:=manager.GetFirst();
+	WHILE (w#NIL) DO
+		remove:=w;
+		w:=manager.GetNext(w);
+		IF (remove#NIL)&(remove IS WMComponents.FormWindow)&(remove(WMComponents.FormWindow).form.GetFirst() IS Panel) THEN
+			manager.Remove(remove); 
+		END;
+	END;
+	manager.lock.ReleaseWrite;
 END Cleanup;
 
 
@@ -479,18 +525,19 @@ BEGIN
 	INCL(window.flags, WM.FlagStorable); (* allow storing of data interactively, through right-click on navigator icon*)
 	panel.alignment.Set(WMComponents.AlignClient);
 	window.SetContent(panel);
-	window.form.fillColor.Set(008888FFH);(*background*)
+	window.form.fillColor.Set(0);(*background*)
+	(*window.form.fillColor.Set(008888FFH);*)(*background*)
 	WM.DefaultAddWindow(window);
-(*
-	LOOP
-		tensor[10..15,..,..]:= MatrixUtilities.Random([6,100,120],MatrixUtilities.Uniform);
-		panel.SetArray(tensor);
-	END;
-*)
+
+	(*LOOP
+		panel.SetSubArray(MatrixUtilities.Random([6,100,120],MatrixUtilities.Uniform), [10..15,..,..]);
+	END;*)
 END Test;
 
 VAR log:Streams.Writer;
 
+BEGIN
+	Modules.InstallTermHandler(Cleanup);
 END WMArrayPanel.
 
 WMArrayPanel.Test~
