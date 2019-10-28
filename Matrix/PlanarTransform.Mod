@@ -184,11 +184,13 @@ CONST
 		RETURN RESULT
 	END ExpandY;
 
-
-	PROCEDURE Reduce*( CONST g: Rect ): Rect;  (*simple scaling without interpolation*)
+	PROCEDURE Reduce*(CONST g: Rect): Rect;  (*simple scaling without interpolation*)
+	VAR newLen: ARRAY [*] OF SIZE;
 	BEGIN
-		IF (LEN( RESULT, 0 ) # ((LEN( g, 0 ) + 1) DIV 2)) OR (LEN( RESULT, 1 ) # ((LEN( g, 1 ) + 1) DIV 2)) THEN NEW( RESULT, (LEN( g, 0 ) + 1) DIV 2, (LEN( g, 1 ) + 1) DIV 2 ) END;
-		RESULT[.. (LEN( g, 0 ) + 1) DIV 2 - 1, .. (LEN( g, 1 ) + 1) DIV 2 - 1] := g[.. BY 2, .. BY 2];
+		newLen:= (LEN(g)+1) DIV 2;
+		IF (DIM(RESULT)=0) OR (LEN(RESULT)#newLen) THEN NEW(RESULT,newLen) END;
+(*		IF (LEN( RESULT, 0 ) # ((LEN( g, 0 ) + 1) DIV 2)) OR (LEN( RESULT, 1 ) # ((LEN( g, 1 ) + 1) DIV 2)) THEN NEW( RESULT, (LEN( g, 0 ) + 1) DIV 2, (LEN( g, 1 ) + 1) DIV 2 ) END;
+*)		RESULT[.. (LEN( g, 0 ) + 1) DIV 2 - 1, .. (LEN( g, 1 ) + 1) DIV 2 - 1] := g[.. BY 2, .. BY 2];
 		RESULT[.. (LEN( g, 0 ) + 0) DIV 2 - 1, .. (LEN( g, 1 ) + 1) DIV 2 - 1] := RESULT[.. (LEN( g, 0 ) + 0) DIV 2 - 1, .. (LEN( g, 1 ) + 1) DIV 2 - 1] + g[1.. BY 2, .. BY 2];
 		RESULT[.. (LEN( g, 0 ) + 1) DIV 2 - 1, .. (LEN( g, 1 ) + 0) DIV 2 - 1] := RESULT[.. (LEN( g, 0 ) + 1) DIV 2 - 1, .. (LEN( g, 1 ) + 0) DIV 2 - 1] + g[.. BY 2, 1.. BY 2];
 		RESULT[.. (LEN( g, 0 ) + 0) DIV 2 - 1, .. (LEN( g, 1 ) + 0) DIV 2 - 1] := RESULT[.. (LEN( g, 0 ) + 0) DIV 2 - 1, .. (LEN( g, 1 ) + 0) DIV 2 - 1] + g[1.. BY 2, 1.. BY 2];
@@ -211,7 +213,6 @@ CONST
 		RESULT[.. (LEN( g, 0 ) + 0) DIV 2 - 1, .. (LEN( g, 1 ) + 0) DIV 2 - 1] := MAX(RESULT[.. (LEN( g, 0 ) + 0) DIV 2 - 1, .. (LEN( g, 1 ) + 0) DIV 2 - 1], g[1.. BY 2, 1.. BY 2]);
 		RETURN RESULT
 	END ReduceMax;
-
 
 	PROCEDURE Expand*( CONST g: Rect ): Rect;  (*simple scaling without interpolation*)
 	BEGIN
@@ -303,7 +304,7 @@ END PlanarTransform.
 System.Free
 PlanarTransform.Test
 
-System.Free PlanarTransform MatrixBSplineInterpolation PlanarBase LinearConvolve MatrixFIRConvolveLongReal TestDSPTransform DSPOpticalFlow DSPWarp3D DSPTransform ~
+System.FreeDownTo PlanarTransform MatrixBSplineInterpolation PlanarBase LinearConvolve MatrixFIRConvolveLongReal TestDSPTransform DSPOpticalFlow DSPWarp3D DSPTransform ~
 
 fofPC.Compile \s *
 fofPC.Compile \f *

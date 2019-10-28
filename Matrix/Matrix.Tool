@@ -1,8 +1,7 @@
 Linear Algebra and Planar/Volumetric Signal Processing Modules. Copyright Patrick Hunziker, Basel, 2005-2018.
 
 (*TBD: e.g., fast randomized matrix algorithms: https://arxiv.org/abs/0909.4061 *)
-
-Testing.Install ~ (*find TEST procedures and test them after compilation*)
+(*TBD: robust statistics *)
 
 (* Compile MatrixTestBackend *)
 Compiler.Compile -S="Matrix/" 
@@ -97,8 +96,6 @@ WMMatrixLoader.Mod
 
 PlanarMorphology.Mod
 VolumeMorphology.Mod
-PlanarEdgeDetectors.Mod
-PlanarBlobDetectors.Mod
 
 MLBase.Mod
 ErrorBase.Mod
@@ -115,6 +112,9 @@ StatisticsHistograms.Mod
 StatisticsFunctions.Mod
 StatisticsLinearRegression.Mod
 StatisticsCombinatorics.Mod
+
+PlanarEdgeDetectors.Mod
+PlanarBlobDetectors.Mod
 
 TestComplexMathL.Mod
 TestMatrixStandardSolvers.Mod

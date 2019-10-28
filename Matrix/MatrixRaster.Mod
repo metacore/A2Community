@@ -296,6 +296,33 @@ BEGIN
 	END;
 END LRealToImageBR;
 
+(*transparency for low values*)
+PROCEDURE LRealToImageBRA*(CONST data:ARRAY [*,*] OF FLOAT64; offset:SIZE; gain:FLOAT64; im:Raster.Image);
+VAR F:Raster.Format; pal:Raster.Palette; max,valI,i,col:SIGNED32; x,y:SIZE; val:FLOAT64; palette:ARRAY [*,*] OF SIGNED32;
+BEGIN
+	IF (LEN(data,0)=0) OR (LEN(data,1)=0) THEN RETURN END;
+	F:=Raster.BGRA8888;
+	Raster.Create(im,LEN(data,1),LEN(data,0),F);
+	FOR y:=0 TO LEN(data,0)-1 DO
+		FOR x:=0 TO LEN(data,1)-1 DO
+			val:=data[y,x]; IF Reals.IsNaNL(val) THEN val:=0 END;
+			valI:=ENTIER(0.5+offset+gain*val);
+			IF valI<0 THEN
+				im.mem[y*im.bpr+4*x+0]:= CHR(-Clamp(valI,-255,0));
+				im.mem[y*im.bpr+4*x+1]:= 0X;
+				im.mem[y*im.bpr+4*x+2]:= 0X;
+				im.mem[y*im.bpr+4*x+3]:= CHR(-Clamp(valI,-255,0));
+			ELSE
+				im.mem[y*im.bpr+4*x+0]:= 0X;
+				im.mem[y*im.bpr+4*x+1]:= 0X;
+				im.mem[y*im.bpr+4*x+2]:= CHR(Clamp(valI,0,255));
+				im.mem[y*im.bpr+4*x+3]:= CHR(Clamp(valI,0,255));
+			END;
+		END;
+	END;
+END LRealToImageBRA;
+
+
 PROCEDURE LRealToImageHeat*(CONST data:ARRAY [*,*] OF FLOAT64; offset:SIZE; gain:FLOAT64; im:Raster.Image);
 VAR F:Raster.Format; pal:Raster.Palette; max,valI,i,col:SIGNED32; x,y:SIZE; val:FLOAT64; palette:ARRAY [*,*] OF SIGNED32;
 BEGIN
@@ -475,9 +502,9 @@ VAR
 	lr:ARRAY [*,*] OF FLOAT64;
 	p:ARRAY [*,*] OF SIGNED32;
 	ind:SIGNED32;
-	pw, pw1, pw2, pw3, pw4, pw5 : WM.BufferWindow;
+	pw, pw1, pw2, pw3, pw4, pw5, pw6, pw7: WM.BufferWindow;
 	res, w, h, x : SIGNED32;
-
+	n: SIZE;
 BEGIN
 
 
@@ -486,6 +513,7 @@ BEGIN
 	NEW(l,100,100); l[50..80,40..90]:=100;
 	NEW(r,100,100); r[50..80,40..90]:=100;
 	NEW(lr,100,100); lr[50..80,40..90]:=100;
+			FOR n:=0 TO LEN(lr,0)-1 DO lr[0..10,n]:= 5.11*n-255 END; (*color ramp*)
 
 	NEW(p,256,3);
 	FOR ind:=0 TO 255 DO
@@ -499,6 +527,8 @@ BEGIN
 	NEW(pw3, w, h, TRUE);
 	NEW(pw4, w, h, TRUE);
 	NEW(pw5, w, h, TRUE);
+	NEW(pw6, w, h, TRUE);
+	NEW(pw7, w, h, TRUE);
 
 	SIntToImage(s,p,pw.img);
 	IntToImage(i,p,pw1.img);
@@ -506,6 +536,8 @@ BEGIN
 	RealToImage(r,128,1,pw3.img);
 	LRealToImage(lr,128,1,pw4.img);
 	LRealToImageHeat(lr,128,1,pw5.img);
+	LRealToImageBR(lr,128,1,pw6.img);
+	LRealToImageBRA(lr,0,1,pw7.img);
 
 	WM.DefaultAddWindow(pw);
 	WM.DefaultAddWindow(pw1);
@@ -513,6 +545,8 @@ BEGIN
 	WM.DefaultAddWindow(pw3);
 	WM.DefaultAddWindow(pw4);
 	WM.DefaultAddWindow(pw5);
+	WM.DefaultAddWindow(pw6);
+	WM.DefaultAddWindow(pw7);
 
 	(*
 	NEW(p,256,3);

@@ -113,8 +113,8 @@ VAR  RG: RandomGenerator (*Rand.Generator*);
 		RETURN x
 	END InvDiag;  
 
-	PROCEDURE RandomVec*( m: SIGNED32;  content: SIGNED32 ): Vector;  
-	VAR i: SIGNED32;  A: Vector;  x:Datatype;
+	PROCEDURE RandomVec*( m: SIZE;  content: SIGNED32 ): Vector;  
+	VAR i: SIZE;  A: Vector;  x:Datatype;
 	BEGIN 
 		NEW( A, m );  
 		FOR i := 0 TO m - 1 DO 
@@ -126,8 +126,8 @@ VAR  RG: RandomGenerator (*Rand.Generator*);
 		RETURN A
 	END RandomVec;  
 
-	PROCEDURE RandomMatrix*( m, n: SIGNED32;  content: SIGNED32 ): Matrix;  
-	VAR i, j: SIGNED32;  A: Matrix;  x:Datatype;
+	PROCEDURE RandomMatrix*( m, n: SIZE;  content: SIGNED32 ): Matrix;  
+	VAR i, j: SIZE;  A: Matrix;  x:Datatype;
 	BEGIN 
 		NEW( A, m, n );  
 		FOR i := 0 TO m - 1 DO 

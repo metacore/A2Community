@@ -2,7 +2,6 @@ MODULE LinearFIRConvolveLongReal;	(** Patrick Hunziker & dk(assembler)   **)
 (** implements basic FIR convolutions for convolve, convolve+downsample, convolve+upsample *)
 
 IMPORT LinearFilters;
-(*IMPORT Commands, MatrixUtilities, LinearFilters;*)
 
 PROCEDURE Convolve*(CONST filter:ARRAY[*]  OF FLOAT64; CONST data:ARRAY [*] OF FLOAT64; VAR result:ARRAY [*] OF FLOAT64);
 VAR d,filterlen,reslen:SIZE;
@@ -14,10 +13,10 @@ BEGIN
 	END;
 END Convolve;
 
-PROCEDURE ConvolveDown2*(CONST filter:ARRAY[*]  OF FLOAT64;  CONST data:ARRAY [*] OF FLOAT64;VAR result:ARRAY [*] OF FLOAT64; shift:SIGNED32);
+PROCEDURE ConvolveDown2*(CONST filter:ARRAY[*]  OF FLOAT64;  CONST data:ARRAY [*] OF FLOAT64;VAR result:ARRAY [*] OF FLOAT64; shift:SIZE);
 VAR d,filterlen,datalen,resPos:SIZE;
 BEGIN
-	(** precondition: shift IN {0,1} ; this is used for even/odd algorithm variants *)
+	ASSERT(shift IN {0,1},200); (* this is used for even/odd algorithm variants *)
 	IF LEN(result,0) < LEN(data,0) DIV 2 THEN datalen:=2* LEN(result,0) ELSE datalen:= LEN(data,0) END;
 	filterlen:=LEN(filter,0);
 	result:=0;
@@ -27,11 +26,11 @@ BEGIN
 	END;
 END ConvolveDown2;
 
-PROCEDURE ConvolveUp2_scalar(CONST filter:ARRAY[*]  OF FLOAT64; CONST data: ARRAY [*] OF FLOAT64;VAR result:ARRAY [*] OF FLOAT64; shift:SIGNED32);
+PROCEDURE ConvolveUp2_scalar(CONST filter:ARRAY[*]  OF FLOAT64; CONST data: ARRAY [*] OF FLOAT64;VAR result:ARRAY [*] OF FLOAT64; shift:SIZE);
 	(** upsampling by 2 and convolution with filter; admissible types should include all basic Oberon number types *)
 VAR f,d,filterlen,reslen,filterstart:SIZE;
 BEGIN
-	(** precondition: shift IN {0,1} ; this is used for even/odd algorithm variants *)
+	ASSERT(shift IN {0,1},200); (* this is used for even/odd algorithm variants *)
 	(* in simpler, slow variant, upsampling (shifted by shift) into a temp array is followed by standard FIRConvolve*)
 	IF LEN(result,0) < 2 * LEN(data,0) THEN reslen:=LEN(result,0) ELSE reslen:=2*LEN(data,0) END;
 	filterlen:=LEN(filter,0);
@@ -46,26 +45,26 @@ BEGIN
 END ConvolveUp2_scalar;
 
 (* rewritten as array math, not fully tested *)
-PROCEDURE ConvolveUp2*(CONST filter:ARRAY[*]  OF FLOAT64; CONST data: ARRAY [*] OF FLOAT64;VAR result:ARRAY [*] OF FLOAT64; shift:SIGNED32);
+PROCEDURE ConvolveUp2*(CONST filter:ARRAY[*]  OF FLOAT64; CONST data: ARRAY [*] OF FLOAT64;VAR result:ARRAY [*] OF FLOAT64; shift:SIZE);
 	(** upsampling by 2 and convolution with filter; admissible types should include all basic Oberon number types *)
 VAR d,filterlen,reslen,filterstart:SIZE;
 BEGIN
-	(** precondition: shift IN {0,1} ; this is used for even/odd algorithm variants *)
+	ASSERT(shift IN {0,1},200); (* this is used for even/odd algorithm variants *)
 	(* in simpler, slow variant, upsampling (shifted by shift) into a temp array is followed by standard FIRConvolve*)
 	IF LEN(result,0) < 2 * LEN(data,0) THEN reslen:=LEN(result,0) ELSE reslen:=2*LEN(data,0) END;
 	filterlen:=LEN(filter,0);
 	FOR d:= 0 TO reslen-filterlen DO
 		result[d]:=0;
 		IF ODD(d+shift) THEN filterstart:=1 ELSE filterstart:=0 END;
-		result[d]:=data[((d+filterstart) DIV 2..(d+filterlen-1) DIV 2 )] +* filter[filterstart..filterlen-1 BY 2] 
+		result[d]:=data[(d+filterstart) DIV 2..(d+filterlen-1) DIV 2 ] +* filter[filterstart..filterlen-1 BY 2] 
 	END;
 END ConvolveUp2;
 
 PROCEDURE {TEST} Test*;
-VAR a,b,c,d: ARRAY [*] OF REAL;
+VAR a,b,c,d: ARRAY [*] OF FLOAT64;
 	down,up: LinearFilters.Filter;
 BEGIN
-	a:=[0,1,2,3,4,5,6,7,6,5,4,3,2,1,0,1,2,3,4,5,6,7,6,5,4,3,2,1,0,1,2,3,4,5,6,7,6,5,4,3,2,1,0,1,2,3,4,5,6,7,6,5,4,3,2,1,0];
+	a:=[0,1,2,3,4,5,6,7,6,5,4,3,2,1,0,1,2,3,4,5,6,7,6,5,4,3,2,1,0,1,2,3,4,5,6,7,6,5,4,3,2,1,0,1,2,3,4,5,6,7,6,5,4,3,2,1,0,1,2,3,4,5,6,7,6,5,4,3,2,1,0,1,2,3,4,5,6,7,6,5,4,3,2,1,0];
 	NEW(b,LEN(a));
 	NEW(c,LEN(a));
 	NEW(d,LEN(a));
