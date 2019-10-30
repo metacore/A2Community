@@ -41,8 +41,8 @@ TYPE Animator=OBJECT
 		END Init;
 		
 		PROCEDURE Die;
-		BEGIN
-			BEGIN{EXCLUSIVE} dead:=TRUE END;
+		BEGIN{EXCLUSIVE} 
+			dead:=TRUE;
 			timer.Wakeup;
 		END Die;
 		
@@ -376,7 +376,7 @@ TYPE Panel*= OBJECT (WMStandardComponents.ImagePanel) (*! tbd: convert some loca
 
 		PROCEDURE Animate*(interval:SIGNED32);
 		BEGIN
-			NEW(animator,SELF,1000);
+			NEW(animator,SELF,interval);
 		END Animate;
 		
 		PROCEDURE StopAnimation*;
@@ -539,6 +539,13 @@ BEGIN {EXCLUSIVE}
 			IF remove(WMComponents.FormWindow).form.GetFirst()(Panel).animator#NIL THEN 
 				remove(WMComponents.FormWindow).form.GetFirst()(Panel).animator.Die;
 			END;
+		END;
+	END;
+	w:=manager.GetFirst();
+	WHILE (w#NIL) DO
+		remove:=w;
+		w:=manager.GetNext(w);
+		IF (remove#NIL)&(remove IS WMComponents.FormWindow)&(remove(WMComponents.FormWindow).form.GetFirst() IS Panel) THEN
 			manager.Remove(remove); 
 		END;
 	END;
@@ -554,8 +561,8 @@ BEGIN
 	log:=context.out;
 	(*have some data in a 3D array ready*)
 	NEW(tensor,50,100,120);
-	tensor[..,10..40 BY 2,..]:=1;
-	tensor[10..15 BY 2,..,..]:=2;
+	tensor[.. ,10..80 BY 2,..]:=1;
+	tensor[10..25 BY 2,..,..]:=2;
 	tensor[..,..,10..30 BY 2]:=3;
 	tensor[..,..,60..100 BY 4]:=4;
 
@@ -571,7 +578,7 @@ BEGIN
 	window.form.fillColor.Set(0);(*background*)
 	(*window.form.fillColor.Set(008888FFH);*)(*background*)
 	WM.DefaultAddWindow(window);
-	panel.Animate(1000);
+	panel.Animate(200);
 	(*LOOP
 		panel.SetSubArray(MatrixUtilities.Random([6,100,120],MatrixUtilities.Uniform), [10..15,..,..]);
 	END;*)
@@ -588,3 +595,4 @@ WMArrayPanel.Test~
 System.FreeDownTo WMArrayPanel~
 
 System.FreeDownTo MatrixUtilities ~
+

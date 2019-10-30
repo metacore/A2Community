@@ -18,23 +18,26 @@ CONST
 	default* = -1;
 
 TYPE
+	ConvolveProc=PROCEDURE {DELEGATE} (CONST filter, data: Dataarray; VAR result:Dataarray);
 	(**Convolution f(t)*g(-t);  *)
 	Convolver* = OBJECT
 	VAR temp, temp2, tmpLo, tmpResLo, coeffs: Dataarray;
 		gain:Datatype; (*for iir convolution*)
 		filter-: Filters.Filter;
+		firConvolve:ConvolveProc;
 		boundary*,shift*: SIGNED32;
 		tmp:SIZE;
 
 		(** Filters need to have their coefficients already transposed g(-tau)  for good  performance  *)
 		PROCEDURE &Init*(filter:Filters.Filter; boundary: SIGNED32);
-		VAR i:SIZE;
+		VAR i:SIZE; 
 		BEGIN
 			SELF.filter:=filter;
 			SELF.boundary:=boundary;
 			SELF.shift:=0; (*default*)
 			IF filter=NIL THEN RETURN
 			ELSIF filter IS Filters.FIRFilter THEN
+				firConvolve:=FIR.Convolve;
 				NEW(coeffs, LEN(filter(Filters.FIRFilter).coeff,0)); (*temporary, until old and new arrays are more compatible *)
 				FOR i:=0 TO LEN(coeffs,0)-1 DO coeffs[i]:=filter( Filters.FIRFilter ).coeff[i] END;
 			ELSIF  filter IS Filters.IIRFilter  THEN (*IIR*)
@@ -45,13 +48,17 @@ TYPE
 			ELSE HALT(100); (* to do: replace halt statement*)
 			END;
 		END Init;
+		
+		PROCEDURE SetFIRConvolveProc*(firConvolveProc: ConvolveProc);
+		BEGIN
+			firConvolve:=firConvolveProc;
+		END SetFIRConvolveProc;
+		
 
 		PROCEDURE convolve*( CONST  data: Dataarray; VAR out: Dataarray );  (*in-place convolution in principle possible but requires some more work on this module*)
 		VAR i,  filterlen,  offset: SIZE;  datalen, rawdatalen: SIZE;
-
 		BEGIN
 		(*Assertions;*)
-			(*IF data=NIL THEN RETURN END;*)
 			IF filter=NIL THEN HALT(100)
 			ELSIF filter IS Filters.FIRFilter THEN
 				filterlen := LEN( filter( Filters.FIRFilter ).coeff,0);  datalen := LEN(data,0);
@@ -59,11 +66,11 @@ TYPE
 				IF (LEN( temp ) # rawdatalen) THEN NEW( temp, rawdatalen );  END;
 				IF (LEN( temp2 ) # rawdatalen) THEN NEW( temp2, rawdatalen );  END;
 				IF LEN( out ) < LEN(data,0) THEN HALT(100); (*NEW( out, outlen )*) END;
-					(*NEED SETTING temp2 TO ZERO HERE ??*)
+					(*! NEED SETTING temp2 TO ZERO HERE ??*)
 
 
 				SYSTEM.MOVE( ADDRESSOF( data[0] ), ADDRESSOF( temp[filterlen] ),
-										  SIZEOF( Datatype ) * datalen );
+										  SIZEOF( Datatype ) * datalen ); (*!TBD: to do efficiently without SYSTEM*)
 				CASE boundary OF
 				finite:
 						FOR i := 0 TO filterlen - 1 DO
@@ -100,7 +107,7 @@ TYPE
 				HALT( this is for FLOAT32 data); LDSPConvolveSIMD.ConvolveR4_SSE( ADDRESSOF(coeffs[0])(*addrK*), ADDRESSOF(temp[0])(*addrX*), ADDRESSOF(temp2[0])(*addrY*), LEN( temp ) );
 				*)
 				(*LDSPConvolve386.ConvolveLR(coeffs, temp,temp2);*)
-				FIR.Convolve( coeffs, temp,  temp2 );
+				firConvolve( coeffs, temp,  temp2 );
 				offset := (filterlen - filter( Filters.FIRFilter ).origin);
 				out[..datalen-1]:=temp2[offset..offset+datalen-1];
 			ELSE (* IIR *)
