@@ -1,18 +1,27 @@
 MODULE libusb; (** AUTHOR "Zdenek, fnecati"; PURPOSE "libusb-1.0 binding for LinuxAos"; *)
-IMPORT SYSTEM, u:=Unix, m:=Modules;
+
+IMPORT HostLibs, m:=Modules;
 
 (* translation of libusb-1.0 /libusb.h/ for linux, May 2, 2017 by Zdenek and fnecati *)
 
 (* There are some constants and structures to be added, TBD *)
-
 CONST
- libusbname = "libusb-1.0.so.0";
+#IF UNIX THEN	
+	libusbname = "libusb-1.0.so.0";
+#ELSIF WIN THEN 
+	libusbname = "libusb-1.0.dll";
+#END
 
 TYPE 
  Uint8* = UNSIGNED8;
  Uint16* = UNSIGNED16;
  Uint32* = UNSIGNED32;
- 
+
+ Timeval* = RECORD
+    sec* : LONGINTEGER;
+    usec* : LONGINTEGER;
+ END;
+			
 (* standard USB stuff *)
  (* Device and/or Interface Class codes *)
 TYPE libusb_class_code* = SIGNED32;
@@ -258,14 +267,9 @@ CONST
 
 TYPE
 
- context* = POINTER {UNSAFE}TO RECORD
- END;
- 
- device_handle* = POINTER {UNSAFE} TO RECORD
- END;
- 
- device* = POINTER {UNSAFE} TO RECORD
- END;
+ context* = POINTER {UNSAFE}TO RECORD END;
+ device_handle* = POINTER {UNSAFE} TO RECORD END;
+ device* = POINTER {UNSAFE} TO RECORD END;
  
  device_descriptor* = RECORD
   bLength- : Uint8; (* Size of this descriptor (in bytes) *)
@@ -299,8 +303,8 @@ TYPE
 	 of 8 mA when the device is operating in super-speed mode. 
   *)
   MaxPower- : Uint8;
-  interface- : POINTER {UNSAFE} TO ARRAY OF Interface; (* Array of interfaces supported by this configuration. The length of this array is determined by the bNumInterfaces field. *)
-  extra- : POINTER {UNSAFE} TO ARRAY OF CHAR; (* Extra descriptors. If libusb encounters unknown configuration descriptors, it will store them here, should you wish to parse them. *)
+  interface- : POINTER {UNSAFE} TO ARRAY MAX(SIZE) OF Interface; (* Array of interfaces supported by this configuration. The length of this array is determined by the bNumInterfaces field. *)
+  extra- : POINTER {UNSAFE} TO ARRAY MAX(SIZE) OF CHAR; (* Extra descriptors. If libusb encounters unknown configuration descriptors, it will store them here, should you wish to parse them. *)
   extra_length- : SIGNED32; (* Length of the extra descriptors, in bytes. *)
  END;
  
@@ -321,7 +325,7 @@ TYPE
   bInterval- : Uint8; (* Interval for polling endpoint for data transfers. *)
   bRefresh- : Uint8; (* For audio devices only: the rate at which synchronization feedback is provided. *)
   bSynchAddress- : Uint8; (* For audio devices only: the address if the synch endpoint *)
-  extra- : POINTER {UNSAFE} TO ARRAY OF CHAR; (* Extra descriptors. If libusb encounters unknown endpoint descriptors, it will store them here, should you wish to parse them. *)
+  extra- : POINTER {UNSAFE} TO ARRAY MAX(SIZE) OF CHAR; (* Extra descriptors. If libusb encounters unknown endpoint descriptors, it will store them here, should you wish to parse them. *)
   extra_length- : SIGNED32; (* Length of the extra descriptors, in bytes. *)
  END;
 
@@ -335,13 +339,13 @@ TYPE
   bInterfaceSubClass- : Uint8; (* USB-IF subclass code for this interface, qualified by the bInterfaceClass value *)
   bInterfaceProtocol- : Uint8; (* USB-IF protocol code for this interface, qualified by the bInterfaceClass and bInterfaceSubClass values *)
   iInterface- : Uint8; (* Index of string descriptor describing this interface *)
-  endpoint- : POINTER {UNSAFE} TO ARRAY OF endpoint_descriptor; (* Array of endpoint descriptors. This length of this array is determined by the bNumEndpoints field. *)
-  extra- : POINTER {UNSAFE} TO ARRAY OF CHAR; (* Extra descriptors. If libusb encounters unknown interface descriptors, it will store them here, should you wish to parse them. *)
+  endpoint- : POINTER {UNSAFE} TO ARRAY MAX(SIZE) OF endpoint_descriptor; (* Array of endpoint descriptors. This length of this array is determined by the bNumEndpoints field. *)
+  extra- : POINTER {UNSAFE} TO ARRAY MAX(SIZE) OF CHAR; (* Extra descriptors. If libusb encounters unknown interface descriptors, it will store them here, should you wish to parse them. *)
   extra_length- : SIGNED32; (* Length of the extra descriptors, in bytes. *)
  END;
 
  Interface*  = RECORD
-  altsetting- : POINTER {UNSAFE} TO ARRAY OF interface_descriptor; (* Array of interface descriptors. The length of this array is determined by the num_altsetting field. *)
+  altsetting- : POINTER {UNSAFE} TO ARRAY MAX(SIZE) OF interface_descriptor; (* Array of interface descriptors. The length of this array is determined by the num_altsetting field. *)
   num_altsetting- : SIGNED32; (* The number of alternate settings that belong to this interface *)
  END; 
  
@@ -412,11 +416,11 @@ TYPE
 	 * "LIBUSB_REQUEST_TYPE_STANDARD" then this field refers to
 	 * \ref libusb_standard_request. For other cases, use of this field is
 	 * application-specific. *)
-	bRequest*: Uint8;
-	wValue*: Uint16; (* Value. Varies according to request *)
-	wIndex*: Uint16; (* Index. Varies according to request, typically used to pass an index  or offset *)
-	wLength*: Uint16; (* Number of bytes to transfer *)
-   END;
+	 bRequest*: Uint8;
+	 wValue*: Uint16; (* Value. Varies according to request *)
+	 wIndex*: Uint16; (* Index. Varies according to request, typically used to pass an index  or offset *)
+	 wLength*: Uint16; (* Number of bytes to transfer *)
+  END;
 
 CONST CONTROL_SETUP_SIZE* = SIZEOF(control_setup);
 
@@ -427,11 +431,11 @@ TYPE
   status* : SIGNED32; (* Status code for this packet *)
  END;
  
- transfer_cb_fn* = PROCEDURE {C} (transfer : transfer); 
+ transfer_cb_fn* = PROCEDURE {PlatformCC} (transfer : transfer); 
 
- pollfd_added_cb* = PROCEDURE {C} (fd : SIGNED32; events : Uint16; user_data : ADDRESS); 
+ pollfd_added_cb* = PROCEDURE {PlatformCC} (fd : SIGNED32; events : Uint16; user_data : ADDRESS); 
 
- hotplug_callback_fn* = PROCEDURE{C} (ctx : context; device : device; event : SIGNED32; user_data : ADDRESS) : SIGNED32; 
+ hotplug_callback_fn* = PROCEDURE{PlatformCC} (ctx : context; device : device; event : SIGNED32; user_data : ADDRESS) : SIGNED32; 
  
  transfer* = POINTER {UNSAFE} TO RECORD
   dev_handle* : device_handle; (* Handle of the device that this transfer will be submitted to *)
@@ -451,7 +455,7 @@ TYPE
    actual_length* : SIGNED32; (* Actual length of data that was transferred. Read-only, and only for use within transfer callback function. Not valid for isochronous endpoint transfers. *)
    callback* : transfer_cb_fn; (* Callback function. This will be invoked when the transfer completes, fails, or is cancelled. *)
    user_data* : ADDRESS; (* User context data to pass to the callback function. *)
-   buffer* : POINTER {UNSAFE} TO ARRAY OF CHAR; (* Data buffer *)
+   buffer* : POINTER {UNSAFE} TO ARRAY MAX(SIZE) OF CHAR; (* Data buffer *)
    num_iso_packets* : SIGNED32; (* Number of isochronous packets. Only used for I/O with isochronous endpoints. *)
    iso_packet_desc* : iso_packet_descriptor; (* Isochronous packet descriptors, for isochronous transfers only. *) (* struct libusb_iso_packet_descriptor iso_packet_desc[] *)
  END;
@@ -461,136 +465,140 @@ TYPE
   events* : Uint16; (* Event flags to poll for from <poll.h>. POLLIN indicates that you should monitor this file descriptor for becoming ready to read from, and POLLOUT indicates that you should monitor this file descriptor for onblocking write readiness. *)
  END;
 
-
+ ppollfds* = POINTER {UNSAFE} TO ARRAY MAX(SIZE) OF pollfd;
 
  version* = POINTER {UNSAFE} TO RECORD
   major* : Uint16; (* Library major version. *)
   minor* : Uint16; (* Library minor version. *)
   micro* : Uint16; (* Library micro version. *)
   nano* : Uint16; (* Library nano version. *)
-  rc* : POINTER {UNSAFE}TO ARRAY OF CHAR; (* Library release candidate suffix string, e.g. "-rc4". *)
-  describe* : POINTER {UNSAFE} TO ARRAY OF CHAR; (* For ABI compatibility only. *)
+  rc* : POINTER {UNSAFE} TO ARRAY MAX(SIZE) OF CHAR; (* Library release candidate suffix string, e.g. "-rc4". *)
+  describe* : POINTER {UNSAFE} TO ARRAY MAX(SIZE) OF CHAR; (* For ABI compatibility only. *)
  END; 
  
- DeviceList* = POINTER {UNSAFE} TO ARRAY OF device;
+ DeviceList* = POINTER {UNSAFE} TO ARRAY MAX(SIZE) OF device;
  
 VAR
- libusb- : ADDRESS;
+ libusb- : HostLibs.LibHandle;
 
- init-  : PROCEDURE {C} (VAR ctx : context) : SIGNED32;
- exit-  : PROCEDURE {C} (ctx : context);
- set_debug-  : PROCEDURE {C} (ctx : context; level:=0 : SIGNED32);
- get_version-  : PROCEDURE {C} () : version;
- has_capability-  : PROCEDURE {C} (capability : SIGNED32) : SIGNED32;
+ init-  : PROCEDURE {PlatformCC} (VAR ctx : context) : SIGNED32;
+ exit-  : PROCEDURE {PlatformCC} (ctx : context);
+ set_debug-  : PROCEDURE {PlatformCC} (ctx : context; level:=0 : SIGNED32);
+ get_version-  : PROCEDURE {PlatformCC} () : version;
+ has_capability-  : PROCEDURE {PlatformCC} (capability : SIGNED32) : SIGNED32;
 
- xlibusb_error_name  : PROCEDURE {C} (errorcode : SIGNED32) : ADDRESS; (*! wrapped, see below *)
+ xlibusb_error_name  : PROCEDURE {PlatformCC} (errorcode : SIGNED32) : ADDRESS; (*! wrapped, see below *)
 
- setlocale-  : PROCEDURE {C} (CONST locale : ARRAY OF CHAR) : SIGNED32;  
+ setlocale-  : PROCEDURE {PlatformCC} (CONST locale : ARRAY OF CHAR) : SIGNED32;  
 
- xlibusb_strerror  : PROCEDURE {C} (errorcode : SIGNED32) : ADDRESS; (*! wrapped, see below *)
+ xlibusb_strerror  : PROCEDURE {PlatformCC} (errorcode : SIGNED32) : ADDRESS; (*! wrapped, see below *)
  
- get_device_list- : PROCEDURE {C} (ctx : context; VAR list : DeviceList) : SIGNED32;   
- free_device_list- : PROCEDURE {C} (list : DeviceList; unref_devices : SIGNED32);
- ref_device- : PROCEDURE {C} (dev : device) : device;
- unref_device- : PROCEDURE {C} (dev : device);
- get_configuration- : PROCEDURE {C} (dev : device_handle; VAR config : SIGNED32) : SIGNED32;
- get_device_descriptor- : PROCEDURE {C} (dev : device; VAR desc : device_descriptor) : SIGNED32; 
- get_active_config_descriptor- : PROCEDURE {C} (dev : device; VAR desc : config_descriptor) : SIGNED32; 
- get_config_descriptor-  : PROCEDURE {C} (dev : device; config_index : Uint8; VAR config : config_descriptor) : SIGNED32;
- get_config_descriptor_by_value-  : PROCEDURE {C} (dev : device; bConfigurationValue : Uint8; VAR config : config_descriptor) : SIGNED32;
- free_config_descriptor-  : PROCEDURE {C} (config : config_descriptor);
- get_ss_endpoint_companion_descriptor-  : PROCEDURE {C} (ctx : context; endpoint : endpoint_descriptor; VAR ep_comp : ss_endpoint_companion_descriptor) : SIGNED32;
- free_ss_endpoint_companion_descriptor-: PROCEDURE {C} (ep_comp: ss_endpoint_companion_descriptor); 
- get_bos_descriptor-  : PROCEDURE {C} (dev : device_handle; VAR bos : bos_descriptor) : SIGNED32;
- free_bos_descriptor-  : PROCEDURE {C} (config : bos_descriptor);
- get_usb_2_0_extension_descriptor-  : PROCEDURE {C} (ctx : context; dev_cap : bos_dev_capability_descriptor; VAR usb_2_0_extension : usb_2_0_extension_descriptor) : SIGNED32;
- free_usb_2_0_extension_descriptor-  : PROCEDURE {C} (usb_2_0_extension : usb_2_0_extension_descriptor);
- get_ss_usb_device_capability_descriptor-  : PROCEDURE {C} (ctx : context; dv_cap : bos_dev_capability_descriptor; VAR ss_usb_device_cap : ss_usb_device_capability_descriptor) : SIGNED32;
- free_ss_usb_device_capability_descriptor-  : PROCEDURE {C} (ss_usb_device_cap : ss_usb_device_capability_descriptor);
- get_container_id_descriptor-  : PROCEDURE {C} (ctx : context; dev_cap : bos_dev_capability_descriptor; VAR container_id : container_id_descriptor) : SIGNED32;
- free_container_id_descriptor-  : PROCEDURE {C} (container_id : container_id_descriptor);
- get_bus_number-  : PROCEDURE {C} (dev : device) : Uint8;
- get_port_number-  : PROCEDURE {C} (dev : device) : Uint8;
- get_port_numbers-  : PROCEDURE {C} (dev : device; port_numbers : ADDRESS; port_numbers_len : SIGNED32) : SIGNED32;
- get_port_path-  : PROCEDURE {C} (ctx : context; dev : device; path : ADDRESS; path_length : SIGNED32) : SIGNED32;
- get_parent-  : PROCEDURE {C} (dev : device) : device;
- get_device_address-  : PROCEDURE {C} (dev : device) : Uint8;
- get_device_speed-  : PROCEDURE {C} (dev : device) : SIGNED32;
- get_max_packet_size-  : PROCEDURE {C} (dev : device; endpoint : Uint8) : SIGNED32;
- get_max_iso_packet_size-  : PROCEDURE {C} (dev : device; endpoint : Uint8) : SIGNED32;
- open- : PROCEDURE {C} (dev : device;  VAR handle : device_handle) : SIGNED32;
- close- : PROCEDURE {C} (dev_handle : device_handle);
- get_device- : PROCEDURE {C} (dev_handle : device_handle) : device;	
- set_configuration- : PROCEDURE {C} (dev : device_handle; configuration : SIGNED32) : SIGNED32;
- claim_interface- : PROCEDURE {C} (dev : device_handle; interface_number : SIGNED32) : SIGNED32;
- release_interface- : PROCEDURE {C} (dev : device_handle; interface_number : SIGNED32) : SIGNED32;
- open_device_with_vid_pid- : PROCEDURE {C} (ctx : context; vendor_id, product_id : SIGNED32) : device_handle;
- set_interface_alt_setting- : PROCEDURE {C} (dev : device_handle; interface_number, alternate_setting : SIGNED32) : SIGNED32;
- clear_halt- : PROCEDURE {C} (dev : device_handle; endpoint : Uint8) : SIGNED32;
- reset_device- : PROCEDURE {C} (dev : device_handle) : SIGNED32;
- alloc_streams- : PROCEDURE {C} (dev : device_handle; num_streams : SIGNED32; endpoints : ADDRESS; num_endpoints : SIGNED32) : SIGNED32;
- free_streams- : PROCEDURE {C} (dev : device_handle; endpoints : ADDRESS; num_endpoints : SIGNED32) : SIGNED32;
- kernel_driver_active- : PROCEDURE {C} (dev : device_handle; interface_number : SIGNED32) : SIGNED32;
- detach_kernel_driver- : PROCEDURE {C} (dev : device_handle; interface_number : SIGNED32) : SIGNED32;
- attach_kernel_driver- : PROCEDURE {C} (dev : device_handle; interface_number : SIGNED32) : SIGNED32;
- set_auto_detach_kernel_driver- : PROCEDURE {C} (dev : device_handle; enable : SIGNED32) : SIGNED32;
- alloc_transfer- : PROCEDURE {C} (iso_packets : SIGNED32) : transfer;
- submit_transfer- : PROCEDURE {C} (transfer: transfer) : SIGNED32;
- cancel_transfer- : PROCEDURE {C} (transfer: transfer) : SIGNED32;
- free_transfer- : PROCEDURE {C} (transfer: transfer);
- transfer_set_stream_id- : PROCEDURE {C} (transfer: transfer; stream_id : SIGNED32);
- transfer_get_stream_id- : PROCEDURE {C} (transfer: transfer) : SIGNED32;
- control_transfer- : PROCEDURE {C} (dev_handle : device_handle; request_type, bRequest : Uint8; wValue, wIndex : Uint16; data : ADDRESS; wLength : Uint16; timeout : SIGNED32) : SIGNED32;
- bulk_transfer- : PROCEDURE {C} (dev_handle : device_handle; endpoint : SIGNED32; data : ADDRESS; length : SIGNED32; VAR actual_length : SIGNED32; timeout : SIGNED32) : SIGNED32;
- interrupt_transfer- : PROCEDURE {C} (dev_handle : device_handle; endpoint : SIGNED32; data : ADDRESS; length : SIGNED32; VAR actual_length : SIGNED32; timeout : SIGNED32) : SIGNED32;
- get_string_descriptor_ascii- : PROCEDURE {C} (dev : device_handle; desc_index : Uint8; data : ADDRESS ; length : SIGNED32) : SIGNED32;
- try_lock_events- : PROCEDURE {C} (ctx : context) : SIGNED32;
- lock_events- : PROCEDURE {C} (ctx : context);
- unlock_events- : PROCEDURE {C} (ctx : context); 
- event_handling_ok- : PROCEDURE {C} (ctx : context) : SIGNED32;
- event_handler_active- : PROCEDURE {C} (ctx : context) : SIGNED32; 
- interrupt_event_handler- : PROCEDURE {C} (ctx : context);
- unlock_event_waiters- : PROCEDURE {C} (ctx : context);
- lock_event_waiters- : PROCEDURE {C} (ctx : context);
- wait_for_event- : PROCEDURE {C} (ctx : context; VAR tv : u.Timeval) : SIGNED32;
- wait_handle_events_timeout- : PROCEDURE {C} (ctx : context; VAR tv : u.Timeval) : SIGNED32;
- handle_events_timeout_completed- : PROCEDURE {C} (ctx : context; VAR tv : u.Timeval; VAR completed : SIGNED32) : SIGNED32;
- handle_events- : PROCEDURE {C} (ctx : context) : SIGNED32;
- handle_events_completed- : PROCEDURE {C} (ctx : context; VAR completed : SIGNED32) : SIGNED32;
- handle_events_locked- : PROCEDURE {C} (ctx : context; VAR tv : u.Timeval) : SIGNED32;
- pollfds_handle_timeouts- : PROCEDURE {C} (ctx : context) : SIGNED32;
- get_next_timeout- : PROCEDURE {C} (ctx : context; VAR tv : u.Timeval) : SIGNED32;
- pollfd_removed_cb- : PROCEDURE {C} (fd : SIGNED32; user_data : ADDRESS);
- get_pollfds- : PROCEDURE {C} (ctx : context) : pollfd; (*! const struct pollfd ** LIBUSB_CALL get_pollfds(	context *ctx); *)
- free_pollfds- : PROCEDURE {C} (VAR pollfds : pollfd);
- set_pollfd_notifiers- : PROCEDURE {C} (ctx : context; added_cb, removed_cb : pollfd_added_cb; user_data : ADDRESS);
- hotplug_register_callback- : PROCEDURE {C} (ctx : context; events, flags : SIGNED32; vendor_id, product_id, dev_class : SIGNED32; cb_fn : hotplug_callback_fn; user_data : ADDRESS; handle : SIGNED32) : SIGNED32;
- hotplug_deregister_callback- : PROCEDURE {C} (ctx : context; handle : SIGNED32);
+ get_device_list- : PROCEDURE {PlatformCC} (ctx : context; VAR list : DeviceList) : SIGNED32;   
+ free_device_list- : PROCEDURE {PlatformCC} (list : DeviceList; unref_devices : SIGNED32);
+ ref_device- : PROCEDURE {PlatformCC} (dev : device) : device;
+ unref_device- : PROCEDURE {PlatformCC} (dev : device);
+ get_configuration- : PROCEDURE {PlatformCC} (dev : device_handle; VAR config : SIGNED32) : SIGNED32;
+ get_device_descriptor- : PROCEDURE {PlatformCC} (dev : device; VAR desc : device_descriptor) : SIGNED32; 
+ get_active_config_descriptor- : PROCEDURE {PlatformCC} (dev : device; VAR desc : config_descriptor) : SIGNED32; 
+ get_config_descriptor-  : PROCEDURE {PlatformCC} (dev : device; config_index : Uint8; VAR config : config_descriptor) : SIGNED32;
+ get_config_descriptor_by_value-  : PROCEDURE {PlatformCC} (dev : device; bConfigurationValue : Uint8; VAR config : config_descriptor) : SIGNED32;
+ free_config_descriptor-  : PROCEDURE {PlatformCC} (config : config_descriptor);
+ get_ss_endpoint_companion_descriptor-  : PROCEDURE {PlatformCC} (ctx : context; endpoint : endpoint_descriptor; VAR ep_comp : ss_endpoint_companion_descriptor) : SIGNED32;
+ free_ss_endpoint_companion_descriptor-: PROCEDURE {PlatformCC} (ep_comp: ss_endpoint_companion_descriptor); 
+ get_bos_descriptor-  : PROCEDURE {PlatformCC} (dev : device_handle; VAR bos : bos_descriptor) : SIGNED32;
+ free_bos_descriptor-  : PROCEDURE {PlatformCC} (config : bos_descriptor);
+ get_usb_2_0_extension_descriptor-  : PROCEDURE {PlatformCC} (ctx : context; dev_cap : bos_dev_capability_descriptor; VAR usb_2_0_extension : usb_2_0_extension_descriptor) : SIGNED32;
+ free_usb_2_0_extension_descriptor-  : PROCEDURE {PlatformCC} (usb_2_0_extension : usb_2_0_extension_descriptor);
+ get_ss_usb_device_capability_descriptor-  : PROCEDURE {PlatformCC} (ctx : context; dv_cap : bos_dev_capability_descriptor; VAR ss_usb_device_cap : ss_usb_device_capability_descriptor) : SIGNED32;
+ free_ss_usb_device_capability_descriptor-  : PROCEDURE {PlatformCC} (ss_usb_device_cap : ss_usb_device_capability_descriptor);
+ get_container_id_descriptor-  : PROCEDURE {PlatformCC} (ctx : context; dev_cap : bos_dev_capability_descriptor; VAR container_id : container_id_descriptor) : SIGNED32;
+ free_container_id_descriptor-  : PROCEDURE {PlatformCC} (container_id : container_id_descriptor);
+ get_bus_number-  : PROCEDURE {PlatformCC} (dev : device) : Uint8;
+ get_port_number-  : PROCEDURE {PlatformCC} (dev : device) : Uint8;
+ get_port_numbers-  : PROCEDURE {PlatformCC} (dev : device; port_numbers : ADDRESS; port_numbers_len : SIGNED32) : SIGNED32;
+ get_port_path-  : PROCEDURE {PlatformCC} (ctx : context; dev : device; path : ADDRESS; path_length : SIGNED32) : SIGNED32;
+ get_parent-  : PROCEDURE {PlatformCC} (dev : device) : device;
+ get_device_address-  : PROCEDURE {PlatformCC} (dev : device) : Uint8;
+ get_device_speed-  : PROCEDURE {PlatformCC} (dev : device) : SIGNED32;
+ get_max_packet_size-  : PROCEDURE {PlatformCC} (dev : device; endpoint : Uint8) : SIGNED32;
+ get_max_iso_packet_size-  : PROCEDURE {PlatformCC} (dev : device; endpoint : Uint8) : SIGNED32;
+ open- : PROCEDURE {PlatformCC} (dev : device;  VAR handle : device_handle) : SIGNED32;
+ close- : PROCEDURE {PlatformCC} (dev_handle : device_handle);
+ get_device- : PROCEDURE {PlatformCC} (dev_handle : device_handle) : device;	
+ set_configuration- : PROCEDURE {PlatformCC} (dev : device_handle; configuration : SIGNED32) : SIGNED32;
+ claim_interface- : PROCEDURE {PlatformCC} (dev : device_handle; interface_number : SIGNED32) : SIGNED32;
+ release_interface- : PROCEDURE {PlatformCC} (dev : device_handle; interface_number : SIGNED32) : SIGNED32;
+ open_device_with_vid_pid- : PROCEDURE {PlatformCC} (ctx : context; vendor_id, product_id : SIGNED32) : device_handle;
+ set_interface_alt_setting- : PROCEDURE {PlatformCC} (dev : device_handle; interface_number, alternate_setting : SIGNED32) : SIGNED32;
+ clear_halt- : PROCEDURE {PlatformCC} (dev : device_handle; endpoint : Uint8) : SIGNED32;
+ reset_device- : PROCEDURE {PlatformCC} (dev : device_handle) : SIGNED32;
+ alloc_streams- : PROCEDURE {PlatformCC} (dev : device_handle; num_streams : SIGNED32; endpoints : ADDRESS; num_endpoints : SIGNED32) : SIGNED32;
+ free_streams- : PROCEDURE {PlatformCC} (dev : device_handle; endpoints : ADDRESS; num_endpoints : SIGNED32) : SIGNED32;
+ kernel_driver_active- : PROCEDURE {PlatformCC} (dev : device_handle; interface_number : SIGNED32) : SIGNED32;
+ detach_kernel_driver- : PROCEDURE {PlatformCC} (dev : device_handle; interface_number : SIGNED32) : SIGNED32;
+ attach_kernel_driver- : PROCEDURE {PlatformCC} (dev : device_handle; interface_number : SIGNED32) : SIGNED32;
+ set_auto_detach_kernel_driver- : PROCEDURE {PlatformCC} (dev : device_handle; enable : SIGNED32) : SIGNED32;
+ alloc_transfer- : PROCEDURE {PlatformCC} (iso_packets : SIGNED32) : transfer;
+ submit_transfer- : PROCEDURE {PlatformCC} (transfer: transfer) : SIGNED32;
+ cancel_transfer- : PROCEDURE {PlatformCC} (transfer: transfer) : SIGNED32;
+ free_transfer- : PROCEDURE {PlatformCC} (transfer: transfer);
+ transfer_set_stream_id- : PROCEDURE {PlatformCC} (transfer: transfer; stream_id : SIGNED32);
+ transfer_get_stream_id- : PROCEDURE {PlatformCC} (transfer: transfer) : SIGNED32;
+ control_transfer- : PROCEDURE {PlatformCC} (dev_handle : device_handle; request_type, bRequest : Uint8; wValue, wIndex : Uint16; data : ADDRESS; wLength : Uint16; timeout : SIGNED32) : SIGNED32;
+ bulk_transfer- : PROCEDURE {PlatformCC} (dev_handle : device_handle; endpoint : SIGNED32; data : ADDRESS; length : SIGNED32; VAR actual_length : SIGNED32; timeout : SIGNED32) : SIGNED32;
+ interrupt_transfer- : PROCEDURE {PlatformCC} (dev_handle : device_handle; endpoint : SIGNED32; data : ADDRESS; length : SIGNED32; VAR actual_length : SIGNED32; timeout : SIGNED32) : SIGNED32;
+ get_string_descriptor_ascii- : PROCEDURE {PlatformCC} (dev : device_handle; desc_index : Uint8; data : ADDRESS ; length : SIGNED32) : SIGNED32;
+ try_lock_events- : PROCEDURE {PlatformCC} (ctx : context) : SIGNED32;
+ lock_events- : PROCEDURE {PlatformCC} (ctx : context);
+ unlock_events- : PROCEDURE {PlatformCC} (ctx : context); 
+ event_handling_ok- : PROCEDURE {PlatformCC} (ctx : context) : SIGNED32;
+ event_handler_active- : PROCEDURE {PlatformCC} (ctx : context) : SIGNED32; 
+ interrupt_event_handler- : PROCEDURE {PlatformCC} (ctx : context);
+ unlock_event_waiters- : PROCEDURE {PlatformCC} (ctx : context);
+ lock_event_waiters- : PROCEDURE {PlatformCC} (ctx : context);
+ wait_for_event- : PROCEDURE {PlatformCC} (ctx : context; VAR tv : Timeval) : SIGNED32;
+ wait_handle_events_timeout- : PROCEDURE {PlatformCC} (ctx : context; VAR tv : Timeval) : SIGNED32;
+ handle_events_timeout_completed- : PROCEDURE {PlatformCC} (ctx : context; VAR tv : Timeval; VAR completed : SIGNED32) : SIGNED32;
+ handle_events- : PROCEDURE {PlatformCC} (ctx : context) : SIGNED32;
+ handle_events_completed- : PROCEDURE {PlatformCC} (ctx : context; VAR completed : SIGNED32) : SIGNED32;
+ handle_events_locked- : PROCEDURE {PlatformCC} (ctx : context; VAR tv : Timeval) : SIGNED32;
+ pollfds_handle_timeouts- : PROCEDURE {PlatformCC} (ctx : context) : SIGNED32;
+ get_next_timeout- : PROCEDURE {PlatformCC} (ctx : context; VAR tv : Timeval) : SIGNED32;
+ pollfd_removed_cb- : PROCEDURE {PlatformCC} (fd : SIGNED32; user_data : ADDRESS);
+ get_pollfds- : PROCEDURE {PlatformCC} (ctx : context) : ppollfds; (*! const struct pollfd ** LIBUSB_CALL get_pollfds(	context *ctx); *)
+ free_pollfds- : PROCEDURE {PlatformCC} (pollfds : ppollfds);
+ set_pollfd_notifiers- : PROCEDURE {PlatformCC} (ctx : context; added_cb, removed_cb : pollfd_added_cb; user_data : ADDRESS);
+ hotplug_register_callback- : PROCEDURE {PlatformCC} (ctx : context; events, flags : SIGNED32; vendor_id, product_id, dev_class : SIGNED32; cb_fn : hotplug_callback_fn; user_data : ADDRESS; handle : SIGNED32) : SIGNED32;
+ hotplug_deregister_callback- : PROCEDURE {PlatformCC} (ctx : context; handle : SIGNED32);
 
-PROCEDURE Cleanup(); 
+PROCEDURE Cleanup();
+VAR res: BOOLEAN; 
 BEGIN
- IF libusb # 0 THEN u.Dlclose(libusb) END;
+ IF libusb # NIL THEN 
+ 	res := HostLibs.FreeLibrary(libusb);
+ END;
 END Cleanup;
 
 (** Get string from address  *)
-PROCEDURE GetStringFromAddr* (adr: ADDRESS): POINTER TO ARRAY OF CHAR;
-VAR  sadr: ADDRESS;
-	cnt: SIGNED32;
-	ch: CHAR;
-	s: POINTER TO ARRAY OF CHAR;
+
+(* Get string from address *)
+PROCEDURE GetStringFromAddr*(adr: ADDRESS): POINTER TO ARRAY OF CHAR;
+VAR s: POINTER {UNSAFE} TO ARRAY MAX(SIZE) OF CHAR;
+	str: POINTER TO ARRAY OF CHAR;
+	pos: SIGNED32;
 BEGIN
+	s := adr;
+	pos := 0;
 	IF adr # NIL THEN
-		(* find length  *)
-		sadr := adr;
-		cnt  := 0;		
-		SYSTEM.GET(sadr,ch);
-		WHILE (ch # 0X) DO  INC(cnt); INC(sadr); SYSTEM.GET(sadr,ch); END;
-		
-		(* then, copy string *)
-		NEW(s, cnt+1);
-		SYSTEM.MOVE(adr, ADDRESSOF(s[0]), cnt);
-	END;	
-	RETURN s;
+		WHILE s[pos] # 0X DO INC(pos); END;
+		NEW(str, pos + 1);
+		pos := 0;
+		WHILE s[pos] # 0X DO str[pos] := s[pos]; INC(pos); END;
+
+	ELSE NEW(str, 1);
+	END;
+	str[pos] := 0X;
+	RETURN str;
 END GetStringFromAddr;
 
 (* wrapper *)
@@ -613,77 +621,89 @@ BEGIN
 	RETURN s;
 END error_name;
 
+PROCEDURE GetProcAddress*( lib: HostLibs.LibHandle;  CONST procName: ARRAY OF CHAR; adr: ADDRESS );
+VAR res: BOOLEAN
 BEGIN
- libusb := u.Dlopen(libusbname, 2);
- ASSERT(libusb # 0, 100);
- m.InstallTermHandler(Cleanup);
- 
- u.Dlsym(libusb, "libusb_init", ADDRESSOF(init));
- u.Dlsym(libusb, "libusb_exit", ADDRESSOF(exit));
- u.Dlsym(libusb, "libusb_set_debug", ADDRESSOF(set_debug));
- u.Dlsym(libusb, "libusb_get_version", ADDRESSOF(get_version));
- u.Dlsym(libusb, "libusb_has_capability", ADDRESSOF(has_capability));
- u.Dlsym(libusb, "libusb_error_name", ADDRESSOF(xlibusb_error_name)); (*! wrapped *)
- u.Dlsym(libusb, "libusb_setlocale", ADDRESSOF(setlocale));
- u.Dlsym(libusb, "libusb_strerror", ADDRESSOF(xlibusb_strerror)); (*! wrapped *)
- u.Dlsym(libusb, "libusb_get_device_list", ADDRESSOF(get_device_list));
- u.Dlsym(libusb, "libusb_free_device_list", ADDRESSOF(free_device_list));
- u.Dlsym(libusb, "libusb_ref_device", ADDRESSOF(ref_device));  
- u.Dlsym(libusb, "libusb_unref_device", ADDRESSOF(unref_device)); 
- u.Dlsym(libusb, "libusb_get_configuration", ADDRESSOF(get_configuration));
- u.Dlsym(libusb, "libusb_get_device_descriptor", ADDRESSOF(get_device_descriptor)); 
- u.Dlsym(libusb, "libusb_get_active_config_descriptor", ADDRESSOF(get_active_config_descriptor));
- u.Dlsym(libusb, "libusb_get_config_descriptor", ADDRESSOF(get_config_descriptor));
- u.Dlsym(libusb, "libusb_get_config_descriptor_by_value", ADDRESSOF(get_config_descriptor_by_value));
- u.Dlsym(libusb, "libusb_free_config_descriptor", ADDRESSOF(free_config_descriptor));
- u.Dlsym(libusb, "libusb_get_ss_endpoint_companion_descriptor", ADDRESSOF(get_ss_endpoint_companion_descriptor));
- u.Dlsym(libusb, "libusb_free_ss_endpoint_companion_descriptor", ADDRESSOF( free_ss_endpoint_companion_descriptor));
- u.Dlsym(libusb, "libusb_get_bos_descriptor", ADDRESSOF(get_bos_descriptor));
- u.Dlsym(libusb, "libusb_free_bos_descriptor", ADDRESSOF(free_bos_descriptor));
- u.Dlsym(libusb, "libusb_get_usb_2_0_extension_descriptor", ADDRESSOF(get_usb_2_0_extension_descriptor));
- u.Dlsym(libusb, "libusb_free_usb_2_0_extension_descriptor", ADDRESSOF(free_usb_2_0_extension_descriptor));
- u.Dlsym(libusb, "libusb_get_ss_usb_device_capability_descriptor", ADDRESSOF(get_ss_usb_device_capability_descriptor));
- u.Dlsym(libusb, "libusb_free_ss_usb_device_capability_descriptor", ADDRESSOF(free_ss_usb_device_capability_descriptor));
- u.Dlsym(libusb, "libusb_get_container_id_descriptor", ADDRESSOF(get_container_id_descriptor));
- u.Dlsym(libusb, "libusb_free_container_id_descriptor", ADDRESSOF(free_container_id_descriptor));
- u.Dlsym(libusb, "libusb_get_bus_number", ADDRESSOF(get_bus_number));
- u.Dlsym(libusb, "libusb_get_port_number", ADDRESSOF(get_port_number));
- u.Dlsym(libusb, "libusb_get_port_numbers", ADDRESSOF(get_port_numbers));
- u.Dlsym(libusb, "libusb_get_port_path", ADDRESSOF(get_port_path));
- u.Dlsym(libusb, "libusb_get_parent", ADDRESSOF(get_parent));
- u.Dlsym(libusb, "libusb_get_device_address", ADDRESSOF(get_device_address));
- u.Dlsym(libusb, "libusb_get_device_speed", ADDRESSOF(get_device_speed));
- u.Dlsym(libusb, "libusb_get_max_packet_size", ADDRESSOF(get_max_packet_size));
- u.Dlsym(libusb, "libusb_get_max_iso_packet_size", ADDRESSOF(get_max_iso_packet_size));
- u.Dlsym(libusb, "libusb_open", ADDRESSOF(open));
- u.Dlsym(libusb, "libusb_close", ADDRESSOF(close));
- u.Dlsym(libusb, "libusb_get_device", ADDRESSOF(get_device));
- u.Dlsym(libusb, "libusb_set_configuration", ADDRESSOF(set_configuration));
- u.Dlsym(libusb, "libusb_claim_interface", ADDRESSOF(claim_interface));
- u.Dlsym(libusb, "libusb_release_interface", ADDRESSOF(release_interface));
- u.Dlsym(libusb, "libusb_open_device_with_vid_pid", ADDRESSOF(open_device_with_vid_pid));
- u.Dlsym(libusb, "libusb_set_interface_alt_setting", ADDRESSOF(set_interface_alt_setting));
- u.Dlsym(libusb, "libusb_clear_halt", ADDRESSOF(clear_halt));
- u.Dlsym(libusb, "libusb_reset_device", ADDRESSOF(reset_device));
- u.Dlsym(libusb, "libusb_alloc_streams", ADDRESSOF(alloc_streams));  
- u.Dlsym(libusb, "libusb_free_streams", ADDRESSOF(free_streams));
- u.Dlsym(libusb, "libusb_kernel_driver_active", ADDRESSOF(kernel_driver_active));  
- u.Dlsym(libusb, "libusb_detach_kernel_driver", ADDRESSOF(detach_kernel_driver));
- u.Dlsym(libusb, "libusb_attach_kernel_driver", ADDRESSOF(attach_kernel_driver));
- u.Dlsym(libusb, "libusb_set_auto_detach_kernel_driver", ADDRESSOF(set_auto_detach_kernel_driver));   
- u.Dlsym(libusb, "libusb_alloc_transfer", ADDRESSOF(alloc_transfer)); 
- u.Dlsym(libusb, "libusb_submit_transfer", ADDRESSOF(submit_transfer)); 
- u.Dlsym(libusb, "libusb_cancel_transfer", ADDRESSOF(cancel_transfer)); 
- u.Dlsym(libusb, "libusb_free_transfer", ADDRESSOF(free_transfer)); 
- u.Dlsym(libusb, "libusb_transfer_set_stream_id", ADDRESSOF(transfer_set_stream_id)); 
- u.Dlsym(libusb, "libusb_transfer_get_stream_id", ADDRESSOF(transfer_get_stream_id)); 
- u.Dlsym(libusb, "libusb_control_transfer", ADDRESSOF(control_transfer));
- u.Dlsym(libusb, "libusb_bulk_transfer", ADDRESSOF(bulk_transfer)); 
- u.Dlsym(libusb, "libusb_interrupt_transfer", ADDRESSOF(interrupt_transfer));
- u.Dlsym(libusb, "libusb_get_string_descriptor_ascii", ADDRESSOF(get_string_descriptor_ascii));
- u.Dlsym(libusb, "libusb_try_lock_events", ADDRESSOF(try_lock_events));
- u.Dlsym(libusb, "libusb_lock_events", ADDRESSOF(lock_events));
- u.Dlsym(libusb, "libusb_unlock_events", ADDRESSOF(unlock_events)); 
+	res := HostLibs.GetProcedure(lib,  procName, adr);
+END GetProcAddress;
+
+PROCEDURE InitLibrary;
+VAR res: BOOLEAN;
+BEGIN
+ res := HostLibs.LoadLibrary(libusbname, libusb);
+ ASSERT(res , 100);
+
+ GetProcAddress(libusb, "libusb_init", ADDRESSOF( init ));
+ GetProcAddress(libusb, "libusb_exit", ADDRESSOF( exit ));
+ GetProcAddress(libusb, "libusb_set_debug", ADDRESSOF( set_debug ));
+ GetProcAddress(libusb, "libusb_get_version", ADDRESSOF( get_version ));
+ GetProcAddress(libusb, "libusb_has_capability", ADDRESSOF( has_capability ));
+ GetProcAddress(libusb, "libusb_error_name", ADDRESSOF( xlibusb_error_name )); (*! wrapped *)
+ GetProcAddress(libusb, "libusb_setlocale", ADDRESSOF( setlocale ));
+ GetProcAddress(libusb, "libusb_strerror", ADDRESSOF( xlibusb_strerror )); (*! wrapped *)
+ GetProcAddress(libusb, "libusb_get_device_list", ADDRESSOF( get_device_list ));
+ GetProcAddress(libusb, "libusb_free_device_list", ADDRESSOF( free_device_list ));
+ GetProcAddress(libusb, "libusb_ref_device", ADDRESSOF( ref_device ));  
+ GetProcAddress(libusb, "libusb_unref_device", ADDRESSOF( unref_device )); 
+ GetProcAddress(libusb, "libusb_get_configuration", ADDRESSOF( get_configuration ));
+ GetProcAddress(libusb, "libusb_get_device_descriptor", ADDRESSOF( get_device_descriptor )); 
+ GetProcAddress(libusb, "libusb_get_active_config_descriptor", ADDRESSOF( get_active_config_descriptor ));
+ GetProcAddress(libusb, "libusb_get_config_descriptor", ADDRESSOF( get_config_descriptor ));
+ GetProcAddress(libusb, "libusb_get_config_descriptor_by_value", ADDRESSOF( get_config_descriptor_by_value ));
+ GetProcAddress(libusb, "libusb_free_config_descriptor", ADDRESSOF( free_config_descriptor ));
+ GetProcAddress(libusb, "libusb_get_ss_endpoint_companion_descriptor", ADDRESSOF( get_ss_endpoint_companion_descriptor ));
+ GetProcAddress(libusb, "libusb_free_ss_endpoint_companion_descriptor", ADDRESSOF(  free_ss_endpoint_companion_descriptor ));
+ GetProcAddress(libusb, "libusb_get_bos_descriptor", ADDRESSOF( get_bos_descriptor ));
+ GetProcAddress(libusb, "libusb_free_bos_descriptor", ADDRESSOF( free_bos_descriptor ));
+ GetProcAddress(libusb, "libusb_get_usb_2_0_extension_descriptor", ADDRESSOF( get_usb_2_0_extension_descriptor ));
+ GetProcAddress(libusb, "libusb_free_usb_2_0_extension_descriptor", ADDRESSOF( free_usb_2_0_extension_descriptor ));
+ GetProcAddress(libusb, "libusb_get_ss_usb_device_capability_descriptor", ADDRESSOF( get_ss_usb_device_capability_descriptor ));
+ GetProcAddress(libusb, "libusb_free_ss_usb_device_capability_descriptor", ADDRESSOF( free_ss_usb_device_capability_descriptor ));
+ GetProcAddress(libusb, "libusb_get_container_id_descriptor", ADDRESSOF( get_container_id_descriptor ));
+ GetProcAddress(libusb, "libusb_free_container_id_descriptor", ADDRESSOF( free_container_id_descriptor ));
+ GetProcAddress(libusb, "libusb_get_bus_number", ADDRESSOF( get_bus_number ));
+ GetProcAddress(libusb, "libusb_get_port_number", ADDRESSOF( get_port_number ));
+ GetProcAddress(libusb, "libusb_get_port_numbers", ADDRESSOF( get_port_numbers ));
+ GetProcAddress(libusb, "libusb_get_port_path", ADDRESSOF( get_port_path ));
+ GetProcAddress(libusb, "libusb_get_parent", ADDRESSOF( get_parent ));
+ GetProcAddress(libusb, "libusb_get_device_address", ADDRESSOF( get_device_address ));
+ GetProcAddress(libusb, "libusb_get_device_speed", ADDRESSOF( get_device_speed ));
+ GetProcAddress(libusb, "libusb_get_max_packet_size", ADDRESSOF( get_max_packet_size ));
+ GetProcAddress(libusb, "libusb_get_max_iso_packet_size", ADDRESSOF( get_max_iso_packet_size ));
+ GetProcAddress(libusb, "libusb_open", ADDRESSOF( open ));
+ GetProcAddress(libusb, "libusb_close", ADDRESSOF( close ));
+ GetProcAddress(libusb, "libusb_get_device", ADDRESSOF( get_device ));
+ GetProcAddress(libusb, "libusb_set_configuration", ADDRESSOF( set_configuration ));
+ GetProcAddress(libusb, "libusb_claim_interface", ADDRESSOF( claim_interface ));
+ GetProcAddress(libusb, "libusb_release_interface", ADDRESSOF( release_interface ));
+ GetProcAddress(libusb, "libusb_open_device_with_vid_pid", ADDRESSOF( open_device_with_vid_pid ));
+ GetProcAddress(libusb, "libusb_set_interface_alt_setting", ADDRESSOF( set_interface_alt_setting ));
+ GetProcAddress(libusb, "libusb_clear_halt", ADDRESSOF( clear_halt ));
+ GetProcAddress(libusb, "libusb_reset_device", ADDRESSOF( reset_device ));
+ GetProcAddress(libusb, "libusb_alloc_streams", ADDRESSOF( alloc_streams ));  
+ GetProcAddress(libusb, "libusb_free_streams", ADDRESSOF( free_streams ));
+ GetProcAddress(libusb, "libusb_kernel_driver_active", ADDRESSOF( kernel_driver_active ));  
+ GetProcAddress(libusb, "libusb_detach_kernel_driver", ADDRESSOF( detach_kernel_driver ));
+ GetProcAddress(libusb, "libusb_attach_kernel_driver", ADDRESSOF( attach_kernel_driver ));
+ GetProcAddress(libusb, "libusb_set_auto_detach_kernel_driver", ADDRESSOF( set_auto_detach_kernel_driver ));   
+ GetProcAddress(libusb, "libusb_alloc_transfer", ADDRESSOF( alloc_transfer )); 
+ GetProcAddress(libusb, "libusb_submit_transfer", ADDRESSOF( submit_transfer )); 
+ GetProcAddress(libusb, "libusb_cancel_transfer", ADDRESSOF( cancel_transfer )); 
+ GetProcAddress(libusb, "libusb_free_transfer", ADDRESSOF( free_transfer )); 
+ GetProcAddress(libusb, "libusb_transfer_set_stream_id", ADDRESSOF( transfer_set_stream_id )); 
+ GetProcAddress(libusb, "libusb_transfer_get_stream_id", ADDRESSOF( transfer_get_stream_id )); 
+ GetProcAddress(libusb, "libusb_control_transfer", ADDRESSOF( control_transfer ));
+ GetProcAddress(libusb, "libusb_bulk_transfer", ADDRESSOF( bulk_transfer )); 
+ GetProcAddress(libusb, "libusb_interrupt_transfer", ADDRESSOF( interrupt_transfer ));
+ GetProcAddress(libusb, "libusb_get_string_descriptor_ascii", ADDRESSOF( get_string_descriptor_ascii ));
+ GetProcAddress(libusb, "libusb_try_lock_events", ADDRESSOF( try_lock_events ));
+ GetProcAddress(libusb, "libusb_lock_events", ADDRESSOF( lock_events ));
+ GetProcAddress(libusb, "libusb_unlock_events", ADDRESSOF( unlock_events ));
+END InitLibrary;
+
+BEGIN
+	InitLibrary;
+	m.InstallTermHandler(Cleanup);
 END libusb.
 
-SystemTools.Free libusb ~
+System.Free libusb ~

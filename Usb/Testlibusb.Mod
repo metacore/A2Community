@@ -1,28 +1,16 @@
 MODULE Testlibusb; (** AUTHOR "fnecati"; PURPOSE "testing libusb module, LinuxAos"; *)
-IMPORT libusb, StdIO, Commands, Streams, KernelLog;
+IMPORT libusb, StdIO, Commands, Streams;
 
 VAR env : Commands.Context;
  	out : Streams.Writer;
  	verbose: BOOLEAN;
-	
-PROCEDURE bout(x: libusb.Uint8; n=0: SIGNED32);
-VAR i: SIGNED32;
-BEGIN
-	i := x; 	out.Int(i, n); 
-END bout;
-
-PROCEDURE wout(x: libusb.Uint16; n=0: SIGNED32);
-VAR i: SIGNED32;
-BEGIN
-	i := x; 	out.Int(i, n);
-END wout;
 
 PROCEDURE print_endpoint_comp(ep_comp: libusb.ss_endpoint_companion_descriptor );
 BEGIN
 	out.String("      USB 3.0 Endpoint Companion:"); out.Ln;
-	out.String("        bMaxBurst:        "); bout( ep_comp.bMaxBurst); out.Ln;
+	out.String("        bMaxBurst:        "); out.Int( ep_comp.bMaxBurst, 0); out.Ln;
 	out.String("        bmAttributes:     "); out.Hex(ep_comp.bmAttributes, -2); out.Ln;
-	out.String("        wBytesPerInterval: "); wout(ep_comp.wBytesPerInterval); out.Ln;
+	out.String("        wBytesPerInterval: "); out.Int(ep_comp.wBytesPerInterval, 0); out.Ln;
 	out.Update;
 END print_endpoint_comp;
 
@@ -32,11 +20,11 @@ BEGIN
 	out.String("      Endpoint:"); out.Ln;
 	out.String("        bEndpointAddress: "); out.Hex(endpoint.bEndpointAddress, -2); out.Ln;
 	out.String("        bmAttributes:     "); out.Hex(endpoint.bmAttributes, -2); out.Ln;
-	out.String("        wMaxPacketSize:   "); wout(endpoint.wMaxPacketSize); out.Ln;
-	out.String("        bInterval:        "); bout(endpoint.bInterval, 0); out.Ln;
+	out.String("        wMaxPacketSize:   "); out.Int(endpoint.wMaxPacketSize, 0); out.Ln;
+	out.String("        bInterval:        "); out.Int(endpoint.bInterval, 0); out.Ln;
 
-	out.String("        bRefresh:         "); bout(endpoint.bRefresh, 0); out.Ln;
-	out.String("        bSynchAddress:    "); bout(endpoint.bSynchAddress, 0); out.Ln;
+	out.String("        bRefresh:         "); out.Int(endpoint.bRefresh, 0); out.Ln;
+	out.String("        bSynchAddress:    "); out.Int(endpoint.bSynchAddress, 0); out.Ln;
 	out.Update;
 (*	
 	i := 0;
@@ -62,13 +50,13 @@ PROCEDURE print_altsetting(interface: libusb.interface_descriptor );
 VAR i: SIGNED32;
 BEGIN
 	out.String("    Interface:");out.Ln;
-	out.String("      bInterfaceNumber:   "); bout( interface.bInterfaceNumber, 0); out.Ln;
-	out.String("      bAlternateSetting:  "); bout( interface.bAlternateSetting, 0);out.Ln;
-	out.String("      bNumEndpoints:      "); bout( interface.bNumEndpoints, 0);out.Ln;
-	out.String("      bInterfaceClass:    "); bout( interface.bInterfaceClass, 0);out.Ln;
-	out.String("      bInterfaceSubClass: "); bout( interface.bInterfaceSubClass, 0);out.Ln;
-	out.String("      bInterfaceProtocol: "); bout( interface.bInterfaceProtocol, 0);out.Ln;
-	out.String("      iInterface:         "); bout( interface.iInterface, 0); out.Ln;
+	out.String("      bInterfaceNumber:   "); out.Int( interface.bInterfaceNumber, 0); out.Ln;
+	out.String("      bAlternateSetting:  "); out.Int( interface.bAlternateSetting, 0);out.Ln;
+	out.String("      bNumEndpoints:      "); out.Int( interface.bNumEndpoints, 0);out.Ln;
+	out.String("      bInterfaceClass:    "); out.Int( interface.bInterfaceClass, 0);out.Ln;
+	out.String("      bInterfaceSubClass: "); out.Int( interface.bInterfaceSubClass, 0);out.Ln;
+	out.String("      bInterfaceProtocol: "); out.Int( interface.bInterfaceProtocol, 0);out.Ln;
+	out.String("      iInterface:         "); out.Int( interface.iInterface, 0); out.Ln;
 	out.Update;	
 	i := 0;
 	WHILE i < interface.bNumEndpoints DO
@@ -81,7 +69,7 @@ END print_altsetting;
 PROCEDURE print_2_0_ext_cap(usb_2_0_ext_cap: libusb.usb_2_0_extension_descriptor );
 BEGIN
 	out.String("    USB 2.0 Extension Capabilities:");out.Ln;
-	out.String("      bDevCapabilityType: ");  bout( usb_2_0_ext_cap.bDevCapabilityType, 0); out.Ln;
+	out.String("      bDevCapabilityType: "); out.Int( usb_2_0_ext_cap.bDevCapabilityType, 0); out.Ln;
 	out.String("      bmAttributes:       "); out.Hex( usb_2_0_ext_cap.bmAttributes, -2); out.Ln;
 	out.Update;
 END print_2_0_ext_cap;
@@ -89,12 +77,12 @@ END print_2_0_ext_cap;
 PROCEDURE print_ss_usb_cap(ss_usb_cap: libusb.ss_usb_device_capability_descriptor );
 BEGIN
 	out.String("    USB 3.0 Capabilities:");out.Ln;
-	out.String("      bDevCapabilityType: ");  bout( ss_usb_cap.bDevCapabilityType, 0); out.Ln;
+	out.String("      bDevCapabilityType: ");  out.Int( ss_usb_cap.bDevCapabilityType, 0); out.Ln;
 	out.String("      bmAttributes:       ");  out.Hex( ss_usb_cap.bmAttributes, -2); out.Ln;
-	out.String("      wSpeedSupported:    ");  wout( ss_usb_cap.wSpeedSupported, 0); out.Ln;
-	out.String("      bFunctionalitySupport: "); bout( ss_usb_cap.bFunctionalitySupport, 0); out.Ln;
-	out.String("      bU1devExitLat:      "); bout( ss_usb_cap.bU1DevExitLat, 0); out.Ln;
-	out.String("      bU2devExitLat:      "); wout( ss_usb_cap.bU2DevExitLat, 0); out.Ln;
+	out.String("      wSpeedSupported:    ");  out.Int( ss_usb_cap.wSpeedSupported, 0); out.Ln;
+	out.String("      bFunctionalitySupport: "); out.Int( ss_usb_cap.bFunctionalitySupport, 0); out.Ln;
+	out.String("      bU1devExitLat:      "); out.Int( ss_usb_cap.bU1DevExitLat, 0); out.Ln;
+	out.String("      bU2devExitLat:      "); out.Int( ss_usb_cap.bU2DevExitLat, 0); out.Ln;
 	out.Update;
 END print_ss_usb_cap;
 
@@ -106,38 +94,27 @@ VAR
 	ret: SIGNED32;
 BEGIN
 	ret := libusb.get_bos_descriptor(handle, bos);
-	IF (0 > ret) THEN out.String("bos ret<0; "); out.Ln; out.Update; RETURN END;
+	IF ret < 0 THEN out.String("bos ret<0; "); out.Ln; out.Update; RETURN END;
 
 	out.String("  Binary Object Store (BOS):");out.Ln;
-	out.String("    wTotalLength:       "); wout( bos.wTotalLength, 0); out.Ln;
-	out.String("    bNumDeviceCaps:     "); bout( bos.bNumDeviceCaps, 0); out.Ln;
+	out.String("    wTotalLength:       "); out.Int( bos.wTotalLength, 0); out.Ln;
+	out.String("    bNumDeviceCaps:     "); out.Int( bos.bNumDeviceCaps, 0); out.Ln;
 	out.Update;
 
-(*
 	IF (bos.dev_capability.bDevCapabilityType = libusb.BT_USB_2_0_EXTENSION) THEN
-
-	        ret :=  libusb.get_usb_2_0_extension_descriptor(NIL, bos.dev_capability,usb_2_0_extension);
-	        IF (0 > ret) THEN
-		        RETURN;
-	        END;
-
-                print_2_0_ext_cap(usb_2_0_extension);
-                libusb.free_usb_2_0_extension_descriptor(usb_2_0_extension);
-       END;
+		ret :=  libusb.get_usb_2_0_extension_descriptor(NIL, bos.dev_capability,usb_2_0_extension);
+		IF ret < 0 THEN RETURN END;
+		print_2_0_ext_cap(usb_2_0_extension);
+		libusb.free_usb_2_0_extension_descriptor(usb_2_0_extension);
+	END;
 
 	IF (bos.dev_capability.bDevCapabilityType = libusb.BT_SS_USB_DEVICE_CAPABILITY) THEN
-
-
 		ret := libusb.get_ss_usb_device_capability_descriptor(NIL, bos.dev_capability, dev_cap);
-	      IF (0 > ret) THEN
-		        RETURN;
-	        END;
+		IF ret < 0 THEN RETURN END;
+		print_ss_usb_cap(dev_cap);
+		libusb.free_ss_usb_device_capability_descriptor(dev_cap);
+	END;
 
-	        print_ss_usb_cap(dev_cap);
-	        libusb.free_ss_usb_device_capability_descriptor(dev_cap);
-       END;
-
-*)
 	libusb.free_bos_descriptor(bos);
 END print_bos;
 
@@ -153,12 +130,12 @@ PROCEDURE print_configuration(config:  libusb.config_descriptor);
 VAR i: SIGNED32;
 BEGIN
 	out.String("  Configuration:");out.Ln;
-	out.String("    wTotalLength:         "); wout( config.wTotalLength, 0); out.Ln;
-	out.String("    bNumInterfaces:       "); bout( config.bNumInterfaces, 0); out.Ln;
-	out.String("    bConfigurationValue:  "); bout( config.bConfigurationValue, 0); out.Ln;
-	out.String("    iConfiguration:       "); bout( config.iConfiguration, 0); out.Ln;
+	out.String("    wTotalLength:         "); out.Int( config.wTotalLength, 0); out.Ln;
+	out.String("    bNumInterfaces:       "); out.Int( config.bNumInterfaces, 0); out.Ln;
+	out.String("    bConfigurationValue:  "); out.Int( config.bConfigurationValue, 0); out.Ln;
+	out.String("    iConfiguration:       "); out.Int( config.iConfiguration, 0); out.Ln;
 	out.String("    bmAttributes:         "); out.Hex( config.bmAttributes, -2); out.Ln;
-	out.String("    MaxPower:             "); bout( config.MaxPower, 0); out.Ln;
+	out.String("    MaxPower:             "); out.Int( config.MaxPower, 0); out.Ln;
 	out.Update;
 	
 	FOR i := 0 TO config.bNumInterfaces-1 DO
@@ -301,15 +278,6 @@ BEGIN
 	out.Update;
 END Do;
 
-(** *)
-PROCEDURE Test1*;
-VAR x: UNSIGNED8;
-BEGIN
-  x := 250; (* unsigned8 printed as negative -4294967046 *)
-  KernelLog.String("x= "); KernelLog.Int(x, 0); KernelLog.Ln; 
-  KernelLog.Hex(x, -2); KernelLog.Ln;  (* 0FAH as hex *)
-END Test1;
-
 BEGIN
 	env := StdIO.env;
 	verbose := TRUE
@@ -317,8 +285,6 @@ END Testlibusb.
 
 System.Free Testlibusb ~
 System.Free libusb ~ 
-
-Testlibusb.Test1 ~ 
 
 Testlibusb.Do ~ 
 
