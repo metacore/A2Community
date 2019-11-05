@@ -1,5 +1,5 @@
 MODULE FFTW; (** AUTHOR "fnecati"; PURPOSE "double precision wrapper for FFTW library"; *)
-IMPORT SYSTEM, Strings, Modules, KernelLog, HostLibs;
+IMPORT Strings, Modules, KernelLog, HostLibs;
 
 (*! For double precision FLOAT64  type:
 	real: 8 bytes (64 bit), complex: 16 bytes (128 bit )*)
@@ -527,26 +527,24 @@ BEGIN
 END OnClose;
 
 (* Get string from address  *)
-PROCEDURE GetStringFromAddr* (adr: ADDRESS): Strings.String;
-VAR  sadr: ADDRESS;
-	cnt: INTEGER;
-	ch: CHAR;
-	s: Strings.String;
+(* Get string from address *)
+PROCEDURE GetStringFromAddr*(adr: ADDRESS): Strings.String;
+VAR s: POINTER {UNSAFE} TO ARRAY MAX(SIZE) OF CHAR;
+	str: Strings.String;
+	pos: SIGNED32;
 BEGIN
-	IF adr # 0 THEN
-		(* find length  *)
-		sadr := adr;
-		cnt  := 0;		
-		SYSTEM.GET(sadr,ch);
-		WHILE (ch # 0X) DO  INC(cnt); INC(sadr); SYSTEM.GET(sadr,ch); END;
-		
-		(* then, copy string *)
-		NEW(s, cnt+1);
-		SYSTEM.MOVE(adr, ADDRESSOF(s[0]), cnt);
-	ELSE NEW(s, 1); s[0] := 0X;
-	END;
+	s := adr;
+	pos := 0;
+	IF adr # NIL THEN
+		WHILE s[pos] # 0X DO INC(pos); END;
+		NEW(str, pos + 1);
+		pos := 0;
+		WHILE s[pos] # 0X DO str[pos] := s[pos]; INC(pos); END;
 
-	RETURN s;
+	ELSE NEW(str, 1);
+	END;
+	str[pos] := 0X;
+	RETURN str;
 END GetStringFromAddr;
 		
 BEGIN
