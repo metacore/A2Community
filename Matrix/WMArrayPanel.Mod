@@ -373,6 +373,11 @@ TYPE Panel*= OBJECT (WMStandardComponents.ImagePanel) (*! tbd: convert some loca
 			bounds.SetHeight(img0.height);
 			SetImage(SELF, img0) (*Implicit invalidate*)
 		END RecacheProperties;
+		
+		PROCEDURE GetImage*():WMGraphics.Image;
+		BEGIN
+			RETURN img0
+		END GetImage;
 
 		PROCEDURE Animate*(interval:SIGNED32);
 		BEGIN

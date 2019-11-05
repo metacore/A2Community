@@ -432,7 +432,7 @@ BEGIN
 				INC(p,3);
 			END;
 		END;
-	ELSIF img.fmt.code=RasterPixelFormats.yuv422 THEN
+	ELSIF img.fmt.code=Raster.yuv422 THEN
 		NEW(data, 3, img.height, img.width) ;
 		FOR row:=0 TO img.height-1 DO
 			FOR col:=0 TO img.width-1 BY 2 DO
@@ -474,6 +474,62 @@ BEGIN
 	END;
 END ImageToArray;
 
+PROCEDURE ImagePlaneToArray*(img:Raster.Image; planeIndex: SIZE):ARRAY [*,*] OF SIGNED16;
+VAR row,col,p, i0, i1: SIZE; int: SIGNED32; fmt: INTEGER; msg: ARRAY 20 OF CHAR;
+VAR data: ARRAY [*,*] OF SIGNED16;
+BEGIN
+	p:=0;
+	IF LEN(RESULT)#[img.height,img.width] THEN 
+		NEW(data, img.height, img.width);
+	ELSIF RESULT[0,0] IS SIGNED16 THEN
+		data:=ALIAS OF RESULT
+	ELSE 
+		NEW(data, img.height, img.width);
+	END;
+		
+	IF img.fmt.code=Raster.bgr888 THEN
+		FOR row:=0 TO img.height-1 DO
+			FOR col:=0 TO img.width-1 DO
+				data[row,col]:= SIGNED16(ORD(img.mem[p+planeIndex]));
+				INC(p,3);
+			END;
+		END;
+	ELSIF img.fmt.code=Raster.yuv422 THEN
+		IF planeIndex=0 THEN i0:=0; i1:=2;
+		ELSIF planeIndex=1 THEN i0:=1; i1:=1;
+		ELSIF planeIndex=2 THEN i0:=3; i1:=3;
+		END;
+		FOR row:=0 TO img.height-1 DO
+			FOR col:=0 TO img.width-1 BY 2 DO
+				data[row,col]:= SIGNED16(ORD(img.mem[p+i0]));
+				data[row,col+1]:= SIGNED16(ORD(img.mem[p+i1]));
+				INC(p,4);
+			END;
+		END;
+	ELSIF img.fmt.code=Raster.bgra8888 THEN
+		FOR row:=0 TO img.height-1 DO
+			FOR col:=0 TO img.width-1 DO
+				data[row,col]:= SIGNED16(ORD(img.mem[p+planeIndex]));
+				INC(p,4);
+			END;
+		END;
+	ELSIF img.fmt.code=Raster.bgr565 THEN
+		FOR row:=0 TO img.height-1 DO
+			FOR col:=0 TO img.width-1 DO
+				int:=ASH(ORD(img.mem[p+1]), 8) + ORD(img.mem[p]);
+				IF planeIndex=0 THEN data[row,col]:= SIGNED8(ASH(ASH(int, -11) MOD 20H, 3) + 4);
+				ELSIF planeIndex=1 THEN data[row,col]:= SIGNED8(ASH(ASH(int, -5) MOD 40H, 2) + 2);
+				ELSIF planeIndex=3 THEN data[row,col]:= SIGNED8(ASH(int MOD 20H, 3) + 4);
+				END;
+				INC(p,2);
+			END;
+		END;
+	ELSE 
+		COPY("failed on format ",msg);; fmt:=img.fmt.code;
+		HALT(200);(* not yet implemented*)
+	END;
+	RETURN data
+END ImagePlaneToArray;
 
 (*
 PROCEDURE IntegrateLReal(CONST m: ARRAY OF FLOAT64);
@@ -548,19 +604,6 @@ BEGIN
 	WM.DefaultAddWindow(pw6);
 	WM.DefaultAddWindow(pw7);
 
-	(*
-	NEW(p,256,3);
-	FOR ind:=0 TO 255 DO
-		p[ind,0]:=ind*256; p[ind,2]:=(255-ind)*256
-	END;
-
-	NEW(l,100,100); l[50..80,40..90]:=80; l[30..60,20..50]:=l[30..60,20..50]+120;  Integrate(LIntToImage(l,p),"color"); (* integrate as Gadgets Frame*)
-
-	ToWindow(LIntToImage(l,p),"Hello.Pict"); (* show as separate Windows document window. use postfix ".Pict" or similar to allow storage*)
-
-	NEW(imF); ImageGadgets.Init(imF,LIntToImage(l,p));
-	ShowGadget("holla.Pict",imF); (* integrate as Gadgets Document in Oberon GUI. use postfix ".Pict" or similar to allow storage*)
-	*)
 END Test;
 
 BEGIN

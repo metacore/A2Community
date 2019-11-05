@@ -164,9 +164,9 @@ CONST
 		RETURN RESULT
 	END ExpandX;
 (*simple scaling without interpolation*)	 (*!may need fix of dimension allocation*)
-	PROCEDURE ReduceY( CONST g: Rect ): Rect;
+	PROCEDURE ReduceY*( CONST g: Rect ): Rect;
 	BEGIN
-		IF (LEN( RESULT, 0 ) # ((LEN( g, 0 ) + 1) DIV 2)) OR (LEN( RESULT, 1 ) # ((LEN( g, 1 ) + 1) DIV 2)) THEN NEW( RESULT, (LEN( g, 0 ) + 1) DIV 2, (LEN( g, 1 ) + 1) DIV 2 ) END;
+		IF (LEN( RESULT, 0 ) # ((LEN( g, 0 ) + 1) DIV 2)) OR (LEN( RESULT, 1 ) # ((LEN( g, 1 ) + 1) DIV 2)) THEN NEW( RESULT, (LEN( g, 0 ) + 1) DIV 2, LEN( g, 1 )) END;
 		RESULT[.. (LEN( g, 0 ) + 1) DIV 2 - 1, .. ] := g[.. BY 2, .. BY 2];
 		RESULT[.. (LEN( g, 0 ) + 0) DIV 2 - 1, .. ] := RESULT[.. (LEN( g, 0 ) + 0) DIV 2 - 1, .. ] + g[1.. BY 2, .. ];
 		RESULT[.. (LEN( g, 0 ) + 1) DIV 2 - 1, .. ] := 0.5 * RESULT[.. (LEN( g, 0 ) + 1) DIV 2 - 1, .. ];  (*scale*)
@@ -176,9 +176,9 @@ CONST
 		RETURN RESULT
 	END ReduceY;
 (*simple scaling without interpolation*)(*! may need fix for dimension allocation*)
-	PROCEDURE ExpandY( CONST g: Rect ): Rect;
+	PROCEDURE ExpandY*( CONST g: Rect ): Rect;
 	BEGIN
-		IF (LEN( g, 0 ) # ((LEN( RESULT, 0 ) + 1) DIV 2)) OR (LEN( g, 1 ) # ((LEN( RESULT, 1 ) + 1) DIV 2)) THEN NEW( RESULT, 2 * LEN( g, 0 ), 2 * LEN( g, 1 ) ) END;
+		IF (LEN( g, 0 ) # ((LEN( RESULT, 0 ) + 1) DIV 2)) OR (LEN( g, 1 ) # ((LEN( RESULT, 1 ) + 1) DIV 2)) THEN NEW( RESULT, 2 * LEN( g, 0 ), LEN( g, 1 ) ) END;
 		RESULT[.. BY 2, ..] := g[.. (LEN( RESULT, 0 ) + 1) DIV 2 - 1, .. ];
 		RESULT[1.. BY 2, ..] := g[.. (LEN( RESULT, 0 ) + 0) DIV 2 - 1, .. ];
 		RETURN RESULT
@@ -286,7 +286,8 @@ CONST
 	END Wavelet2D;
 	
 	PROCEDURE {TEST} Test*;
-	VAR a,b,c,d,e,f,g: ARRAY [*,*] OF REAL;
+	VAR a,b,c,d,e,f,g,j: ARRAY [*,*] OF REAL;
+		h,i: ARRAY [?] OF REAL;
 	BEGIN
 		NEW(a,100,100);
 		NEW(b, 50,100);
@@ -298,10 +299,14 @@ CONST
 		
 		a:=Expand(c); (*preallocated*)
 		e:=Expand(c); (*unallocated*)
-		
 		NEW(f,101,101); f:=1;
 		g:=Reduce(f); ASSERT(LEN(g)=[51,51], 200);
 		f:=0; f:=Expand(g); ASSERT(SUM(f)=101*101, 201);
+		(*h:=Reduce(a);*)(* unallocated tensor fails compilation*)
+		NEW(i, LEN(d)); i:=Reduce(a); (*allocated tensor*)
+
+		j:=ExpandY(a);
+		
 	END Test;
 
 (*
