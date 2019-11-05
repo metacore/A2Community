@@ -487,26 +487,26 @@ TYPE
 
 	(* ****************************** *)
 	(*! used for easy accessing to pixels of various image types, see Scanline procs. ( Necati ) *)
-	PtrLineRGB* = POINTER {UNTRACED, UNSAFE}TO ARRAY OF RGBTRIPLE; (* for accessing 24 bit lines, RGB *)
-	PtrLineRGBA* = POINTER {UNTRACED, UNSAFE} TO ARRAY OF RGBQUAD; (* for accessing 32 bit lines, RGBA *)
-	PtrFISINT16* = POINTER {UNTRACED, UNSAFE} TO ARRAY OF SIGNED16; (* for 16 bit integers *)
-	PtrFIINT32* = POINTER {UNTRACED, UNSAFE} TO ARRAY OF SIGNED32; (* for 32 bit integers *)
-	PtrFIFLOAT* = POINTER {UNTRACED, UNSAFE} TO ARRAY OF FLOAT32; (* for 32 bit real *)
-	PtrFIDOUBLE* = POINTER {UNTRACED, UNSAFE}TO ARRAY OF FLOAT64; (* for 64 bit real *)
+	PtrLineRGB* = POINTER {UNTRACED, UNSAFE}TO ARRAY MAX(SIZE) OF RGBTRIPLE; (* for accessing 24 bit lines, RGB *)
+	PtrLineRGBA* = POINTER {UNTRACED, UNSAFE} TO ARRAY MAX(SIZE) OF RGBQUAD; (* for accessing 32 bit lines, RGBA *)
+	PtrFISINT16* = POINTER {UNTRACED, UNSAFE} TO ARRAY MAX(SIZE) OF SIGNED16; (* for 16 bit integers *)
+	PtrFIINT32* = POINTER {UNTRACED, UNSAFE} TO ARRAY MAX(SIZE) OF SIGNED32; (* for 32 bit integers *)
+	PtrFIFLOAT* = POINTER {UNTRACED, UNSAFE} TO ARRAY MAX(SIZE) OF FLOAT32; (* for 32 bit real *)
+	PtrFIDOUBLE* = POINTER {UNTRACED, UNSAFE}TO ARRAY MAX(SIZE) OF FLOAT64; (* for 64 bit real *)
 
-	PtrFICOMPLEX* = POINTER {UNTRACED, UNSAFE} TO ARRAY OF FICOMPLEX; (* 2x64 bits real, Complex *)
-	PtrFIRGB16* = POINTER {UNTRACED, UNSAFE} TO ARRAY OF FIRGB16; (* for 48-bit RGB, 3x16 bits *)
-	PtrFIRGBA16* = POINTER {UNTRACED, UNSAFE} TO ARRAY OF FIRGBA16; (* 64-bit RGBA, 4x16 bits *)
-	PtrFIRGBF* = POINTER {UNTRACED, UNSAFE} TO ARRAY OF FIRGBF; (* 96-bit RGB Float, 3*32 bits *)
-	PtrFIRGBAF* = POINTER {UNTRACED, UNSAFE} TO ARRAY OF FIRGBAF; (* 128-bit RGBA Float, 4x32 bits *)
+	PtrFICOMPLEX* = POINTER {UNTRACED, UNSAFE} TO ARRAY MAX(SIZE) OF FICOMPLEX; (* 2x64 bits real, Complex *)
+	PtrFIRGB16* = POINTER {UNTRACED, UNSAFE} TO ARRAY MAX(SIZE) OF FIRGB16; (* for 48-bit RGB, 3x16 bits *)
+	PtrFIRGBA16* = POINTER {UNTRACED, UNSAFE} TO ARRAY MAX(SIZE) OF FIRGBA16; (* 64-bit RGBA, 4x16 bits *)
+	PtrFIRGBF* = POINTER {UNTRACED, UNSAFE} TO ARRAY MAX(SIZE) OF FIRGBF; (* 96-bit RGB Float, 3*32 bits *)
+	PtrFIRGBAF* = POINTER {UNTRACED, UNSAFE} TO ARRAY MAX(SIZE) OF FIRGBAF; (* 128-bit RGBA Float, 4x32 bits *)
 
 	Palette* = ARRAY 256 OF RGBQUAD;
 	PtrPALETTE* = POINTER {UNTRACED, UNSAFE} TO Palette;
 
 	(* File IO routines *)
 	FHandle* =  ADDRESS;
-	PSint* = POINTER {UNTRACED, UNSAFE} TO ARRAY OF SIGNED16;
-	Pint* = POINTER {UNTRACED, UNSAFE} TO ARRAY OF SIGNED32;
+	PSint* = POINTER {UNTRACED, UNSAFE} TO ARRAY MAX(SIZE) OF SIGNED16;
+	Pint* = POINTER {UNTRACED, UNSAFE} TO ARRAY MAX(SIZE) OF SIGNED32;
 	FI_ReadProc* = PROCEDURE {PlatformCC} (buffer: ADDRESS; size: SIGNED32; count: SIGNED32; handle: FHandle): SIGNED32;
 	FI_WriteProc* = PROCEDURE {PlatformCC} (buffer: ADDRESS; size: SIGNED32; count: SIGNED32; handle: FHandle): SIGNED32;
 	FI_SeekProc* = PROCEDURE {PlatformCC} (handle: FHandle; offset: SIGNED32; origin: SIGNED32): PSint;
@@ -526,8 +526,8 @@ TYPE
 	FIMETADATA* = POINTER  {UNTRACED, UNSAFE} TO RECORD END; (* Handle to a metadata model *)
 	FITAG* = POINTER {UNTRACED, UNSAFE} TO RECORD END; (* Handle to a FreeImage tag *)
 
-	OutputMessageFunction* = PROCEDURE {PlatformCC} (fif: IMAGE_FORMAT; msg: POINTER  {UNSAFE} TO ARRAY OF CHAR);
-	OutputMessageFunctionStdCall* = PROCEDURE {PlatformCC} (fif: IMAGE_FORMAT;  msg: POINTER  {UNSAFE} TO ARRAY OF CHAR);
+	OutputMessageFunction* = PROCEDURE {PlatformCC} (fif: IMAGE_FORMAT; msg: POINTER  {UNSAFE} TO ARRAY 1024 OF CHAR);
+	OutputMessageFunctionStdCall* = PROCEDURE {PlatformCC} (fif: IMAGE_FORMAT;  msg: POINTER  {UNSAFE} TO ARRAY 1024 OF CHAR);
 	
 
 CONST
@@ -1452,25 +1452,24 @@ BEGIN
 END OnClose;
 	
 (* utilities  *)
-PROCEDURE GetStringFromAddr*(adr:  POINTER {UNSAFE} TO ARRAY OF CHAR ): Strings.String;
-VAR
+(* Get string from address *)
+PROCEDURE GetStringFromAddr*(adr: ADDRESS): Strings.String;
+VAR s: POINTER {UNSAFE} TO ARRAY MAX(SIZE) OF CHAR;
 	str: Strings.String;
-	pos: SIZE;
+	pos: SIGNED32;
 BEGIN
-
+	s := adr;
 	pos := 0;
 	IF adr # NIL THEN
-		WHILE adr[pos] # 0X DO INC(pos); END;
+		WHILE s[pos] # 0X DO INC(pos); END;
 		NEW(str, pos + 1);
 		pos := 0;
-		WHILE adr[pos] # 0X DO str[pos] := adr[pos]; INC(pos); 	END;
+		WHILE s[pos] # 0X DO str[pos] := s[pos]; INC(pos); END;
 
 	ELSE NEW(str, 1);
 	END;
-
 	str[pos] := 0X;
 	RETURN str;
-
 END GetStringFromAddr;
 
 (** wrapper procedure for getVersion() *)
@@ -1612,21 +1611,11 @@ BEGIN
 END SaveImage;
 
 (* called by FreeImage when error occurs *)
-#IF UNIX THEN
- PROCEDURE {C} MyOutputMessageFunction(fif: IMAGE_FORMAT;  msg: POINTER  {UNSAFE} TO ARRAY OF CHAR);
-#ELSE
- PROCEDURE {WINAPI} MyOutputMessageFunction(fif: IMAGE_FORMAT;  msg: POINTER  {UNSAFE} TO ARRAY OF CHAR);
-#END
-
-VAR 
-	i: SIGNED32;
+PROCEDURE {PlatformCC} MyOutputMessageFunction(fif: IMAGE_FORMAT; msg: POINTER {UNSAFE} TO ARRAY 1024 OF CHAR);
 BEGIN	
 	IF msg # NIL THEN
 		KernelLog.String("FreeImage ERROR: ");
-		i := 0;
-		(* limit msg length to 255 *)
-		WHILE (i < 255) & (msg[i] # 0X) DO  KernelLog.Char( msg[i] ); INC( i ); END;
-
+		KernelLog.String(msg^);
 		KernelLog.String(", FIF_FORMAT= "); KernelLog.Int(fif, 0);
 		KernelLog.Ln; 
 	END;	
