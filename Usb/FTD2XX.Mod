@@ -1,11 +1,15 @@
-MODULE FTD2XX; (** AUTHOR "fnecati"; PURPOSE "FTDI USB/Serial interface for WinAos"; *)
-IMPORT Kernel32, SYSTEM, Modules, KernelLog;
+MODULE FTD2XX; (** AUTHOR "fnecati"; PURPOSE "FTDI USB/Serial interface for WinAos/LinuxAos"; *)
+IMPORT SYSTEM, HostLibs, Modules, KernelLog;
 
-CONST 
-	clibname="ftd2xx.dll";
+CONST
+#IF UNIX THEN	
+	libname="/usr/local/lib/libftd2xx.so";
+#ELSIF WIN THEN 
+	libname="ftd2xx.dll"
+#END
+
 VAR
-	lib-: Kernel32.HMODULE;
-	libname: ARRAY 32 OF CHAR;
+	lib: HostLibs.LibHandle;
 	
 (*	 
 	 Module Name: ftd2xx.h,  version 1.3.6
@@ -23,17 +27,13 @@ TYPE
 	USHORT* = UNSIGNED16; (* 2 bytes *)
 
 	UCHAR* = UNSIGNED8; (* unsigned *)
-(*	SIGNED16* = UNSIGNED16; (* 2 bytes *)*)
 	PCHAR* = POINTER TO ARRAY OF CHAR;
-	PVOID* = (*POINTER TO ARRAY OF SYSTEM.BYTE; *) ADDRESS;
+	PVOID* = ADDRESS;
 	HANDLE* = UNSIGNED32;
 
 	INT* = SIGNED32;
 	UINT* = UNSIGNED32; (* 4 bytes *)
 
-(*	LPSTR* = POINTER TO ARRAY OF CHAR;
-	LPTSTR* = POINTER TO ARRAY OF CHAR;
-*)
 	LPVOID* = PVOID;
 	
 	OVERLAPPED* = RECORD 
@@ -44,10 +44,8 @@ TYPE
 		hEvent* : HANDLE;
 	END;
 	LPOVERLAPPED* = POINTER TO OVERLAPPED;
-	
-	
+
 	(* Modem Status Flags *)
-	
 CONST
 	MS_CTS_ON* = 00010H;
 	MS_DSR_ON* = 00020H;
@@ -66,13 +64,10 @@ CONST
 	CE_IOE* = 00400H;  (* LPTx I/O Error *)
 	CE_DNS* = 00800H;  (* LPTx Device not selected *)
 	CE_OOP* = 01000H;  (* LPTx Out-Of-Paper *)
-	CE_MODE* = 08000H;  (* Requested mode unsupported *)
+	CE_MODE* = 08000H; (* Requested mode unsupported *)
 
 	INVALID_HANDLE_VALUE* = 0FFFFFFFFH;
 
-
-
-	
 (*	TYPE _EVENT_HANDLE* = RECORD 
 		eCondVar: pthread_cond_t;
 		eMutex: pthread_mutex_t;
@@ -83,8 +78,7 @@ CONST
 	
 TYPE 
 	STATUS* = ULONG;
-	
-	
+
 	(* Device status *)
 CONST 
 	OK* = 0; 
@@ -162,7 +156,7 @@ CONST
 
 	(* Events *)
 TYPE 
-	PEVENT_HANDLER* = PROCEDURE {WINAPI} (a: DWORD; b: DWORD);
+	PEVENT_HANDLER* = PROCEDURE {PlatformCC} (a: DWORD; b: DWORD);
 CONST	
 	EVENT_RXCHAR* = 1;
 	EVENT_MODEM_STATUS* = 2;
@@ -232,19 +226,19 @@ CONST
 	
 
 VAR
-	Open- : PROCEDURE {WINAPI} (deviceNumber: DWORD; VAR pHandle: HANDLE): STATUS;
-	OpenEx- :	PROCEDURE {WINAPI} (pArg1: ADDRESS; Flags: DWORD; VAR pHandle: HANDLE): STATUS;
-	ListDevices- : PROCEDURE {WINAPI} (pArg1, pArg2: PVOID; Flags: DWORD): STATUS;
-	SetVIDPID- : PROCEDURE {WINAPI} (dwVID, dwPID: DWORD): STATUS;
-	GetVIDPID- : PROCEDURE {WINAPI} (VAR pdwVID, pdwPID: DWORD): STATUS;
-	Close- : PROCEDURE {WINAPI} (ftHandle: HANDLE): STATUS;
-(*	Read- : PROCEDURE {WINAPI} (ftHandle: HANDLE; lpBuffer: LPVOID; nBufferSize: DWORD; VAR lpBytesReturned: DWORD): STATUS;
-	Write- : PROCEDURE {WINAPI} (ftHandle: HANDLE; lpBuffer: LPVOID; nBufferSize: DWORD; VAR lpBytesWritten: DWORD): STATUS;
+	Open- : PROCEDURE {PlatformCC} (deviceNumber: DWORD; VAR pHandle: HANDLE): STATUS;
+	OpenEx- :	PROCEDURE {PlatformCC} (pArg1: ADDRESS; Flags: DWORD; VAR pHandle: HANDLE): STATUS;
+	ListDevices- : PROCEDURE {PlatformCC} (pArg1, pArg2: PVOID; Flags: DWORD): STATUS;
+	SetVIDPID- : PROCEDURE {PlatformCC} (dwVID, dwPID: DWORD): STATUS;
+	GetVIDPID- : PROCEDURE {PlatformCC} (VAR pdwVID, pdwPID: DWORD): STATUS;
+	Close- : PROCEDURE {PlatformCC} (ftHandle: HANDLE): STATUS;
+(*	Read- : PROCEDURE {PlatformCC} (ftHandle: HANDLE; lpBuffer: LPVOID; nBufferSize: DWORD; VAR lpBytesReturned: DWORD): STATUS;
+	Write- : PROCEDURE {PlatformCC} (ftHandle: HANDLE; lpBuffer: LPVOID; nBufferSize: DWORD; VAR lpBytesWritten: DWORD): STATUS;
 *)	
-	Read- : PROCEDURE {WINAPI} (ftHandle: HANDLE; VAR lpBuffer: ARRAY OF SYSTEM.BYTE; nBufferSize: DWORD; VAR lpBytesReturned: DWORD): STATUS;
-	Write- : PROCEDURE {WINAPI} (ftHandle: HANDLE; lpBuffer: ARRAY OF SYSTEM.BYTE; nBufferSize: DWORD; VAR lpBytesWritten: DWORD): STATUS;
+	Read- : PROCEDURE {PlatformCC} (ftHandle: HANDLE; VAR lpBuffer: ARRAY OF SYSTEM.BYTE; nBufferSize: DWORD; VAR lpBytesReturned: DWORD): STATUS;
+	Write- : PROCEDURE {PlatformCC} (ftHandle: HANDLE; lpBuffer: ARRAY OF SYSTEM.BYTE; nBufferSize: DWORD; VAR lpBytesWritten: DWORD): STATUS;
 	
-	IoCtl- :	 PROCEDURE {WINAPI} (ftHandle: HANDLE;
+	IoCtl- :	 PROCEDURE {PlatformCC} (ftHandle: HANDLE;
 								dwIoControlCode: DWORD;
 								lpInBuf: LPVOID;
 								nInBufSize: DWORD;
@@ -253,53 +247,53 @@ VAR
 								lpBytesReturned: DWORD;
 								VAR  lpOverlapped: LPOVERLAPPED): STATUS;
 	
-	SetBaudRate- : PROCEDURE {WINAPI} (ftHandle: HANDLE; BaudRate: ULONG): STATUS;
-	SetDivisor- : PROCEDURE {WINAPI} (ftHandle: HANDLE; Divisor: USHORT): STATUS;
-	SetDataCharacteristics- : PROCEDURE {WINAPI} (ftHandle: HANDLE; WordLength, StopBits, Parity: UCHAR): STATUS;
-	SetFlowControl- : PROCEDURE {WINAPI} (ftHandle: HANDLE; FlowControl: USHORT; XonChar,XoffChar: UCHAR): STATUS;
-	ResetDevice- : PROCEDURE {WINAPI} (ftHandle: HANDLE): STATUS;
-	SetDtr- : PROCEDURE {WINAPI} (ftHandle: HANDLE): STATUS;
-	ClrDtr- : PROCEDURE {WINAPI} (ftHandle: HANDLE): STATUS;
-	SetRts- : PROCEDURE {WINAPI} (ftHandle: HANDLE): STATUS;
-	ClrRts- : PROCEDURE {WINAPI} (ftHandle: HANDLE): STATUS;
-	GetModemStatus- : PROCEDURE {WINAPI} (ftHandle: HANDLE; VAR pModemStatus: ULONG): STATUS;
-	SetChars- : PROCEDURE {WINAPI} (ftHandle: HANDLE; EventChar, EventCharEnabled, ErrorChar, ErrorCharEnabled: UCHAR): STATUS;
-	Purge- : PROCEDURE {WINAPI} (ftHandle: HANDLE; Mask: ULONG): STATUS;
-	SetTimeouts- : PROCEDURE {WINAPI} (ftHandle: HANDLE; ReadTimeout, WriteTimeout: ULONG): STATUS;
-	GetQueueStatus- : PROCEDURE {WINAPI} (ftHandle: HANDLE; VAR dwRxBytes: DWORD): STATUS;
-	GetQueueStatusEx- : PROCEDURE {WINAPI} (ftHandle: HANDLE; VAR dwRxBytes: DWORD): STATUS;
-	SetEventNotification- : PROCEDURE {WINAPI} (ftHandle: HANDLE; Mask: DWORD; Param: PVOID): STATUS;
-	GetStatus- : PROCEDURE {WINAPI} (ftHandle: HANDLE; VAR dwRxBytes, dwTxBytes, dwEventDWord: DWORD): STATUS;
-	SetBreakOn- : PROCEDURE {WINAPI} (ftHandle: HANDLE): STATUS;
-	SetBreakOff- : PROCEDURE {WINAPI} (ftHandle: HANDLE): STATUS;
-	SetWaitMask- : PROCEDURE {WINAPI} (ftHandle: HANDLE; Mask: DWORD): STATUS;
-	WaitOnMask- : PROCEDURE {WINAPI} (ftHandle: HANDLE; VAR Mask: DWORD): STATUS;
-	GetEventStatus- : PROCEDURE {WINAPI} (ftHandle: HANDLE; VAR dwEventDWord: DWORD): STATUS;
-	ReadEE- : PROCEDURE {WINAPI} (ftHandle: HANDLE; dwWordOffset: DWORD; VAR lpwValue: DWORD): STATUS;
-	WriteEE- : PROCEDURE {WINAPI} (ftHandle: HANDLE; dwWordOffset: DWORD; wValue: UNSIGNED16): STATUS;
-	EraseEE- : PROCEDURE {WINAPI} (ftHandle: HANDLE): STATUS;
+	SetBaudRate- : PROCEDURE {PlatformCC} (ftHandle: HANDLE; BaudRate: ULONG): STATUS;
+	SetDivisor- : PROCEDURE {PlatformCC} (ftHandle: HANDLE; Divisor: USHORT): STATUS;
+	SetDataCharacteristics- : PROCEDURE {PlatformCC} (ftHandle: HANDLE; WordLength, StopBits, Parity: UCHAR): STATUS;
+	SetFlowControl- : PROCEDURE {PlatformCC} (ftHandle: HANDLE; FlowControl: USHORT; XonChar,XoffChar: UCHAR): STATUS;
+	ResetDevice- : PROCEDURE {PlatformCC} (ftHandle: HANDLE): STATUS;
+	SetDtr- : PROCEDURE {PlatformCC} (ftHandle: HANDLE): STATUS;
+	ClrDtr- : PROCEDURE {PlatformCC} (ftHandle: HANDLE): STATUS;
+	SetRts- : PROCEDURE {PlatformCC} (ftHandle: HANDLE): STATUS;
+	ClrRts- : PROCEDURE {PlatformCC} (ftHandle: HANDLE): STATUS;
+	GetModemStatus- : PROCEDURE {PlatformCC} (ftHandle: HANDLE; VAR pModemStatus: ULONG): STATUS;
+	SetChars- : PROCEDURE {PlatformCC} (ftHandle: HANDLE; EventChar, EventCharEnabled, ErrorChar, ErrorCharEnabled: UCHAR): STATUS;
+	Purge- : PROCEDURE {PlatformCC} (ftHandle: HANDLE; Mask: ULONG): STATUS;
+	SetTimeouts- : PROCEDURE {PlatformCC} (ftHandle: HANDLE; ReadTimeout, WriteTimeout: ULONG): STATUS;
+	GetQueueStatus- : PROCEDURE {PlatformCC} (ftHandle: HANDLE; VAR dwRxBytes: DWORD): STATUS;
+	GetQueueStatusEx- : PROCEDURE {PlatformCC} (ftHandle: HANDLE; VAR dwRxBytes: DWORD): STATUS;
+	SetEventNotification- : PROCEDURE {PlatformCC} (ftHandle: HANDLE; Mask: DWORD; Param: PVOID): STATUS;
+	GetStatus- : PROCEDURE {PlatformCC} (ftHandle: HANDLE; VAR dwRxBytes, dwTxBytes, dwEventDWord: DWORD): STATUS;
+	SetBreakOn- : PROCEDURE {PlatformCC} (ftHandle: HANDLE): STATUS;
+	SetBreakOff- : PROCEDURE {PlatformCC} (ftHandle: HANDLE): STATUS;
+	SetWaitMask- : PROCEDURE {PlatformCC} (ftHandle: HANDLE; Mask: DWORD): STATUS;
+	WaitOnMask- : PROCEDURE {PlatformCC} (ftHandle: HANDLE; VAR Mask: DWORD): STATUS;
+	GetEventStatus- : PROCEDURE {PlatformCC} (ftHandle: HANDLE; VAR dwEventDWord: DWORD): STATUS;
+	ReadEE- : PROCEDURE {PlatformCC} (ftHandle: HANDLE; dwWordOffset: DWORD; VAR lpwValue: DWORD): STATUS;
+	WriteEE- : PROCEDURE {PlatformCC} (ftHandle: HANDLE; dwWordOffset: DWORD; wValue: UNSIGNED16): STATUS;
+	EraseEE- : PROCEDURE {PlatformCC} (ftHandle: HANDLE): STATUS;
 
 
 	(* structure to hold program data for Program function *)
 	
 	TYPE PROGRAM_DATA* = RECORD 
 		
-		Signature1* : DWORD;			(* Header - must be 00000000H *)
+		Signature1* : DWORD;	(* Header - must be 00000000H *)
 		
-		Signature2* : DWORD;			(* Header - must be 0ffffffffH *)
-		Version* : DWORD;				(* Header - PROGRAM_DATA version *)
-		(*          0 = original *)
-		(*          1 = FT2232C extensions *)
+		Signature2* : DWORD;	(* Header - must be 0ffffffffH *)
+		Version* : DWORD;			(* Header - PROGRAM_DATA version *)
+		(*        0 = original *)
+		(*        1 = FT2232C extensions *)
 		(* 			2 = FT232R extensions *)
 		(* 			3 = FT2232H extensions *)
 		(* 			4 = FT4232H extensions *)
 		(* 			5 = FT232H extensions *)
 		VendorId* : UNSIGNED16;				(* 0x0403 *)
 		ProductId* : UNSIGNED16;				(* 0x6001 *)
-		Manufacturer* : POINTER {UNSAFE} TO ARRAY OF CHAR;			(* "FTDI" *)
-		ManufacturerId* : POINTER {UNSAFE} TO ARRAY OF CHAR;		(* "FT" *)
-		Description* : POINTER {UNSAFE} TO ARRAY OF CHAR;			(* "USB HS Serial Converter" *)
-		SerialNumber* : POINTER {UNSAFE} TO ARRAY OF CHAR;			(* "FT000001" if fixed, or NULL *)
+		Manufacturer* : POINTER {UNSAFE} TO ARRAY 256 OF CHAR;			(* "FTDI" *)
+		ManufacturerId* : POINTER {UNSAFE} TO ARRAY 256 OF CHAR;		(* "FT" *)
+		Description* : POINTER {UNSAFE} TO ARRAY 256 OF CHAR;			(* "USB HS Serial Converter" *)
+		SerialNumber* : POINTER {UNSAFE} TO ARRAY 256 OF CHAR;			(* "FT000001" if fixed, or NULL *)
 		MaxPower* : UNSIGNED16;				(* 0 < MaxPower <= 500 *)
 		PnP* : UNSIGNED16;					(* 0 = disabled, 1 = enabled *)
 		SelfPowered* : UNSIGNED16;			(* 0 = bus powered, 1 = self powered *)
@@ -312,8 +306,8 @@ VAR
 		IsoOut* : UCHAR;				(* non-zero if out endpoint is isochronous *)
 		PullDownEnable* : UCHAR;		(* non-zero if pull down enabled *)
 		SerNumEnable* : UCHAR;			(* non-zero if serial number to be used *)
-		USBVersionEnable* : UCHAR;		(* non-zero if chip uses USBVersion *)
-		USBVersion* : UNSIGNED16;			(* BCD (0x0200* => USB2) *)
+		USBVersionEnable* : UCHAR;	(* non-zero if chip uses USBVersion *)
+		USBVersion* : UNSIGNED16;	(* BCD (0x0200* => USB2) *)
 		
 		(* Rev 5 (FT2232) extensions *)
 		
@@ -322,28 +316,28 @@ VAR
 		IsoInB* : UCHAR;				(* non-zero if in endpoint is isochronous *)
 		IsoOutA* : UCHAR;				(* non-zero if out endpoint is isochronous *)
 		IsoOutB* : UCHAR;				(* non-zero if out endpoint is isochronous *)
-		PullDownEnable5* : UCHAR;		(* non-zero if pull down enabled *)
+		PullDownEnable5* : UCHAR;	(* non-zero if pull down enabled *)
 		SerNumEnable5* : UCHAR;		(* non-zero if serial number to be used *)
 		USBVersionEnable5* : UCHAR;	(* non-zero if chip uses USBVersion *)
-		USBVersion5* : UNSIGNED16;			(* BCD (0x0200* => USB2) *)
-		AIsHighCurrent* : UCHAR;		(* non-zero if interface is high current *)
-		BIsHighCurrent* : UCHAR;		(* non-zero if interface is high current *)
+		USBVersion5* : UNSIGNED16;	(* BCD (0x0200* => USB2) *)
+		AIsHighCurrent* : UCHAR;	(* non-zero if interface is high current *)
+		BIsHighCurrent* : UCHAR;	(* non-zero if interface is high current *)
 		IFAIsFifo* : UCHAR;			(* non-zero if interface is 245 FIFO *)
-		IFAIsFifoTar* : UCHAR;			(* non-zero if interface is 245 FIFO CPU target *)
-		IFAIsFastSer* : UCHAR;			(* non-zero if interface is Fast serial *)
+		IFAIsFifoTar* : UCHAR;		(* non-zero if interface is 245 FIFO CPU target *)
+		IFAIsFastSer* : UCHAR;		(* non-zero if interface is Fast serial *)
 		AIsVCP* : UCHAR;				(* non-zero if interface is to use VCP drivers *)
 		IFBIsFifo* : UCHAR;			(* non-zero if interface is 245 FIFO *)
-		IFBIsFifoTar* : UCHAR;			(* non-zero if interface is 245 FIFO CPU target *)
-		IFBIsFastSer* : UCHAR;			(* non-zero if interface is Fast serial *)
+		IFBIsFifoTar* : UCHAR;		(* non-zero if interface is 245 FIFO CPU target *)
+		IFBIsFastSer* : UCHAR;		(* non-zero if interface is Fast serial *)
 		BIsVCP* : UCHAR;				(* non-zero if interface is to use VCP drivers *)
 		
 		(* Rev 6 (FT232R) extensions *)
 		
-		UseExtOsc* : UCHAR;			(* Use External Oscillator *)
+		UseExtOsc* : UCHAR;				(* Use External Oscillator *)
 		HighDriveIOs* : UCHAR;			(* High Drive I/Os *)
 		EndpointSize* : UCHAR;			(* Endpoint size *)
-		PullDownEnableR* : UCHAR;		(* non-zero if pull down enabled *)
-		SerNumEnableR* : UCHAR;		(* non-zero if serial number to be used *)
+		PullDownEnableR* : UCHAR;	(* non-zero if pull down enabled *)
+		SerNumEnableR* : UCHAR;	(* non-zero if serial number to be used *)
 		InvertTXD* : UCHAR;			(* non-zero if invert TXD *)
 		InvertRXD* : UCHAR;			(* non-zero if invert RXD *)
 		InvertRTS* : UCHAR;			(* non-zero if invert RTS *)
@@ -351,7 +345,7 @@ VAR
 		InvertDTR* : UCHAR;			(* non-zero if invert DTR *)
 		InvertDSR* : UCHAR;			(* non-zero if invert DSR *)
 		InvertDCD* : UCHAR;			(* non-zero if invert DCD *)
-		InvertRI* : UCHAR;				(* non-zero if invert RI *)
+		InvertRI* : UCHAR;			(* non-zero if invert RI *)
 		Cbus0* : UCHAR;				(* Cbus Mux control *)
 		Cbus1* : UCHAR;				(* Cbus Mux control *)
 		Cbus2* : UCHAR;				(* Cbus Mux control *)
@@ -378,48 +372,48 @@ VAR
 		IFAIsFifo7* : UCHAR;			(* non-zero if interface is 245 FIFO *)
 		IFAIsFifoTar7* : UCHAR;		(* non-zero if interface is 245 FIFO CPU target *)
 		IFAIsFastSer7* : UCHAR;		(* non-zero if interface is Fast serial *)
-		AIsVCP7* : UCHAR;				(* non-zero if interface is to use VCP drivers *)
+		AIsVCP7* : UCHAR;					(* non-zero if interface is to use VCP drivers *)
 		IFBIsFifo7* : UCHAR;			(* non-zero if interface is 245 FIFO *)
 		IFBIsFifoTar7* : UCHAR;		(* non-zero if interface is 245 FIFO CPU target *)
 		IFBIsFastSer7* : UCHAR;		(* non-zero if interface is Fast serial *)
-		BIsVCP7* : UCHAR;				(* non-zero if interface is to use VCP drivers *)
-		PowerSaveEnable* : UCHAR;			(* non-zero if using BCBUS7 to save power for self-powered designs *)
+		BIsVCP7* : UCHAR;					(* non-zero if interface is to use VCP drivers *)
+		PowerSaveEnable* : UCHAR;	(* non-zero if using BCBUS7 to save power for self-powered designs *)
 		
 		(* Rev 8 (FT4232H) Extensions *)
 		
-		PullDownEnable8* : UCHAR;		(* non-zero if pull down enabled *)
+		PullDownEnable8* : UCHAR;	(* non-zero if pull down enabled *)
 		SerNumEnable8* : UCHAR;		(* non-zero if serial number to be used *)
-		ASlowSlew* : UCHAR;			(* non-zero if AL pins have slow slew *)
+		ASlowSlew* : UCHAR;				(* non-zero if AL pins have slow slew *)
 		ASchmittInput* : UCHAR;		(* non-zero if AL pins are Schmitt input *)
 		ADriveCurrent* : UCHAR;		(* valid values are 4mA, 8mA, 12mA, 16mA *)
-		BSlowSlew* : UCHAR;			(* non-zero if AH pins have slow slew *)
+		BSlowSlew* : UCHAR;				(* non-zero if AH pins have slow slew *)
 		BSchmittInput* : UCHAR;		(* non-zero if AH pins are Schmitt input *)
 		BDriveCurrent* : UCHAR;		(* valid values are 4mA, 8mA, 12mA, 16mA *)
-		CSlowSlew* : UCHAR;			(* non-zero if BL pins have slow slew *)
+		CSlowSlew* : UCHAR;				(* non-zero if BL pins have slow slew *)
 		CSchmittInput* : UCHAR;		(* non-zero if BL pins are Schmitt input *)
 		CDriveCurrent* : UCHAR;		(* valid values are 4mA, 8mA, 12mA, 16mA *)
-		DSlowSlew* : UCHAR;			(* non-zero if BH pins have slow slew *)
+		DSlowSlew* : UCHAR;				(* non-zero if BH pins have slow slew *)
 		DSchmittInput* : UCHAR;		(* non-zero if BH pins are Schmitt input *)
 		DDriveCurrent* : UCHAR;		(* valid values are 4mA, 8mA, 12mA, 16mA *)
 		ARIIsTXDEN* : UCHAR;			(* non-zero if port A uses RI as RS485 TXDEN *)
 		BRIIsTXDEN* : UCHAR;			(* non-zero if port B uses RI as RS485 TXDEN *)
 		CRIIsTXDEN* : UCHAR;			(* non-zero if port C uses RI as RS485 TXDEN *)
 		DRIIsTXDEN* : UCHAR;			(* non-zero if port D uses RI as RS485 TXDEN *)
-		AIsVCP8* : UCHAR;				(* non-zero if interface is to use VCP drivers *)
-		BIsVCP8* : UCHAR;				(* non-zero if interface is to use VCP drivers *)
-		CIsVCP8* : UCHAR;				(* non-zero if interface is to use VCP drivers *)
-		DIsVCP8* : UCHAR;				(* non-zero if interface is to use VCP drivers *)
+		AIsVCP8* : UCHAR;					(* non-zero if interface is to use VCP drivers *)
+		BIsVCP8* : UCHAR;					(* non-zero if interface is to use VCP drivers *)
+		CIsVCP8* : UCHAR;					(* non-zero if interface is to use VCP drivers *)
+		DIsVCP8* : UCHAR;					(* non-zero if interface is to use VCP drivers *)
 		
 		(* Rev 9 (FT232H) Extensions *)
 		
-		PullDownEnableH* : UCHAR;		(* non-zero if pull down enabled *)
+		PullDownEnableH* : UCHAR;	(* non-zero if pull down enabled *)
 		SerNumEnableH* : UCHAR;		(* non-zero if serial number to be used *)
 		ACSlowSlewH* : UCHAR;			(* non-zero if AC pins have slow slew *)
-		ACSchmittInputH* : UCHAR;		(* non-zero if AC pins are Schmitt input *)
-		ACDriveCurrentH* : UCHAR;		(* valid values are 4mA, 8mA, 12mA, 16mA *)
+		ACSchmittInputH* : UCHAR;	(* non-zero if AC pins are Schmitt input *)
+		ACDriveCurrentH* : UCHAR;	(* valid values are 4mA, 8mA, 12mA, 16mA *)
 		ADSlowSlewH* : UCHAR;			(* non-zero if AD pins have slow slew *)
-		ADSchmittInputH* : UCHAR;		(* non-zero if AD pins are Schmitt input *)
-		ADDriveCurrentH* : UCHAR;		(* valid values are 4mA, 8mA, 12mA, 16mA *)
+		ADSchmittInputH* : UCHAR;	(* non-zero if AD pins are Schmitt input *)
+		ADDriveCurrentH* : UCHAR;	(* valid values are 4mA, 8mA, 12mA, 16mA *)
 		Cbus0H* : UCHAR;				(* Cbus Mux control *)
 		Cbus1H* : UCHAR;				(* Cbus Mux control *)
 		Cbus2H* : UCHAR;				(* Cbus Mux control *)
@@ -431,15 +425,14 @@ VAR
 		Cbus8H* : UCHAR;				(* Cbus Mux control *)
 		Cbus9H* : UCHAR;				(* Cbus Mux control *)
 		IsFifoH* : UCHAR;				(* non-zero if interface is 245 FIFO *)
-		IsFifoTarH* : UCHAR;			(* non-zero if interface is 245 FIFO CPU target *)
-		IsFastSerH* : UCHAR;			(* non-zero if interface is Fast serial *)
+		IsFifoTarH* : UCHAR;		(* non-zero if interface is 245 FIFO CPU target *)
+		IsFastSerH* : UCHAR;		(* non-zero if interface is Fast serial *)
 		IsFT1248H* : UCHAR;			(* non-zero if interface is FT1248 *)
-		FT1248CpolH* : UCHAR;			(* FT1248 clock polarity - clock idle high (1) or clock idle low (0) *)
-		FT1248LsbH* : UCHAR;			(* FT1248 data is LSB (1) or MSB (0) *)
+		FT1248CpolH* : UCHAR;		(* FT1248 clock polarity - clock idle high (1) or clock idle low (0) *)
+		FT1248LsbH* : UCHAR;		(* FT1248 data is LSB (1) or MSB (0) *)
 		FT1248FlowControlH* : UCHAR;	(* FT1248 flow control enable *)
 		IsVCPH* : UCHAR;				(* non-zero if interface is to use VCP drivers *)
-		PowerSaveEnableH* : UCHAR;		(* non-zero if using ACBUS7 to save power for self-powered designs *)
-		
+		PowerSaveEnableH* : UCHAR;	(* non-zero if using ACBUS7 to save power for self-powered designs *)
 	END;
 
 	PPROGRAM_DATA* = POINTER {UNSAFE} TO PROGRAM_DATA;
@@ -705,12 +698,12 @@ CONST
 	FLAGS_HISPEED* = 2;
 
 VAR
-	CreateDeviceInfoList- : PROCEDURE {WINAPI} (VAR lpdwNumDevs: DWORD): STATUS;
+	CreateDeviceInfoList- : PROCEDURE {PlatformCC} (VAR lpdwNumDevs: DWORD): STATUS;
 		
-	GetDeviceInfoList- :  PROCEDURE {WINAPI} (VAR pDest: ARRAY OF DEVICE_LIST_INFO_NODE ; 
+	GetDeviceInfoList- :  PROCEDURE {PlatformCC} (VAR pDest: ARRAY OF DEVICE_LIST_INFO_NODE ; 
 						VAR lpdwNumDevs: DWORD): STATUS;
 		
-	GetDeviceInfoDetail- : PROCEDURE {WINAPI} (dwIndex: DWORD; VAR lpdwFlags, 
+	GetDeviceInfoDetail- : PROCEDURE {PlatformCC} (dwIndex: DWORD; VAR lpdwFlags, 
 						lpdwType,  
 						lpdwID, 
 						lpdwLocId: DWORD; 
@@ -722,9 +715,9 @@ VAR
 		 
 		 (*! Version information, Windows??? *)
 (*		 
-	GetDriverVersion- : PROCEDURE {WINAPI}  (ftHandle: HANDLE; VAR lpdwVersion: DWORD): STATUS;
+	GetDriverVersion- : PROCEDURE {PlatformCC}  (ftHandle: HANDLE; VAR lpdwVersion: DWORD): STATUS;
 		
-	GetLibraryVersion- : PROCEDURE {WINAPI} (VAR lpdwVersion: LDWORD): STATUS;
+	GetLibraryVersion- : PROCEDURE {PlatformCC} (VAR lpdwVersion: LDWORD): STATUS;
 *)		
 		 
 
@@ -799,19 +792,18 @@ BEGIN
 	END;	
 END PrintError;
 
-(** Wrapper for Kernel32.getProcAddress. *)
-PROCEDURE GetProcAddress*( hModule: Kernel32.HMODULE; CONST procName: ARRAY OF CHAR; adr: ADDRESS );
-VAR padr: ADDRESS;
+PROCEDURE GetProcAddress*( lib: HostLibs.LibHandle; CONST procName: ARRAY OF CHAR; adr: ADDRESS );
+VAR res: BOOLEAN;
 BEGIN
-	padr := Kernel32.getProcAddress( hModule, procName );
-	SYSTEM.PUT(adr, padr);
+	res := HostLibs.GetProcedure(lib,  procName, adr);
 END GetProcAddress;
 
 PROCEDURE Init();
+VAR res: BOOLEAN;
 BEGIN
-	lib := Kernel32.LoadLibrary(libname);
-	ASSERT(lib #  0, 208);
-
+	res := HostLibs.LoadLibrary(libname, lib);
+	ASSERT(res , 100);
+	
 	(* load functions *)
 
 	GetProcAddress(lib, 'FT_Open',  ADDRESSOF( Open ));
@@ -878,14 +870,13 @@ BEGIN
 	KernelLog.String(libname); KernelLog.String(" library loaded.."); KernelLog.Ln;
 END Init;
 
-PROCEDURE OnClose;
-VAR res: SIGNED32;
+PROCEDURE Cleanup();
+VAR res: BOOLEAN; 
 BEGIN
-	IF lib # Kernel32.NULL THEN
-		res := Kernel32.FreeLibrary(lib);
-		KernelLog.String(libname); KernelLog.String(" library unloaded.."); KernelLog.Ln;
-	END;
-END OnClose;
+ IF lib # NIL THEN 
+ 	res := HostLibs.FreeLibrary(lib);
+ END;
+END Cleanup;
 
 PROCEDURE InitFtdiDevices*;
 VAR ftStatus: HANDLE; i: ULONG;
@@ -921,9 +912,21 @@ BEGIN
 	ASSERT(ftStatus = OK, 212);
 END InitFtdiDevices;
 
+(*
+(* required on linux *)
+PROCEDURE Setvidpid();
+VAR ftStatus: STATUS;
 BEGIN
-	libname := clibname;
+	ftStatus := SetVIDPID(0403H, 0FAF0H); (*! required for  linux, disable for windows *) 	
+	IF  ftStatus # OK THEN
+		PrintError("Error: SetVIDPID : ", ftStatus);		
+	END;
+	ASSERT(ftStatus = OK, 209);
+END Setvidpid;
+*)
+
+BEGIN
 	Init;
 	InitFtdiDevices();
-	Modules.InstallTermHandler(OnClose);		
+	Modules.InstallTermHandler(Cleanup);		
 END FTD2XX.
