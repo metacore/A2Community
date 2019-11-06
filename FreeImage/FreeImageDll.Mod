@@ -846,16 +846,14 @@ VAR
 	(* miscellaneous algorithms -------------------------------- *)
 	MultigridPoissonSolver-: PROCEDURE {PlatformCC} (Laplacian: FIBITMAP; ncycle:SIGNED32): FIBITMAP;
 
-
-	PROCEDURE GetProcAddress*( lib: HostLibs.LibHandle;  CONST procName: ARRAY OF CHAR;  adr: ADDRESS );
-	VAR res: BOOLEAN;
-	BEGIN
-		res := HostLibs.GetProcedure(lib, procName, adr);
-		IF adr = NIL THEN
-			KernelLog.String("NOT FOUND:  "); KernelLog.String(procName); KernelLog.Ln; 
-		END;
-	END GetProcAddress;
-	
+PROCEDURE GetProcAddress*( lib: HostLibs.LibHandle;  CONST procName: ARRAY OF CHAR;  adr: ADDRESS );
+VAR res: BOOLEAN;
+BEGIN
+	res := HostLibs.GetProcedure(lib, procName, adr);
+	IF adr = NIL THEN
+		KernelLog.String("NOT FOUND:  "); KernelLog.String(procName); KernelLog.Ln; 
+	END;
+END GetProcAddress;
 
 PROCEDURE InitFunctions;
 VAR res: BOOLEAN;
