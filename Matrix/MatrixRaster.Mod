@@ -519,7 +519,7 @@ BEGIN
 				int:=ASH(ORD(img.mem[p+1]), 8) + ORD(img.mem[p]);
 				IF planeIndex=0 THEN data[row,col]:= SIGNED8(ASH(ASH(int, -11) MOD 20H, 3) + 4);
 				ELSIF planeIndex=1 THEN data[row,col]:= SIGNED8(ASH(ASH(int, -5) MOD 40H, 2) + 2);
-				ELSIF planeIndex=3 THEN data[row,col]:= SIGNED8(ASH(int MOD 20H, 3) + 4);
+				ELSIF planeIndex=2 THEN data[row,col]:= SIGNED8(ASH(int MOD 20H, 3) + 4);
 				END;
 				INC(p,2);
 			END;

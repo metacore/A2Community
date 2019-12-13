@@ -435,10 +435,9 @@ TYPE	VideoEncoder* = OBJECT
 										Counter.Update;
 										WriteFOURCC(R,"strn");
 										R.RawLInt(16); (* the length of the strn subchunk *)
-										COPY("FileAvi write  ",string16);
-										(*COPY("A2 AVIEncoder  ",string16);*)
+										(*COPY("FileAvi write  ",string16); *)
+										COPY("A2 AVIEncoder  ",string16);
 										R.Bytes(string16,0,16); (*includes 0X termination*)
-										(*R.Bytes(string16,0,15); R.Char(0X); (*! TO DO - CHECK FOR CORRECT STRING LENGHT *)*)
 										saveJUNKsignature := R.Pos();
 										R.Update;
 										Counter.SetPos(saveLIST1Size); Counter.RawLInt((saveJUNKsignature-saveLIST1Size-4)(SIGNED32));
@@ -464,7 +463,7 @@ TYPE	VideoEncoder* = OBJECT
 						IF lut=GrayLUT THEN WritePixelsUncompressed(R,data[z],bytePP, 254/absmax, 1);(*pass 2D array [h,w]*)
 						ELSIF lut=FlowLUT THEN WritePixelsUncompressed(R,data[z],bytePP, 127/absmax, 128);(*pass 2D array [h,w]*)
 						ELSIF lut=BGRA THEN WritePixelsUncompressed(R,data[z],bytePP, 127/absmax, 128);(*pass 3D array [4,h,w]*)
-						ELSE HALT(203);
+						ELSE log.String("unimplemented lut/compression=0"); log.Ln; log.Update; res:=Streams.FormatError; RETURN
 						END;
 					END;
 				ELSIF compression=1 THEN
@@ -476,7 +475,7 @@ TYPE	VideoEncoder* = OBJECT
 						(*R.RawLInt(0);  encoded length is inserted here within WriteRLE8() *)
 						IF lut=GrayLUT THEN WriteRLE8(R,data[z],bytePP,254/absmax, 1);
 						ELSIF lut=FlowLUT THEN WriteRLE8(R,data[z],bytePP,127/absmax, 128);
-						ELSE HALT(204);
+						ELSE log.String("unimplemented lut/compression=1"); log.Ln; log.Update; res:=Streams.FormatError; RETURN
 						END;
 						dcLength[z]:=R.Pos()-savedcLength[z]-4;
 						END;

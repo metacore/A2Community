@@ -354,6 +354,7 @@ TYPE Panel*= OBJECT (WMStandardComponents.ImagePanel) (*! tbd: convert some loca
 			IF property = model THEN RecacheProperties; (*implicit invalidate in RecacheProperties*)
 			ELSIF property=orientation THEN RecacheProperties;
 			ELSIF property=displayMode THEN RecacheProperties
+			ELSIF property=transparency THEN RecacheProperties
 			ELSE	PropertyChanged^(sender, property)
 			END
 		END PropertyChanged;
@@ -506,7 +507,7 @@ VAR window:WMComponents.FormWindow;bounds: WMRectangles.Rectangle;
 BEGIN
 	bounds:=panel.bounds.Get();
 	w:=bounds.r-bounds.l; h:=bounds.b-bounds.t; ASSERT(h>0);
-	NEW(window, SIGNED32(w), SIGNED32(h), FALSE);
+	NEW(window, SIGNED32(w), SIGNED32(h), TRUE);
 	IF panel IS Panel THEN panel(Panel).win:=window END;
 	window.SetTitle(Strings.NewString(title));
 	INCL(window.flags, WM.FlagStorable); (* allow storing of data interactively, through right-click on navigator icon*)
@@ -575,7 +576,7 @@ BEGIN
 	NEW(panel);
 	panel.SetArray(tensor);
 	panel.SetOrientation(0);
-	NEW(window, 400,400, FALSE);
+	NEW(window, 400,400, TRUE);
 	window.SetTitle(Strings.NewString("tensor window"));
 	INCL(window.flags, WM.FlagStorable); (* allow storing of data interactively, through right-click on navigator icon*)
 	panel.alignment.Set(WMComponents.AlignClient);
